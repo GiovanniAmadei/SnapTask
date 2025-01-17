@@ -65,17 +65,20 @@ class TaskManager: ObservableObject {
             
             var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
             
-            if completion.completedSubtasks.contains(subtaskId) {
-                completion.completedSubtasks.remove(subtaskId)
-            } else {
-                completion.completedSubtasks.insert(subtaskId)
+            // Add a small delay to ensure animations complete
+            DispatchQueue.main.async {
+                if completion.completedSubtasks.contains(subtaskId) {
+                    completion.completedSubtasks.remove(subtaskId)
+                } else {
+                    completion.completedSubtasks.insert(subtaskId)
+                }
+                
+                task.completions[startOfDay] = completion
+                self.tasks[taskIndex] = task
+                self.saveTasks()
+                self.notifyTasksUpdated()
+                self.objectWillChange.send()
             }
-            
-            task.completions[startOfDay] = completion
-            tasks[taskIndex] = task
-            saveTasks()
-            notifyTasksUpdated()
-            objectWillChange.send()
         }
     }
     

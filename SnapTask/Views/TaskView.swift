@@ -42,7 +42,7 @@ struct TaskView: View {
                 if task.pomodoroSettings != nil {
                     Button(action: { showingPomodoro = true }) {
                         Image(systemName: "timer")
-                            .foregroundColor(Color(hex: task.category.color))
+                            .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .gray)
                     }
                 }
                 
@@ -58,16 +58,15 @@ struct TaskView: View {
             
             if !task.subtasks.isEmpty {
                 ProgressView(value: task.completionProgress, total: 1.0)
-                    .tint(Color(hex: task.category.color))
+                    .tint(task.category.map { Color(hex: $0.color) } ?? .gray)
                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: task.completionProgress)
                 
                 ForEach(task.subtasks) { subtask in
                     HStack {
                         Button(action: { onToggleSubtask(subtask.id) }) {
-                            Image(systemName: subtask.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(subtask.isCompleted ? .green : .gray)
-                                .animation(.spring(response: 0.3), value: subtask.isCompleted)
+                            SubtaskCheckmark(isCompleted: subtask.isCompleted)
                         }
+                        .buttonStyle(BorderlessButtonStyle())
                         
                         Text(subtask.name)
                             .font(.subheadline)
@@ -76,6 +75,7 @@ struct TaskView: View {
                         
                         Spacer()
                     }
+                    .contentShape(Rectangle())
                 }
             }
         }

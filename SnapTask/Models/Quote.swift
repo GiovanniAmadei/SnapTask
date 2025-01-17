@@ -1,4 +1,6 @@
-struct Quote {
+import Foundation
+
+struct Quote: Codable, Equatable {
     let id: String
     let content: String
     let author: String

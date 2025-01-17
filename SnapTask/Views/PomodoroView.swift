@@ -15,7 +15,7 @@ struct PomodoroView: View {
                 settings: task.pomodoroSettings ?? PomodoroSettings()
             )
         )
-        self.workColor = Color(hex: task.category.color)
+        self.workColor = Color(hex: task.category!.color)
         self.breakColor = .green
     }
     

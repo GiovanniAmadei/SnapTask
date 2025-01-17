@@ -1,85 +1,140 @@
 import SwiftUI
 
 struct TimelineView: View {
-    @StateObject private var viewModel = TimelineViewModel()
+    @StateObject var viewModel: TimelineViewModel
     @State private var showingNewTask = false
     @State private var selectedDayOffset = 0
+    @State private var showingCalendarPicker = false
+    @State private var scrollProxy: ScrollViewProxy?
     
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
-                ZStack {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            // Date Selector
-                            ScrollViewReader { proxy in
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(-7...7, id: \.self) { offset in
-                                            DayCell(
-                                                date: Calendar.current.date(
-                                                    byAdding: .day,
-                                                    value: offset,
-                                                    to: Date()
-                                                ) ?? Date(),
-                                                isSelected: offset == selectedDayOffset,
-                                                onTap: {
-                                                    withAnimation(.spring(response: 0.3)) {
-                                                        selectedDayOffset = offset
-                                                        viewModel.selectedDate = Calendar.current.date(
-                                                            byAdding: .day,
-                                                            value: offset,
-                                                            to: Date()
-                                                        ) ?? Date()
-                                                        proxy.scrollTo(offset, anchor: .center)
-                                                    }
-                                                }
-                                            )
-                                            .id(offset)
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                }
-                                .onAppear {
-                                    proxy.scrollTo(0, anchor: .center)
-                                }
+                VStack(spacing: 0) {
+                    // Fixed Month and Date Selector
+                    VStack(spacing: 4) {
+                        HStack {
+                            Text(viewModel.monthYearString)
+                                .font(.title2.bold())
+                            Spacer()
+                            Button(action: { showingCalendarPicker = true }) {
+                                Image(systemName: "calendar")
+                                    .foregroundColor(.pink)
                             }
-                            .padding(.top, 4)
-                            
-                            // Task List
-                            ScrollView {
-                                LazyVStack(spacing: 16) {
-                                    ForEach(viewModel.tasksForSelectedDate()) { task in
-                                        TaskCard(
-                                            task: task,
-                                            onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
-                                            onToggleSubtask: { subtaskId in
-                                                viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
-                                            },
-                                            viewModel: viewModel
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        
+                        // Date Selector
+                        ScrollViewReader { proxy in
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(-365...365, id: \.self) { offset in // Extended to full year range
+                                        DayCell(
+                                            date: Calendar.current.date(
+                                                byAdding: .day,
+                                                value: offset,
+                                                to: Date()
+                                            ) ?? Date(),
+                                            isSelected: offset == selectedDayOffset,
+                                            onTap: {
+                                                selectDay(offset, proxy: proxy)
+                                            }
                                         )
+                                        .id(offset)
                                     }
                                 }
-                                .padding()
-                                .padding(.bottom, 80)
+                                .padding(.horizontal)
                             }
-                            .frame(minHeight: geometry.size.height - 100)
+                            .onAppear {
+                                scrollProxy = proxy
+                                proxy.scrollTo(selectedDayOffset, anchor: .center)
+                            }
                         }
                     }
+                    .background(Color(.systemBackground))
+                    .zIndex(1)
                     
-                    // Floating Add Button
-                    VStack {
-                        Spacer()
-                        AddTaskButton(isShowingTaskForm: $showingNewTask)
+                    // Task List and Add Button
+                    ZStack {
+                        ScrollView {
+                            LazyVStack(spacing: 16) {
+                                ForEach(viewModel.tasksForSelectedDate()) { task in
+                                    TaskCard(task: task,
+                                           onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
+                                           onToggleSubtask: { subtaskId in
+                                               viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
+                                           },
+                                           viewModel: viewModel)
+                                }
+                            }
+                            .padding()
+                            .padding(.bottom, 100)
+                        }
+                        
+                        // Centered Add Button
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Spacer()
+                                AddTaskButton(isShowingTaskForm: $showingNewTask)
+                                Spacer()
+                            }
                             .padding(.bottom, 16)
+                        }
                     }
                 }
             }
-            .navigationTitle("Timeline")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
             .sheet(isPresented: $showingNewTask) {
-                TaskFormView { task in
-                    viewModel.addTask(task)
+                TaskFormView(
+                    viewModel: TaskFormViewModel(initialDate: viewModel.selectedDate),
+                    onSave: { task in
+                        viewModel.addTask(task)
+                    }
+                )
+            }
+            .sheet(isPresented: $showingCalendarPicker) {
+                NavigationStack {
+                    VStack {
+                        DatePicker("",
+                                  selection: $viewModel.selectedDate,
+                                  displayedComponents: [.date])
+                            .datePickerStyle(.graphical)
+                            .padding()
+                        
+                        Button("Done") {
+                            let calendar = Calendar.current
+                            let today = Date()
+                            if let daysDiff = calendar.dateComponents([.day], from: today, to: viewModel.selectedDate).day {
+                                selectDay(daysDiff, proxy: scrollProxy)
+                            }
+                            showingCalendarPicker = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.bottom)
+                    }
+                    .navigationBarHidden(true)
+                    .presentationDetents([.height(500)])
+                    .presentationDragIndicator(.visible)
+                }
+            }
+        }
+    }
+    
+    private func selectDay(_ offset: Int, proxy: ScrollViewProxy?) {
+        withAnimation {
+            selectedDayOffset = offset
+            viewModel.selectedDate = Calendar.current.date(
+                byAdding: .day,
+                value: offset,
+                to: Date()
+            ) ?? Date()
+            
+            // Ensure the day cell is visible
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation {
+                    proxy?.scrollTo(offset, anchor: .center)
                 }
             }
         }
@@ -164,6 +219,10 @@ private struct TaskCard: View {
         return Double(completedCount) / Double(task.subtasks.count)
     }
     
+    private var completedSubtasks: Set<UUID> {
+        task.completions[viewModel.selectedDate.startOfDay]?.completedSubtasks ?? []
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 12) {
@@ -212,7 +271,14 @@ private struct TaskCard: View {
                                 .stroke(.pink, lineWidth: 2)
                                 .frame(width: 32, height: 32)
                                 .rotationEffect(.degrees(-90))
-                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: completionProgress)
+                                .animation(
+                                    .spring(
+                                        response: 0.6,
+                                        dampingFraction: 0.7,
+                                        blendDuration: 0.5
+                                    ),
+                                    value: completionProgress
+                                )
                         }
                         
                         Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
@@ -232,7 +298,11 @@ private struct TaskCard: View {
                         SubtaskRow(
                             subtask: subtask,
                             isCompleted: completedSubtasks.contains(subtask.id),
-                            onToggle: { onToggleSubtask(subtask.id) }
+                            onToggle: {
+                                withAnimation(.spring(response: 0.3)) {
+                                    onToggleSubtask(subtask.id)
+                                }
+                            }
                         )
                     }
                 }
@@ -270,13 +340,6 @@ private struct TaskCard: View {
             return "\(hours)h \(minutes)m"
         }
         return "\(minutes)m"
-    }
-    
-    private var completedSubtasks: Set<UUID> {
-        if let completion = task.completions[viewModel.selectedDate.startOfDay] {
-            return completion.completedSubtasks
-        }
-        return []
     }
 }
 
@@ -335,8 +398,7 @@ private struct SubtaskRow: View {
     var body: some View {
         HStack {
             Button(action: onToggle) {
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isCompleted ? .green : .gray)
+                SubtaskCheckmark(isCompleted: isCompleted)
             }
             .buttonStyle(BorderlessButtonStyle())
             .contentShape(Rectangle())
@@ -349,6 +411,5 @@ private struct SubtaskRow: View {
             
             Spacer()
         }
-    } 
-
-    } 
+    }
+} 

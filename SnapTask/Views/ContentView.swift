@@ -1,27 +1,22 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selectedTab = 0
-    @StateObject private var statisticsViewModel = StatisticsViewModel()
+    @StateObject private var timelineViewModel = TimelineViewModel()
+    @AppStorage("selectedTab") private var selectedTab = 0
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            TimelineView()
+            TimelineView(viewModel: timelineViewModel)
                 .tabItem {
-                    Label("Timeline", systemImage: "clock")
+                    Label("Timeline", systemImage: "calendar")
                 }
                 .tag(0)
             
             StatisticsView()
                 .tabItem {
-                    Label("Statistics", systemImage: "chart.bar")
+                    Label("Stats", systemImage: "chart.bar")
                 }
                 .tag(1)
-                .onChange(of: selectedTab) { oldValue, newValue in
-                    if newValue == 1 {
-                        statisticsViewModel.refreshStats()
-                    }
-                }
             
             SettingsView()
                 .tabItem {

@@ -1,13 +1,13 @@
 import Foundation
 
 struct TodoTask: Identifiable, Codable, Equatable {
-    var id: UUID
+    let id: UUID
     var name: String
     var description: String?
     var startTime: Date
     var duration: TimeInterval
     var hasDuration: Bool
-    var category: Category
+    var category: Category?
     var priority: Priority
     var icon: String
     var recurrence: Recurrence?
@@ -22,7 +22,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         startTime: Date,
         duration: TimeInterval = 0,
         hasDuration: Bool = false,
-        category: Category,
+        category: Category? = nil,
         priority: Priority = .medium,
         icon: String = "circle",
         recurrence: Recurrence? = nil,

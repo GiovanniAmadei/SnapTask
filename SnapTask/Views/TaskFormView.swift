@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct TaskFormView: View {
+    @ObservedObject var viewModel: TaskFormViewModel
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel = TaskFormViewModel()
     @State private var newSubtaskName = ""
     @State private var showingPomodoroSettings = false
     @State private var showDurationPicker = false
@@ -158,20 +158,17 @@ struct TaskFormView: View {
             .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        let task = viewModel.createTask()
+                        TaskManager.shared.addTask(task)
                         dismiss()
                     }
                 }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        if let task = viewModel.createTask() {
-                            onSave(task)
-                            dismiss()
-                        }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
-                    .disabled(!viewModel.isValid)
                 }
             }
             .sheet(isPresented: $showDurationPicker) {
@@ -191,5 +188,5 @@ struct TaskFormView: View {
 }
 
 #Preview {
-    TaskFormView { _ in }
+    TaskFormView(viewModel: TaskFormViewModel()) { _ in }
 } 

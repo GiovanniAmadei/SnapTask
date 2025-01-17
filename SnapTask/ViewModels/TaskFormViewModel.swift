@@ -23,7 +23,8 @@ class TaskFormViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let settingsViewModel = SettingsViewModel.shared
     
-    init() {
+    init(initialDate: Date = Date()) {
+        self.startDate = initialDate
         // Get initial categories
         categories = settingsViewModel.categories
         
@@ -50,16 +51,15 @@ class TaskFormViewModel: ObservableObject {
         !name.isEmpty
     }
     
-    func createTask() -> TodoTask? {
-        guard !name.isEmpty else { return nil }
-        
+    func createTask() -> TodoTask {
         var task = TodoTask(
+            id: UUID(),
             name: name,
             description: description.isEmpty ? nil : description,
             startTime: startDate,
-            duration: hasDuration ? duration : 0,
+            duration: duration,
             hasDuration: hasDuration,
-            category: selectedCategory ?? Category(id: UUID(), name: "Uncategorized", color: "#808080"),
+            category: selectedCategory,
             priority: selectedPriority,
             icon: icon
         )
@@ -71,12 +71,10 @@ class TaskFormViewModel: ObservableObject {
             )
         }
         
-        // Add pomodoro settings if enabled
         if isPomodoroEnabled {
             task.pomodoroSettings = pomodoroSettings
         }
         
-        // Add any subtasks
         task.subtasks = subtasks
         
         return task

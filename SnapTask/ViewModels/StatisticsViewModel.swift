@@ -86,13 +86,15 @@ class StatisticsViewModel: ObservableObject {
         let startOfMonth = calendar.date(byAdding: .month, value: -1, to: today)!
         
         categoryStats = categories.map { category in
-            let categoryTasks = allTasks.filter { $0.category.id == category.id }
+            let categoryTasks = allTasks.filter { task in
+                task.category?.id == category.id
+            }
             let totalHours = categoryTasks.reduce(0.0) { total, task in
                 // Sum up all completed instances of this task
                 let taskHours = task.completions
                     .filter { $0.key >= startOfMonth && $0.value.isCompleted }
                     .reduce(0.0) { sum, completion in
-                        sum + (task.duration / 3600.0)
+                        sum + (task.hasDuration ? task.duration / 3600.0 : 0)
                     }
                 return total + taskHours
             }
