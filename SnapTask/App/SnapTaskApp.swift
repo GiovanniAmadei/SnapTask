@@ -11,11 +11,15 @@ struct SnapTaskApp: App {
             ContentView()
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .onAppear {
-                    quoteManager.checkAndUpdateQuote()
+                    Task {
+                        await quoteManager.checkAndUpdateQuote()
+                    }
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
-                        quoteManager.checkAndUpdateQuote()
+                        Task {
+                            await quoteManager.checkAndUpdateQuote()
+                        }
                     }
                 }
         }

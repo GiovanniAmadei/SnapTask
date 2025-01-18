@@ -1,23 +1,21 @@
 import Foundation
 
-class QuoteService {
+actor QuoteService {
     static let shared = QuoteService()
+    
     private let baseURL = "https://api.quotable.io"
     
     func fetchDailyQuote() async throws -> Quote {
-        guard let url = URL(string: "\(baseURL)/random?tags=inspirational,motivation") else {
-            throw URLError(.badURL)
-        }
-        
+        let url = URL(string: "\(baseURL)/random")!
         let (data, _) = try await URLSession.shared.data(from: url)
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         
-        guard let id = json?["_id"] as? String,
-              let content = json?["content"] as? String,
-              let author = json?["author"] as? String else {
-            throw URLError(.cannotParseResponse)
+        struct QuoteResponse: Codable {
+            let _id: String
+            let content: String
+            let author: String
         }
         
-        return Quote(id: id, content: content, author: author)
+        let response = try JSONDecoder().decode(QuoteResponse.self, from: data)
+        return Quote(id: response._id, content: response.content, author: response.author)
     }
 } 

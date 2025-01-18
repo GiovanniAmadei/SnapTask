@@ -2,34 +2,25 @@ import SwiftUI
 
 struct CategoryEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var settingsViewModel = SettingsViewModel.shared
-    @State private var showingColorPicker = false
-    @State private var editingCategory: Category?
+    @StateObject private var viewModel = SettingsViewModel.shared
     @State private var newCategoryName = ""
-    @State private var selectedColor = "#FF69B4" // Default pink color
-    
-    private let presetColors: [[Color]] = [
-        [.red, .orange, .yellow, .green],
-        [.mint, .teal, .cyan, .blue],
-        [.indigo, .purple, .pink, .brown],
-        [.gray, .black, .white, .clear]
-    ]
+    @State private var selectedColor = "#FF0000"
+    @State private var showingColorPicker = false
+    @State private var editingCategory: Category? = nil
     
     var body: some View {
         List {
-            Section {
+            Section("Add New Category") {
                 HStack {
-                    TextField("New Category", text: $newCategoryName)
+                    TextField("Category Name", text: $newCategoryName)
                     Button("Add") {
-                        if !newCategoryName.isEmpty {
-                            let category = Category(
-                                id: UUID(),
-                                name: newCategoryName,
-                                color: selectedColor
-                            )
-                            settingsViewModel.addCategory(category)
-                            newCategoryName = ""
-                        }
+                        let newCategory = Category(
+                            id: UUID(),
+                            name: newCategoryName,
+                            color: selectedColor
+                        )
+                        viewModel.addCategory(newCategory)
+                        newCategoryName = ""
                     }
                     .disabled(newCategoryName.isEmpty)
                 }
@@ -40,56 +31,35 @@ struct CategoryEditorView: View {
             }
             
             Section {
-                ForEach(settingsViewModel.categories) { category in
+                ForEach(viewModel.categories) { category in
                     HStack {
-                        RoundedRectangle(cornerRadius: 8)
+                        Circle()
                             .fill(Color(hex: category.color))
-                            .frame(width: 44, height: 44)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
-                            )
+                            .frame(width: 24, height: 24)
                         Text(category.name)
-                            .padding(.leading, 8)
                         Spacer()
-                        Button {
+                        Button(action: {
                             editingCategory = category
-                            selectedColor = category.color
-                            showingColorPicker = true
-                        } label: {
+                        }) {
                             Image(systemName: "pencil")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.gray)
                         }
                     }
                 }
                 .onDelete { indexSet in
-                    settingsViewModel.removeCategory(at: indexSet)
+                    viewModel.removeCategory(at: indexSet)
                 }
             }
         }
-        .navigationTitle("Edit Categories")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    dismiss()
-                }
-            }
-        }
-        .sheet(isPresented: $showingColorPicker) {
+        .navigationTitle("Categories")
+        .sheet(item: $editingCategory) { category in
             NavigationStack {
-                ColorPickerView(selectedColor: $selectedColor) { color in
-                    if let category = editingCategory {
-                        var updatedCategory = category
-                        updatedCategory.color = color
-                        settingsViewModel.updateCategory(updatedCategory)
-                        editingCategory = nil
-                    }
-                    selectedColor = color
-                    showingColorPicker = false
+                CategoryFormView(
+                    editingCategory: category
+                ) { updatedCategory in
+                    viewModel.updateCategory(updatedCategory)
                 }
             }
-            .presentationDetents([.medium])
         }
     }
 }

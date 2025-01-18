@@ -37,12 +37,11 @@ class TaskFormViewModel: ObservableObject {
             }
             .store(in: &cancellables)
             
-        // Also observe the SettingsViewModel directly
-        settingsViewModel.$categories
+        // Add CategoryManager observation
+        CategoryManager.shared.$categories
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] newCategories in
-                DispatchQueue.main.async {
-                    self?.categories = newCategories
-                }
+                self?.categories = newCategories
             }
             .store(in: &cancellables)
     }

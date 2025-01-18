@@ -203,6 +203,7 @@ private struct TaskCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var taskManager = TaskManager.shared
     @State private var showingPomodoro = false
+    @State private var isExpanded = false
     @ObservedObject var viewModel: TimelineViewModel
     
     private var isCompleted: Bool {
@@ -223,13 +224,38 @@ private struct TaskCard: View {
         task.completions[viewModel.selectedDate.startOfDay]?.completedSubtasks ?? []
     }
     
+    private var subtaskCountText: String {
+        if task.subtasks.isEmpty { return "" }
+        let completedCount = completedSubtasks.count
+        let totalCount = task.subtasks.count
+        return "\(completedCount)/\(totalCount)"
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(task.name)
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                    HStack(spacing: 8) {
+                        Text(task.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        if !task.subtasks.isEmpty {
+                            HStack(spacing: 4) {
+                                Text(subtaskCountText)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .onTapGesture {
+                                withAnimation {
+                                    isExpanded.toggle()
+                                }
+                            }
+                        }
+                    }
                     
                     if let description = task.description {
                         Text(description)
@@ -242,104 +268,78 @@ private struct TaskCard: View {
                 Spacer()
                 
                 if task.hasDuration && task.duration > 0 {
-                    Text(formatDuration(task.duration))
+                    Text(task.duration.formatted())
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.secondary.opacity(0.1))
-                        .cornerRadius(8)
                 }
                 
                 if task.pomodoroSettings != nil {
                     Button(action: { showingPomodoro = true }) {
                         Image(systemName: "timer")
-                            .foregroundColor(.pink)
+                            .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .gray)
                     }
-                    .buttonStyle(BorderlessButtonStyle())
                 }
                 
                 Button(action: onToggleComplete) {
                     ZStack {
+                        // Background circle
+                        Circle()
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 2)
+                            .frame(width: 32, height: 32)
+                        
+                        // Progress circle
                         if !task.subtasks.isEmpty {
                             Circle()
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 2)
-                                .frame(width: 32, height: 32)
-                            
-                            Circle()
                                 .trim(from: 0, to: completionProgress)
-                                .stroke(.pink, lineWidth: 2)
+                                .stroke(Color.pink, lineWidth: 3)
                                 .frame(width: 32, height: 32)
                                 .rotationEffect(.degrees(-90))
-                                .animation(
-                                    .spring(
-                                        response: 0.6,
-                                        dampingFraction: 0.7,
-                                        blendDuration: 0.5
-                                    ),
-                                    value: completionProgress
-                                )
+                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: completionProgress)
                         }
                         
+                        // Checkmark
                         Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                            .font(.title2)
                             .foregroundColor(isCompleted ? .green : .gray)
-                            .animation(.spring(response: 0.3), value: isCompleted)
+                            .font(.title2)
                     }
                 }
-                .buttonStyle(BorderlessButtonStyle())
-                .contentShape(Rectangle())
                 .frame(width: 44, height: 44)
             }
+            .padding(.vertical, 8)
             
-            if !task.subtasks.isEmpty {
-                VStack(spacing: 4) {
+            if !task.subtasks.isEmpty && isExpanded {
+                VStack(spacing: 12) {
                     ForEach(task.subtasks) { subtask in
-                        SubtaskRow(
-                            subtask: subtask,
-                            isCompleted: completedSubtasks.contains(subtask.id),
-                            onToggle: {
-                                withAnimation(.spring(response: 0.3)) {
-                                    onToggleSubtask(subtask.id)
-                                }
+                        HStack {
+                            Button(action: { onToggleSubtask(subtask.id) }) {
+                                SubtaskCheckmark(isCompleted: completedSubtasks.contains(subtask.id))
+                                    .scaleEffect(0.8)
                             }
-                        )
+                            .buttonStyle(BorderlessButtonStyle())
+                            
+                            Text(subtask.name)
+                                .font(.subheadline)
+                                .foregroundColor(isCompleted ? .secondary : .primary)
+                                .strikethrough(isCompleted)
+                            
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
                     }
                 }
+                .padding(.top, 4)
+                .padding(.bottom, 12)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal)
         .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color(.systemBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(.white)
-                        .opacity(colorScheme == .dark ? 0.1 : 0)
-                )
-                .shadow(
-                    color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.08),
-                    radius: 15,
-                    x: 0,
-                    y: 5
-                )
+            RoundedRectangle(cornerRadius: 12)
+                .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
         )
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
         }
-        .onChange(of: task.completions) { oldValue, newValue in
-            taskManager.updateTask(task)
-        }
-    }
-    
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let hours = Int(seconds) / 3600
-        let minutes = Int(seconds) / 60 % 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
     }
 }
 
@@ -397,7 +397,12 @@ private struct SubtaskRow: View {
     
     var body: some View {
         HStack {
-            Button(action: onToggle) {
+            Button(action: {
+                // Disable implicit animations
+                withAnimation(.none) {
+                    onToggle()
+                }
+            }) {
                 SubtaskCheckmark(isCompleted: isCompleted)
             }
             .buttonStyle(BorderlessButtonStyle())
@@ -411,5 +416,5 @@ private struct SubtaskRow: View {
             
             Spacer()
         }
-    }
-} 
+    } 
+    } 

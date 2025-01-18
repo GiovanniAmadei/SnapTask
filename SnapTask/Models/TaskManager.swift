@@ -59,26 +59,27 @@ class TaskManager: ObservableObject {
     }
     
     func toggleSubtask(taskId: UUID, subtaskId: UUID, on date: Date = Date()) {
-        if let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) {
-            var task = tasks[taskIndex]
-            let startOfDay = date.startOfDay
-            
-            var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
-            
-            // Add a small delay to ensure animations complete
-            DispatchQueue.main.async {
-                if completion.completedSubtasks.contains(subtaskId) {
-                    completion.completedSubtasks.remove(subtaskId)
-                } else {
-                    completion.completedSubtasks.insert(subtaskId)
-                }
-                
-                task.completions[startOfDay] = completion
-                self.tasks[taskIndex] = task
-                self.saveTasks()
-                self.notifyTasksUpdated()
-                self.objectWillChange.send()
-            }
+        guard let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+        
+        var task = tasks[taskIndex]
+        let startOfDay = date.startOfDay
+        
+        var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
+        
+        if completion.completedSubtasks.contains(subtaskId) {
+            completion.completedSubtasks.remove(subtaskId)
+        } else {
+            completion.completedSubtasks.insert(subtaskId)
+        }
+        
+        task.completions[startOfDay] = completion
+        tasks[taskIndex] = task
+        
+        // Ensure UI updates happen on the main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.saveTasks()
+            self?.notifyTasksUpdated()
+            self?.objectWillChange.send()
         }
     }
     

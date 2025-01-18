@@ -23,11 +23,10 @@ class StatisticsViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     private let taskManager: TaskManager
-    private let settingsViewModel: SettingsViewModel
+    private let categoryManager = CategoryManager.shared
     
-    init(taskManager: TaskManager = .shared, settingsViewModel: SettingsViewModel = .shared) {
+    init(taskManager: TaskManager = .shared) {
         self.taskManager = taskManager
-        self.settingsViewModel = settingsViewModel
         setupObservers()
     }
     
@@ -53,17 +52,17 @@ class StatisticsViewModel: ObservableObject {
                 self?.updateStats()
             }
             .store(in: &cancellables)
-            
-        // Listen for task manager updates
-        taskManager.$tasks
+        
+        // Listen for category manager updates
+        categoryManager.$categories
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStats()
             }
             .store(in: &cancellables)
-            
-        // Listen for settings updates
-        settingsViewModel.$categories
+        
+        // Listen for task manager updates
+        taskManager.$tasks
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStats()
@@ -79,7 +78,7 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func updateCategoryStats() {
-        let categories = SettingsViewModel.shared.categories
+        let categories = categoryManager.categories
         let allTasks = taskManager.tasks
         let calendar = Calendar.current
         let today = Date().startOfDay
