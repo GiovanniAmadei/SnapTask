@@ -12,17 +12,23 @@ struct ContentView: View {
                 }
                 .tag(0)
             
+            PomodoroTabView()
+                .tabItem {
+                    Label("Pomodoro", systemImage: "timer")
+                }
+                .tag(1)
+            
             StatisticsView()
                 .tabItem {
                     Label("Stats", systemImage: "chart.bar")
                 }
-                .tag(1)
+                .tag(2)
             
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
-                .tag(2)
+                .tag(3)
         }
     }
 } 

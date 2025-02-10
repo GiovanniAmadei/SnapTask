@@ -14,8 +14,8 @@ class PomodoroViewModel: ObservableObject {
     @Published var state: PomodoroState = .notStarted
     @Published var timeRemaining: TimeInterval
     @Published var currentSession: Int = 1
+    @Published var settings: PomodoroSettings
     
-    let settings: PomodoroSettings
     let totalSessions: Int
     private var timer: AnyCancellable?
     private var startDate: Date?
