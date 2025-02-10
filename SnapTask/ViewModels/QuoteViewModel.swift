@@ -10,9 +10,8 @@ class QuoteViewModel: ObservableObject {
     
     private struct StorageKeys {
         static let lastFetch = "quote_last_fetch"
-        static let content = "quote_content"
+        static let text = "quote_text"
         static let author = "quote_author"
-        static let id = "quote_id"
     }
     
     init() {
@@ -23,13 +22,12 @@ class QuoteViewModel: ObservableObject {
     private func loadSavedQuote() {
         guard let lastFetch = defaults.object(forKey: StorageKeys.lastFetch) as? Date,
               Calendar.current.isDateInToday(lastFetch),
-              let content = defaults.string(forKey: StorageKeys.content),
-              let author = defaults.string(forKey: StorageKeys.author),
-              let id = defaults.string(forKey: StorageKeys.id) else {
+              let text = defaults.string(forKey: StorageKeys.text),
+              let author = defaults.string(forKey: StorageKeys.author) else {
             return
         }
         
-        currentQuote = Quote(id: id, content: content, author: author)
+        currentQuote = Quote(text: text, author: author)
     }
     
     private func fetchNewQuoteIfNeeded() {
@@ -53,9 +51,8 @@ class QuoteViewModel: ObservableObject {
     
     private func saveQuote(_ quote: Quote) {
         defaults.set(Date(), forKey: StorageKeys.lastFetch)
-        defaults.set(quote.content, forKey: StorageKeys.content)
+        defaults.set(quote.text, forKey: StorageKeys.text)
         defaults.set(quote.author, forKey: StorageKeys.author)
-        defaults.set(quote.id, forKey: StorageKeys.id)
     }
     
     func refreshQuote() {

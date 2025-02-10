@@ -2,38 +2,25 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
-    @StateObject private var quoteViewModel = QuoteViewModel()
+    @StateObject private var quoteManager = QuoteManager.shared
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
     
     var body: some View {
         NavigationStack {
             List {
-                // Quote of the Day
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Quote of the Day")
-                            .font(.headline)
-                            .foregroundColor(.pink)
-                        
-                        if quoteViewModel.isLoading {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, alignment: .center)
-                        } else {
-                            let quote = quoteViewModel.currentQuote
-                            Text(quote.content)
-                                .font(.callout)
-                                .italic()
+                Section("Quote of the Day") {
+                    if quoteManager.isLoading {
+                        ProgressView()
+                    } else {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(quoteManager.currentQuote.text)
+                                .font(.body)
                             
-                            Text("— \(quote.author)")
+                            Text("- \(quoteManager.currentQuote.author)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
                         }
-                    }
-                    .padding(.vertical, 8)
-                    .onTapGesture {
-                        quoteViewModel.refreshQuote()
                     }
                 }
                 
@@ -51,11 +38,24 @@ struct SettingsView: View {
                     }
                 }
                 
+                Section("Performance") {
+                    NavigationLink {
+                        BiohackingView()
+                    } label: {
+                        Label("Biohacking", systemImage: "bolt.heart")
+                    }
+                }
+                
                 Section("Appearance") {
                     Toggle("Dark Mode", isOn: $isDarkMode)
                 }
             }
             .navigationTitle("Settings")
+            .onAppear {
+                Task {
+                    await quoteManager.checkAndUpdateQuote()
+                }
+            }
         }
     }
 }

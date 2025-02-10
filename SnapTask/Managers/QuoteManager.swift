@@ -12,11 +12,15 @@ class QuoteManager: ObservableObject {
     private let currentQuoteKey = "currentQuote"
     
     init() {
+        // Initialize with placeholder first
         self.currentQuote = Quote.placeholder
+        
+        // Then try to load saved quote
         if let savedQuote = loadSavedQuote() {
             self.currentQuote = savedQuote
         }
-        // Force fetch on first launch
+        
+        // Check if we need to update the quote
         Task {
             await checkAndUpdateQuote()
         }
@@ -24,6 +28,7 @@ class QuoteManager: ObservableObject {
     
     @MainActor
     func checkAndUpdateQuote() async {
+        // Only update if we haven't updated today
         guard shouldUpdateQuote() else { return }
         
         isLoading = true
@@ -36,6 +41,7 @@ class QuoteManager: ObservableObject {
             updateLastUpdateDate()
         } catch {
             print("Error fetching quote: \(error)")
+            // If there's an error, we'll try again next time
         }
     }
     
@@ -62,5 +68,9 @@ class QuoteManager: ObservableObject {
             return nil
         }
         return quote
+    }
+    
+    func forceUpdateQuote() async {
+        await checkAndUpdateQuote()
     }
 } 

@@ -1,13 +1,12 @@
 import Foundation
 
-struct Quote: Codable, Equatable {
-    let id: String
-    let content: String
+struct Quote: Identifiable, Codable, Equatable {
+    let id = UUID()
+    let text: String
     let author: String
     
     static let placeholder = Quote(
-        id: "placeholder",
-        content: "The best way to predict the future is to create it.",
-        author: "Peter Drucker"
+        text: "The journey of a thousand miles begins with a single step.",
+        author: "Lao Tzu"
     )
 } 
