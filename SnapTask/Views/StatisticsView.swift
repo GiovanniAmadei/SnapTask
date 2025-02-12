@@ -16,14 +16,15 @@ struct StatisticsView: View {
                                     range: range,
                                     isSelected: viewModel.selectedTimeRange == range,
                                     action: {
-                                        withAnimation {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
                                             viewModel.selectedTimeRange = range
                                         }
                                     }
                                 )
                             }
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
                         
                         Chart(viewModel.categoryStats) { stat in
                             SectorMark(
@@ -105,16 +106,26 @@ private struct TimeRangeButton: View {
     var body: some View {
         Button(action: action) {
             Text(range.rawValue)
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded, weight: isSelected ? .semibold : .medium))
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isSelected ? Color.accentColor : Color.clear)
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isSelected ? 
+                            Color.accentColor.opacity(0.15) : 
+                            Color.gray.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(
+                                    isSelected ? Color.accentColor : Color.clear,
+                                    lineWidth: 1.5
+                                )
+                        )
                 )
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .accentColor : .primary)
         }
         .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 } 
