@@ -9,6 +9,15 @@ class SettingsViewModel: ObservableObject {
     
     init() {
         loadPriorities()
+        // Add default categories if none exist
+        if categories.isEmpty {
+            let defaultCategories = [
+                Category(id: UUID(), name: "Work", color: "#FF6B6B"),
+                Category(id: UUID(), name: "Study", color: "#4ECDC4"),
+                Category(id: UUID(), name: "Sport", color: "#45B7D5")
+            ]
+            defaultCategories.forEach { addCategory($0) }
+        }
     }
     
     // MARK: - Categories

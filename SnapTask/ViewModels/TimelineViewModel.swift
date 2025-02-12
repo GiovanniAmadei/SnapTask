@@ -4,7 +4,7 @@ import Combine
 
 class TimelineViewModel: ObservableObject {
     @Published private(set) var tasks: [TodoTask] = []
-    @Published var selectedDate: Date
+    @Published var selectedDate: Date = Date()
     @Published var timelineStartHour: Int = 6
     @Published var timelineEndHour: Int = 22
     private let taskManager = TaskManager.shared
@@ -15,7 +15,6 @@ class TimelineViewModel: ObservableObject {
     @Published private(set) var monthYearString: String = ""
     
     init() {
-        selectedDate = Date()
         updateMonthYearString()
         
         // Update month string whenever selected date changes
@@ -66,9 +65,11 @@ class TimelineViewModel: ObservableObject {
     }
     
     func selectDate(_ offset: Int) {
-        if let newDate = Calendar.current.date(byAdding: .day, value: offset, to: Date()) {
-            selectedDate = newDate
-        }
+        selectedDate = Calendar.current.date(
+            byAdding: .day,
+            value: offset,
+            to: Date()
+        ) ?? Date()
     }
     
     func tasksForSelectedDate() -> [TodoTask] {

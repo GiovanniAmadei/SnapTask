@@ -17,14 +17,16 @@ class TaskFormViewModel: ObservableObject {
     @Published var selectedDays: Set<Int> = []
     @Published var recurrenceEndDate: Date = Date().addingTimeInterval(86400 * 30)
     @Published var isPomodoroEnabled: Bool = false
-    @Published var pomodoroSettings = PomodoroSettings()
+    @Published var pomodoroSettings = PomodoroSettings.defaultSettings
     @Published private(set) var categories: [Category] = []
     
     private var cancellables = Set<AnyCancellable>()
     private let settingsViewModel = SettingsViewModel.shared
     
-    init(initialDate: Date = Date()) {
-        self.startDate = initialDate
+    init(initialDate: Date) {
+        let calendar = Calendar.current
+        let startDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: initialDate) ?? initialDate
+        self.startDate = startDate
         // Get initial categories
         categories = settingsViewModel.categories
         

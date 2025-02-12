@@ -29,7 +29,7 @@ struct TimelineView: View {
                         ScrollViewReader { proxy in
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
-                                    ForEach(-365...365, id: \.self) { offset in // Extended to full year range
+                                    ForEach(-365...365, id: \.self) { offset in
                                         DayCell(
                                             date: Calendar.current.date(
                                                 byAdding: .day,
@@ -37,10 +37,14 @@ struct TimelineView: View {
                                                 to: Date()
                                             ) ?? Date(),
                                             isSelected: offset == selectedDayOffset,
-                                            onTap: {
-                                                selectDay(offset, proxy: proxy)
+                                            offset: offset
+                                        ) { _ in
+                                            withAnimation {
+                                                selectedDayOffset = offset
+                                                viewModel.selectDate(offset)
+                                                proxy.scrollTo(offset, anchor: .center)
                                             }
-                                        )
+                                        }
                                         .id(offset)
                                     }
                                 }
@@ -107,7 +111,11 @@ struct TimelineView: View {
                             let calendar = Calendar.current
                             let today = Date()
                             if let daysDiff = calendar.dateComponents([.day], from: today, to: viewModel.selectedDate).day {
-                                selectDay(daysDiff, proxy: scrollProxy)
+                                withAnimation {
+                                    selectedDayOffset = daysDiff
+                                    viewModel.selectDate(daysDiff)
+                                    scrollProxy?.scrollTo(daysDiff, anchor: .center)
+                                }
                             }
                             showingCalendarPicker = false
                         }
@@ -121,32 +129,23 @@ struct TimelineView: View {
             }
         }
     }
-    
-    private func selectDay(_ offset: Int, proxy: ScrollViewProxy?) {
-        withAnimation {
-            selectedDayOffset = offset
-            viewModel.selectedDate = Calendar.current.date(
-                byAdding: .day,
-                value: offset,
-                to: Date()
-            ) ?? Date()
-            
-            // Ensure the day cell is visible
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation {
-                    proxy?.scrollTo(offset, anchor: .center)
-                }
-            }
-        }
-    }
 }
 
 // Day Cell Component
 private struct DayCell: View {
     let date: Date
     let isSelected: Bool
-    let onTap: () -> Void
+    let offset: Int
+    let action: (Int) -> Void
     
+    // Explicit initializer to handle closure parameter
+    init(date: Date, isSelected: Bool, offset: Int, action: @escaping (Int) -> Void) {
+        self.date = date
+        self.isSelected = isSelected
+        self.offset = offset
+        self.action = action
+    }
+
     var body: some View {
         VStack(spacing: 4) {
             Text(dayName)
@@ -171,21 +170,21 @@ private struct DayCell: View {
                         )
                     ) :
                     AnyShapeStyle(Color.clear))
-                .shadow(color: isSelected ? .pink.opacity(0.3) : .clear, 
-                       radius: 8, x: 0, y: 4)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(isSelected ? Color.clear : Color.gray.opacity(0.2), 
                             lineWidth: 1)
         )
-        .onTapGesture(perform: onTap)
+        .onTapGesture {
+            action(offset)
+        }
     }
     
     private var dayName: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE"
-        return formatter.string(from: date)
+        return formatter.string(from: date).lowercased()
     }
     
     private var dayNumber: String {
@@ -207,7 +206,8 @@ private struct TaskCard: View {
     @ObservedObject var viewModel: TimelineViewModel
     
     private var isCompleted: Bool {
-        if let completion = task.completions[viewModel.selectedDate.startOfDay] {
+        let startOfDay = viewModel.selectedDate.startOfDay
+        if let completion = task.completions[startOfDay] {
             return completion.isCompleted
         }
         return false

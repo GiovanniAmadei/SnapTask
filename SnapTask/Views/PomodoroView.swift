@@ -1,218 +1,122 @@
 import SwiftUI
 
 struct PomodoroView: View {
-    @StateObject private var viewModel: PomodoroViewModel
-    @Environment(\.dismiss) private var dismiss
     let task: TodoTask
+    @State private var timeRemaining: Int
+    @State private var isRunning = false
+    @State private var showSettings = false
+    @State private var currentSession = 1
+    @State private var isBreak = false
     
-    private let workColor: Color
-    private let breakColor: Color
+    private var settings: PomodoroSettings {
+        task.pomodoroSettings ?? PomodoroSettings.defaultSettings
+    }
     
     init(task: TodoTask) {
         self.task = task
-        self._viewModel = StateObject(
-            wrappedValue: PomodoroViewModel(
-                settings: task.pomodoroSettings ?? PomodoroSettings()
-            )
-        )
-        self.workColor = Color(hex: task.category!.color)
-        self.breakColor = .green
+        let initialDuration = Int(task.pomodoroSettings?.workDuration ?? PomodoroSettings.defaultSettings.workDuration)
+        self._timeRemaining = State(initialValue: initialDuration)
     }
     
     var body: some View {
         VStack(spacing: 20) {
-            // Header
-            Text(task.name)
-                .font(.title2)
-                .bold()
-            
-            // Timer Display
             ZStack {
-                // Progress Circle
                 Circle()
                     .stroke(lineWidth: 20)
                     .opacity(0.3)
-                    .foregroundColor(viewModel.state == .working ? workColor : breakColor)
+                    .foregroundColor(.gray)
+                
+                let totalDuration = Int(settings.workDuration)
+                let progress = CGFloat(timeRemaining) / CGFloat(totalDuration)
                 
                 Circle()
-                    .trim(from: 0.0, to: viewModel.progress)
-                    .stroke(style: StrokeStyle(
-                        lineWidth: 20,
-                        lineCap: .round
-                    ))
-                    .foregroundColor(viewModel.state == .working ? workColor : breakColor)
+                    .trim(from: 0, to: progress)
+                    .stroke(style: StrokeStyle(lineWidth: 20, lineCap: .round, lineJoin: .round))
+                    .foregroundColor(isBreak ? .green : .blue)
                     .rotationEffect(Angle(degrees: -90))
-                    .animation(.linear(duration: 0.1), value: viewModel.progress)
+                    .animation(.linear, value: timeRemaining)
                 
-                // Time and Session Display
                 VStack {
-                    Text(timeString(from: viewModel.timeRemaining))
+                    Text(timeString(time: timeRemaining))
                         .font(.system(size: 50, weight: .bold, design: .rounded))
-                        .monospacedDigit()
                     
-                    Text(stateText)
-                        .font(.title3)
-                        .foregroundColor(viewModel.state == .working ? workColor : breakColor)
+                    Text(isBreak ? "Break Time" : "Focus Time")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
                     
-                    if viewModel.state != .notStarted {
-                        Text("Session \(viewModel.currentSession) of \(viewModel.totalSessions)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("Session \(currentSession)/\(settings.sessionsUntilLongBreak)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
             .padding(40)
             
-            // Session Progress Bars
-            VStack(spacing: 2) {
-                // Work sessions
-                GeometryReader { geometry in
-                    HStack(spacing: 2) {
-                        ForEach(0..<viewModel.totalSessions, id: \.self) { session in
-                            let width = sessionWidth(for: geometry, isWork: true, session: session)
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(workColor)
-                                .frame(width: width)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(workColor)
-                                        .frame(width: width * sessionProgress(session: session, isWork: true))
-                                )
-                                .opacity(0.3)
-                        }
-                    }
-                }
-                .frame(height: 8)
-                
-                // Break sessions
-                GeometryReader { geometry in
-                    HStack(spacing: 2) {
-                        ForEach(0..<viewModel.totalSessions, id: \.self) { session in
-                            let width = sessionWidth(for: geometry, isWork: false, session: session)
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(breakColor)
-                                .frame(width: width)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(breakColor)
-                                        .frame(width: width * sessionProgress(session: session, isWork: false))
-                                )
-                                .opacity(0.3)
-                        }
-                    }
-                }
-                .frame(height: 8)
-            }
-            .padding(.horizontal)
-            .animation(.linear(duration: 0.1), value: viewModel.progress)
-            
-            // Controls
             HStack(spacing: 30) {
-                // Stop Button
-                Button(action: viewModel.stop) {
-                    Image(systemName: "stop.fill")
-                        .font(.title)
-                        .foregroundColor(.red)
-                }
-                .opacity(viewModel.state == .notStarted ? 0 : 1)
-                
-                // Play/Pause Button
-                Button(action: {
-                    switch viewModel.state {
-                    case .notStarted:
-                        viewModel.start()
-                    case .working, .onBreak:
-                        viewModel.pause()
-                    case .paused:
-                        viewModel.resume()
-                    case .completed:
-                        break
-                    }
-                }) {
-                    Image(systemName: playPauseIcon)
-                        .font(.title)
-                        .foregroundColor(.primary)
+                Button {
+                    isRunning.toggle()
+                } label: {
+                    Image(systemName: isRunning ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 50))
                 }
                 
-                // Skip Button
-                Button(action: viewModel.skip) {
-                    Image(systemName: "forward.fill")
-                        .font(.title)
-                        .foregroundColor(.primary)
+                Button {
+                    resetTimer()
+                } label: {
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                        .font(.system(size: 50))
                 }
-                .opacity(viewModel.state == .notStarted ? 0 : 1)
             }
-            .padding()
+            
+            Spacer()
         }
         .padding()
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(task.name)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    dismiss()
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gear")
                 }
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            PomodoroSettingsView(settings: .constant(settings))
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            guard isRunning else { return }
+            
+            if timeRemaining > 0 {
+                timeRemaining -= 1
+            } else {
+                handleSessionEnd()
             }
         }
     }
     
-    private var stateText: String {
-        switch viewModel.state {
-        case .notStarted:
-            return "Ready to start"
-        case .working:
-            return "Working"
-        case .onBreak:
-            return "Break Time"
-        case .paused:
-            return "Paused"
-        case .completed:
-            return "Completed!"
-        }
-    }
-    
-    private var playPauseIcon: String {
-        switch viewModel.state {
-        case .notStarted:
-            return "play.fill"
-        case .working, .onBreak:
-            return "pause.fill"
-        case .paused:
-            return "play.fill"
-        case .completed:
-            return "checkmark.circle.fill"
-        }
-    }
-    
-    private func timeString(from timeInterval: TimeInterval) -> String {
-        let minutes = Int(timeInterval) / 60
-        let seconds = Int(timeInterval) % 60
+    private func timeString(time: Int) -> String {
+        let minutes = time / 60
+        let seconds = time % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
-    private func sessionWidth(for geometry: GeometryProxy, isWork: Bool, session: Int) -> CGFloat {
-        let totalTime = viewModel.settings.workDuration * Double(viewModel.totalSessions) +
-            (0..<viewModel.totalSessions).reduce(0.0) { total, sessionIndex in
-                total + (sessionIndex % viewModel.settings.sessionsUntilLongBreak == 0 ?
-                    viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
-            }
-        
-        let sessionTime = isWork ? viewModel.settings.workDuration :
-            (session % viewModel.settings.sessionsUntilLongBreak == 0 ?
-                viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
-        
-        return geometry.size.width * (sessionTime / totalTime)
+    private func resetTimer() {
+        isRunning = false
+        timeRemaining = Int(settings.workDuration)
+        currentSession = 1
+        isBreak = false
     }
     
-    private func sessionProgress(session: Int, isWork: Bool) -> Double {
-        guard session == viewModel.currentSession - 1 else {
-            return viewModel.isSessionCompleted(session: session, isWork: isWork) ? 1 : 0
+    private func handleSessionEnd() {
+        isRunning = false
+        if isBreak {
+            currentSession += 1
+            if currentSession > settings.sessionsUntilLongBreak {
+                // All sessions completed
+                return
+            }
         }
-        
-        if isWork && viewModel.state == .working {
-            return viewModel.progress
-        } else if !isWork && viewModel.state == .onBreak {
-            return viewModel.progress
-        }
-        return viewModel.isSessionCompleted(session: session, isWork: isWork) ? 1 : 0
+        isBreak.toggle()
+        timeRemaining = isBreak ? Int(settings.breakDuration) * 60 : Int(settings.workDuration)
     }
 } 

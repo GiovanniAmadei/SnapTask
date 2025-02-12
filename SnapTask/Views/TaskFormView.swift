@@ -49,50 +49,20 @@ struct TaskFormView: View {
                 
                 Section("Category & Priority") {
                     NavigationLink {
-                        List {
-                            Section {
-                                ForEach(viewModel.categories) { category in
-                                    Button {
-                                        viewModel.selectedCategory = category
-                                    } label: {
-                                        HStack {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color(hex: category.color))
-                                                .frame(width: 44, height: 44)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
-                                                )
-                                            Text(category.name)
-                                                .padding(.leading, 8)
-                                            Spacer()
-                                            if viewModel.selectedCategory?.id == category.id {
-                                                Image(systemName: "checkmark")
-                                                    .foregroundColor(.accentColor)
-                                            }
-                                        }
-                                    }
-                                    .foregroundColor(.primary)
-                                }
-                            }
-                        }
-                        .navigationTitle("Select Category")
+                        CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
                     } label: {
                         HStack {
                             Text("Category")
                             Spacer()
                             if let category = viewModel.selectedCategory {
-                                RoundedRectangle(cornerRadius: 6)
+                                Circle()
                                     .fill(Color(hex: category.color))
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 20, height: 20)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 6)
+                                        Circle()
                                             .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
                                     )
                                 Text(category.name)
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text("None")
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -188,5 +158,8 @@ struct TaskFormView: View {
 }
 
 #Preview {
-    TaskFormView(viewModel: TaskFormViewModel()) { _ in }
+    TaskFormView(
+        viewModel: TaskFormViewModel(initialDate: Date()),
+        onSave: { _ in }
+    )
 } 

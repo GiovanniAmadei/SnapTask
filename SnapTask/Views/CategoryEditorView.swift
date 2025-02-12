@@ -27,15 +27,24 @@ struct CategoryEditorView: View {
             }
             
             Section("Color") {
-                ColorPickerGrid(selectedColor: $selectedColor)
+                ColorPicker("Select Color", selection: Binding(
+                    get: { Color(hex: selectedColor) },
+                    set: { selectedColor = $0.toHex() ?? "#FF0000" }
+                ))
+                .padding(.vertical, 8)
             }
             
             Section {
                 ForEach(viewModel.categories) { category in
                     HStack {
-                        Circle()
-                            .fill(Color(hex: category.color))
-                            .frame(width: 24, height: 24)
+                        Button {
+                            editingCategory = category
+                        } label: {
+                            Circle()
+                                .fill(Color(hex: category.color))
+                                .frame(width: 24, height: 24)
+                        }
+                        .buttonStyle(.plain)
                         Text(category.name)
                         Spacer()
                         Button(action: {
