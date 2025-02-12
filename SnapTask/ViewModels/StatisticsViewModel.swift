@@ -16,10 +16,36 @@ class StatisticsViewModel: ObservableObject {
         let totalTasks: Int
     }
     
+    enum TimeRange: String, CaseIterable {
+        case today = "Today"
+        case week = "Week"
+        case month = "Month"
+        case year = "Year"
+        
+        var dateRange: (start: Date, end: Date) {
+            let calendar = Calendar.current
+            let now = Date()
+            switch self {
+            case .today:
+                return (calendar.startOfDay(for: now), now)
+            case .week:
+                let weekStart = calendar.date(byAdding: .day, value: -7, to: now)!
+                return (weekStart, now)
+            case .month:
+                let monthStart = calendar.date(byAdding: .month, value: -1, to: now)!
+                return (monthStart, now)
+            case .year:
+                let yearStart = calendar.date(byAdding: .year, value: -1, to: now)!
+                return (yearStart, now)
+            }
+        }
+    }
+    
     @Published private(set) var categoryStats: [CategoryStat] = []
     @Published private(set) var weeklyStats: [WeeklyStat] = []
     @Published private(set) var currentStreak: Int = 0
     @Published private(set) var bestStreak: Int = 0
+    @Published var selectedTimeRange: TimeRange = .today
     
     private var cancellables = Set<AnyCancellable>()
     private let taskManager: TaskManager
@@ -68,6 +94,15 @@ class StatisticsViewModel: ObservableObject {
                 self?.updateStats()
             }
             .store(in: &cancellables)
+        
+        // Add time range observer
+        $selectedTimeRange
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateStats()
+            }
+            .store(in: &cancellables)
     }
     
     private func updateStats() {
@@ -80,18 +115,15 @@ class StatisticsViewModel: ObservableObject {
     private func updateCategoryStats() {
         let categories = categoryManager.categories
         let allTasks = taskManager.tasks
-        let calendar = Calendar.current
-        let today = Date().startOfDay
-        let startOfMonth = calendar.date(byAdding: .month, value: -1, to: today)!
+        let (startDate, endDate) = selectedTimeRange.dateRange
         
         categoryStats = categories.map { category in
             let categoryTasks = allTasks.filter { task in
                 task.category?.id == category.id
             }
             let totalHours = categoryTasks.reduce(0.0) { total, task in
-                // Sum up all completed instances of this task
                 let taskHours = task.completions
-                    .filter { $0.key >= startOfMonth && $0.value.isCompleted }
+                    .filter { $0.key >= startDate && $0.key <= endDate && $0.value.isCompleted }
                     .reduce(0.0) { sum, completion in
                         sum + (task.hasDuration ? task.duration / 3600.0 : 0)
                     }
@@ -103,7 +135,7 @@ class StatisticsViewModel: ObservableObject {
                 color: category.color,
                 hours: totalHours
             )
-        }
+        }.filter { $0.hours > 0 }
     }
     
     private func updateWeeklyStats() {

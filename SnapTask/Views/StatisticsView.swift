@@ -8,29 +8,48 @@ struct StatisticsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Time Spent Today") {
-                    Chart(viewModel.categoryStats) { stat in
-                        SectorMark(
-                            angle: .value("Hours", stat.hours),
-                            innerRadius: .ratio(0.618),
-                            angularInset: 1.5
-                        )
-                        .cornerRadius(3)
-                        .foregroundStyle(Color(hex: stat.color))
-                    }
-                    .frame(height: 200)
-                    
-                    ForEach(viewModel.categoryStats) { stat in
-                        HStack {
-                            Circle()
-                                .fill(Color(hex: stat.color))
-                                .frame(width: 12, height: 12)
-                            Text(stat.name)
-                            Spacer()
-                            Text(String(format: "%.1f hrs", stat.hours))
-                                .foregroundColor(.secondary)
+                Section {
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            ForEach(StatisticsViewModel.TimeRange.allCases, id: \.self) { range in
+                                TimeRangeButton(
+                                    range: range,
+                                    isSelected: viewModel.selectedTimeRange == range,
+                                    action: {
+                                        withAnimation {
+                                            viewModel.selectedTimeRange = range
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        
+                        Chart(viewModel.categoryStats) { stat in
+                            SectorMark(
+                                angle: .value("Hours", stat.hours),
+                                innerRadius: .ratio(0.618),
+                                angularInset: 1.5
+                            )
+                            .cornerRadius(3)
+                            .foregroundStyle(Color(hex: stat.color))
+                        }
+                        .frame(height: 200)
+                        
+                        ForEach(viewModel.categoryStats) { stat in
+                            HStack {
+                                Circle()
+                                    .fill(Color(hex: stat.color))
+                                    .frame(width: 12, height: 12)
+                                Text(stat.name)
+                                Spacer()
+                                Text(String(format: "%.1f hrs", stat.hours))
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
+                } header: {
+                    Text("Time Spent \(viewModel.selectedTimeRange.rawValue)")
                 }
                 
                 Section("Task Completion Rate") {
@@ -75,5 +94,27 @@ struct StatisticsView: View {
         .refreshable {
             viewModel.refreshStats()
         }
+    }
+}
+
+private struct TimeRangeButton: View {
+    let range: StatisticsViewModel.TimeRange
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(range.rawValue)
+                .font(.subheadline)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isSelected ? Color.accentColor : Color.clear)
+                )
+                .foregroundColor(isSelected ? .white : .primary)
+        }
+        .buttonStyle(.plain)
     }
 } 
