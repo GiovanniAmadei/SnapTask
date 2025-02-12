@@ -9,39 +9,27 @@ struct CategoryPickerView: View {
     
     var body: some View {
         List {
-            Button {
-                selectedCategory = nil
-                dismiss()
-            } label: {
+            ForEach(settingsViewModel.categories) { category in
                 HStack {
-                    Image(systemName: "xmark.circle")
-                    Text("No Category")
+                    Circle()
+                        .fill(Color(hex: category.color))
+                        .frame(width: 20, height: 20)
+                    Text(category.name)
                     Spacer()
-                    if selectedCategory == nil {
+                    if category.id == selectedCategory?.id {
                         Image(systemName: "checkmark")
                             .foregroundColor(.accentColor)
                     }
                 }
-            }
-            .foregroundColor(.primary)
-            
-            ForEach(settingsViewModel.categories) { category in
-                Button {
-                    selectedCategory = category
-                    dismiss()
-                } label: {
-                    HStack {
-                        Circle()
-                            .fill(Color(hex: category.color))
-                            .frame(width: 20, height: 20)
-                        Text(category.name)
-                        Spacer()
-                        if selectedCategory?.id == category.id {
-                            Image(systemName: "checkmark")
-                        }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if category.id == selectedCategory?.id {
+                        selectedCategory = nil
+                    } else {
+                        selectedCategory = category
                     }
+                    dismiss()
                 }
-                .foregroundColor(.primary)
             }
             
             Button {
