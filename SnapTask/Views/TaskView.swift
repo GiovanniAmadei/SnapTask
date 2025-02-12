@@ -16,12 +16,13 @@ struct TaskView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(task.name)
                         .font(.headline)
                         .foregroundColor(.primary)
+                        .padding(.leading, 8)
                     
                     if let description = task.description {
                         Text(description)
@@ -30,6 +31,7 @@ struct TaskView: View {
                             .lineLimit(1)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Spacer()
                 
@@ -79,6 +81,14 @@ struct TaskView: View {
                 }
             }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, minHeight: 50)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+        )
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
         }

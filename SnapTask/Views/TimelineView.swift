@@ -62,17 +62,21 @@ struct TimelineView: View {
                     // Task List and Add Button
                     ZStack {
                         ScrollView {
-                            LazyVStack(spacing: 16) {
-                                ForEach(viewModel.tasksForSelectedDate()) { task in
-                                    TaskCard(task: task,
-                                           onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
+                            LazyVStack(spacing: 8) {
+                                ForEach(viewModel.tasksForSelectedDate().indices, id: \.self) { index in
+                                    TaskCard(task: viewModel.tasksForSelectedDate()[index],
+                                           onToggleComplete: { viewModel.toggleTaskCompletion(viewModel.tasksForSelectedDate()[index].id) },
                                            onToggleSubtask: { subtaskId in
-                                               viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
+                                               viewModel.toggleSubtask(taskId: viewModel.tasksForSelectedDate()[index].id, subtaskId: subtaskId)
                                            },
                                            viewModel: viewModel)
+                                    .padding(.horizontal, 4)
+                                    .padding(.top, index == 0 ? 8 : 0)
+                                    .padding(.bottom, 0)
+                                    .frame(maxWidth: .infinity)
                                 }
                             }
-                            .padding()
+                            .padding(.horizontal, 4)
                             .padding(.bottom, 100)
                         }
                         
