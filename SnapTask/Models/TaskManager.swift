@@ -12,18 +12,24 @@ class TaskManager: ObservableObject {
     }
     
     func addTask(_ task: TodoTask) {
+        print("Adding task: \(task.name)")
+        print("Has recurrence: \(task.recurrence != nil)")
         tasks.append(task)
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
     }
     
-    func updateTask(_ task: TodoTask) {
-        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+    func updateTask(_ updatedTask: TodoTask) {
+        if let index = tasks.firstIndex(where: { $0.id == updatedTask.id }) {
+            // Preserva i dati di completamento esistenti
+            let existingCompletions = tasks[index].completions
+            var task = updatedTask
+            task.completions = existingCompletions
             tasks[index] = task
+            
             saveTasks()
             notifyTasksUpdated()
-            objectWillChange.send()
         }
     }
     
@@ -39,6 +45,7 @@ class TaskManager: ObservableObject {
             var task = tasks[index]
             let startOfDay = date.startOfDay
             
+            // Aggiorna il completion status
             if let completion = task.completions[startOfDay] {
                 task.completions[startOfDay] = TaskCompletion(
                     isCompleted: !completion.isCompleted,
@@ -51,10 +58,23 @@ class TaskManager: ObservableObject {
                 )
             }
             
+            // Aggiorna completionDates
+            if task.completions[startOfDay]?.isCompleted == true {
+                if !task.completionDates.contains(startOfDay) {
+                    task.completionDates.append(startOfDay)
+                }
+            } else {
+                task.completionDates.removeAll { $0 == startOfDay }
+            }
+            
             tasks[index] = task
-            saveTasks()
-            notifyTasksUpdated()
-            objectWillChange.send()
+            
+            // Forza l'aggiornamento
+            DispatchQueue.main.async { [weak self] in
+                self?.saveTasks()
+                self?.notifyTasksUpdated()
+                self?.objectWillChange.send()
+            }
         }
     }
     

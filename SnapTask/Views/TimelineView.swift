@@ -61,24 +61,22 @@ struct TimelineView: View {
                     
                     // Task List and Add Button
                     ZStack {
-                        ScrollView {
-                            LazyVStack(spacing: 8) {
-                                ForEach(viewModel.tasksForSelectedDate().indices, id: \.self) { index in
-                                    TaskCard(task: viewModel.tasksForSelectedDate()[index],
-                                           onToggleComplete: { viewModel.toggleTaskCompletion(viewModel.tasksForSelectedDate()[index].id) },
-                                           onToggleSubtask: { subtaskId in
-                                               viewModel.toggleSubtask(taskId: viewModel.tasksForSelectedDate()[index].id, subtaskId: subtaskId)
-                                           },
-                                           viewModel: viewModel)
-                                    .padding(.horizontal, 4)
-                                    .padding(.top, index == 0 ? 8 : 0)
-                                    .padding(.bottom, 0)
-                                    .frame(maxWidth: .infinity)
-                                }
+                        List {
+                            ForEach(viewModel.tasksForSelectedDate(), id: \.id) { task in
+                                TaskCard(task: task,
+                                       onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
+                                       onToggleSubtask: { subtaskId in
+                                           viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
+                                       },
+                                       viewModel: viewModel)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
+                                .listRowBackground(Color.clear)
                             }
-                            .padding(.horizontal, 4)
-                            .padding(.bottom, 100)
                         }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 4)
                         
                         // Centered Add Button
                         VStack {
@@ -204,9 +202,9 @@ private struct TaskCard: View {
     let onToggleComplete: () -> Void
     let onToggleSubtask: (UUID) -> Void
     @Environment(\.colorScheme) private var colorScheme
-    @StateObject private var taskManager = TaskManager.shared
     @State private var showingPomodoro = false
     @State private var isExpanded = false
+    @State private var showingEditSheet = false
     @ObservedObject var viewModel: TimelineViewModel
     
     private var isCompleted: Bool {
@@ -236,28 +234,39 @@ private struct TaskCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
+                    HStack(alignment: .center) {
                         Text(task.name)
                             .font(.headline)
                             .foregroundColor(.primary)
                         
+                        // Streak indicator migliorato
+                        if let recurrence = task.recurrence {
+                            HStack(spacing: 2) {
+                                Image(systemName: "flame.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 12))
+                                Text("\(task.currentStreak)")
+                                    .font(.system(.caption, design: .rounded).bold())
+                                    .foregroundColor(.orange)
+                            }
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.orange.opacity(0.15))
+                            )
+                        }
+                        
+                        Spacer()
+                        
+                        // Freccia per espandere se ci sono subtask
                         if !task.subtasks.isEmpty {
-                            HStack(spacing: 4) {
-                                Text(subtaskCountText)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .onTapGesture {
-                                withAnimation {
-                                    isExpanded.toggle()
-                                }
-                            }
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
                     }
                     
@@ -268,6 +277,7 @@ private struct TaskCard: View {
                             .lineLimit(1)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Spacer()
                 
@@ -309,10 +319,12 @@ private struct TaskCard: View {
                 }
                 .frame(width: 44, height: 44)
             }
+            .padding(.horizontal, 12)
             .padding(.vertical, 8)
             
-            if !task.subtasks.isEmpty && isExpanded {
-                VStack(spacing: 12) {
+            // Subtasks (mostrati solo se espanso)
+            if isExpanded && !task.subtasks.isEmpty {
+                VStack(spacing: 8) {
                     ForEach(task.subtasks) { subtask in
                         HStack {
                             Button(action: { onToggleSubtask(subtask.id) }) {
@@ -324,23 +336,56 @@ private struct TaskCard: View {
                             Text(subtask.name)
                                 .font(.subheadline)
                                 .foregroundColor(isCompleted ? .secondary : .primary)
-                                .strikethrough(isCompleted)
                             
                             Spacer()
                         }
                         .contentShape(Rectangle())
+                        .padding(.horizontal, 12)
                     }
                 }
-                .padding(.top, 4)
-                .padding(.bottom, 12)
+                .padding(.vertical, 8)
             }
         }
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, minHeight: 60)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 14)
                 .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
                 .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
         )
+        .contentShape(Rectangle())
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                TaskManager.shared.removeTask(task)
+            } label: {
+                Image(systemName: "trash.circle.fill")
+                    .font(.system(size: 32, weight: .regular))
+                    .foregroundStyle(.red)
+                    .padding(.trailing, -24)
+            }
+            .tint(.clear)
+            
+            Button {
+                showingEditSheet = true
+            } label: {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.system(size: 32, weight: .regular))
+                    .foregroundStyle(.blue)
+                    .padding(.leading, -24)
+            }
+            .tint(.clear)
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            NavigationStack {
+                TaskFormView(initialTask: task)
+            }
+        }
+        .onTapGesture {
+            if !task.subtasks.isEmpty {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            }
+        }
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
         }

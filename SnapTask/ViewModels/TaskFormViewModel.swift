@@ -19,6 +19,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var isPomodoroEnabled: Bool = false
     @Published var pomodoroSettings = PomodoroSettings.defaultSettings
     @Published private(set) var categories: [Category] = []
+    var taskId: UUID?
     
     private var cancellables = Set<AnyCancellable>()
     private let settingsViewModel = SettingsViewModel.shared
@@ -53,8 +54,18 @@ class TaskFormViewModel: ObservableObject {
     }
     
     func createTask() -> TodoTask {
-        var task = TodoTask(
-            id: UUID(),
+        let id = taskId ?? UUID()
+        
+        let recurrence: Recurrence? = isRecurring ? {
+            if isDailyRecurrence {
+                return Recurrence(type: .daily, endDate: recurrenceEndDate)
+            } else {
+                return Recurrence(type: .weekly(days: selectedDays), endDate: recurrenceEndDate)
+            }
+        }() : nil
+        
+        return TodoTask(
+            id: id,
             name: name,
             description: description.isEmpty ? nil : description,
             startTime: startDate,
@@ -62,23 +73,11 @@ class TaskFormViewModel: ObservableObject {
             hasDuration: hasDuration,
             category: selectedCategory,
             priority: selectedPriority,
-            icon: icon
+            icon: icon,
+            recurrence: recurrence,
+            pomodoroSettings: isPomodoroEnabled ? pomodoroSettings : nil,
+            subtasks: subtasks
         )
-        
-        if isRecurring {
-            task.recurrence = Recurrence(
-                type: isDailyRecurrence ? .daily : .weekly(days: selectedDays),
-                endDate: recurrenceEndDate
-            )
-        }
-        
-        if isPomodoroEnabled {
-            task.pomodoroSettings = pomodoroSettings
-        }
-        
-        task.subtasks = subtasks
-        
-        return task
     }
     
     func addSubtask(name: String) {

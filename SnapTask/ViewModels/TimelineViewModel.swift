@@ -17,19 +17,65 @@ class TimelineViewModel: ObservableObject {
     init() {
         updateMonthYearString()
         
-        // Update month string whenever selected date changes
+        // Observe TaskManager changes
+        NotificationCenter.default.publisher(for: .tasksDidUpdate)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshTasks()
+            }
+            .store(in: &cancellables)
+        
+        // Observe selected date changes
         $selectedDate
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateMonthYearString()
+                self?.refreshTasks()
             }
             .store(in: &cancellables)
             
-        taskManager.$tasks
-            .sink { [weak self] tasks in
-                self?.tasks = tasks
+        // Initial load
+        refreshTasks()
+    }
+    
+    private func refreshTasks() {
+        let calendar = Calendar.current
+        _ = calendar.startOfDay(for: selectedDate)
+        
+        tasks = taskManager.tasks.filter { task in
+            // Include tasks specifically for this day
+            if calendar.isDate(task.startTime, inSameDayAs: selectedDate) {
+                return true
             }
-            .store(in: &cancellables)
+            
+            // Include recurring tasks
+            if let recurrence = task.recurrence {
+                // Check if task has started
+                if selectedDate < calendar.startOfDay(for: task.startTime) {
+                    return false
+                }
+                
+                // Check end date if it exists
+                if let endDate = recurrence.endDate, selectedDate > endDate {
+                    return false
+                }
+                
+                switch recurrence.type {
+                case .daily:
+                    return true
+                case .weekly(let days):
+                    let weekday = calendar.component(.weekday, from: selectedDate)
+                    return days.contains(weekday)
+                case .monthly(let days):
+                    let day = calendar.component(.day, from: selectedDate)
+                    return days.contains(day)
+                }
+            }
+            
+            return false
+        }.sorted { $0.startTime < $1.startTime }
+        
+        objectWillChange.send()
     }
     
     func addTask(_ task: TodoTask) {

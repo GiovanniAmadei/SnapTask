@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SubtaskCheckmark: View {
     let isCompleted: Bool
-    @State private var animationTrigger = false
     
     var body: some View {
         ZStack {
@@ -24,16 +23,7 @@ struct SubtaskCheckmark: View {
                 .scaleEffect(isCompleted ? 1 : 0)
                 .opacity(isCompleted ? 1 : 0)
         }
-        .onChange(of: isCompleted) { _, newValue in
-            if newValue {
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                    animationTrigger.toggle()
-                }
-            } else {
-                withAnimation(.easeOut(duration: 0.1)) {
-                    animationTrigger.toggle()
-                }
-            }
-        }
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isCompleted)
+        .contentTransition(.opacity)
     }
 } 

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import OSLog
 
 class PomodoroViewModel: ObservableObject {
     enum PomodoroState {
@@ -17,7 +18,9 @@ class PomodoroViewModel: ObservableObject {
     @Published var settings: PomodoroSettings
     
     let totalSessions: Int
-    private var timer: AnyCancellable?
+    @MainActor private var timer: AnyCancellable? {
+        didSet { Logger.pomodoro.debug("Timer state updated: \(self.timer != nil)") }
+    }
     private var startDate: Date?
     private var pausedTimeRemaining: TimeInterval?
     
@@ -34,9 +37,14 @@ class PomodoroViewModel: ObservableObject {
         let total = state == .working ? settings.workDuration : 
                    (currentSession % settings.sessionsUntilLongBreak == 0 ? 
                     settings.longBreakDuration : settings.breakDuration)
+        guard total > 0 else {
+            Logger.pomodoro.error("Invalid timer duration configuration")
+            return 0
+        }
         return 1 - (timeRemaining / total)
     }
     
+    @MainActor
     func start() {
         guard timer == nil else { return }
         
@@ -54,6 +62,7 @@ class PomodoroViewModel: ObservableObject {
             }
     }
     
+    @MainActor
     func pause() {
         timer?.cancel()
         timer = nil
@@ -62,11 +71,13 @@ class PomodoroViewModel: ObservableObject {
         state = .paused
     }
     
+    @MainActor
     func resume() {
         guard state == .paused else { return }
         start()
     }
     
+    @MainActor
     func skip() {
         if state == .working {
             completedWorkSessions.insert(currentSession - 1)
@@ -80,6 +91,7 @@ class PomodoroViewModel: ObservableObject {
         }
     }
     
+    @MainActor
     func stop() {
         timer?.cancel()
         timer = nil
@@ -88,6 +100,7 @@ class PomodoroViewModel: ObservableObject {
         currentSession = 1
     }
     
+    @MainActor
     private func updateTimer() {
         timeRemaining -= 1
         
@@ -100,6 +113,7 @@ class PomodoroViewModel: ObservableObject {
         }
     }
     
+    @MainActor
     private func completeWorkSession() {
         timer?.cancel()
         timer = nil
@@ -118,6 +132,7 @@ class PomodoroViewModel: ObservableObject {
         start()
     }
     
+    @MainActor
     private func completeBreakSession() {
         timer?.cancel()
         timer = nil
@@ -151,4 +166,13 @@ class PomodoroViewModel: ObservableObject {
             (currentSession % settings.sessionsUntilLongBreak == 0 ? 
                 settings.longBreakDuration : settings.breakDuration)
     }
+    
+    deinit {
+        timer?.cancel()
+        Logger.pomodoro.info("PomodoroViewModel deinitialized")
+    }
+}
+
+private extension Logger {
+    static let pomodoro = Logger(subsystem: "com.yourapp.SnapTask", category: "Pomodoro")
 } 

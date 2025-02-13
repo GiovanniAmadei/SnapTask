@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import OSLog
 
 class StatisticsViewModel: ObservableObject {
     struct CategoryStat: Identifiable {
@@ -184,17 +185,30 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func updateStreaks() {
+        // Improve date calculations using Calendar
         let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let yearAgo = calendar.date(byAdding: .year, value: -1, to: today) else {
+            Logger.stats.error("Date calculation failed")
+            return
+        }
+        
+        // Replace manual date stride with Calendar enumeration
+        var currentDate = yearAgo
+        var dates: [Date] = []
+        
+        while currentDate <= today {
+            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
+            dates.append(currentDate)
+            currentDate = nextDate
+        }
+        
         var currentStreak = 0
         var bestStreak = 0
         var tempStreak = 0
         
-        // Get last 365 days of tasks
-        let today = calendar.startOfDay(for: Date())
-        let yearAgo = calendar.date(byAdding: .year, value: -1, to: today)!
-        
-        let dates = stride(from: today, through: yearAgo, by: -86400).map { date in
-            let startOfDay = date.startOfDay
+        // Calculate streaks
+        for date in dates {
             let dayTasks = taskManager.tasks.filter { task in
                 // Include tasks specifically for this day
                 if calendar.isDate(task.startTime, inSameDayAs: date) {
@@ -216,25 +230,21 @@ class StatisticsViewModel: ObservableObject {
                 return false
             }
             
-            // Check if all tasks for this day were completed
-            return !dayTasks.isEmpty && dayTasks.allSatisfy { task in
-                if let completion = task.completions[startOfDay] {
+            // Fix allSatisfy closure syntax
+            let allCompleted = !dayTasks.isEmpty && dayTasks.allSatisfy { task in
+                if let completion = task.completions[date.startOfDay] {
                     return completion.isCompleted
                 }
                 return false
             }
-        }
-        
-        // Calculate streaks
-        for completed in dates {
-            if completed {
+            
+            if allCompleted {
                 tempStreak += 1
-                currentStreak = tempStreak
                 bestStreak = max(bestStreak, tempStreak)
-            } else {
-                if currentStreak == tempStreak {
-                    currentStreak = 0
+                if calendar.isDateInToday(date) {
+                    currentStreak = tempStreak
                 }
+            } else {
                 tempStreak = 0
             }
         }
@@ -242,4 +252,9 @@ class StatisticsViewModel: ObservableObject {
         self.currentStreak = currentStreak
         self.bestStreak = bestStreak
     }
+}
+
+// Add logger extension at the bottom of the file
+private extension Logger {
+    static let stats = Logger(subsystem: "com.yourapp.SnapTask", category: "Statistics")
 } 

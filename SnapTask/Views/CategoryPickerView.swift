@@ -16,14 +16,14 @@ struct CategoryPickerView: View {
                         .frame(width: 20, height: 20)
                     Text(category.name)
                     Spacer()
-                    if category.id == selectedCategory?.id {
+                    if selectedCategory?.id == category.id {
                         Image(systemName: "checkmark")
                             .foregroundColor(.accentColor)
                     }
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    if category.id == selectedCategory?.id {
+                    if selectedCategory?.id == category.id {
                         selectedCategory = nil
                     } else {
                         selectedCategory = category

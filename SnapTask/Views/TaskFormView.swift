@@ -131,9 +131,14 @@ struct TaskFormView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         let task = viewModel.createTask()
-                        TaskManager.shared.addTask(task)
+                        if viewModel.taskId != nil {
+                            TaskManager.shared.updateTask(task)
+                        } else {
+                            TaskManager.shared.addTask(task)
+                        }
                         dismiss()
                     }
+                    .disabled(!viewModel.isValid)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -154,6 +159,46 @@ struct TaskFormView: View {
             return "\(hours)h \(mins)m"
         }
         return "\(mins)m"
+    }
+}
+
+extension TaskFormView {
+    init(initialTask: TodoTask) {
+        let viewModel = TaskFormViewModel(initialDate: initialTask.startTime)
+        viewModel.taskId = initialTask.id
+        viewModel.name = initialTask.name
+        viewModel.description = initialTask.description ?? ""
+        viewModel.startDate = initialTask.startTime
+        viewModel.hasDuration = initialTask.hasDuration
+        viewModel.duration = initialTask.duration
+        viewModel.selectedCategory = initialTask.category
+        viewModel.selectedPriority = initialTask.priority
+        viewModel.icon = initialTask.icon
+        viewModel.subtasks = initialTask.subtasks
+        viewModel.isRecurring = initialTask.recurrence != nil
+        if let recurrence = initialTask.recurrence {
+            switch recurrence.type {
+            case .daily:
+                viewModel.isDailyRecurrence = true
+            case .weekly(let days):
+                viewModel.isDailyRecurrence = false
+                viewModel.selectedDays = Set(days)
+            case .monthly:
+                break // Gestire se necessario
+            }
+            viewModel.recurrenceEndDate = recurrence.endDate ?? Date().addingTimeInterval(86400 * 30)
+        }
+        viewModel.isPomodoroEnabled = initialTask.pomodoroSettings != nil
+        if let pomodoroSettings = initialTask.pomodoroSettings {
+            viewModel.pomodoroSettings = pomodoroSettings
+        }
+        
+        self.init(
+            viewModel: viewModel,
+            onSave: { updatedTask in
+                TaskManager.shared.updateTask(updatedTask)
+            }
+        )
     }
 }
 
