@@ -1,0 +1,197 @@
+import SwiftUI
+import Foundation
+
+struct TaskCard: View {
+    let task: TodoTask
+    let onToggleComplete: () -> Void
+    let onToggleSubtask: (UUID) -> Void
+    @ObservedObject var viewModel: TimelineViewModel
+    @State private var isExpanded = false
+    @State private var showingPomodoro = false
+    
+    // Calcola se la task è completata per la data corrente
+    private var isCompleted: Bool {
+        if let completion = task.completions[Date().startOfDay] {
+            return completion.isCompleted
+        }
+        return false
+    }
+    
+    // Calcola le subtask completate per la data corrente
+    private var completedSubtasks: Set<UUID> {
+        if let completion = task.completions[Date().startOfDay] {
+            return completion.completedSubtasks
+        }
+        return []
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header della task
+            HStack(alignment: .center) {
+                // Checkmark
+                Button(action: onToggleComplete) {
+                    TaskCheckmark(isCompleted: isCompleted)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+                .contentShape(Rectangle())
+                .frame(width: 24, height: 24)
+                
+                // Titolo e categoria
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(task.name)
+                        .font(.headline)
+                        .foregroundColor(isCompleted ? .secondary : .primary)
+                        .strikethrough(isCompleted)
+                    
+                    if let category = task.category {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color(hex: category.color))
+                                .frame(width: 8, height: 8)
+                            Text(category.name)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // Pulsante Pomodoro (se disponibile)
+                if task.pomodoroSettings != nil {
+                    Button(action: {
+                        showingPomodoro = true
+                    }) {
+                        Image(systemName: "timer")
+                            .foregroundColor(.accentColor)
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color.accentColor.opacity(0.1))
+                            )
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
+                }
+                
+                // Pulsante espandi (se ci sono subtask)
+                if !task.subtasks.isEmpty {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            isExpanded.toggle()
+                        }
+                    }) {
+                        Image(systemName: "chevron.down")
+                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                            .foregroundColor(.secondary)
+                            .padding(8)
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
+                    .padding(.leading, -8) // Spostato più a sinistra
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            
+            // Subtasks (se espanso)
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(task.subtasks) { subtask in
+                        SubtaskRow(
+                            subtask: subtask,
+                            isCompleted: completedSubtasks.contains(subtask.id),
+                            onToggle: {
+                                onToggleSubtask(subtask.id)
+                            }
+                        )
+                        .padding(.horizontal, 12)
+                    }
+                }
+                .padding(.vertical, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
+        .sheet(isPresented: $showingPomodoro) {
+            PomodoroView(task: task)
+        }
+    }
+}
+
+// MARK: - TaskCheckmark
+struct TaskCheckmark: View {
+    let isCompleted: Bool
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(isCompleted ? Color.accentColor : Color.gray.opacity(0.5), lineWidth: 1.5)
+                .frame(width: 22, height: 22)
+            
+            if isCompleted {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 22, height: 22)
+                
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
+    }
+}
+
+// MARK: - SubtaskRow
+struct SubtaskRow: View {
+    let subtask: Subtask
+    let isCompleted: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        HStack {
+            Button(action: onToggle) {
+                SubtaskCheckmark(isCompleted: isCompleted)
+            }
+            .buttonStyle(BorderlessButtonStyle())
+            .contentShape(Rectangle())
+            .frame(width: 20, height: 20)
+            
+            Text(subtask.name)
+                .font(.subheadline)
+                .foregroundColor(isCompleted ? .secondary : .primary)
+                .strikethrough(isCompleted)
+            
+            Spacer()
+        }
+    }
+}
+
+// MARK: - SubtaskCheckmark
+struct SubtaskCheckmark: View {
+    let isCompleted: Bool
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(isCompleted ? Color.accentColor : Color.gray.opacity(0.5), lineWidth: 1.5)
+                .frame(width: 18, height: 18)
+            
+            if isCompleted {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 18, height: 18)
+                
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
+    }
+} 

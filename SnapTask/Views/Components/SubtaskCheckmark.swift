@@ -1,29 +1,31 @@
 import SwiftUI
 
-struct SubtaskCheckmark: View {
+struct TaskSubtaskCheckmark: View {
     let isCompleted: Bool
+    var onToggle: () -> Void
     
     var body: some View {
-        ZStack {
-            // Background circle
-            Circle()
-                .stroke(Color.gray.opacity(0.3), lineWidth: 2)
-                .frame(width: 24, height: 24)
-            
-            // Filled circle
-            Circle()
-                .fill(Color.green)
-                .frame(width: 24, height: 24)
-                .scaleEffect(isCompleted ? 1 : 0)
-            
-            // Checkmark
-            Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
-                .scaleEffect(isCompleted ? 1 : 0)
-                .opacity(isCompleted ? 1 : 0)
+        Button(action: onToggle) {
+            ZStack {
+                Circle()
+                    .strokeBorder(isCompleted ? Color.accentColor : Color.gray, lineWidth: 1.5)
+                    .frame(width: 24, height: 24)
+                
+                if isCompleted {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 16, height: 16)
+                }
+            }
         }
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isCompleted)
-        .contentTransition(.opacity)
+        .buttonStyle(PlainButtonStyle())
     }
+}
+
+#Preview {
+    VStack(spacing: 20) {
+        TaskSubtaskCheckmark(isCompleted: false, onToggle: {})
+        TaskSubtaskCheckmark(isCompleted: true, onToggle: {})
+    }
+    .padding()
 } 

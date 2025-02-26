@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import OSLog
+import Foundation
 
 class StatisticsViewModel: ObservableObject {
     struct CategoryStat: Identifiable {
@@ -47,6 +48,7 @@ class StatisticsViewModel: ObservableObject {
     @Published private(set) var currentStreak: Int = 0
     @Published private(set) var bestStreak: Int = 0
     @Published var selectedTimeRange: TimeRange = .today
+    @Published private(set) var recurringTasks: [TodoTask] = []
     
     private var cancellables = Set<AnyCancellable>()
     private let taskManager: TaskManager
@@ -109,7 +111,8 @@ class StatisticsViewModel: ObservableObject {
     private func updateStats() {
         updateCategoryStats()
         updateWeeklyStats()
-        updateStreaks()
+        updateStreakStats()
+        updateRecurringTasks()
         objectWillChange.send()
     }
     
@@ -154,8 +157,8 @@ class StatisticsViewModel: ObservableObject {
                     return true
                 }
                 // Check if it's a recurring task that should appear on this day
-                if let recurrence = task.recurrence {
-                    switch recurrence.type {
+                if task.recurrence != nil {
+                    switch task.recurrence!.type {
                     case .daily:
                         return true
                     case .weekly(let days):
@@ -184,7 +187,7 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
-    private func updateStreaks() {
+    private func updateStreakStats() {
         // Improve date calculations using Calendar
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -215,8 +218,8 @@ class StatisticsViewModel: ObservableObject {
                     return true
                 }
                 // Include recurring tasks
-                if let recurrence = task.recurrence {
-                    switch recurrence.type {
+                if task.recurrence != nil {
+                    switch task.recurrence!.type {
                     case .daily:
                         return true
                     case .weekly(let days):
@@ -251,6 +254,86 @@ class StatisticsViewModel: ObservableObject {
         
         self.currentStreak = currentStreak
         self.bestStreak = bestStreak
+    }
+    
+    private func updateRecurringTasks() {
+        recurringTasks = taskManager.tasks.filter { $0.recurrence != nil }
+    }
+    
+    func consistencyPoints(for task: TodoTask, in timeRange: TaskConsistencyChartView.TimeRange) -> [(x: CGFloat, y: CGFloat)] {
+        guard task.recurrence != nil else { 
+            print("Task \(task.name) has no recurrence")
+            return [] 
+        }
+        
+        let calendar = Calendar.current
+        let today = Date()
+        var points: [(x: CGFloat, y: CGFloat)] = []
+        
+        // Determine time range to analyze
+        let daysToAnalyze: Int
+        switch timeRange {
+        case .week:
+            daysToAnalyze = 7
+        case .month:
+            daysToAnalyze = 30
+        case .year:
+            daysToAnalyze = 365
+        default:
+            daysToAnalyze = 1
+        }
+        
+        // Start with zero progress
+        var cumulativeProgress: Int = 0
+        
+        // Calculate points for each day in the period
+        for dayOffset in (1-daysToAnalyze)...0 {
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!.startOfDay
+            
+            // Check if task should occur on this date based on recurrence pattern
+            if shouldTaskOccurOnDate(task: task, date: date) {
+                // Update the cumulative progress: +1 if completed, -0 if not completed
+                let isCompleted = task.completions[date]?.isCompleted == true
+                cumulativeProgress = max(0, cumulativeProgress + (isCompleted ? 1 : -1))
+                
+                // Normalize x position between 0 and 1
+                let normalizedX = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
+                
+                points.append((x: normalizedX, y: CGFloat(cumulativeProgress)))
+            }
+        }
+        
+        print("Task: \(task.name) - Generated \(points.count) points, final progress: \(cumulativeProgress)")
+        return points
+    }
+    
+    // Helper function to check if a task should occur on a specific date
+    private func shouldTaskOccurOnDate(task: TodoTask, date: Date) -> Bool {
+        guard let recurrence = task.recurrence else { return false }
+        
+        let calendar = Calendar.current
+        
+        // Check if task has started
+        if date < calendar.startOfDay(for: task.startTime) {
+            return false
+        }
+        
+        // Check end date if it exists
+        if let endDate = recurrence.endDate, date > endDate {
+            return false
+        }
+        
+        // Check recurrence pattern
+        switch recurrence.type {
+        case .daily:
+            return true
+        case .weekly(let days):
+            let weekday = calendar.component(.weekday, from: date)
+            return days.contains(weekday)
+        case .monthly(let days):
+            let day = calendar.component(.day, from: date)
+            return days.contains(day)
+        }
     }
 }
 

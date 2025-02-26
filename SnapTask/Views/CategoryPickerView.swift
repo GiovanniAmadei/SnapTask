@@ -56,7 +56,7 @@ struct CategoryPickerView: View {
         .sheet(item: $editingCategory) { category in
             NavigationStack {
                 CategoryFormView(editingCategory: category) { updatedCategory in
-                    if let index = settingsViewModel.categories.firstIndex(where: { $0.id == updatedCategory.id }) {
+                    if let _ = settingsViewModel.categories.firstIndex(where: { $0.id == updatedCategory.id }) {
                         settingsViewModel.updateCategory(updatedCategory)
                     } else {
                         settingsViewModel.addCategory(updatedCategory)

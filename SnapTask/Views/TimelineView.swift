@@ -11,84 +11,21 @@ struct TimelineView: View {
         NavigationStack {
             GeometryReader { geometry in
                 VStack(spacing: 0) {
-                    // Fixed Month and Date Selector
-                    VStack(spacing: 4) {
-                        HStack {
-                            Text(viewModel.monthYearString)
-                                .font(.title2.bold())
-                            Spacer()
-                            Button(action: { showingCalendarPicker = true }) {
-                                Image(systemName: "calendar")
-                                    .foregroundColor(.pink)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                        
-                        // Date Selector
-                        ScrollViewReader { proxy in
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(-365...365, id: \.self) { offset in
-                                        DayCell(
-                                            date: Calendar.current.date(
-                                                byAdding: .day,
-                                                value: offset,
-                                                to: Date()
-                                            ) ?? Date(),
-                                            isSelected: offset == selectedDayOffset,
-                                            offset: offset
-                                        ) { _ in
-                                            withAnimation {
-                                                selectedDayOffset = offset
-                                                viewModel.selectDate(offset)
-                                                proxy.scrollTo(offset, anchor: .center)
-                                            }
-                                        }
-                                        .id(offset)
-                                    }
-                                }
-                                .padding(.horizontal)
-                            }
-                            .onAppear {
-                                scrollProxy = proxy
-                                proxy.scrollTo(selectedDayOffset, anchor: .center)
-                            }
-                        }
-                    }
+                    // Header con mese e selettore data
+                    TimelineHeaderView(
+                        viewModel: viewModel,
+                        selectedDayOffset: $selectedDayOffset,
+                        showingCalendarPicker: $showingCalendarPicker,
+                        scrollProxy: $scrollProxy
+                    )
                     .background(Color(.systemBackground))
                     .zIndex(1)
                     
-                    // Task List and Add Button
-                    ZStack {
-                        List {
-                            ForEach(viewModel.tasksForSelectedDate(), id: \.id) { task in
-                                TaskCard(task: task,
-                                       onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
-                                       onToggleSubtask: { subtaskId in
-                                           viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
-                                       },
-                                       viewModel: viewModel)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
-                                .listRowBackground(Color.clear)
-                            }
-                        }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                        .padding(.horizontal, 4)
-                        
-                        // Centered Add Button
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                AddTaskButton(isShowingTaskForm: $showingNewTask)
-                                Spacer()
-                            }
-                            .padding(.bottom, 16)
-                        }
-                    }
+                    // Lista task e pulsante aggiungi
+                    TaskListView(
+                        viewModel: viewModel,
+                        showingNewTask: $showingNewTask
+                    )
                 }
             }
             .navigationBarHidden(true)
@@ -101,34 +38,231 @@ struct TimelineView: View {
                 )
             }
             .sheet(isPresented: $showingCalendarPicker) {
-                NavigationStack {
-                    VStack {
-                        DatePicker("",
-                                  selection: $viewModel.selectedDate,
-                                  displayedComponents: [.date])
-                            .datePickerStyle(.graphical)
-                            .padding()
-                        
-                        Button("Done") {
-                            let calendar = Calendar.current
-                            let today = Date()
-                            if let daysDiff = calendar.dateComponents([.day], from: today, to: viewModel.selectedDate).day {
-                                withAnimation {
-                                    selectedDayOffset = daysDiff
-                                    viewModel.selectDate(daysDiff)
-                                    scrollProxy?.scrollTo(daysDiff, anchor: .center)
-                                }
-                            }
-                            showingCalendarPicker = false
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .padding(.bottom)
-                    }
-                    .navigationBarHidden(true)
-                    .presentationDetents([.height(500)])
-                    .presentationDragIndicator(.visible)
+                CalendarPickerView(
+                    selectedDate: $viewModel.selectedDate,
+                    selectedDayOffset: $selectedDayOffset,
+                    viewModel: viewModel,
+                    scrollProxy: scrollProxy
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Header View
+struct TimelineHeaderView: View {
+    @ObservedObject var viewModel: TimelineViewModel
+    @Binding var selectedDayOffset: Int
+    @Binding var showingCalendarPicker: Bool
+    @Binding var scrollProxy: ScrollViewProxy?
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            // Titolo mese e anno
+            HStack {
+                Text(viewModel.monthYearString)
+                    .font(.title2.bold())
+                Spacer()
+                Button(action: { showingCalendarPicker = true }) {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.pink)
                 }
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            
+            // Selettore date orizzontale
+            DateSelectorView(
+                viewModel: viewModel,
+                selectedDayOffset: $selectedDayOffset,
+                scrollProxy: $scrollProxy
+            )
+        }
+    }
+}
+
+// MARK: - Date Selector
+struct DateSelectorView: View {
+    @ObservedObject var viewModel: TimelineViewModel
+    @Binding var selectedDayOffset: Int
+    @Binding var scrollProxy: ScrollViewProxy?
+    @State private var isDragging = false
+    @State private var dragOffset: CGFloat = 0
+    
+    var body: some View {
+        ZStack {
+            // Indicatore centrale fisso (rimosso il rettangolo azzurro)
+            
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(-365...365, id: \.self) { offset in
+                            DayCell(
+                                date: Calendar.current.date(
+                                    byAdding: .day,
+                                    value: offset,
+                                    to: Date()
+                                ) ?? Date(),
+                                isSelected: offset == selectedDayOffset,
+                                offset: offset
+                            ) { _ in
+                                withAnimation {
+                                    selectedDayOffset = offset
+                                    viewModel.selectDate(offset)
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    
+                                    // Assicurati che la data selezionata sia centrata
+                                    proxy.scrollTo(offset, anchor: .center)
+                                }
+                            }
+                            .id(offset)
+                            .scaleEffect(offset == selectedDayOffset ? 1.08 : 1.0)
+                            .animation(.spring(response: 0.3), value: offset == selectedDayOffset)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 6) // Aggiunto padding verticale per evitare il taglio
+                }
+                .onAppear {
+                    scrollProxy = proxy
+                    // Centra la data selezionata all'avvio
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation {
+                            proxy.scrollTo(selectedDayOffset, anchor: .center)
+                        }
+                    }
+                }
+                // Aggiornato per iOS 17+
+                .onChange(of: selectedDayOffset) { _, newValue in
+                    // Centra la data selezionata quando cambia
+                    withAnimation {
+                        proxy.scrollTo(newValue, anchor: .center)
+                    }
+                }
+                .simultaneousGesture(
+                    DragGesture()
+                        .onChanged { value in
+                            isDragging = true
+                            dragOffset = value.translation.width
+                        }
+                        .onEnded { value in
+                            isDragging = false
+                            let velocity = value.predictedEndLocation.x - value.location.x
+                            
+                            if abs(velocity) > 50 {
+                                let direction = velocity > 0 ? -1 : 1
+                                let newOffset = selectedDayOffset + direction
+                                
+                                withAnimation {
+                                    selectedDayOffset = newOffset
+                                    viewModel.selectDate(newOffset)
+                                    proxy.scrollTo(newOffset, anchor: .center)
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                }
+                            } else {
+                                // Calcola l'offset più vicino in base alla posizione di trascinamento
+                                let cellWidth: CGFloat = 62 // 50 (width) + 12 (spacing)
+                                let estimatedOffset = Int(round(dragOffset / cellWidth))
+                                let newOffset = selectedDayOffset - estimatedOffset
+                                
+                                if newOffset != selectedDayOffset {
+                                    withAnimation {
+                                        selectedDayOffset = newOffset
+                                        viewModel.selectDate(newOffset)
+                                        proxy.scrollTo(newOffset, anchor: .center)
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    }
+                                } else {
+                                    // Se non cambia l'offset, assicurati che la vista torni alla posizione centrale
+                                    withAnimation {
+                                        proxy.scrollTo(selectedDayOffset, anchor: .center)
+                                    }
+                                }
+                            }
+                        }
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Task List View
+struct TaskListView: View {
+    @ObservedObject var viewModel: TimelineViewModel
+    @Binding var showingNewTask: Bool
+    
+    var body: some View {
+        ZStack {
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(viewModel.tasksForSelectedDate().indices, id: \.self) { index in
+                        TimelineTaskCard(
+                            task: viewModel.tasksForSelectedDate()[index],
+                            onToggleComplete: { viewModel.toggleTaskCompletion(viewModel.tasksForSelectedDate()[index].id) },
+                            onToggleSubtask: { subtaskId in
+                                viewModel.toggleSubtask(taskId: viewModel.tasksForSelectedDate()[index].id, subtaskId: subtaskId)
+                            },
+                            viewModel: viewModel
+                        )
+                        .padding(.horizontal, 4)
+                        .padding(.top, index == 0 ? 8 : 0)
+                        .padding(.bottom, 0)
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 100)
+            }
+            
+            // Centered Add Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    AddTaskButton(isShowingTaskForm: $showingNewTask)
+                    Spacer()
+                }
+                .padding(.bottom, 16)
+            }
+        }
+    }
+}
+
+// MARK: - Calendar Picker View
+struct CalendarPickerView: View {
+    @Binding var selectedDate: Date
+    @Binding var selectedDayOffset: Int
+    @ObservedObject var viewModel: TimelineViewModel
+    let scrollProxy: ScrollViewProxy?
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack {
+                DatePicker("",
+                          selection: $selectedDate,
+                          displayedComponents: [.date])
+                    .datePickerStyle(.graphical)
+                    .padding()
+                
+                Button("Done") {
+                    let calendar = Calendar.current
+                    let today = Date()
+                    if let daysDiff = calendar.dateComponents([.day], from: today, to: selectedDate).day {
+                        withAnimation {
+                            selectedDayOffset = daysDiff
+                            viewModel.selectDate(daysDiff)
+                            scrollProxy?.scrollTo(daysDiff, anchor: .center)
+                        }
+                    }
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.bottom)
+            }
+            .navigationBarHidden(true)
+            .presentationDetents([.height(500)])
+            .presentationDragIndicator(.visible)
         }
     }
 }
@@ -147,20 +281,25 @@ private struct DayCell: View {
         self.offset = offset
         self.action = action
     }
+    
+    private var isToday: Bool {
+        Calendar.current.isDateInToday(date)
+    }
 
     var body: some View {
         VStack(spacing: 4) {
             Text(dayName)
                 .font(.caption2)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : .secondary)
+                .foregroundColor(isSelected ? .white : (isToday ? .pink : .secondary))
             
             Text(dayNumber)
                 .font(.callout)
                 .fontWeight(.bold)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : (isToday ? .pink : .primary))
         }
         .frame(width: 45, height: 60)
+        .scaleEffect(isSelected ? 1.1 : 1.0)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(isSelected ? 
@@ -171,11 +310,13 @@ private struct DayCell: View {
                             endPoint: .bottom
                         )
                     ) :
-                    AnyShapeStyle(Color.clear))
+                    (isToday ? 
+                        AnyShapeStyle(Color.pink.opacity(0.1)) : 
+                        AnyShapeStyle(Color.clear)))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(isSelected ? Color.clear : Color.gray.opacity(0.2), 
+                .strokeBorder(isSelected ? Color.clear : (isToday ? Color.pink.opacity(0.3) : Color.gray.opacity(0.2)), 
                             lineWidth: 1)
         )
         .onTapGesture {
@@ -197,7 +338,7 @@ private struct DayCell: View {
 }
 
 // Enhanced Task Card
-private struct TaskCard: View {
+private struct TimelineTaskCard: View {
     let task: TodoTask
     let onToggleComplete: () -> Void
     let onToggleSubtask: (UUID) -> Void
@@ -233,9 +374,67 @@ private struct TaskCard: View {
         return "\(completedCount)/\(totalCount)"
     }
     
+    private var currentStreak: Int {
+        guard let recurrence = task.recurrence else { return 0 }
+        
+        // Ottieni la data selezionata
+        let selectedDate = viewModel.selectedDate.startOfDay
+        
+        // Calcola lo streak fino alla data selezionata
+        var streak = 0
+        var currentDate = selectedDate
+        
+        // Controlla se la task è completata nella data selezionata
+        let isCompletedOnSelectedDate = task.completions[selectedDate]?.isCompleted == true
+        
+        // Se la task è completata nella data selezionata, inizia il conteggio da 1
+        if isCompletedOnSelectedDate {
+            streak = 1
+            // Vai indietro di un giorno per continuare il conteggio
+            currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
+        }
+        
+        // Controlla all'indietro per trovare lo streak
+        while true {
+            // Verifica se la data corrente è una data in cui la task dovrebbe essere eseguita
+            guard recurrence.shouldOccurOn(date: currentDate) else {
+                // Se la task non doveva essere eseguita in questa data, passa alla data precedente
+                currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
+                continue
+            }
+            
+            // Verifica se la task è stata completata in questa data
+            if task.completions[currentDate]?.isCompleted == true {
+                streak += 1
+                currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
+            } else {
+                // Lo streak è interrotto
+                break
+            }
+        }
+        
+        return streak
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
+                // Barra colorata della categoria
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                task.category.map { Color(hex: $0.color) } ?? .gray,
+                                task.category.map { Color(hex: $0.color).opacity(0.7) } ?? .gray.opacity(0.7)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 4)
+                    .cornerRadius(2)
+                    .padding(.vertical, 4)
+                
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .center) {
                         Text(task.name)
@@ -243,12 +442,12 @@ private struct TaskCard: View {
                             .foregroundColor(.primary)
                         
                         // Streak indicator migliorato
-                        if let recurrence = task.recurrence {
+                        if task.recurrence != nil && currentStreak > 0 {
                             HStack(spacing: 2) {
                                 Image(systemName: "flame.fill")
                                     .foregroundColor(.orange)
                                     .font(.system(size: 12))
-                                Text("\(task.currentStreak)")
+                                Text("\(currentStreak)")
                                     .font(.system(.caption, design: .rounded).bold())
                                     .foregroundColor(.orange)
                             }
@@ -264,9 +463,11 @@ private struct TaskCard: View {
                         
                         // Freccia per espandere se ci sono subtask
                         if !task.subtasks.isEmpty {
-                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                                .font(.caption)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 12))
                                 .foregroundColor(.secondary)
+                                .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                                .animation(.easeInOut(duration: 0.2), value: isExpanded)
                         }
                     }
                     
@@ -294,7 +495,11 @@ private struct TaskCard: View {
                     }
                 }
                 
-                Button(action: onToggleComplete) {
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        onToggleComplete()
+                    }
+                }) {
                     ZStack {
                         // Background circle
                         Circle()
@@ -317,6 +522,7 @@ private struct TaskCard: View {
                             .font(.title2)
                     }
                 }
+                .buttonStyle(BorderlessButtonStyle())
                 .frame(width: 44, height: 44)
             }
             .padding(.horizontal, 12)
@@ -326,21 +532,11 @@ private struct TaskCard: View {
             if isExpanded && !task.subtasks.isEmpty {
                 VStack(spacing: 8) {
                     ForEach(task.subtasks) { subtask in
-                        HStack {
-                            Button(action: { onToggleSubtask(subtask.id) }) {
-                                SubtaskCheckmark(isCompleted: completedSubtasks.contains(subtask.id))
-                                    .scaleEffect(0.8)
-                            }
-                            .buttonStyle(BorderlessButtonStyle())
-                            
-                            Text(subtask.name)
-                                .font(.subheadline)
-                                .foregroundColor(isCompleted ? .secondary : .primary)
-                            
-                            Spacer()
-                        }
-                        .contentShape(Rectangle())
-                        .padding(.horizontal, 12)
+                        TimelineSubtaskRow(
+                            subtask: subtask,
+                            isCompleted: completedSubtasks.contains(subtask.id),
+                            onToggle: { onToggleSubtask(subtask.id) }
+                        )
                     }
                 }
                 .padding(.vertical, 8)
@@ -357,20 +553,28 @@ private struct TaskCard: View {
             Button(role: .destructive) {
                 TaskManager.shared.removeTask(task)
             } label: {
-                Image(systemName: "trash.circle.fill")
-                    .font(.system(size: 32, weight: .regular))
-                    .foregroundStyle(.red)
-                    .padding(.trailing, -24)
+                Image(systemName: "trash")
+                    .font(.system(size: 16, weight: .medium))
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(Color.red.opacity(0.9))
+                    )
+                    .foregroundStyle(.white)
             }
             .tint(.clear)
             
             Button {
                 showingEditSheet = true
             } label: {
-                Image(systemName: "pencil.circle.fill")
-                    .font(.system(size: 32, weight: .regular))
-                    .foregroundStyle(.blue)
-                    .padding(.leading, -24)
+                Image(systemName: "pencil")
+                    .font(.system(size: 16, weight: .medium))
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(Color.blue.opacity(0.9))
+                    )
+                    .foregroundStyle(.white)
             }
             .tint(.clear)
         }
@@ -439,7 +643,7 @@ private struct AddTaskButton: View {
     }
 }
 
-private struct SubtaskRow: View {
+private struct TimelineSubtaskRow: View {
     let subtask: Subtask
     let isCompleted: Bool
     let onToggle: () -> Void
@@ -461,9 +665,9 @@ private struct SubtaskRow: View {
             Text(subtask.name)
                 .font(.subheadline)
                 .foregroundColor(isCompleted ? .secondary : .primary)
-                .strikethrough(isCompleted)
             
             Spacer()
         }
-    } 
-    } 
+        .padding(.leading, 16) // Add more padding to move subtasks to the right
+    }
+} 

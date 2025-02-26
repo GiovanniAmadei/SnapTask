@@ -16,6 +16,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var completions: [Date: TaskCompletion] = [:]
     var subtasks: [Subtask] = []
     var completionDates: [Date] = []
+    var creationDate: Date = Date()
     
     init(
         id: UUID = UUID(),

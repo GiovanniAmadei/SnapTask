@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 class QuoteManager: ObservableObject {
     static let shared = QuoteManager()
@@ -10,6 +11,22 @@ class QuoteManager: ObservableObject {
     
     private let lastUpdateDateKey = "lastQuoteUpdateDate"
     private let currentQuoteKey = "currentQuote"
+    
+    // Collection of fallback motivational quotes
+    private let fallbackQuotes: [Quote] = [
+        Quote(text: "The only way to do great work is to love what you do.", author: "Steve Jobs"),
+        Quote(text: "Success is not final, failure is not fatal: It is the courage to continue that counts.", author: "Winston Churchill"),
+        Quote(text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt"),
+        Quote(text: "Your time is limited, don't waste it living someone else's life.", author: "Steve Jobs"),
+        Quote(text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt"),
+        Quote(text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius"),
+        Quote(text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson"),
+        Quote(text: "The only limit to our realization of tomorrow is our doubts of today.", author: "Franklin D. Roosevelt"),
+        Quote(text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney"),
+        Quote(text: "If you're going through hell, keep going.", author: "Winston Churchill")
+    ]
+    
+    private var cancellables = Set<AnyCancellable>()
     
     init() {
         // Initialize with placeholder first
@@ -24,6 +41,16 @@ class QuoteManager: ObservableObject {
         Task {
             await checkAndUpdateQuote()
         }
+        
+        // Set up a timer to refresh the quote daily
+        Timer.publish(every: 86400, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                Task { [weak self] in
+                    await self?.checkAndUpdateQuote()
+                }
+            }
+            .store(in: &cancellables)
     }
     
     @MainActor
@@ -41,7 +68,10 @@ class QuoteManager: ObservableObject {
             updateLastUpdateDate()
         } catch {
             print("Error fetching quote: \(error)")
-            // If there's an error, we'll try again next time
+            // If there's an error, use a random fallback quote
+            currentQuote = fallbackQuotes.randomElement() ?? Quote.placeholder
+            saveCurrentQuote()
+            updateLastUpdateDate()
         }
     }
     
@@ -68,6 +98,12 @@ class QuoteManager: ObservableObject {
             return nil
         }
         return quote
+    }
+    
+    func refreshQuote() {
+        Task {
+            await checkAndUpdateQuote()
+        }
     }
     
     func forceUpdateQuote() async {

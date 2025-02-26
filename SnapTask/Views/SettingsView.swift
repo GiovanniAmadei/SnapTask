@@ -10,18 +10,34 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section("Quote of the Day") {
-                    if quoteManager.isLoading {
-                        ProgressView()
-                    } else {
-                        VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if quoteManager.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 8)
+                        } else {
                             Text(quoteManager.currentQuote.text)
                                 .font(.body)
+                                .italic()
                             
                             Text("- \(quoteManager.currentQuote.author)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
+                        
+                        Button {
+                            Task {
+                                await quoteManager.checkAndUpdateQuote()
+                            }
+                        } label: {
+                            Label("New Quote", systemImage: "arrow.clockwise")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        .padding(.top, 4)
                     }
+                    .padding(.vertical, 4)
                 }
                 
                 Section("Customization") {

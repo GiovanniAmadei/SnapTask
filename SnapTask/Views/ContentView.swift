@@ -18,7 +18,7 @@ struct ContentView: View {
                 }
                 .tag(1)
             
-            StatisticsView()
+            TaskStatisticsView()
                 .tabItem {
                     Label("Stats", systemImage: "chart.bar")
                 }
