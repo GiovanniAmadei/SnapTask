@@ -26,10 +26,12 @@ struct TaskStatisticsView: View {
                     weeklyStatsView
                 }
                 
-                Section {
-                    // Consistency chart modificato
-                    TaskConsistencyChartView(viewModel: viewModel)
-                }
+                // Remove the Section wrapper completely
+                TaskConsistencyView(viewModel: viewModel)
+                    .listRowInsets(EdgeInsets()) // Remove all insets
+                    .padding(0) // Remove all padding
+                    .background(Color.clear) // Clear background
+                    .listRowBackground(Color.clear) // Clear row background
                 
                 Section {
                     // Streak info

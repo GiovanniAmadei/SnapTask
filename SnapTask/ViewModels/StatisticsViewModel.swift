@@ -279,8 +279,6 @@ class StatisticsViewModel: ObservableObject {
             daysToAnalyze = 30
         case .year:
             daysToAnalyze = 365
-        default:
-            daysToAnalyze = 1
         }
         
         // Start with zero progress

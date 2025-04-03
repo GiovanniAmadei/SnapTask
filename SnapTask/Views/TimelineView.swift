@@ -342,11 +342,13 @@ private struct TimelineTaskCard: View {
     let task: TodoTask
     let onToggleComplete: () -> Void
     let onToggleSubtask: (UUID) -> Void
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var showingPomodoro = false
-    @State private var isExpanded = false
-    @State private var showingEditSheet = false
     @ObservedObject var viewModel: TimelineViewModel
+    @State private var isExpanded = false
+    @State private var showingPomodoro = false
+    @State private var showingEditSheet = false
+    @State private var offset: CGFloat = 0
+    @State private var showingActions = false
+    @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
         let startOfDay = viewModel.selectedDate.startOfDay
@@ -417,177 +419,232 @@ private struct TimelineTaskCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .center, spacing: 8) {
-                // Barra colorata della categoria
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                task.category.map { Color(hex: $0.color) } ?? .gray,
-                                task.category.map { Color(hex: $0.color).opacity(0.7) } ?? .gray.opacity(0.7)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(width: 4)
-                    .cornerRadius(2)
-                    .padding(.vertical, 4)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .center) {
-                        Text(task.name)
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        // Streak indicator migliorato
-                        if task.recurrence != nil && currentStreak > 0 {
-                            HStack(spacing: 2) {
-                                Image(systemName: "flame.fill")
-                                    .foregroundColor(.orange)
-                                    .font(.system(size: 12))
-                                Text("\(currentStreak)")
-                                    .font(.system(.caption, design: .rounded).bold())
-                                    .foregroundColor(.orange)
-                            }
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.orange.opacity(0.15))
+        ZStack {
+            // Contenuto principale della card
+            VStack(alignment: .leading, spacing: 2) {
+                // Task header
+                HStack(alignment: .center, spacing: 8) {
+                    // Barra colorata della categoria
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    task.category.map { Color(hex: $0.color) } ?? .gray,
+                                    task.category.map { Color(hex: $0.color).opacity(0.7) } ?? .gray.opacity(0.7)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
+                        )
+                        .frame(width: 4)
+                        .cornerRadius(2)
+                        .padding(.vertical, 4)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .center) {
+                            Text(task.name)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            // Streak indicator migliorato
+                            if task.recurrence != nil && currentStreak > 0 {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "flame.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.system(size: 12))
+                                    Text("\(currentStreak)")
+                                        .font(.system(.caption, design: .rounded).bold())
+                                        .foregroundColor(.orange)
+                                }
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color.orange.opacity(0.15))
+                                )
+                            }
+                            
+                            Spacer()
+                            
+                            // Freccia per espandere se ci sono subtask
+                            if !task.subtasks.isEmpty {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                                    .animation(.easeInOut(duration: 0.2), value: isExpanded)
+                            }
                         }
                         
-                        Spacer()
-                        
-                        // Freccia per espandere se ci sono subtask
-                        if !task.subtasks.isEmpty {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 12))
+                        if let description = task.description {
+                            Text(description)
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
-                                .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                                .animation(.easeInOut(duration: 0.2), value: isExpanded)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Spacer()
+                    
+                    if task.hasDuration && task.duration > 0 {
+                        Text(task.duration.formatted())
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if task.pomodoroSettings != nil {
+                        Button(action: { showingPomodoro = true }) {
+                            Image(systemName: "timer")
+                                .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .gray)
                         }
                     }
                     
-                    if let description = task.description {
-                        Text(description)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                
-                Spacer()
-                
-                if task.hasDuration && task.duration > 0 {
-                    Text(task.duration.formatted())
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                if task.pomodoroSettings != nil {
-                    Button(action: { showingPomodoro = true }) {
-                        Image(systemName: "timer")
-                            .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .gray)
-                    }
-                }
-                
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        onToggleComplete()
-                    }
-                }) {
-                    ZStack {
-                        // Background circle
-                        Circle()
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 2)
-                            .frame(width: 32, height: 32)
-                        
-                        // Progress circle
-                        if !task.subtasks.isEmpty {
-                            Circle()
-                                .trim(from: 0, to: completionProgress)
-                                .stroke(Color.pink, lineWidth: 3)
-                                .frame(width: 32, height: 32)
-                                .rotationEffect(.degrees(-90))
-                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: completionProgress)
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            onToggleComplete()
                         }
-                        
-                        // Checkmark
-                        Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(isCompleted ? .green : .gray)
-                            .font(.title2)
+                    }) {
+                        ZStack {
+                            // Background circle
+                            Circle()
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 2)
+                                .frame(width: 32, height: 32)
+                            
+                            // Progress circle
+                            if !task.subtasks.isEmpty {
+                                Circle()
+                                    .trim(from: 0, to: completionProgress)
+                                    .stroke(Color.pink, lineWidth: 3)
+                                    .frame(width: 32, height: 32)
+                                    .rotationEffect(.degrees(-90))
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: completionProgress)
+                            }
+                            
+                            // Checkmark
+                            Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(isCompleted ? .green : .gray)
+                                .font(.title2)
+                        }
                     }
+                    .buttonStyle(BorderlessButtonStyle())
+                    .frame(width: 44, height: 44)
                 }
-                .buttonStyle(BorderlessButtonStyle())
-                .frame(width: 44, height: 44)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            
-            // Subtasks (mostrati solo se espanso)
-            if isExpanded && !task.subtasks.isEmpty {
-                VStack(spacing: 8) {
-                    ForEach(task.subtasks) { subtask in
-                        TimelineSubtaskRow(
-                            subtask: subtask,
-                            isCompleted: completedSubtasks.contains(subtask.id),
-                            onToggle: { onToggleSubtask(subtask.id) }
-                        )
-                    }
-                }
+                .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+                
+                // Subtasks (mostrati solo se espanso)
+                if isExpanded && !task.subtasks.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(task.subtasks) { subtask in
+                            TimelineSubtaskRow(
+                                subtask: subtask,
+                                isCompleted: completedSubtasks.contains(subtask.id),
+                                onToggle: { onToggleSubtask(subtask.id) }
+                            )
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
             }
-        }
-        .frame(maxWidth: .infinity, minHeight: 60)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
-                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-        )
-        .contentShape(Rectangle())
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                TaskManager.shared.removeTask(task)
-            } label: {
-                Image(systemName: "trash")
-                    .font(.system(size: 16, weight: .medium))
-                    .padding(8)
-                    .background(
-                        Circle()
-                            .fill(Color.red.opacity(0.9))
-                    )
-                    .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                    .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+            )
+            .offset(x: offset)
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 30)
+                    .onChanged { value in
+                        if abs(value.translation.width) > abs(value.translation.height) * 2.0 {
+                            withAnimation {
+                                offset = value.translation.width < 0 ? value.translation.width : 0
+                            }
+                        }
+                    }
+                    .onEnded { value in
+                        withAnimation {
+                            if value.translation.width < -60 && abs(value.translation.width) > abs(value.translation.height) * 2.0 {
+                                offset = -80
+                                showingActions = true
+                            } else {
+                                // Reset position
+                                offset = 0
+                                showingActions = false
+                            }
+                        }
+                    }
+            )
+            .overlay(
+                HStack(spacing: 0) {
+                    Spacer()
+                    
+                    // Edit button
+                    Button(action: {
+                        showingEditSheet = true
+                        withAnimation(.spring()) {
+                            offset = 0
+                        }
+                    }) {
+                        ZStack {
+                            Rectangle()
+                                .fill(Color.blue)
+                                .frame(width: 80)
+                            
+                            VStack(spacing: 4) {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 16, weight: .medium))
+                                Text("Edit")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.white)
+                        }
+                    }
+                    
+                    // Delete button
+                    Button(action: {
+                        withAnimation(.spring()) {
+                            TaskManager.shared.removeTask(task)
+                            offset = 0
+                        }
+                    }) {
+                        ZStack {
+                            Rectangle()
+                                .fill(Color.red)
+                                .frame(width: 80)
+                            
+                            VStack(spacing: 4) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 16, weight: .medium))
+                                Text("Delete")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.white)
+                        }
+                    }
+                }
+                .frame(height: 80)
+                .opacity(showingActions ? 1 : 0)
+                .disabled(!showingActions)
+                , alignment: .trailing
+            )
+            // Tap per chiudere il menu se aperto, altrimenti espandi/collassa
+            .onTapGesture {
+                if offset < 0 {
+                    withAnimation(.spring()) {
+                        offset = 0
+                    }
+                } else if !task.subtasks.isEmpty {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isExpanded.toggle()
+                    }
+                }
             }
-            .tint(.clear)
-            
-            Button {
-                showingEditSheet = true
-            } label: {
-                Image(systemName: "pencil")
-                    .font(.system(size: 16, weight: .medium))
-                    .padding(8)
-                    .background(
-                        Circle()
-                            .fill(Color.blue.opacity(0.9))
-                    )
-                    .foregroundStyle(.white)
-            }
-            .tint(.clear)
         }
         .sheet(isPresented: $showingEditSheet) {
             NavigationStack {
                 TaskFormView(initialTask: task)
-            }
-        }
-        .onTapGesture {
-            if !task.subtasks.isEmpty {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
-                }
             }
         }
         .sheet(isPresented: $showingPomodoro) {

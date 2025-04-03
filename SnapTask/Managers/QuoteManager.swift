@@ -5,7 +5,7 @@ import Combine
 class QuoteManager: ObservableObject {
     static let shared = QuoteManager()
     
-    @Published private(set) var currentQuote: Quote
+    @Published private(set) var currentQuote: SnapTask.Quote
     @Published private(set) var isLoading = false
     private let service = QuoteService.shared
     
@@ -13,24 +13,24 @@ class QuoteManager: ObservableObject {
     private let currentQuoteKey = "currentQuote"
     
     // Collection of fallback motivational quotes
-    private let fallbackQuotes: [Quote] = [
-        Quote(text: "The only way to do great work is to love what you do.", author: "Steve Jobs"),
-        Quote(text: "Success is not final, failure is not fatal: It is the courage to continue that counts.", author: "Winston Churchill"),
-        Quote(text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt"),
-        Quote(text: "Your time is limited, don't waste it living someone else's life.", author: "Steve Jobs"),
-        Quote(text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt"),
-        Quote(text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius"),
-        Quote(text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson"),
-        Quote(text: "The only limit to our realization of tomorrow is our doubts of today.", author: "Franklin D. Roosevelt"),
-        Quote(text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney"),
-        Quote(text: "If you're going through hell, keep going.", author: "Winston Churchill")
+    private let fallbackQuotes: [SnapTask.Quote] = [
+        SnapTask.Quote(text: "The only way to do great work is to love what you do.", author: "Steve Jobs"),
+        SnapTask.Quote(text: "Success is not final, failure is not fatal: It is the courage to continue that counts.", author: "Winston Churchill"),
+        SnapTask.Quote(text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt"),
+        SnapTask.Quote(text: "Your time is limited, don't waste it living someone else's life.", author: "Steve Jobs"),
+        SnapTask.Quote(text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt"),
+        SnapTask.Quote(text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius"),
+        SnapTask.Quote(text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson"),
+        SnapTask.Quote(text: "The only limit to our realization of tomorrow is our doubts of today.", author: "Franklin D. Roosevelt"),
+        SnapTask.Quote(text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney"),
+        SnapTask.Quote(text: "If you're going through hell, keep going.", author: "Winston Churchill")
     ]
     
     private var cancellables = Set<AnyCancellable>()
     
     init() {
         // Initialize with placeholder first
-        self.currentQuote = Quote.placeholder
+        self.currentQuote = SnapTask.Quote.placeholder
         
         // Then try to load saved quote
         if let savedQuote = loadSavedQuote() {
@@ -69,7 +69,7 @@ class QuoteManager: ObservableObject {
         } catch {
             print("Error fetching quote: \(error)")
             // If there's an error, use a random fallback quote
-            currentQuote = fallbackQuotes.randomElement() ?? Quote.placeholder
+            currentQuote = fallbackQuotes.randomElement() ?? SnapTask.Quote.placeholder
             saveCurrentQuote()
             updateLastUpdateDate()
         }
@@ -92,9 +92,9 @@ class QuoteManager: ObservableObject {
         }
     }
     
-    private func loadSavedQuote() -> Quote? {
+    private func loadSavedQuote() -> SnapTask.Quote? {
         guard let data = UserDefaults.standard.data(forKey: currentQuoteKey),
-              let quote = try? JSONDecoder().decode(Quote.self, from: data) else {
+              let quote = try? JSONDecoder().decode(SnapTask.Quote.self, from: data) else {
             return nil
         }
         return quote

@@ -101,21 +101,24 @@ struct TaskRowView: View {
             .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
             .contentShape(Rectangle())
             .offset(x: offset)
-            .gesture(DragGesture()
-                .onChanged { gesture in
-                    if gesture.translation.width < 0 {
-                        offset = max(gesture.translation.width, -100)
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.spring()) {
-                        if offset < -50 {
-                            offset = -100
-                        } else {
-                            offset = 0
+            .gesture(
+                DragGesture()
+                    .onChanged { gesture in
+                        if gesture.translation.width < 0 {
+                            withAnimation(.spring()) {
+                                offset = max(-100, gesture.translation.width)
+                            }
                         }
                     }
-                }
+                    .onEnded { gesture in
+                        withAnimation(.spring()) {
+                            if offset < -50 {
+                                offset = -100
+                            } else {
+                                offset = 0
+                            }
+                        }
+                    }
             )
             .overlay(
                 HStack(spacing: -8) {
