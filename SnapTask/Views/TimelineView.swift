@@ -190,6 +190,8 @@ struct DateSelectorView: View {
 struct TaskListView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var showingNewTask: Bool
+    @StateObject private var pomodoroViewModel = PomodoroViewModel.shared
+    @State private var showingActivePomodoroSession = false
     
     var body: some View {
         ZStack {
@@ -214,15 +216,32 @@ struct TaskListView: View {
                 .padding(.bottom, 100)
             }
             
-            // Centered Add Button
+            // Centered Add Button and Active Pomodoro Widget
             VStack {
                 Spacer()
-                HStack {
-                    Spacer()
+                
+                // Position the floating widget above the add button
+                VStack(spacing: 0) {
+                    // Active Pomodoro Widget (if available)
+                    if pomodoroViewModel.hasActiveTask {
+                        MiniPomodoroWidget(viewModel: pomodoroViewModel) {
+                            showingActivePomodoroSession = true
+                        }
+                        .padding(.bottom, 10)
+                        .zIndex(1)
+                    }
+                    
+                    // Add Button
                     AddTaskButton(isShowingTaskForm: $showingNewTask)
-                    Spacer()
                 }
                 .padding(.bottom, 16)
+            }
+        }
+        .sheet(isPresented: $showingActivePomodoroSession) {
+            if pomodoroViewModel.activeTask != nil {
+                NavigationStack {
+                    PomodoroView(task: pomodoroViewModel.activeTask!)
+                }
             }
         }
     }
@@ -418,10 +437,77 @@ private struct TimelineTaskCard: View {
     }
     
     var body: some View {
-        ZStack {
-            // Contenuto principale della card
+        ZStack(alignment: .leading) {
+            // Action buttons background
+            // This is the container that will be visible when swiping
+            HStack(spacing: 4) {
+                Spacer()
+                
+                // Edit button
+                Button(action: {
+                    showingEditSheet = true
+                    withAnimation(.spring()) {
+                        offset = 0
+                    }
+                }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: 60, height: 50)
+                            .shadow(color: Color.blue.opacity(0.2), radius: 2, x: 0, y: 1)
+                        
+                        VStack(spacing: 2) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("edit".localized)
+                                .font(.system(.caption2, design: .rounded).bold())
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
+                
+                // Delete button
+                Button(action: {
+                    withAnimation(.spring()) {
+                        TaskManager.shared.removeTask(task)
+                        offset = 0
+                    }
+                }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.red, Color.red.opacity(0.8)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: 60, height: 50)
+                            .shadow(color: Color.red.opacity(0.2), radius: 2, x: 0, y: 1)
+                        
+                        VStack(spacing: 2) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("delete".localized)
+                                .font(.system(.caption2, design: .rounded).bold())
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
+            }
+            .padding(.trailing, 8)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .opacity(offset < -20 ? 1 : 0)
+            
+            // Card principale
             VStack(alignment: .leading, spacing: 2) {
-                // Task header
+                // Task header con tutti i contenuti
                 HStack(alignment: .center, spacing: 8) {
                     // Barra colorata della categoria
                     Rectangle()
@@ -493,9 +579,24 @@ private struct TimelineTaskCard: View {
                     }
                     
                     if task.pomodoroSettings != nil {
-                        Button(action: { showingPomodoro = true }) {
-                            Image(systemName: "timer")
-                                .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .gray)
+                        Button(action: { 
+                            PomodoroViewModel.shared.setActiveTask(task)
+                            showingPomodoro = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.accentColor.opacity(0.15))
+                                    .frame(width: 36, height: 36)
+                                    
+                                Image(systemName: "timer")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .accentColor)
+                            }
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1)
+                            )
+                            .shadow(color: Color.accentColor.opacity(0.2), radius: 2, x: 0, y: 1)
                         }
                     }
                     
@@ -553,72 +654,6 @@ private struct TimelineTaskCard: View {
                     .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
             )
             .offset(x: offset)
-            
-            // Pulsanti di azione (separati dalla card principale)
-            if offset < -20 {
-                HStack(spacing: 4) {
-                    // Edit button
-                    Button(action: {
-                        showingEditSheet = true
-                        withAnimation(.spring()) {
-                            offset = 0
-                        }
-                    }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.blue.opacity(0.8)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .frame(width: 60, height: 50)
-                                .shadow(color: Color.blue.opacity(0.2), radius: 2, x: 0, y: 1)
-                            
-                            VStack(spacing: 2) {
-                                Image(systemName: "pencil")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("edit".localized)
-                                    .font(.system(.caption2, design: .rounded).bold())
-                            }
-                            .foregroundColor(.white)
-                        }
-                    }
-                    
-                    // Delete button
-                    Button(action: {
-                        withAnimation(.spring()) {
-                            TaskManager.shared.removeTask(task)
-                            offset = 0
-                        }
-                    }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.red, Color.red.opacity(0.8)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .frame(width: 60, height: 50)
-                                .shadow(color: Color.red.opacity(0.2), radius: 2, x: 0, y: 1)
-                            
-                            VStack(spacing: 2) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("delete".localized)
-                                    .font(.system(.caption2, design: .rounded).bold())
-                            }
-                            .foregroundColor(.white)
-                        }
-                    }
-                }
-                .offset(x: UIScreen.main.bounds.width - 130 + offset)
-                .opacity(min(1.0, -offset / 60))
-                .animation(.interactiveSpring(), value: offset)
-            }
         }
         .contentShape(Rectangle())
         .gesture(
@@ -649,7 +684,6 @@ private struct TimelineTaskCard: View {
                     }
                 }
         )
-        // Tocco per espandere/collassare i subtask o chiudere lo swipe
         .onTapGesture {
             if offset < 0 {
                 withAnimation(.spring()) {

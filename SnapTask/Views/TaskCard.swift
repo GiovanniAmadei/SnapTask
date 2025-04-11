@@ -61,15 +61,23 @@ struct TaskCard: View {
                 // Pulsante Pomodoro (se disponibile)
                 if task.pomodoroSettings != nil {
                     Button(action: {
+                        PomodoroViewModel.shared.setActiveTask(task)
                         showingPomodoro = true
                     }) {
-                        Image(systemName: "timer")
-                            .foregroundColor(.accentColor)
-                            .padding(8)
-                            .background(
-                                Circle()
-                                    .fill(Color.accentColor.opacity(0.1))
-                            )
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.15))
+                                .frame(width: 36, height: 36)
+                                
+                            Image(systemName: "timer")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.accentColor)
+                        }
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1)
+                        )
+                        .shadow(color: Color.accentColor.opacity(0.2), radius: 2, x: 0, y: 1)
                     }
                     .buttonStyle(BorderlessButtonStyle())
                 }

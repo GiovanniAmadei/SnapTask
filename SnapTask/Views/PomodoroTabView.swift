@@ -1,14 +1,7 @@
 import SwiftUI
 
 struct PomodoroTabView: View {
-    @State private var selectedDate = Date()
-    @StateObject private var viewModel: PomodoroViewModel
-    
-    init() {
-        // Initialize with default settings
-        let settings = PomodoroSettings.defaultSettings
-        _viewModel = StateObject(wrappedValue: PomodoroViewModel(settings: settings))
-    }
+    @StateObject private var viewModel = PomodoroViewModel.shared
     
     var body: some View {
         NavigationStack {

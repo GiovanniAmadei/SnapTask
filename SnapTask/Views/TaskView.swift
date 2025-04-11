@@ -42,9 +42,24 @@ struct TaskView: View {
                 }
                 
                 if task.pomodoroSettings != nil {
-                    Button(action: { showingPomodoro = true }) {
-                        Image(systemName: "timer")
-                            .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .gray)
+                    Button(action: { 
+                        PomodoroViewModel.shared.setActiveTask(task)
+                        showingPomodoro = true
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.15))
+                                .frame(width: 36, height: 36)
+                                
+                            Image(systemName: "timer")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .accentColor)
+                        }
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1)
+                        )
+                        .shadow(color: Color.accentColor.opacity(0.2), radius: 2, x: 0, y: 1)
                     }
                 }
                 

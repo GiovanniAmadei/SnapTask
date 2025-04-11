@@ -198,9 +198,9 @@ struct TaskConsistencyChartView: View {
     @State private var timeRange: TimeRange = .week
     
     enum TimeRange: String, CaseIterable {
-        case week = "7 Days"
-        case month = "30 Days"
-        case year = "Year"
+        case week = "week"
+        case month = "month"
+        case year = "year"
     }
     
     var body: some View {

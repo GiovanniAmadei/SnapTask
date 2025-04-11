@@ -324,10 +324,12 @@ class StatisticsViewModel: ObservableObject {
                 // Check if task was completed on this day
                 let isCompleted = task.completions[startOfDay]?.isCompleted == true
                 
-                // Update progress: +1 if completed, +0 if not completed
-                // Nota: abbiamo cambiato da -1 a 0 per non completati per rendere il progresso sempre crescente
+                // Update progress: +1 if completed, -1 if not completed
                 if isCompleted {
                     cumulativeProgress += 1
+                } else {
+                    // Penalize missed tasks by decreasing the score
+                    cumulativeProgress = max(0, cumulativeProgress - 1)
                 }
                 
                 // Normalize x position between 0 and 1

@@ -55,6 +55,10 @@
 "tracking_consistency" = "Monitoraggio della costanza nel completare attività ricorrenti";
 "higher_points" = "Punti più alti indicano una migliore costanza nel tempo";
 "no_recurring_tasks" = "Nessuna attività ricorrente trovata";
+"shows_consistency" = "Mostra la costanza per le attività ricorrenti nel tempo";
+"x_axis_y_axis" = "Asse X: Giorni/Periodo • Asse Y: Punti progresso cumulativi";
+"how_to_read" = "Come leggere: ↑ Le linee salgono quando le attività sono completate, ↓ scendono quando mancate";
+"points_explanation" = "Ogni attività completata = +1 punto • Ogni attività mancata = -1 punto";
 
 // Categories
 "categories" = "Categorie";

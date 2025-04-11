@@ -30,7 +30,7 @@ private struct ConsistencyContentView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Task Consistency")
+            Text("task_consistency".localized)
                 .font(.title3.bold())
                 .padding(.horizontal, 16)
             
@@ -55,19 +55,19 @@ private struct ConsistencyContentView: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("Shows consistency for recurring tasks over time")
+                Text("shows_consistency".localized)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                Text("X-axis: Days/Period • Y-axis: Accumulative progress points")
+                Text("x_axis_y_axis".localized)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                Text("How to read: ↑ Lines rise when tasks are completed, showing your consistency")
+                Text("how_to_read".localized)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                Text("Each completed task = +1 point • Higher points = Better consistency")
+                Text("points_explanation".localized)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -83,7 +83,7 @@ private struct ConsistencyTimeRangeSelector: View {
     var body: some View {
         Picker("Time Range", selection: $timeRange) {
             ForEach(TaskConsistencyChartView.TimeRange.allCases, id: \.self) { range in
-                Text(range.rawValue).tag(range)
+                Text(range.rawValue.localized).tag(range)
             }
         }
         .pickerStyle(.segmented)

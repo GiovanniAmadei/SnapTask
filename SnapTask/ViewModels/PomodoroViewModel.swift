@@ -12,6 +12,12 @@ class PomodoroViewModel: ObservableObject {
         case completed
     }
     
+    // Shared instance for the active Pomodoro session
+    static let shared = PomodoroViewModel(settings: PomodoroSettings.defaultSettings)
+    
+    // Current active task being tracked
+    @Published var activeTask: TodoTask?
+    
     @Published var state: PomodoroState = .notStarted
     @Published var timeRemaining: TimeInterval
     @Published var currentSession: Int = 1
@@ -42,6 +48,35 @@ class PomodoroViewModel: ObservableObject {
             return 0
         }
         return 1 - (timeRemaining / total)
+    }
+    
+    // Set active task and configure settings
+    @MainActor func setActiveTask(_ task: TodoTask) {
+        // Check if this is already the active task
+        if let activeTask = self.activeTask, activeTask.id == task.id {
+            // The same task is already active, don't reset
+            return
+        }
+        
+        // It's a different task, reset and set up the new one
+        stop()
+        self.activeTask = task
+        self.settings = task.pomodoroSettings ?? PomodoroSettings.defaultSettings
+        self.timeRemaining = settings.workDuration
+        self.currentSession = 1
+        self.completedWorkSessions = []
+        self.completedBreakSessions = []
+        self.state = .notStarted
+    }
+    
+    // Check if a specific task is the active one
+    func isActiveTask(_ task: TodoTask) -> Bool {
+        return activeTask?.id == task.id
+    }
+    
+    // Check if a task is currently active
+    var hasActiveTask: Bool {
+        return activeTask != nil && (state == .working || state == .onBreak || state == .paused)
     }
     
     @MainActor
