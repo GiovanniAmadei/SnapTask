@@ -74,16 +74,37 @@ struct TaskStatisticsView: View {
     }
     
     private var categoryChart: some View {
-        Chart(viewModel.categoryStats) { stat in
-            SectorMark(
-                angle: .value("Hours", stat.hours),
-                innerRadius: .ratio(0.618),
-                angularInset: 1.5
-            )
-            .cornerRadius(3)
-            .foregroundStyle(Color(hex: stat.color))
+        ZStack {
+            if viewModel.categoryStats.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "chart.pie")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    
+                    Text("No category data available")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Complete tasks with categories to see stats")
+                        .font(.caption)
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(20)
+                .frame(height: 200)
+            } else {
+                Chart(viewModel.categoryStats) { stat in
+                    SectorMark(
+                        angle: .value("Hours", stat.hours),
+                        innerRadius: .ratio(0.618),
+                        angularInset: 1.5
+                    )
+                    .cornerRadius(3)
+                    .foregroundStyle(Color(hex: stat.color))
+                }
+                .frame(height: 200)
+            }
         }
-        .frame(height: 200)
     }
     
     private var categoryLegend: some View {
@@ -205,18 +226,33 @@ struct TaskConsistencyChartView: View {
                     VStack(spacing: 0) {
                         ForEach(0..<4) { i in
                             Spacer()
-                            Rectangle()
-                                .frame(height: 1)
-                                .foregroundColor(.gray.opacity(0.2))
+                            HStack {
+                                // Y-axis label
+                                Text("\(3-i)")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 10)
+                                
+                                Rectangle()
+                                    .frame(height: 1)
+                                    .foregroundColor(.gray.opacity(0.2))
+                            }
                         }
                     }
+                    
+                    // Y-axis label
+                    Text("Progress")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .rotationEffect(Angle(degrees: -90))
+                        .position(x: 15, y: geometry.size.height / 2)
                     
                     // X-axis (bottom line)
                     Rectangle()
                         .frame(height: 1.5)
                         .foregroundColor(.gray.opacity(0.4))
-                        .frame(width: geometry.size.width - 20)
-                        .position(x: (geometry.size.width - 20) / 2 + 10, y: geometry.size.height - 10)
+                        .frame(width: geometry.size.width - 35)
+                        .position(x: (geometry.size.width - 35) / 2 + 25, y: geometry.size.height - 10)
                     
                     // X-axis date labels
                     HStack(spacing: 0) {
@@ -224,10 +260,11 @@ struct TaskConsistencyChartView: View {
                             Text(dateLabel)
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
-                                .frame(width: (geometry.size.width - 20) / CGFloat(getDateLabels(for: timeRange).count))
+                                .frame(width: (geometry.size.width - 35) / CGFloat(getDateLabels(for: timeRange).count))
                         }
                     }
                     .padding(.horizontal, 10)
+                    .padding(.leading, 15)
                     .position(x: geometry.size.width / 2, y: geometry.size.height - 2)
                     
                     // Draw individual task lines
@@ -242,17 +279,37 @@ struct TaskConsistencyChartView: View {
                                 task: task,
                                 timeRange: timeRange,
                                 viewModel: viewModel,
-                                width: geometry.size.width - 20,
+                                width: geometry.size.width - 35,
                                 height: geometry.size.height - 20,
                                 taskIndex: index
                             )
                             .padding(.horizontal, 10)
+                            .padding(.leading, 15)
                         }
                     }
                 }
                 .padding(.bottom, 10) // Space for X-axis labels
             }
             .frame(height: 220)
+            
+            // Description 
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Tracking consistency in completing recurring tasks")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text("Y-axis: Progress points (+1 for each completed task)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text("Higher points indicate better consistency over time")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal)
             
             // Improved task legend with scrollable grid
             ScrollView {

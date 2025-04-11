@@ -54,10 +54,24 @@ private struct ConsistencyContentView: View {
                 )
             }
             
-            Text("Shows completion rate for recurring tasks")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 16)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Shows consistency for recurring tasks over time")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("X-axis: Days/Period • Y-axis: Accumulative progress points")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("How to read: ↑ Lines rise when tasks are completed, showing your consistency")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("Each completed task = +1 point • Higher points = Better consistency")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
         }
     }
 }
@@ -86,12 +100,32 @@ private struct ConsistencyChartContainer: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Background grid lines
+                // Background grid lines with Y-axis labels
                 VStack(spacing: geometry.size.height / 4) {
-                    ForEach(0..<4) { _ in
-                        Divider().background(Color.gray.opacity(0.2))
+                    ForEach(0..<5) { index in
+                        ZStack {
+                            // Grid line
+                            Divider().background(Color.gray.opacity(0.2))
+                            
+                            // Y-axis label
+                            if index < 4 { // Skip the bottom line label (0)
+                                Text("\(4-index)")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.leading, 4)
+                                    .zIndex(1)
+                            }
+                        }
                     }
                 }
+                
+                // Y-axis title
+                Text("Progress")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .rotationEffect(Angle(degrees: -90))
+                    .position(x: 8, y: geometry.size.height / 2)
                 
                 // X-axis date labels
                 DateLabelsView(
@@ -109,6 +143,7 @@ private struct ConsistencyChartContainer: View {
                     height: geometry.size.height - 40,
                     selectedTaskId: selectedTaskId
                 )
+                .padding(.leading, 20) // Make space for Y-axis labels
             }
         }
         .frame(height: 300)
@@ -122,45 +157,69 @@ private struct DateLabelsView: View {
     let height: CGFloat
     
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(getDateLabels(for: timeRange), id: \.self) { label in
-                Text(label)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
+        VStack {
+            // Date markers
+            HStack(spacing: 0) {
+                ForEach(getDateLabels(for: timeRange), id: \.self) { label in
+                    Text(label)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
             }
+            .padding(.horizontal, 10)
+            
+            // X-axis title
+            Text(getAxisTitle(for: timeRange))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
         }
-        .padding(.horizontal, 10)
-        .offset(y: height / 2 - 10)
+        .offset(y: height / 2 - 15)
     }
     
     // Helper for generating date labels
     private func getDateLabels(for timeRange: TaskConsistencyChartView.TimeRange) -> [String] {
         let formatter = DateFormatter()
-        formatter.dateFormat = "d"
         
         let calendar = Calendar.current
         let today = Date()
         
         switch timeRange {
         case .week:
-            return (-6...0).map { offset in
+            formatter.dateFormat = "d MMM"
+            let dates = [-6, -4, -2, 0].map { offset in
                 let date = calendar.date(byAdding: .day, value: offset, to: today)!
                 return formatter.string(from: date)
             }
+            return dates
         case .month:
-            let labels = [-30, -25, -20, -15, -10, -5, 0].map { offset in
+            formatter.dateFormat = "d MMM"
+            let dates = [-30, -20, -10, 0].map { offset in
                 let date = calendar.date(byAdding: .day, value: offset, to: today)!
                 return formatter.string(from: date)
             }
-            return labels
+            return dates
         case .year:
             formatter.dateFormat = "MMM"
-            let labels = [-12, -10, -8, -6, -4, -2, 0].map { offset in
+            let dates = [-12, -9, -6, -3, 0].map { offset in
                 let date = calendar.date(byAdding: .month, value: offset, to: today)!
                 return formatter.string(from: date)
             }
-            return labels
+            return dates
+        }
+    }
+    
+    // Return a title for the x-axis based on time range
+    private func getAxisTitle(for timeRange: TaskConsistencyChartView.TimeRange) -> String {
+        switch timeRange {
+        case .week:
+            return "Last 7 days"
+        case .month:
+            return "Last 30 days"
+        case .year:
+            return "Last 12 months"
         }
     }
 }

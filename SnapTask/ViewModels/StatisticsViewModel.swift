@@ -149,32 +149,44 @@ class StatisticsViewModel: ObservableObject {
         
         weeklyStats = (0...6).map { dayOffset in
             let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStart)!
-            let startOfDay = date.startOfDay
+            let startOfDay = calendar.startOfDay(for: date)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
             
-            // Get all tasks that were either created for this day or are recurring
-            let dayTasks = taskManager.tasks.filter { task in
-                if calendar.isDate(task.startTime, inSameDayAs: date) {
-                    return true
-                }
-                // Check if it's a recurring task that should appear on this day
-                if task.recurrence != nil {
-                    switch task.recurrence!.type {
-                    case .daily:
-                        return true
-                    case .weekly(let days):
-                        let weekday = calendar.component(.weekday, from: date)
-                        return days.contains(weekday)
-                    case .monthly(let days):
-                        let day = calendar.component(.day, from: date)
-                        return days.contains(day)
-                    }
-                }
-                return false
+            // 1. Filtra le task SINGLE (non ricorrenti) create specificamente per questo giorno
+            let singleDayTasks = taskManager.tasks.filter { task in
+                task.recurrence == nil && calendar.isDate(task.startTime, inSameDayAs: date)
             }
             
-            let completedCount = dayTasks.filter { task in
-                if let completion = task.completions[startOfDay] {
-                    return completion.isCompleted
+            // 2. Filtra le task RICORRENTI che dovrebbero essere attive in questo giorno
+            let recurringDayTasks = taskManager.tasks.filter { task in
+                guard let recurrence = task.recurrence else { return false }
+                
+                // Verifica che la task sia stata creata in o prima di questo giorno
+                if task.startTime > endOfDay { return false }
+                
+                // Verifica la data di fine se esiste
+                if let endDate = recurrence.endDate, endDate < startOfDay { return false }
+                
+                // Controlla il pattern di ricorrenza per questo giorno specifico
+                switch recurrence.type {
+                case .daily:
+                    return true
+                case .weekly(let days):
+                    let weekday = calendar.component(.weekday, from: date)
+                    return days.contains(weekday)
+                case .monthly(let days):
+                    let day = calendar.component(.day, from: date)
+                    return days.contains(day)
+                }
+            }
+            
+            // Combina tutte le task attive per questo giorno
+            let allDayTasks = singleDayTasks + recurringDayTasks
+            
+            // Conta quante task sono state completate per questo giorno
+            let completedCount = allDayTasks.filter { task in
+                if let completion = task.completions[startOfDay], completion.isCompleted {
+                    return true
                 }
                 return false
             }.count
@@ -182,7 +194,7 @@ class StatisticsViewModel: ObservableObject {
             return WeeklyStat(
                 day: date.formatted(.dateTime.weekday(.abbreviated)),
                 completedTasks: completedCount,
-                totalTasks: dayTasks.count
+                totalTasks: allDayTasks.count
             )
         }
     }
@@ -196,7 +208,7 @@ class StatisticsViewModel: ObservableObject {
             return
         }
         
-        // Replace manual date stride with Calendar enumeration
+        // Genera array di date dal passato a oggi
         var currentDate = yearAgo
         var dates: [Date] = []
         
@@ -210,16 +222,26 @@ class StatisticsViewModel: ObservableObject {
         var bestStreak = 0
         var tempStreak = 0
         
-        // Calculate streaks
-        for date in dates {
+        // Itera dal giorno più recente al più vecchio
+        for date in dates.reversed() {
+            let startOfDay = calendar.startOfDay(for: date)
+            
+            // Ottiene le task per il giorno, includendo quelle ricorrenti
             let dayTasks = taskManager.tasks.filter { task in
-                // Include tasks specifically for this day
+                // Verifica che la task sia stata creata in o prima di questo giorno
+                guard task.startTime <= startOfDay else { return false }
+                
+                // Includi task specifiche per questo giorno
                 if calendar.isDate(task.startTime, inSameDayAs: date) {
                     return true
                 }
-                // Include recurring tasks
-                if task.recurrence != nil {
-                    switch task.recurrence!.type {
+                
+                // Includi task ricorrenti per questo giorno
+                if let recurrence = task.recurrence {
+                    // Verifica la data di fine se esiste
+                    if let endDate = recurrence.endDate, endDate < startOfDay { return false }
+                    
+                    switch recurrence.type {
                     case .daily:
                         return true
                     case .weekly(let days):
@@ -233,21 +255,29 @@ class StatisticsViewModel: ObservableObject {
                 return false
             }
             
-            // Fix allSatisfy closure syntax
-            let allCompleted = !dayTasks.isEmpty && dayTasks.allSatisfy { task in
-                if let completion = task.completions[date.startOfDay] {
+            // Controlla se ci sono task per il giorno e se sono tutte completate
+            let allCompletedForDay = !dayTasks.isEmpty && dayTasks.allSatisfy { task in
+                if let completion = task.completions[startOfDay] {
                     return completion.isCompleted
                 }
                 return false
             }
             
-            if allCompleted {
+            if allCompletedForDay {
                 tempStreak += 1
+                // Aggiorna la striscia migliore
                 bestStreak = max(bestStreak, tempStreak)
+                
+                // Se siamo a oggi, questa è la striscia corrente
                 if calendar.isDateInToday(date) {
                     currentStreak = tempStreak
                 }
             } else {
+                // Se c'è un'interruzione nella striscia
+                if tempStreak > 0 && calendar.isDateInToday(date) {
+                    // Se l'interruzione è proprio oggi, consideriamo la striscia corrente come 0
+                    currentStreak = 0
+                }
                 tempStreak = 0
             }
         }
@@ -286,13 +316,19 @@ class StatisticsViewModel: ObservableObject {
         
         // Calculate points for each day in the period
         for dayOffset in (1-daysToAnalyze)...0 {
-            let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!.startOfDay
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!
+            let startOfDay = calendar.startOfDay(for: date)
             
             // Check if task should occur on this date based on recurrence pattern
-            if shouldTaskOccurOnDate(task: task, date: date) {
-                // Update the cumulative progress: +1 if completed, -0 if not completed
-                let isCompleted = task.completions[date]?.isCompleted == true
-                cumulativeProgress = max(0, cumulativeProgress + (isCompleted ? 1 : -1))
+            if shouldTaskOccurOnDate(task: task, date: startOfDay) {
+                // Check if task was completed on this day
+                let isCompleted = task.completions[startOfDay]?.isCompleted == true
+                
+                // Update progress: +1 if completed, +0 if not completed
+                // Nota: abbiamo cambiato da -1 a 0 per non completati per rendere il progresso sempre crescente
+                if isCompleted {
+                    cumulativeProgress += 1
+                }
                 
                 // Normalize x position between 0 and 1
                 let normalizedX = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
@@ -301,7 +337,6 @@ class StatisticsViewModel: ObservableObject {
             }
         }
         
-        print("Task: \(task.name) - Generated \(points.count) points, final progress: \(cumulativeProgress)")
         return points
     }
     

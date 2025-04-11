@@ -1,0 +1,84 @@
+// Common
+"app_name" = "SnapTask";
+"cancel" = "Cancel";
+"save" = "Save";
+"edit" = "Edit";
+"delete" = "Delete";
+"done" = "Done";
+"add" = "Add";
+
+// Main tabs
+"timeline" = "Timeline";
+"statistics" = "Statistics";
+"settings" = "Settings";
+
+// Task related
+"task" = "Task";
+"tasks" = "Tasks";
+"new_task" = "New Task";
+"edit_task" = "Edit Task";
+"task_name" = "Task Name";
+"task_description" = "Description";
+"task_category" = "Category";
+"task_priority" = "Priority";
+"task_duration" = "Duration";
+"task_recurrence" = "Recurrence";
+"subtasks" = "Subtasks";
+"add_subtask" = "Add Subtask";
+"no_subtasks" = "No Subtasks";
+"task_completed" = "Task Completed";
+"high_priority" = "High";
+"medium_priority" = "Medium";
+"low_priority" = "Low";
+
+// Recurrence
+"daily" = "Daily";
+"weekly" = "Weekly";
+"monthly" = "Monthly";
+"recurrence_settings" = "Recurrence Settings";
+"select_days" = "Select Days";
+
+// Statistics
+"time_spent" = "Time Spent";
+"today" = "Today";
+"week" = "Week";
+"month" = "Month";
+"year" = "Year";
+"weekly_overview" = "Weekly Overview";
+"streak" = "Streak";
+"current_streak" = "Current Streak";
+"best_streak" = "Best Streak";
+"task_consistency" = "Task Consistency";
+"progress_points" = "Progress Points";
+"no_category_data" = "No category data available";
+"complete_tasks_see_stats" = "Complete tasks with categories to see stats";
+"tracking_consistency" = "Tracking consistency in completing recurring tasks";
+"higher_points" = "Higher points indicate better consistency over time";
+"no_recurring_tasks" = "No recurring tasks found";
+
+// Categories
+"categories" = "Categories";
+"add_category" = "Add Category";
+"edit_category" = "Edit Category";
+"category_name" = "Category Name";
+"category_color" = "Color";
+
+// Settings
+"quote_of_the_day" = "Quote of the Day";
+"new_quote" = "New Quote";
+"customization" = "Customization";
+"appearance" = "Appearance";
+"dark_mode" = "Dark Mode";
+"priorities" = "Priorities";
+"add_priority" = "Add Priority";
+"language" = "Language";
+"performance" = "Performance";
+"biohacking" = "Biohacking";
+
+// Pomodoro
+"pomodoro" = "Pomodoro";
+"pomodoro_settings" = "Pomodoro Settings";
+"work_duration" = "Work Duration";
+"short_break" = "Short Break";
+"long_break" = "Long Break";
+"sessions_before_long_break" = "Sessions Before Long Break"; 

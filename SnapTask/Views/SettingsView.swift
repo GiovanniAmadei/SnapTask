@@ -3,13 +3,15 @@ import SwiftUI
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var quoteManager = QuoteManager.shared
+    @StateObject private var languageManager = LanguageManager.shared
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
+    @State private var showingLanguagePicker = false
     
     var body: some View {
         NavigationStack {
             List {
-                Section("Quote of the Day") {
+                Section("quote_of_the_day".localized) {
                     VStack(alignment: .leading, spacing: 8) {
                         if quoteManager.isLoading {
                             ProgressView()
@@ -27,10 +29,10 @@ struct SettingsView: View {
                         
                         Button {
                             Task {
-                                await quoteManager.checkAndUpdateQuote()
+                                await quoteManager.forceUpdateQuote()
                             }
                         } label: {
-                            Label("New Quote", systemImage: "arrow.clockwise")
+                            Label("new_quote".localized, systemImage: "arrow.clockwise")
                                 .font(.caption)
                                 .foregroundColor(.accentColor)
                         }
@@ -40,37 +42,59 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
                 
-                Section("Customization") {
+                Section("customization".localized) {
                     NavigationLink {
                         CategoriesView(viewModel: viewModel)
                     } label: {
-                        Label("Categories", systemImage: "folder.fill")
+                        Label("categories".localized, systemImage: "folder.fill")
                     }
                     
                     NavigationLink {
                         PrioritiesView(viewModel: viewModel)
                     } label: {
-                        Label("Priorities", systemImage: "flag.fill")
+                        Label("priorities".localized, systemImage: "flag.fill")
                     }
                 }
                 
-                Section("Performance") {
+                Section("appearance".localized) {
+                    Toggle("dark_mode".localized, isOn: $isDarkMode)
+                    
+                    Button {
+                        showingLanguagePicker = true
+                    } label: {
+                        HStack {
+                            Label("language".localized, systemImage: "globe")
+                            Spacer()
+                            Text(languageManager.currentLanguage.name)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                Section("performance".localized) {
                     NavigationLink {
                         BiohackingView()
                     } label: {
-                        Label("Biohacking", systemImage: "bolt.heart")
+                        Label("biohacking".localized, systemImage: "bolt.heart")
                     }
                 }
-                
-                Section("Appearance") {
-                    Toggle("Dark Mode", isOn: $isDarkMode)
-                }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("settings".localized)
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
                 }
+            }
+            .actionSheet(isPresented: $showingLanguagePicker) {
+                ActionSheet(
+                    title: Text("language".localized),
+                    message: Text("Choose a language"),
+                    buttons: languageManager.availableLanguages.map { language in
+                        .default(Text(language.name)) {
+                            languageManager.setLanguage(language.code)
+                        }
+                    } + [.cancel()]
+                )
             }
         }
     }

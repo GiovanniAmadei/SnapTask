@@ -555,21 +555,31 @@ private struct TimelineTaskCard: View {
             )
             .offset(x: offset)
             .highPriorityGesture(
-                DragGesture(minimumDistance: 30)
+                DragGesture(minimumDistance: 20)
                     .onChanged { value in
                         if abs(value.translation.width) > abs(value.translation.height) * 2.0 {
-                            withAnimation {
-                                offset = value.translation.width < 0 ? value.translation.width : 0
+                            // Applicare l'offset solo per drag verso sinistra con animazione interattiva
+                            if value.translation.width < 0 {
+                                withAnimation(.interactiveSpring()) {
+                                    offset = max(-140, value.translation.width)
+                                    showingActions = true
+                                }
+                            } else if offset < 0 {
+                                // Se stiamo trascinando verso destra da uno stato aperto
+                                withAnimation(.interactiveSpring()) {
+                                    offset = min(0, value.translation.width - 140)
+                                }
                             }
                         }
                     }
                     .onEnded { value in
-                        withAnimation {
-                            if value.translation.width < -60 && abs(value.translation.width) > abs(value.translation.height) * 2.0 {
-                                offset = -80
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if value.translation.width < -60 || (offset < -60 && value.translation.width > 0 && value.translation.width < 60) {
+                                // Se il drag è abbastanza verso sinistra o se siamo già aperti e non c'è un significativo drag verso destra
+                                offset = -140
                                 showingActions = true
                             } else {
-                                // Reset position
+                                // Chiudi i pulsanti
                                 offset = 0
                                 showingActions = false
                             }
@@ -577,56 +587,91 @@ private struct TimelineTaskCard: View {
                     }
             )
             .overlay(
-                HStack(spacing: 0) {
-                    Spacer()
-                    
-                    // Edit button
-                    Button(action: {
-                        showingEditSheet = true
-                        withAnimation(.spring()) {
-                            offset = 0
-                        }
-                    }) {
-                        ZStack {
-                            Rectangle()
-                                .fill(Color.blue)
-                                .frame(width: 80)
-                            
-                            VStack(spacing: 4) {
-                                Image(systemName: "pencil")
-                                    .font(.system(size: 16, weight: .medium))
-                                Text("Edit")
-                                    .font(.caption2)
+                ZStack {
+                    // Sfondo semitrasparente che si estende dal lato destro
+                    if offset < 0 {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.001)) // Trasparente ma rilevabile
+                            .frame(width: -offset)
+                            .frame(maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.spring()) {
+                                    offset = 0
+                                    showingActions = false
+                                }
                             }
-                            .foregroundColor(.white)
-                        }
                     }
                     
-                    // Delete button
-                    Button(action: {
-                        withAnimation(.spring()) {
-                            TaskManager.shared.removeTask(task)
-                            offset = 0
-                        }
-                    }) {
-                        ZStack {
-                            Rectangle()
-                                .fill(Color.red)
-                                .frame(width: 80)
-                            
-                            VStack(spacing: 4) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 16, weight: .medium))
-                                Text("Delete")
-                                    .font(.caption2)
+                    HStack(spacing: 0) {
+                        Spacer()
+                        
+                        // Edit button
+                        Button(action: {
+                            showingEditSheet = true
+                            showingActions = false
+                            withAnimation(.spring()) {
+                                offset = 0
                             }
-                            .foregroundColor(.white)
+                        }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.blue, Color.blue.opacity(0.8)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                    )
+                                    .frame(width: 70, height: 50)
+                                    .shadow(color: Color.blue.opacity(0.2), radius: 2, x: 0, y: 1)
+                                
+                                VStack(spacing: 2) {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Text("Edit")
+                                        .font(.system(.caption2, design: .rounded).bold())
+                                }
+                                .foregroundColor(.white)
+                            }
+                        }
+                        
+                        // Delete button
+                        Button(action: {
+                            withAnimation(.spring()) {
+                                TaskManager.shared.removeTask(task)
+                                offset = 0
+                                showingActions = false
+                            }
+                        }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.red, Color.red.opacity(0.8)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                    )
+                                    .frame(width: 70, height: 50)
+                                    .shadow(color: Color.red.opacity(0.2), radius: 2, x: 0, y: 1)
+                                
+                                VStack(spacing: 2) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Text("Delete")
+                                        .font(.system(.caption2, design: .rounded).bold())
+                                }
+                                .foregroundColor(.white)
+                            }
                         }
                     }
+                    .frame(height: 60)
                 }
-                .frame(height: 80)
-                .opacity(showingActions ? 1 : 0)
-                .disabled(!showingActions)
+                // Pulsanti fissati a destra
+                .frame(width: UIScreen.main.bounds.width, alignment: .trailing)
+                // Traslazione orizzontale per seguire il bordo della card
+                .offset(x: min(0, offset + 140))
                 , alignment: .trailing
             )
             // Tap per chiudere il menu se aperto, altrimenti espandi/collassa
@@ -634,6 +679,7 @@ private struct TimelineTaskCard: View {
                 if offset < 0 {
                     withAnimation(.spring()) {
                         offset = 0
+                        showingActions = false
                     }
                 } else if !task.subtasks.isEmpty {
                     withAnimation(.easeInOut(duration: 0.2)) {

@@ -106,7 +106,33 @@ class QuoteManager: ObservableObject {
         }
     }
     
+    @MainActor
     func forceUpdateQuote() async {
-        await checkAndUpdateQuote()
+        // Notifichiamo che stiamo caricando
+        isLoading = true
+        
+        do {
+            // Tentiamo di ottenere una nuova citazione dall'API
+            let quote = try await service.fetchDailyQuote()
+            currentQuote = quote
+            saveCurrentQuote()
+            updateLastUpdateDate()
+        } catch {
+            print("Error fetching quote: \(error)")
+            // Se c'è un errore, utilizziamo una citazione casuale dalla lista
+            let randomQuote = fallbackQuotes.randomElement() ?? fallbackQuotes[0]
+            // Assicuriamoci che non sia uguale a quella attuale se possibile
+            if fallbackQuotes.count > 1 && randomQuote.text == currentQuote.text {
+                let filteredQuotes = fallbackQuotes.filter { $0.text != currentQuote.text }
+                currentQuote = filteredQuotes.randomElement() ?? randomQuote
+            } else {
+                currentQuote = randomQuote
+            }
+            saveCurrentQuote()
+            updateLastUpdateDate()
+        }
+        
+        // Completato il caricamento
+        isLoading = false
     }
 } 

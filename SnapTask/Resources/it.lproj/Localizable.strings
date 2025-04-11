@@ -1,0 +1,84 @@
+// Common
+"app_name" = "SnapTask";
+"cancel" = "Annulla";
+"save" = "Salva";
+"edit" = "Modifica";
+"delete" = "Elimina";
+"done" = "Fatto";
+"add" = "Aggiungi";
+
+// Main tabs
+"timeline" = "Timeline";
+"statistics" = "Statistiche";
+"settings" = "Impostazioni";
+
+// Task related
+"task" = "Attività";
+"tasks" = "Attività";
+"new_task" = "Nuova Attività";
+"edit_task" = "Modifica Attività";
+"task_name" = "Nome Attività";
+"task_description" = "Descrizione";
+"task_category" = "Categoria";
+"task_priority" = "Priorità";
+"task_duration" = "Durata";
+"task_recurrence" = "Ricorrenza";
+"subtasks" = "Sottoattività";
+"add_subtask" = "Aggiungi Sottoattività";
+"no_subtasks" = "Nessuna Sottoattività";
+"task_completed" = "Attività Completata";
+"high_priority" = "Alta";
+"medium_priority" = "Media";
+"low_priority" = "Bassa";
+
+// Recurrence
+"daily" = "Giornaliera";
+"weekly" = "Settimanale";
+"monthly" = "Mensile";
+"recurrence_settings" = "Impostazioni Ricorrenza";
+"select_days" = "Seleziona Giorni";
+
+// Statistics
+"time_spent" = "Tempo Impiegato";
+"today" = "Oggi";
+"week" = "Settimana";
+"month" = "Mese";
+"year" = "Anno";
+"weekly_overview" = "Panoramica Settimanale";
+"streak" = "Serie";
+"current_streak" = "Serie Attuale";
+"best_streak" = "Serie Migliore";
+"task_consistency" = "Costanza Attività";
+"progress_points" = "Punti Progresso";
+"no_category_data" = "Nessun dato di categoria disponibile";
+"complete_tasks_see_stats" = "Completa attività con categorie per vedere le statistiche";
+"tracking_consistency" = "Monitoraggio della costanza nel completare attività ricorrenti";
+"higher_points" = "Punti più alti indicano una migliore costanza nel tempo";
+"no_recurring_tasks" = "Nessuna attività ricorrente trovata";
+
+// Categories
+"categories" = "Categorie";
+"add_category" = "Aggiungi Categoria";
+"edit_category" = "Modifica Categoria";
+"category_name" = "Nome Categoria";
+"category_color" = "Colore";
+
+// Settings
+"quote_of_the_day" = "Citazione del Giorno";
+"new_quote" = "Nuova Citazione";
+"customization" = "Personalizzazione";
+"appearance" = "Aspetto";
+"dark_mode" = "Modalità Scura";
+"priorities" = "Priorità";
+"add_priority" = "Aggiungi Priorità";
+"language" = "Lingua";
+"performance" = "Prestazioni";
+"biohacking" = "Biohacking";
+
+// Pomodoro
+"pomodoro" = "Pomodoro";
+"pomodoro_settings" = "Impostazioni Pomodoro";
+"work_duration" = "Durata Lavoro";
+"short_break" = "Pausa Breve";
+"long_break" = "Pausa Lunga";
+"sessions_before_long_break" = "Sessioni Prima della Pausa Lunga"; 
