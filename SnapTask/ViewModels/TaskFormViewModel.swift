@@ -16,6 +16,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var isDailyRecurrence: Bool = true
     @Published var selectedDays: Set<Int> = []
     @Published var recurrenceEndDate: Date = Date().addingTimeInterval(86400 * 30)
+    @Published var trackInStatistics: Bool = true
     @Published var isPomodoroEnabled: Bool = false
     @Published var pomodoroSettings = PomodoroSettings.defaultSettings
     @Published private(set) var categories: [Category] = []
@@ -58,9 +59,9 @@ class TaskFormViewModel: ObservableObject {
         
         let recurrence: Recurrence? = isRecurring ? {
             if isDailyRecurrence {
-                return Recurrence(type: .daily, endDate: recurrenceEndDate)
+                return Recurrence(type: .daily, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
             } else {
-                return Recurrence(type: .weekly(days: selectedDays), endDate: recurrenceEndDate)
+                return Recurrence(type: .weekly(days: selectedDays), endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
             }
         }() : nil
         

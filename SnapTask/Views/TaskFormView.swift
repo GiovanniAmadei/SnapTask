@@ -93,6 +93,10 @@ struct TaskFormView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
+                        
+                        Toggle("track_in_consistency".localized, isOn: $viewModel.trackInStatistics)
+                            .font(.subheadline)
+                            .padding(.top, 4)
                     }
                 }
                 
@@ -187,6 +191,7 @@ extension TaskFormView {
                 break // Gestire se necessario
             }
             viewModel.recurrenceEndDate = recurrence.endDate ?? Date().addingTimeInterval(86400 * 30)
+            viewModel.trackInStatistics = recurrence.trackInStatistics
         }
         viewModel.isPomodoroEnabled = initialTask.pomodoroSettings != nil
         if let pomodoroSettings = initialTask.pomodoroSettings {

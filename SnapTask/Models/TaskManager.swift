@@ -126,6 +126,14 @@ class TaskManager: ObservableObject {
     private func notifyTasksUpdated() {
         NotificationCenter.default.post(name: .tasksDidUpdate, object: nil)
     }
+    
+    // For debugging purposes only
+    func resetUserDefaults() {
+        UserDefaults.standard.removeObject(forKey: tasksKey)
+        loadTasks()
+        notifyTasksUpdated()
+        objectWillChange.send()
+    }
 }
 
 extension Notification.Name {

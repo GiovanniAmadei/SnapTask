@@ -59,6 +59,7 @@
 "x_axis_y_axis" = "Asse X: Giorni/Periodo • Asse Y: Punti progresso cumulativi";
 "how_to_read" = "Come leggere: ↑ Le linee salgono quando le attività sono completate, ↓ scendono quando mancate";
 "points_explanation" = "Ogni attività completata = +1 punto • Ogni attività mancata = -1 punto";
+"track_in_consistency" = "Traccia nelle statistiche di consistenza";
 
 // Categories
 "categories" = "Categorie";

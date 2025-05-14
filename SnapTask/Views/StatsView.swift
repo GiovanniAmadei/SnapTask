@@ -268,13 +268,13 @@ struct TaskConsistencyChartView: View {
                     .position(x: geometry.size.width / 2, y: geometry.size.height - 2)
                     
                     // Draw individual task lines
-                    if viewModel.recurringTasks.isEmpty {
+                    if viewModel.consistency.isEmpty {
                         Text("No recurring tasks found")
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         // Task lines
-                        ForEach(Array(viewModel.recurringTasks.enumerated()), id: \.element.id) { index, task in
+                        ForEach(Array(viewModel.consistency.enumerated()), id: \.element.id) { index, task in
                             SingleTaskLineView(
                                 task: task,
                                 timeRange: timeRange,
@@ -314,7 +314,7 @@ struct TaskConsistencyChartView: View {
             // Improved task legend with scrollable grid
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 8) {
-                    ForEach(Array(viewModel.recurringTasks.enumerated()), id: \.element.id) { index, task in
+                    ForEach(Array(viewModel.consistency.enumerated()), id: \.element.id) { index, task in
                         HStack(spacing: 6) {
                             let color = task.category.map { Color(hex: $0.color) } ?? 
                                       [Color.blue, .green, .orange, .purple, .pink, .yellow, .red][index % 7]
@@ -336,7 +336,7 @@ struct TaskConsistencyChartView: View {
                 }
                 .padding(.horizontal)
             }
-            .frame(height: min(CGFloat(viewModel.recurringTasks.count) * 20, 80))
+            .frame(height: min(CGFloat(viewModel.consistency.count) * 20, 80))
         }
         .padding(.vertical)
         .background(Color(.secondarySystemBackground))

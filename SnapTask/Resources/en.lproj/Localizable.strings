@@ -59,6 +59,7 @@
 "x_axis_y_axis" = "X-axis: Days/Period • Y-axis: Accumulative progress points";
 "how_to_read" = "How to read: ↑ Lines rise when tasks are completed, ↓ fall when missed";
 "points_explanation" = "Each completed task = +1 point • Each missed task = -1 point";
+"track_in_consistency" = "Track in consistency statistics";
 
 // Categories
 "categories" = "Categories";

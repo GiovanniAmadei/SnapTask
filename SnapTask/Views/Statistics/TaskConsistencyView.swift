@@ -34,7 +34,7 @@ private struct ConsistencyContentView: View {
                 .font(.title3.bold())
                 .padding(.horizontal, 16)
             
-            if viewModel.recurringTasks.isEmpty {
+            if viewModel.consistency.isEmpty {
                 EmptyConsistencyView()
             } else {
                 // Time range selector
@@ -49,7 +49,7 @@ private struct ConsistencyContentView: View {
                 
                 // Task legend
                 ConsistencyLegendGrid(
-                    tasks: viewModel.recurringTasks,
+                    tasks: viewModel.consistency,
                     selectedTaskId: $selectedTaskId
                 )
             }
@@ -136,7 +136,7 @@ private struct ConsistencyChartContainer: View {
                 
                 // Task lines
                 TaskLinesContainer(
-                    tasks: viewModel.recurringTasks,
+                    tasks: viewModel.consistency,
                     timeRange: timeRange,
                     viewModel: viewModel,
                     width: geometry.size.width - 20,

@@ -7,8 +7,29 @@ struct Recurrence: Codable, Equatable {
         case monthly(days: Set<Int>)
     }
     
+    private enum CodingKeys: String, CodingKey {
+        case type, endDate, trackInStatistics
+    }
+    
     let type: RecurrenceType
     let endDate: Date?
+    let trackInStatistics: Bool
+    
+    init(type: RecurrenceType, endDate: Date?, trackInStatistics: Bool = true) {
+        self.type = type
+        self.endDate = endDate
+        self.trackInStatistics = trackInStatistics
+    }
+    
+    // Custom decoder to handle missing trackInStatistics in older data
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(RecurrenceType.self, forKey: .type)
+        endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
+        
+        // Default to true if property doesn't exist in saved data
+        trackInStatistics = try container.decodeIfPresent(Bool.self, forKey: .trackInStatistics) ?? true
+    }
 }
 
 extension Recurrence {

@@ -50,6 +50,22 @@ class StatisticsViewModel: ObservableObject {
     @Published var selectedTimeRange: TimeRange = .today
     @Published private(set) var recurringTasks: [TodoTask] = []
     
+    // Tasks that should be included in consistency tracking
+    var trackedRecurringTasks: [TodoTask] {
+        recurringTasks.filter { task in
+            if let recurrence = task.recurrence {
+                return recurrence.trackInStatistics
+            }
+            return false
+        }
+    }
+    
+    // Make sure we use all recurring tasks in consistency view
+    var consistency: [TodoTask] {
+        // Use all recurring tasks for consistency view regardless of tracking setting
+        recurringTasks
+    }
+    
     private var cancellables = Set<AnyCancellable>()
     private let taskManager: TaskManager
     private let categoryManager = CategoryManager.shared
@@ -287,17 +303,20 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func updateRecurringTasks() {
-        recurringTasks = taskManager.tasks.filter { $0.recurrence != nil }
+        // Include all recurring tasks regardless of trackInStatistics setting
+        recurringTasks = taskManager.tasks.filter { task in 
+            task.recurrence != nil
+        }
     }
     
     func consistencyPoints(for task: TodoTask, in timeRange: TaskConsistencyChartView.TimeRange) -> [(x: CGFloat, y: CGFloat)] {
-        guard task.recurrence != nil else { 
-            print("Task \(task.name) has no recurrence")
+        guard let recurrence = task.recurrence else { 
             return [] 
         }
         
         let calendar = Calendar.current
         let today = Date()
+        let taskCreationDay = calendar.startOfDay(for: task.startTime)
         var points: [(x: CGFloat, y: CGFloat)] = []
         
         // Determine time range to analyze
@@ -313,11 +332,23 @@ class StatisticsViewModel: ObservableObject {
         
         // Start with zero progress
         var cumulativeProgress: Int = 0
+        var foundFirstValidDay = false
         
         // Calculate points for each day in the period
         for dayOffset in (1-daysToAnalyze)...0 {
             let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!
             let startOfDay = calendar.startOfDay(for: date)
+            
+            // Normalize x position between 0 and 1
+            let normalizedX = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
+            
+            // Skip days before task was created
+            if startOfDay < taskCreationDay {
+                continue
+            }
+            
+            // We've found the first valid day for this task
+            foundFirstValidDay = true
             
             // Check if task should occur on this date based on recurrence pattern
             if shouldTaskOccurOnDate(task: task, date: startOfDay) {
@@ -332,10 +363,21 @@ class StatisticsViewModel: ObservableObject {
                     cumulativeProgress = max(0, cumulativeProgress - 1)
                 }
                 
-                // Normalize x position between 0 and 1
-                let normalizedX = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
-                
                 points.append((x: normalizedX, y: CGFloat(cumulativeProgress)))
+            }
+        }
+        
+        // If we have no points but the task exists in the time range, add a starting point
+        if points.isEmpty && foundFirstValidDay {
+            // Calculate normalized X for task creation date
+            let daysDiff = calendar.dateComponents([.day], from: calendar.startOfDay(for: today.addingTimeInterval(-Double(daysToAnalyze-1) * 86400)), to: taskCreationDay).day ?? 0
+            let startX = CGFloat(max(0, min(daysToAnalyze, daysDiff))) / CGFloat(daysToAnalyze)
+            
+            points.append((x: startX, y: 0))
+            
+            // Add another point at current date if we only have one point
+            if points.count == 1 {
+                points.append((x: 1.0, y: 0))
             }
         }
         

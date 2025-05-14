@@ -49,9 +49,19 @@ struct Language: Identifiable, Equatable {
     }
 }
 
-// Estensione di String per facilitare la localizzazione
+// Extension for String localization that reacts to language changes dynamically
 extension String {
     var localized: String {
-        NSLocalizedString(self, comment: "")
+        let bundle = Bundle.main
+        let languageCode = LanguageManager.shared.currentLanguage.code
+        
+        // First try to get the string from a specific resource bundle
+        if let path = bundle.path(forResource: languageCode, ofType: "lproj"),
+           let langBundle = Bundle(path: path) {
+            return NSLocalizedString(self, bundle: langBundle, comment: "")
+        }
+        
+        // Fallback to default localization
+        return NSLocalizedString(self, comment: "")
     }
 } 
