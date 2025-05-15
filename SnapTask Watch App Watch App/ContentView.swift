@@ -1,24 +1,45 @@
-//
-//  ContentView.swift
-//  SnapTask Watch App Watch App
-//
-//  Created by Giovanni Amadei on 14/05/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var taskManager = TaskManager.shared
+    @State private var selectedTab = 0
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView(selection: $selectedTab) {
+            TimelineWatchView()
+                .tag(0)
+            
+            PomodoroListView()
+                .tag(1)
+                
+            WatchStatisticsView()
+                .tag(2)
+                
+            SettingsWatchView()
+                .tag(3)
         }
-        .padding()
+        .tabViewStyle(PageTabViewStyle())
+        .navigationTitle(tabTitle)
+    }
+    
+    private var tabTitle: String {
+        switch selectedTab {
+        case 0:
+            return ""
+        case 1:
+            return "Pomodoro"
+        case 2:
+            return "Statistics"
+        case 3:
+            return "Settings"
+        default:
+            return ""
+        }
     }
 }
 
-#Preview {
-    ContentView()
-}
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
+} 

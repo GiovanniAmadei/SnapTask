@@ -59,9 +59,9 @@ class TaskFormViewModel: ObservableObject {
         
         let recurrence: Recurrence? = isRecurring ? {
             if isDailyRecurrence {
-                return Recurrence(type: .daily, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
+                return Recurrence(type: .daily, startDate: self.startDate, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
             } else {
-                return Recurrence(type: .weekly(days: selectedDays), endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
+                return Recurrence(type: .weekly(days: selectedDays), startDate: self.startDate, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
             }
         }() : nil
         

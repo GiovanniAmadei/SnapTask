@@ -29,16 +29,34 @@ class CategoryManager: ObservableObject {
         notifyCategoryUpdates()
     }
     
+    func clearAllData() {
+        categories = []
+        UserDefaults.standard.removeObject(forKey: categoriesKey)
+        UserDefaults.standard.synchronize()
+        notifyCategoryUpdates()
+    }
+    
     private func loadCategories() {
+        var shouldAddDefaults = true
+        
         if let data = UserDefaults.standard.data(forKey: categoriesKey),
            let decoded = try? JSONDecoder().decode([Category].self, from: data) {
             categories = decoded
+            // Check if we have the default categories
+            let defaultNames = ["Work", "Personal Care", "Leisure"]
+            shouldAddDefaults = categories.filter { defaultNames.contains($0.name) }.count != defaultNames.count
+        }
+        
+        if shouldAddDefaults {
+            addDefaultCategories()
         }
     }
     
     private func saveCategories() {
         if let encoded = try? JSONEncoder().encode(categories) {
             UserDefaults.standard.set(encoded, forKey: categoriesKey)
+            UserDefaults.standard.synchronize() // Ensure changes are saved immediately
+            notifyCategoryUpdates()
         }
     }
     
@@ -53,6 +71,29 @@ class CategoryManager: ObservableObject {
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
+            
+        // Add observer for UserDefaults changes
+        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .sink { [weak self] _ in
+                self?.loadCategories()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func addDefaultCategories() {
+        let defaultCategories = [
+            Category(id: UUID(), name: "Work", color: "#E74C3C"),        // Rosso più piacevole
+            Category(id: UUID(), name: "Personal Care", color: "#2ECC71"), // Verde più piacevole
+            Category(id: UUID(), name: "Leisure", color: "#3498DB")      // Blu più piacevole
+        ]
+        
+        // Merge with existing categories, keeping any custom ones
+        let existingCustomCategories = categories.filter { category in
+            !defaultCategories.contains { $0.name == category.name }
+        }
+        
+        categories = defaultCategories + existingCustomCategories
+        saveCategories()
     }
 }
 

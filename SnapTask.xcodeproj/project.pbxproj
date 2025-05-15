@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FC6909862DD49BE00006E601 /* SnapTask Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FC690B782DD4A0DA0006E601 /* QuoteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC690B772DD4A0DA0006E601 /* QuoteService.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		ACCAD3F72D37D10600A26002 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,13 +26,62 @@
 			remoteGlobalIDString = ACCAD3E52D37D10500A26002;
 			remoteInfo = SnapTask;
 		};
+		FC6909732DD49BE00006E601 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACCAD3DE2D37D10500A26002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FC6909652DD49BDF0006E601;
+			remoteInfo = "SnapTask Watch App Watch App";
+		};
+		FC69097D2DD49BE00006E601 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACCAD3DE2D37D10500A26002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FC6909652DD49BDF0006E601;
+			remoteInfo = "SnapTask Watch App Watch App";
+		};
+		FC6909842DD49BE00006E601 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACCAD3DE2D37D10500A26002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FC6909652DD49BDF0006E601;
+			remoteInfo = "SnapTask Watch App Watch App";
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		FC6909872DD49BE00006E601 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				FC6909862DD49BE00006E601 /* SnapTask Watch App Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		ACCAD3E62D37D10500A26002 /* SnapTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SnapTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACCAD3F62D37D10600A26002 /* SnapTaskTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnapTaskTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACCAD4002D37D10600A26002 /* SnapTaskUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnapTaskUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SnapTask Watch App Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC6909722DD49BE00006E601 /* SnapTask Watch App Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SnapTask Watch App Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC69097C2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SnapTask Watch App Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC690B772DD4A0DA0006E601 /* QuoteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QuoteService.swift; path = SnapTask/Services/QuoteService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FC690B762DD4A0DA0006E601 /* Exceptions for "SnapTask Watch App Watch App" folder in "SnapTask Watch App Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ACCAD3E82D37D10500A26002 /* SnapTask */ = {
@@ -43,6 +97,24 @@
 		ACCAD4032D37D10600A26002 /* SnapTaskUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SnapTaskUITests;
+			sourceTree = "<group>";
+		};
+		FC6909672DD49BDF0006E601 /* SnapTask Watch App Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FC690B762DD4A0DA0006E601 /* Exceptions for "SnapTask Watch App Watch App" folder in "SnapTask Watch App Watch App" target */,
+			);
+			path = "SnapTask Watch App Watch App";
+			sourceTree = "<group>";
+		};
+		FC6909752DD49BE00006E601 /* SnapTask Watch App Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "SnapTask Watch App Watch AppTests";
+			sourceTree = "<group>";
+		};
+		FC69097F2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "SnapTask Watch App Watch AppUITests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +141,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FC6909632DD49BDF0006E601 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC69096F2DD49BE00006E601 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC6909792DD49BE00006E601 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,7 +171,11 @@
 				ACCAD3E82D37D10500A26002 /* SnapTask */,
 				ACCAD3F92D37D10600A26002 /* SnapTaskTests */,
 				ACCAD4032D37D10600A26002 /* SnapTaskUITests */,
+				FC6909672DD49BDF0006E601 /* SnapTask Watch App Watch App */,
+				FC6909752DD49BE00006E601 /* SnapTask Watch App Watch AppTests */,
+				FC69097F2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests */,
 				ACCAD3E72D37D10500A26002 /* Products */,
+				FC690D292DD4A4300006E601 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -88,8 +185,19 @@
 				ACCAD3E62D37D10500A26002 /* SnapTask.app */,
 				ACCAD3F62D37D10600A26002 /* SnapTaskTests.xctest */,
 				ACCAD4002D37D10600A26002 /* SnapTaskUITests.xctest */,
+				FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */,
+				FC6909722DD49BE00006E601 /* SnapTask Watch App Watch AppTests.xctest */,
+				FC69097C2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FC690D292DD4A4300006E601 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				FC690B772DD4A0DA0006E601 /* QuoteService.swift */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,10 +210,12 @@
 				ACCAD3E22D37D10500A26002 /* Sources */,
 				ACCAD3E32D37D10500A26002 /* Frameworks */,
 				ACCAD3E42D37D10500A26002 /* Resources */,
+				FC6909872DD49BE00006E601 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				FC6909852DD49BE00006E601 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				ACCAD3E82D37D10500A26002 /* SnapTask */,
@@ -163,6 +273,74 @@
 			productReference = ACCAD4002D37D10600A26002 /* SnapTaskUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FC69098E2DD49BE00006E601 /* Build configuration list for PBXNativeTarget "SnapTask Watch App Watch App" */;
+			buildPhases = (
+				FC6909622DD49BDF0006E601 /* Sources */,
+				FC6909632DD49BDF0006E601 /* Frameworks */,
+				FC6909642DD49BDF0006E601 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FC6909672DD49BDF0006E601 /* SnapTask Watch App Watch App */,
+			);
+			name = "SnapTask Watch App Watch App";
+			packageProductDependencies = (
+			);
+			productName = "SnapTask Watch App Watch App";
+			productReference = FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FC6909712DD49BE00006E601 /* SnapTask Watch App Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FC69098F2DD49BE00006E601 /* Build configuration list for PBXNativeTarget "SnapTask Watch App Watch AppTests" */;
+			buildPhases = (
+				FC69096E2DD49BE00006E601 /* Sources */,
+				FC69096F2DD49BE00006E601 /* Frameworks */,
+				FC6909702DD49BE00006E601 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FC6909742DD49BE00006E601 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FC6909752DD49BE00006E601 /* SnapTask Watch App Watch AppTests */,
+			);
+			name = "SnapTask Watch App Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "SnapTask Watch App Watch AppTests";
+			productReference = FC6909722DD49BE00006E601 /* SnapTask Watch App Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FC69097B2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FC6909902DD49BE00006E601 /* Build configuration list for PBXNativeTarget "SnapTask Watch App Watch AppUITests" */;
+			buildPhases = (
+				FC6909782DD49BE00006E601 /* Sources */,
+				FC6909792DD49BE00006E601 /* Frameworks */,
+				FC69097A2DD49BE00006E601 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FC69097E2DD49BE00006E601 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FC69097F2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests */,
+			);
+			name = "SnapTask Watch App Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "SnapTask Watch App Watch AppUITests";
+			productReference = FC69097C2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -170,7 +348,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1620;
+				LastSwiftUpdateCheck = 1630;
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					ACCAD3E52D37D10500A26002 = {
@@ -183,6 +361,17 @@
 					ACCAD3FF2D37D10600A26002 = {
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = ACCAD3E52D37D10500A26002;
+					};
+					FC6909652DD49BDF0006E601 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					FC6909712DD49BE00006E601 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = FC6909652DD49BDF0006E601;
+					};
+					FC69097B2DD49BE00006E601 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = FC6909652DD49BDF0006E601;
 					};
 				};
 			};
@@ -204,6 +393,9 @@
 				ACCAD3E52D37D10500A26002 /* SnapTask */,
 				ACCAD3F52D37D10600A26002 /* SnapTaskTests */,
 				ACCAD3FF2D37D10600A26002 /* SnapTaskUITests */,
+				FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */,
+				FC6909712DD49BE00006E601 /* SnapTask Watch App Watch AppTests */,
+				FC69097B2DD49BE00006E601 /* SnapTask Watch App Watch AppUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -224,6 +416,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		ACCAD3FE2D37D10600A26002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC6909642DD49BDF0006E601 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC6909702DD49BE00006E601 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC69097A2DD49BE00006E601 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -254,6 +467,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FC6909622DD49BDF0006E601 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FC690B782DD4A0DA0006E601 /* QuoteService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC69096E2DD49BE00006E601 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC6909782DD49BE00006E601 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -266,6 +501,21 @@
 			isa = PBXTargetDependency;
 			target = ACCAD3E52D37D10500A26002 /* SnapTask */;
 			targetProxy = ACCAD4012D37D10600A26002 /* PBXContainerItemProxy */;
+		};
+		FC6909742DD49BE00006E601 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
+			targetProxy = FC6909732DD49BE00006E601 /* PBXContainerItemProxy */;
+		};
+		FC69097E2DD49BE00006E601 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
+			targetProxy = FC69097D2DD49BE00006E601 /* PBXContainerItemProxy */;
+		};
+		FC6909852DD49BE00006E601 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
+			targetProxy = FC6909842DD49BE00006E601 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -523,6 +773,159 @@
 			};
 			name = Release;
 		};
+		FC6909882DD49BE00006E601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y997848SS8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Watch App";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.giovanniamadei.SnapTask;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.4;
+			};
+			name = Debug;
+		};
+		FC6909892DD49BE00006E601 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y997848SS8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Watch App";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.giovanniamadei.SnapTask;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.4;
+			};
+			name = Release;
+		};
+		FC69098A2DD49BE00006E601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y997848SS8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.giovanniamadei.SnapTask.watchkitapp.SnapTask-Watch-App-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnapTask Watch App Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SnapTask Watch App Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.4;
+			};
+			name = Debug;
+		};
+		FC69098B2DD49BE00006E601 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y997848SS8;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.giovanniamadei.SnapTask.watchkitapp.SnapTask-Watch-App-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnapTask Watch App Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SnapTask Watch App Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.4;
+			};
+			name = Release;
+		};
+		FC69098C2DD49BE00006E601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = Y997848SS8;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "SnapTask Watch App Watch App/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.5;
+			};
+			name = Debug;
+		};
+		FC69098D2DD49BE00006E601 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = Y997848SS8;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "SnapTask Watch App Watch App/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "SnapTask Watch App Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 10.5;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -558,6 +961,33 @@
 			buildConfigurations = (
 				ACCAD4112D37D10600A26002 /* Debug */,
 				ACCAD4122D37D10600A26002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FC69098E2DD49BE00006E601 /* Build configuration list for PBXNativeTarget "SnapTask Watch App Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FC6909882DD49BE00006E601 /* Debug */,
+				FC6909892DD49BE00006E601 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FC69098F2DD49BE00006E601 /* Build configuration list for PBXNativeTarget "SnapTask Watch App Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FC69098A2DD49BE00006E601 /* Debug */,
+				FC69098B2DD49BE00006E601 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FC6909902DD49BE00006E601 /* Build configuration list for PBXNativeTarget "SnapTask Watch App Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FC69098C2DD49BE00006E601 /* Debug */,
+				FC69098D2DD49BE00006E601 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

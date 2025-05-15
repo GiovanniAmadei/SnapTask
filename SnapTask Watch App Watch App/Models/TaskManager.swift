@@ -1,11 +1,10 @@
 import Foundation
 import Combine
-import WatchConnectivity
 
 class TaskManager: ObservableObject {
     static let shared = TaskManager()
     
-    @Published private(set) var tasks: [TodoTask] = []
+    @Published var tasks: [TodoTask] = []
     private let tasksKey = "savedTasks"
     
     init() {
@@ -119,7 +118,7 @@ class TaskManager: ObservableObject {
         }
     }
     
-    private func saveTasks() {
+    func saveTasks() {
         do {
             let data = try JSONEncoder().encode(tasks)
             UserDefaults.standard.set(data, forKey: tasksKey)
@@ -139,14 +138,8 @@ class TaskManager: ObservableObject {
         }
     }
     
-    private func notifyTasksUpdated() {
+    func notifyTasksUpdated() {
         NotificationCenter.default.post(name: .tasksDidUpdate, object: nil)
-    }
-    
-    // Function to synchronize tasks with Apple Watch
-    private func synchronizeWithWatch() {
-        let connectivityManager = WatchConnectivityManager.shared
-        connectivityManager.updateWatchContext()
     }
     
     // For debugging purposes only
@@ -158,6 +151,21 @@ class TaskManager: ObservableObject {
         
         // Sincronizar con Apple Watch
         synchronizeWithWatch()
+    }
+    
+    // Method to send task updates to the iOS app
+    func synchronizeWithWatch() {
+        WatchConnectivityManager.shared.sendTasksToiOS(tasks: self.tasks)
+    }
+    
+    func isSubtaskCompleted(taskId: UUID, subtaskId: UUID, on date: Date = Date()) -> Bool {
+        guard let task = tasks.first(where: { $0.id == taskId }) else { return false }
+        let startOfDay = date.startOfDay
+        
+        if let completion = task.completions[startOfDay] {
+            return completion.completedSubtasks.contains(subtaskId)
+        }
+        return false
     }
 }
 
