@@ -26,6 +26,7 @@ struct TimelineView: View {
                         viewModel: viewModel,
                         showingNewTask: $showingNewTask
                     )
+                    .frame(maxHeight: .infinity)
                 }
             }
             .navigationBarHidden(true)

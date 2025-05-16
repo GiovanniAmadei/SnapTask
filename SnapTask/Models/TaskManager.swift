@@ -20,7 +20,10 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Sincronizar con Apple Watch
+        // Sincronizza con CloudKit in modo sicuro
+        // CloudKitSyncProxy.shared.saveTask(task)
+        
+        // Sincronizza con Apple Watch
         synchronizeWithWatch()
     }
     
@@ -35,9 +38,22 @@ class TaskManager: ObservableObject {
             saveTasks()
             notifyTasksUpdated()
             
-            // Sincronizar con Apple Watch
+            // Sincronizza con CloudKit in modo sicuro
+            // CloudKitSyncProxy.shared.saveTask(task)
+            
+            // Sincronizza con Apple Watch
             synchronizeWithWatch()
         }
+    }
+    
+    func updateAllTasks(_ newTasks: [TodoTask]) {
+        tasks = newTasks
+        saveTasks()
+        notifyTasksUpdated()
+        objectWillChange.send()
+        
+        // Sincronizza con Apple Watch
+        synchronizeWithWatch()
     }
     
     func removeTask(_ task: TodoTask) {
@@ -46,7 +62,10 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Sincronizar con Apple Watch
+        // Sincronizza con CloudKit in modo sicuro
+        // CloudKitSyncProxy.shared.deleteTask(task)
+        
+        // Sincronizza con Apple Watch
         synchronizeWithWatch()
     }
     
@@ -85,7 +104,10 @@ class TaskManager: ObservableObject {
                 self?.notifyTasksUpdated()
                 self?.objectWillChange.send()
                 
-                // Sincronizar con Apple Watch
+                // Sincronizza con CloudKit in modo sicuro
+                // CloudKitSyncProxy.shared.saveTask(task)
+                
+                // Sincronizza con Apple Watch
                 self?.synchronizeWithWatch()
             }
         }
@@ -114,9 +136,17 @@ class TaskManager: ObservableObject {
             self?.notifyTasksUpdated()
             self?.objectWillChange.send()
             
-            // Sincronizar con Apple Watch
+            // Sincronizza con CloudKit in modo sicuro
+            // CloudKitSyncProxy.shared.saveTask(task)
+            
+            // Sincronizza con Apple Watch
             self?.synchronizeWithWatch()
         }
+    }
+    
+    func syncWithCloudKit() {
+        // Sincronizza in modo sicuro tramite proxy
+        // CloudKitSyncProxy.shared.syncTasks()
     }
     
     private func saveTasks() {
@@ -156,7 +186,10 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Sincronizar con Apple Watch
+        // Sincronizza con CloudKit in modo sicuro
+        // CloudKitSyncProxy.shared.syncTasks()
+        
+        // Sincronizza con Apple Watch
         synchronizeWithWatch()
     }
 }

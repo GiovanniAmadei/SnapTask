@@ -4,6 +4,7 @@ struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var cloudKitService = CloudKitService.shared
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var showingLanguagePicker = false
@@ -40,6 +41,12 @@ struct SettingsView: View {
                         .padding(.top, 4)
                     }
                     .padding(.vertical, 4)
+                }
+                
+                Section("iCloud Sync") {
+                    CloudSyncStatusView()
+                        .listRowInsets(EdgeInsets())
+                        .padding(.vertical, 5)
                 }
                 
                 Section("customization".localized) {
@@ -84,6 +91,9 @@ struct SettingsView: View {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
                 }
+                
+                // Verifica la sincronizzazione con CloudKit
+                cloudKitService.syncTasks()
             }
             .actionSheet(isPresented: $showingLanguagePicker) {
                 ActionSheet(

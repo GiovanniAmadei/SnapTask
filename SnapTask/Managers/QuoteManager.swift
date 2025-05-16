@@ -38,19 +38,19 @@ class QuoteManager: ObservableObject {
         }
         
         // Check if we need to update the quote
-        Task {
-            await checkAndUpdateQuote()
-        }
+        // Task {
+        //     await checkAndUpdateQuote()
+        // }
         
         // Set up a timer to refresh the quote daily
-        Timer.publish(every: 86400, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { [weak self] in
-                    await self?.checkAndUpdateQuote()
-                }
-            }
-            .store(in: &cancellables)
+        // Timer.publish(every: 86400, on: .main, in: .common)
+        //     .autoconnect()
+        //     .sink { [weak self] _ in
+        //         Task { [weak self] in
+        //             await self?.checkAndUpdateQuote()
+        //         }
+        //     }
+        //     .store(in: &cancellables)
     }
     
     @MainActor

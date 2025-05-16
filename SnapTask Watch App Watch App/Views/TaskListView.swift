@@ -4,9 +4,13 @@ struct TaskListView: View {
     @ObservedObject private var taskManager = TaskManager.shared
     @State private var date = Date()
     @State private var isShowingCreateTask = false
+    @State private var showTaskDetail: TodoTask? = nil
+    @State private var editingTask: TodoTask? = nil
+    @State private var hapticEngine = WKHapticType.click
+    @State private var selectedTask: TodoTask? = nil
+    @State private var showingActionSheet = false
     
     var body: some View {
-        // Temporarily remove ZStack, ScrollView becomes the root of the body for diagnostics
         ScrollView {
             VStack(alignment: .leading) {
                 if todaysTasks.isEmpty {
@@ -20,37 +24,52 @@ struct TaskListView: View {
                         .padding(.bottom, 5)
                     
                     ForEach(todaysTasks) { taskItem in
-                        HStack {
-                            Image(systemName: (taskManager.tasks.first{ $0.id == taskItem.id }?.completions[Calendar.current.startOfDay(for: Date())]?.isCompleted ?? false) ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor((taskManager.tasks.first{ $0.id == taskItem.id }?.completions[Calendar.current.startOfDay(for: Date())]?.isCompleted ?? false) ? .green : .gray)
-                            
-                            Text(taskItem.name)
-                                .padding(.vertical, 4)
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        .onTapGesture {
-                            print("Tapped on task (simplified): \(taskItem.name)")
-                            // toggleTaskCompletion(taskItem)
-                        }
+                        TaskRowView(
+                            task: taskItem,
+                            onTap: {
+                                showTaskDetail = taskItem
+                                WKInterfaceDevice.current().play(hapticEngine)
+                            },
+                            onLongPress: {
+                                selectedTask = taskItem
+                                showingActionSheet = true
+                                WKInterfaceDevice.current().play(hapticEngine)
+                            }
+                        )
                         Divider()
                     }
                 }
             }
         }
         .navigationTitle("Tasks (Simplified)")
-        // All previously commented out sections remain commented out for now
-        /*
         .sheet(isPresented: $isShowingCreateTask) {
-            CreateTaskView()
+            WatchTaskFormView(
+                viewModel: editingTask != nil ? TaskFormViewModel(task: editingTask!, initialDate: date) : TaskFormViewModel(initialDate: date),
+                isPresented: $isShowingCreateTask
+            )
+            .onDisappear {
+                editingTask = nil
+            }
         }
-        */
-        /*
-        .onLongPressGesture {
-            isShowingCreateTask = true
+        .sheet(item: $showTaskDetail) { task in
+            WatchTaskDetailView(task: task, date: date)
         }
-        */
+        .sheet(isPresented: $showingActionSheet) {
+            if let task = selectedTask {
+                ActionSheetView(
+                    task: task,
+                    onEdit: {
+                        editingTask = task
+                        isShowingCreateTask = true
+                        showingActionSheet = false
+                    },
+                    onDelete: {
+                        taskManager.removeTask(task)
+                        showingActionSheet = false
+                    }
+                )
+            }
+        }
     }
     
     private var todaysTasks: [TodoTask] {
@@ -70,9 +89,54 @@ struct TaskListView: View {
         }
         .sorted { $0.startTime < $1.startTime }
     }
+}
+
+struct TaskRowView: View {
+    let task: TodoTask
+    let onTap: () -> Void
+    let onLongPress: () -> Void
     
-    private func toggleTaskCompletion(_ task: TodoTask) {
-        taskManager.toggleTaskCompletion(task.id, on: date)
+    var body: some View {
+        Button(action: onTap) {
+            HStack {
+                Image(systemName: task.completions[Calendar.current.startOfDay(for: Date())]?.isCompleted ?? false ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(task.completions[Calendar.current.startOfDay(for: Date())]?.isCompleted ?? false ? .green : .gray)
+                    .font(.system(size: 20))
+                
+                Text(task.name)
+                    .padding(.vertical, 4)
+                
+                Spacer()
+            }
+            .padding(.horizontal)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .gesture(
+            LongPressGesture(minimumDuration: 0.5)
+                .onEnded { _ in
+                    onLongPress()
+                }
+        )
+    }
+}
+
+struct ActionSheetView: View {
+    let task: TodoTask
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        List {
+            Button(action: onEdit) {
+                Label("Edit Task", systemImage: "pencil")
+                    .foregroundColor(.orange)
+            }
+            
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete Task", systemImage: "trash")
+            }
+        }
+        .listStyle(EllipticalListStyle())
     }
 }
 
@@ -173,3 +237,4 @@ extension Color {
         )
     }
 } 
+

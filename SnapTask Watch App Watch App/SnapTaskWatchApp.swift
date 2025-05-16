@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import CloudKit
 
 @main
 struct SnapTaskWatchApp: App {
     @StateObject private var taskManager = TaskManager.shared
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
+    @StateObject private var cloudKitService = CloudKitService.shared
     
     var body: some Scene {
         WindowGroup {
@@ -23,7 +25,10 @@ struct SnapTaskWatchApp: App {
                     await quoteManager.checkAndUpdateQuote()
                 }
                 
-                // Richiesta delle attività da iOS quando l'app si avvia
+                // Prima sincronizzazione con CloudKit
+                cloudKitService.syncTasks()
+                
+                // Richiesta delle attività da iOS come fallback
                 connectivityManager.requestTasksFromiOS()
             }
         }
