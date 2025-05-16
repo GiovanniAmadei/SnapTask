@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsWatchView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var quoteManager = QuoteManager.shared
+    @StateObject private var cloudKitService = CloudKitService.shared
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var showingLanguagePicker = false
@@ -10,6 +11,14 @@ struct SettingsWatchView: View {
     @State private var showingPrioritiesView = false
     @State private var showingPomodoroSettings = false
     @State private var selectedLanguage = "en"
+    
+    // Date formatter
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }
     
     var body: some View {
         ScrollView {
@@ -44,6 +53,53 @@ struct SettingsWatchView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.1))
+                )
+                
+                // iCloud Sync Section - NEW
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("iCloud Sync")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    if cloudKitService.isSyncing {
+                        HStack {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Sincronizzazione in corso...")
+                                .font(.caption)
+                        }
+                    } else {
+                        Button(action: {
+                            cloudKitService.syncTasks()
+                        }) {
+                            Label("Sincronizza Ora", systemImage: "arrow.triangle.2.circlepath.icloud.fill")
+                        }
+                        .buttonStyle(.bordered)
+                        // .disabled(cloudKitService.isSyncing) // Already handled by showing ProgressView
+                    }
+                    
+                    if let lastSync = cloudKitService.lastSyncDate {
+                        Text("Ultima sinc.: \(lastSync, formatter: dateFormatter)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Ultima sinc.: Mai")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if let error = cloudKitService.syncError {
+                        Text("Errore: \(error.localizedDescription)")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                            .lineLimit(5)
+                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 10)
