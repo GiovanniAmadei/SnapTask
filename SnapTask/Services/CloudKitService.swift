@@ -350,90 +350,119 @@ class CloudKitService: ObservableObject {
     }
     
     private func mergeTasksSafely(localTasks: [TodoTask], remoteTasks: [TodoTask]) {
-        do {
-            print("CloudKitService: mergeTasksSafely - Starting merge with \(localTasks.count) local tasks and \(remoteTasks.count) remote tasks")
-            
-            // Keep track of any local deletions
-            let localTaskIDs = Set(localTasks.map { $0.id.uuidString })
-            let remoteTaskIDs = Set(remoteTasks.map { $0.id.uuidString })
-            
-            // Start with remote tasks that aren't in our deleted tasks list
-            let filteredRemoteTasks = remoteTasks.filter { !isTaskDeleted(taskID: $0.id.uuidString) }
-            print("CloudKitService: mergeTasksSafely - After filtering deleted tasks: \(filteredRemoteTasks.count) remote tasks")
-            
-            var mergedTasks = filteredRemoteTasks
-            
-            // Find remote tasks that should be deleted (in remote but not in local)
-            let tasksToDelete = filteredRemoteTasks.filter { !localTaskIDs.contains($0.id.uuidString) }
-            print("CloudKitService: mergeTasksSafely - Found \(tasksToDelete.count) tasks to delete")
-            
-            // Check for local tasks not in remote
-            for localTask in localTasks {
-                let localTaskID = localTask.id.uuidString
-                
-                // Skip if this task is in our deletion list
-                if isTaskDeleted(taskID: localTaskID) {
-                    print("CloudKitService: mergeTasksSafely - Skipping deleted local task: \(localTask.name)")
-                    continue
-                }
-                
-                if !remoteTaskIDs.contains(localTaskID) {
-                    // This is a new local task, add it to merged
-                    print("CloudKitService: mergeTasksSafely - Adding new local task: \(localTask.name)")
-                    mergedTasks.append(localTask)
-                    // We'll save it after updating the local state
-                } else if let remoteTask = filteredRemoteTasks.first(where: { $0.id.uuidString == localTaskID }),
-                          localTask.creationDate > remoteTask.creationDate {
-                    // Local task is newer, replace
-                    print("CloudKitService: mergeTasksSafely - Updating task with newer local version: \(localTask.name)")
-                    if let index = mergedTasks.firstIndex(where: { $0.id.uuidString == localTaskID }) {
-                        mergedTasks[index] = localTask
-                        // We'll save it after updating the local state
-                    }
-                }
+        // localTasks: from TaskManager at start of sync
+        // remoteTasks: from CloudKit, already filtered by this device's deletedTaskIDs list (tasks this device knows were deleted by it are not included)
+
+        print("CloudKitService: mergeTasksSafely - Starting merge. Local: \(localTasks.count), Remote (filtered by local deletes): \(remoteTasks.count)")
+        let localDeviceDeletedIDs = self.deletedTaskIDs // IDs this device knows MUST be deleted
+
+        var finalLocalState = [UUID: TodoTask]() // Accumulator for new local state
+        var recordsToSaveToCloudKit = [CKRecord]()
+        var recordIDsToDeleteFromCloudKit = Set<CKRecord.ID>()
+
+        // Ensure all tasks this device marked as deleted are indeed queued for server deletion
+        localDeviceDeletedIDs.forEach { idString in
+            recordIDsToDeleteFromCloudKit.insert(CKRecord.ID(recordName: idString, zoneID: self.zoneID))
+        }
+
+        let localTasksMap = Dictionary(localTasks.map { ($0.id, $0) }, uniquingKeysWith: { (first, _) in first })
+        // remoteTasks are already filtered by localDeviceDeletedIDs during fetchAllTasks.
+        // This means remoteTasksMap does not contain tasks that this device has deleted and recorded in its UserDefaults.
+        let remoteTasksMap = Dictionary(remoteTasks.map { ($0.id, $0) }, uniquingKeysWith: { (first, _) in first })
+        
+        let allConsideredIDs = Set(localTasksMap.keys).union(remoteTasksMap.keys)
+
+        for taskID in allConsideredIDs {
+            let idString = taskID.uuidString
+            let localTask = localTasksMap[taskID]
+            let remoteTask = remoteTasksMap[taskID]
+
+            if localDeviceDeletedIDs.contains(idString) {
+                // This task is marked for deletion by this device.
+                // It should not be in finalLocalState. Its deletion from server is already queued.
+                print("CloudKitService: Merge - Task \(localTask?.name ?? idString) is in local deleted list. Skipping for local state, ensuring server delete.")
+                continue // Skip to next taskID
             }
-            
-            // Update local task store
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                print("CloudKitService: mergeTasksSafely - Updating local task store with \(mergedTasks.count) tasks")
-                
-                // Update local tasks first
-                TaskManager.shared.updateAllTasks(mergedTasks)
-                
-                // Then handle CloudKit operations
-                
-                // Delete tasks that were deleted locally
-                for taskToDelete in tasksToDelete {
-                    print("CloudKitService: Deleting task from CloudKit: \(taskToDelete.name)")
-                    self.deleteTask(taskToDelete)
-                }
-                
-                // Save new or updated local tasks to CloudKit
-                for task in localTasks {
-                    // Skip if this task is deleted
-                    if self.isTaskDeleted(taskID: task.id.uuidString) {
-                        continue
+
+            if let lt = localTask, let rt = remoteTask {
+                // Task exists in both local cache and remote (and not in localDeviceDeletedIDs).
+                // Standard merge: newer wins (using creationDate as a proxy for modificationDate).
+                // For a more robust solution, a dedicated 'lastModifiedAt' timestamp managed by your app would be better.
+                if lt.creationDate >= rt.creationDate { // Local is newer or same.
+                    finalLocalState[taskID] = lt
+                    if lt.creationDate > rt.creationDate { // Only schedule save if local is strictly newer.
+                        print("CloudKitService: Merge - Local task '\(lt.name)' is newer. Scheduling for server update.")
+                        recordsToSaveToCloudKit.append(self.taskToRecord(lt))
+                    } else {
+                        print("CloudKitService: Merge - Local task '\(lt.name)' and remote are same or local is newer/same. Keeping local version, no server update needed unless content differs (not checked here).")
                     }
-                    
-                    let taskID = task.id.uuidString
-                    if !remoteTaskIDs.contains(taskID) || 
-                       (filteredRemoteTasks.first(where: { $0.id.uuidString == taskID })?.creationDate ?? Date.distantPast) < task.creationDate {
-                        print("CloudKitService: Saving updated task to CloudKit: \(task.name)")
-                        self.saveTask(task)
+                } else { // Remote is newer.
+                    finalLocalState[taskID] = rt
+                    print("CloudKitService: Merge - Remote task '\(rt.name)' is newer. Updating local state.")
+                }
+            } else if let lt = localTask {
+                // Task exists locally, but not in remoteTasks (which are already filtered by *this device's* deletedTaskIDs).
+                // This means:
+                // a) It's a new task created on this device that hasn't successfully synced yet.
+                // b) It *was* on the server, but was deleted by *another* device. This device doesn't know about that remote deletion yet.
+                
+                // We keep it in the local state because this device believes it exists.
+                finalLocalState[taskID] = lt
+                
+                // We schedule it for upload.
+                // If it's case (a), it gets to the server. Good.
+                // If it's case (b), it might be temporarily resurrected on the server.
+                // The other device, on its next sync, should re-delete it based on its local deletedTaskIDs.
+                // This is preferable to new tasks never appearing.
+                print("CloudKitService: Merge - Task '\(lt.name)' is local-only (or remotely deleted by another device). Keeping local and scheduling for upload/update on CloudKit.")
+                recordsToSaveToCloudKit.append(self.taskToRecord(lt))
+
+            } else if let rt = remoteTask {
+                // Task exists in remoteTasks, but not locally (and not in localDeviceDeletedIDs).
+                // This means it's a new task from the server / another device.
+                finalLocalState[taskID] = rt
+                print("CloudKitService: Merge - Remote task '\(rt.name)' is new to this device or was re-fetched. Adding/updating locally.")
+            }
+        }
+
+        // Perform local and remote updates
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let tasksForManager = Array(finalLocalState.values)
+            print("CloudKitService: Merge - Finalizing. Updating TaskManager with \(tasksForManager.count) tasks.")
+            TaskManager.shared.updateAllTasks(tasksForManager)
+
+            // Consolidate recordIDsToDeleteFromCloudKit: ensure we don't try to delete what we're about to save if a task was rapidly changed.
+            // However, given the logic, a task to be saved shouldn't also be in localDeviceDeletedIDs.
+            let finalRecordIDsToDelete = Array(recordIDsToDeleteFromCloudKit)
+
+            if !recordsToSaveToCloudKit.isEmpty || !finalRecordIDsToDelete.isEmpty {
+                print("CloudKitService: Merge - Preparing to save \(recordsToSaveToCloudKit.count) records and delete \(finalRecordIDsToDelete.count) record IDs from CloudKit.")
+                let modifyOp = CKModifyRecordsOperation(recordsToSave: recordsToSaveToCloudKit, recordIDsToDelete: finalRecordIDsToDelete)
+                modifyOp.savePolicy = .changedKeys 
+                // modifyOp.isAtomic = false // Consider atomicity if needed, default is true per zone.
+                modifyOp.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
+                    DispatchQueue.main.async { // Ensure UI updates on main thread
+                        if let error = error {
+                            print("CloudKitService: Merge - CKModifyRecordsOperation error: \(error.localizedDescription)")
+                            self.handleSyncError(error)
+                        } else {
+                            print("CloudKitService: Merge - CKModifyRecordsOperation success. Saved: \(savedRecords?.count ?? 0), Deleted: \(deletedRecordIDs?.count ?? 0).")
+                            // Optionally, if you want to clean up UserDefaults after confirmed server deletion:
+                            // deletedRecordIDs?.forEach { self.removeFromDeletedTasks(taskID: $0.recordName) }
+                            self.syncError = nil
+                        }
+                        self.isSyncing = false
+                        self.lastSyncDate = Date()
                     }
                 }
-                
+                self.privateDatabase.add(modifyOp)
+            } else {
+                print("CloudKitService: Merge - No CloudKit operations needed.")
                 self.isSyncing = false
                 self.lastSyncDate = Date()
-                self.syncError = nil // Clear error on successful merge and local update
-                
-                print("CloudKitService: mergeTasksSafely - Sync completed successfully")
+                self.syncError = nil
             }
-        } catch {
-            print("Error in mergeTasksSafely: \(error.localizedDescription)")
-            handleSyncError(error)
         }
     }
     
