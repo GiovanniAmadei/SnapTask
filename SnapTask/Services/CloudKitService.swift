@@ -378,27 +378,26 @@ class CloudKitService: ObservableObject {
             let remoteTask = remoteTasksMap[taskID]
 
             if localDeviceDeletedIDs.contains(idString) {
-                // This task is marked for deletion by this device.
-                // It should not be in finalLocalState. Its deletion from server is already queued.
-                print("CloudKitService: Merge - Task \(localTask?.name ?? idString) is in local deleted list. Skipping for local state, ensuring server delete.")
-                continue // Skip to next taskID
+                print("CKService (iOS): Merge - Task \\(idString) in local deleted list. Ensuring server delete.")
+                // Already added to recordIDsToDeleteFromCloudKit via localDeviceDeletedIDs
+                continue
             }
 
             if let lt = localTask, let rt = remoteTask {
-                // Task exists in both local cache and remote (and not in localDeviceDeletedIDs).
-                // Standard merge: newer wins (using creationDate as a proxy for modificationDate).
-                // For a more robust solution, a dedicated 'lastModifiedAt' timestamp managed by your app would be better.
-                if lt.creationDate >= rt.creationDate { // Local is newer or same.
+                // Prioritize based on lastModifiedDate
+                if lt.lastModifiedDate >= rt.lastModifiedDate { // MODIFIED
                     finalLocalState[taskID] = lt
-                    if lt.creationDate > rt.creationDate { // Only schedule save if local is strictly newer.
-                        print("CloudKitService: Merge - Local task '\(lt.name)' is newer. Scheduling for server update.")
+                    if lt.lastModifiedDate > rt.lastModifiedDate { // MODIFIED
+                        print("CKService (iOS): Merge - Local task '\\(lt.name)' is more recently modified. Scheduling for server update.")
                         recordsToSaveToCloudKit.append(self.taskToRecord(lt))
                     } else {
-                        print("CloudKitService: Merge - Local task '\(lt.name)' and remote are same or local is newer/same. Keeping local version, no server update needed unless content differs (not checked here).")
+                        // Potentially check for content differences if dates are identical but not sure if synced.
+                        // For now, assume synced if dates are identical.
+                        print("CKService (iOS): Merge - Local task '\\(lt.name)' and remote task have same modification date.")
                     }
-                } else { // Remote is newer.
+                } else {
                     finalLocalState[taskID] = rt
-                    print("CloudKitService: Merge - Remote task '\(rt.name)' is newer. Updating local state.")
+                    print("CKService (iOS): Merge - Remote task '\\(rt.name)' is more recently modified. Updating local state.")
                 }
             } else if let lt = localTask {
                 // Task exists locally, but not in remoteTasks (which are already filtered by *this device's* deletedTaskIDs).
@@ -474,6 +473,7 @@ class CloudKitService: ObservableObject {
         // Basic properties - Explicitly cast all values to CKRecordValue
         record["name"] = task.name as CKRecordValue
         record["appCreationDate"] = task.creationDate as NSDate // Custom field for model's creation date
+        record["lastModifiedDate"] = task.lastModifiedDate as NSDate // ADDED
         record["startTime"] = task.startTime as NSDate
         record["duration"] = task.duration as CKRecordValue
         record["hasDuration"] = task.hasDuration as CKRecordValue
@@ -551,6 +551,7 @@ class CloudKitService: ObservableObject {
             
             // Extract other fields with safe fallbacks
             let modelCreationDate = record["appCreationDate"] as? Date ?? record.creationDate ?? Date()
+            let lastModifiedDate = record["lastModifiedDate"] as? Date ?? record.modificationDate ?? modelCreationDate // ADDED
             let startTime = record["startTime"] as? Date ?? modelCreationDate
             let duration = record["duration"] as? TimeInterval ?? 0.0
             let hasDuration = record["hasDuration"] as? Bool ?? false
@@ -638,6 +639,7 @@ class CloudKitService: ObservableObject {
             task.completions = completions
             task.completionDates = completionDates
             task.creationDate = modelCreationDate
+            task.lastModifiedDate = lastModifiedDate // ADDED
             
             print("CloudKitService: recordToTask - Successfully created task: \(name)")
             return task

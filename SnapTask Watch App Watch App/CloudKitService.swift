@@ -39,7 +39,7 @@ class CloudKitService: ObservableObject {
     }
     
     private init() {
-        container = CKContainer.default() 
+        container = CKContainer(identifier: "iCloud.com.giovanniamadei.SnapTask") 
         privateDatabase = container.privateCloudDatabase
         zoneID = CKRecordZone.ID(zoneName: "SnapTaskZone", ownerName: CKCurrentUserDefaultName)
         recordZone = CKRecordZone(zoneID: zoneID)
@@ -261,15 +261,17 @@ class CloudKitService: ObservableObject {
             }
 
             if let lt = localTask, let rt = remoteTask {
-                if lt.creationDate >= rt.creationDate {
+                if lt.lastModifiedDate >= rt.lastModifiedDate {
                     finalLocalState[taskID] = lt
-                    if lt.creationDate > rt.creationDate {
-                        print("Watch CKService: Merge - Local task '\(lt.name)' is newer. Scheduling for server update.")
+                    if lt.lastModifiedDate > rt.lastModifiedDate {
+                        print("Watch CKService: Merge - Local task '\(lt.name)' is more recently modified. Scheduling for server update.")
                         recordsToSaveToCloudKit.append(self.taskToRecord(lt))
+                    } else {
+                        print("Watch CKService: Merge - Local task '\(lt.name)' and remote task have same modification date.")
                     }
                 } else {
                     finalLocalState[taskID] = rt
-                    print("Watch CKService: Merge - Remote task '\(rt.name)' is newer. Updating local state.")
+                    print("Watch CKService: Merge - Remote task '\(rt.name)' is more recently modified. Updating local state.")
                 }
             } else if let lt = localTask {
                 finalLocalState[taskID] = lt
@@ -321,6 +323,7 @@ class CloudKitService: ObservableObject {
         // Basic properties
         record["name"] = task.name as CKRecordValue
         record["appCreationDate"] = task.creationDate as NSDate
+        record["lastModifiedDate"] = task.lastModifiedDate as NSDate
         record["startTime"] = task.startTime as NSDate
         record["duration"] = task.duration as CKRecordValue
         record["hasDuration"] = task.hasDuration as CKRecordValue
@@ -350,6 +353,7 @@ class CloudKitService: ObservableObject {
         do {
             guard let name = record["name"] as? String else { return nil }
             let modelCreationDate = record["appCreationDate"] as? Date ?? record.creationDate ?? Date()
+            let lastModifiedDate = record["lastModifiedDate"] as? Date ?? record.modificationDate ?? modelCreationDate
             let startTime = record["startTime"] as? Date ?? modelCreationDate
             let duration = record["duration"] as? TimeInterval ?? 0.0
             let hasDuration = record["hasDuration"] as? Bool ?? false
@@ -370,6 +374,7 @@ class CloudKitService: ObservableObject {
             task.completions = completions
             task.completionDates = completionDates
             task.creationDate = modelCreationDate
+            task.lastModifiedDate = lastModifiedDate
             return task
         } catch {
             print("Watch CKService: recordToTask - Error processing record ID \(record.recordID.recordName): \(error.localizedDescription)")
