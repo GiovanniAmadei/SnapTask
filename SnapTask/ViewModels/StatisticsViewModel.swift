@@ -1,6 +1,6 @@
 import SwiftUI
 import Combine
-import OSLog
+import os.log
 import Foundation
 
 class StatisticsViewModel: ObservableObject {
@@ -220,7 +220,7 @@ class StatisticsViewModel: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let yearAgo = calendar.date(byAdding: .year, value: -1, to: today) else {
-            Logger.stats.error("Date calculation failed")
+            Logger.stats("Date calculation failed", level: .error)
             return
         }
         
@@ -414,7 +414,9 @@ class StatisticsViewModel: ObservableObject {
     }
 }
 
-// Add logger extension at the bottom of the file
-private extension Logger {
-    static let stats = Logger(subsystem: "com.yourapp.SnapTask", category: "Statistics")
-} 
+// Extension to add Statistics-specific logging
+extension Logger {
+    static func stats(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
+        Logger.shared.log(message, level: level, subsystem: "statistics", file: file, function: function, line: line)
+    }
+}

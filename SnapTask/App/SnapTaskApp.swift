@@ -25,9 +25,9 @@ struct SnapTaskApp: App {
                     
                     registerForRemoteNotifications()
                     
-                    // COMMENTIAMO TEMPORANEAMENTE CLOUDKIT
-                    // CloudKitSyncProxy.shared.setupCloudKit()
-                    // CloudKitSyncProxy.shared.syncTasks()
+                    // Abilita sincronizzazione CloudKit regolare
+                    cloudKitService.syncTasksSafely()
+                    taskManager.startRegularSync()
                     
                     connectivityManager.updateWatchContext()
                 }
@@ -37,8 +37,8 @@ struct SnapTaskApp: App {
                             await quoteManager.checkAndUpdateQuote()
                         }
                         
-                        // COMMENTIAMO TEMPORANEAMENTE CLOUDKIT
-                        // CloudKitSyncProxy.shared.syncTasks()
+                        // Sincronizza all'attivazione dell'app
+                        cloudKitService.syncTasksSafely()
                         
                         connectivityManager.updateWatchContext()
                     }

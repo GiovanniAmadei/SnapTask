@@ -25,8 +25,9 @@ struct SnapTaskWatchApp: App {
                     await quoteManager.checkAndUpdateQuote()
                 }
                 
-                // Prima sincronizzazione con CloudKit
+                // Abilita sincronizzazione CloudKit regolare
                 cloudKitService.syncTasks()
+                taskManager.startRegularSync()
                 
                 // Richiesta delle attività da iOS come fallback
                 connectivityManager.requestTasksFromiOS()

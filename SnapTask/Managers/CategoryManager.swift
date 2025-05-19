@@ -36,6 +36,24 @@ class CategoryManager: ObservableObject {
         notifyCategoryUpdates()
     }
     
+    func importCategories(_ newCategories: [Category]) {
+        // Create a dictionary of existing categories by ID for quick lookup
+        let existingCategoriesDict = Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0) })
+        
+        // Merge new categories with existing ones, prioritizing new ones in case of conflict
+        var updatedCategories = existingCategoriesDict
+        
+        for category in newCategories {
+            updatedCategories[category.id] = category
+        }
+        
+        // Convert back to array
+        categories = Array(updatedCategories.values)
+        
+        // Save the updated categories
+        saveCategories()
+    }
+    
     private func loadCategories() {
         var shouldAddDefaults = true
         

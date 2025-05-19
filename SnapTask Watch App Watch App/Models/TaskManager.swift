@@ -15,13 +15,18 @@ class TaskManager: ObservableObject {
     func addTask(_ task: TodoTask) {
         print("Adding task: \(task.name)")
         print("Has recurrence: \(task.recurrence != nil)")
-        tasks.append(task)
+        
+        // Assicurati che la task abbia una data di modifica aggiornata
+        var updatedTask = task
+        updatedTask.lastModifiedDate = Date()
+        
+        tasks.append(updatedTask)
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
         
         // Sincronizza con CloudKit
-        CloudKitService.shared.saveTask(task)
+        CloudKitService.shared.saveTask(updatedTask)
         
         // Sincronizza con iOS
         synchronizeWithWatch()
@@ -33,6 +38,10 @@ class TaskManager: ObservableObject {
             let existingCompletions = tasks[index].completions
             var task = updatedTask
             task.completions = existingCompletions
+            
+            // Aggiorna la data di modifica
+            task.lastModifiedDate = Date()
+            
             tasks[index] = task
             
             saveTasks()
@@ -69,13 +78,26 @@ class TaskManager: ObservableObject {
     }
     
     func removeTask(_ task: TodoTask) {
+        print("TaskManager Watch: Removing task with ID: \(task.id.uuidString)")
+        
+        // Rimuovi la task dall'array locale
         tasks.removeAll { $0.id == task.id }
+        
+        // Salva i cambiamenti nel database locale
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
         
+        // Elimina la task su CloudKit
+        CloudKitService.shared.deleteTask(task)
+        
         // Sincronizza con iOS
         synchronizeWithWatch()
+        
+        // Forza una sincronizzazione per assicurarti che tutti i dispositivi vedano l'eliminazione
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            CloudKitService.shared.syncTasks()
+        }
     }
     
     func toggleTaskCompletion(_ taskId: UUID, on date: Date = Date()) {
@@ -201,6 +223,17 @@ class TaskManager: ObservableObject {
             return completion.completedSubtasks.contains(subtaskId)
         }
         return false
+    }
+    
+    // Aggiungo un metodo per sincronizzare regolarmente con CloudKit
+    func startRegularSync() {
+        // Sincronizza all'avvio
+        CloudKitService.shared.syncTasks()
+        
+        // Configura un timer per sincronizzare ogni 30 secondi
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            CloudKitService.shared.syncTasks()
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
-import OSLog
+import os.log
 
 class PomodoroViewModel: ObservableObject {
     enum PomodoroState {
@@ -25,7 +25,7 @@ class PomodoroViewModel: ObservableObject {
     
     let totalSessions: Int
     @MainActor private var timer: AnyCancellable? {
-        didSet { Logger.pomodoro.debug("Timer state updated: \(self.timer != nil)") }
+        didSet { Logger.pomodoro("Timer state updated: \(self.timer != nil)", level: .debug) }
     }
     private var startDate: Date?
     private var pausedTimeRemaining: TimeInterval?
@@ -44,7 +44,7 @@ class PomodoroViewModel: ObservableObject {
                    (currentSession % settings.sessionsUntilLongBreak == 0 ? 
                     settings.longBreakDuration : settings.breakDuration)
         guard total > 0 else {
-            Logger.pomodoro.error("Invalid timer duration configuration")
+            Logger.pomodoro("Invalid timer duration configuration", level: .error)
             return 0
         }
         return 1 - (timeRemaining / total)
@@ -204,10 +204,13 @@ class PomodoroViewModel: ObservableObject {
     
     deinit {
         timer?.cancel()
-        Logger.pomodoro.info("PomodoroViewModel deinitialized")
+        Logger.pomodoro("PomodoroViewModel deinitialized", level: .info)
     }
 }
 
-private extension Logger {
-    static let pomodoro = Logger(subsystem: "com.yourapp.SnapTask", category: "Pomodoro")
-} 
+// Extension to add Pomodoro-specific logging
+extension Logger {
+    static func pomodoro(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
+        Logger.shared.log(message, level: level, subsystem: "pomodoro", file: file, function: function, line: line)
+    }
+}
