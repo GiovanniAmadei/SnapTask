@@ -115,6 +115,9 @@ class TaskManager: ObservableObject {
                 task.completionDates.removeAll { $0 == startOfDay }
             }
             
+            // Aggiorna la data di modifica
+            task.lastModifiedDate = Date()
+            
             tasks[index] = task
             
             // Forza l'aggiornamento
@@ -123,8 +126,13 @@ class TaskManager: ObservableObject {
                 self?.notifyTasksUpdated()
                 self?.objectWillChange.send()
                 
-                // Sincronizza con CloudKit in modo sicuro
-                // CloudKitSyncProxy.shared.saveTask(task)
+                // Sincronizza con CloudKit
+                CloudKitService.shared.saveTask(task)
+                
+                // Forza una sincronizzazione completa per assicurarsi che tutti i dispositivi vedano l'aggiornamento
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    CloudKitService.shared.syncTasksSafely()
+                }
                 
                 // Sincronizza con Apple Watch
                 self?.synchronizeWithWatch()
@@ -147,6 +155,10 @@ class TaskManager: ObservableObject {
         }
         
         task.completions[startOfDay] = completion
+        
+        // Aggiorna la data di modifica
+        task.lastModifiedDate = Date()
+        
         tasks[taskIndex] = task
         
         // Ensure UI updates happen on the main thread
@@ -155,8 +167,13 @@ class TaskManager: ObservableObject {
             self?.notifyTasksUpdated()
             self?.objectWillChange.send()
             
-            // Sincronizza con CloudKit in modo sicuro
-            // CloudKitSyncProxy.shared.saveTask(task)
+            // Sincronizza con CloudKit
+            CloudKitService.shared.saveTask(task)
+            
+            // Forza una sincronizzazione completa per assicurarsi che tutti i dispositivi vedano l'aggiornamento
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                CloudKitService.shared.syncTasksSafely()
+            }
             
             // Sincronizza con Apple Watch
             self?.synchronizeWithWatch()

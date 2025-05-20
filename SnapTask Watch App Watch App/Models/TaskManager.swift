@@ -127,6 +127,9 @@ class TaskManager: ObservableObject {
                 task.completionDates.removeAll { $0 == startOfDay }
             }
             
+            // Aggiorna la data di modifica
+            task.lastModifiedDate = Date()
+            
             tasks[index] = task
             
             // Forza l'aggiornamento
@@ -137,6 +140,11 @@ class TaskManager: ObservableObject {
                 
                 // Sincronizza con CloudKit
                 CloudKitService.shared.saveTask(task)
+                
+                // Forza una sincronizzazione completa per assicurarsi che tutti i dispositivi vedano l'aggiornamento
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    CloudKitService.shared.syncTasks()
+                }
                 
                 // Sincronizza con iOS
                 self?.synchronizeWithWatch()
@@ -159,6 +167,10 @@ class TaskManager: ObservableObject {
         }
         
         task.completions[startOfDay] = completion
+        
+        // Aggiorna la data di modifica
+        task.lastModifiedDate = Date()
+        
         tasks[taskIndex] = task
         
         // Ensure UI updates happen on the main thread
@@ -169,6 +181,11 @@ class TaskManager: ObservableObject {
             
             // Sincronizza con CloudKit
             CloudKitService.shared.saveTask(task)
+            
+            // Forza una sincronizzazione completa per assicurarsi che tutti i dispositivi vedano l'aggiornamento
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                CloudKitService.shared.syncTasks()
+            }
             
             // Sincronizza con iOS
             self?.synchronizeWithWatch()

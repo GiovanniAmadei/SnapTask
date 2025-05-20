@@ -11,7 +11,9 @@ class CloudKitService: ObservableObject {
     private let zoneID: CKRecordZone.ID
     
     private let taskRecordType = "TodoTask"
+    private let categoryRecordType = "Category" // Added record type for categories
     private let deletedTasksKey = "deletedTaskIDs" // Key for tracking deleted tasks
+    private let deletedCategoriesKey = "deletedCategoryIDs" // Key for tracking deleted categories
     
     @Published var isSyncing = false
     @Published var lastSyncDate: Date?
@@ -32,6 +34,22 @@ class CloudKitService: ObservableObject {
         set {
             if let data = try? JSONEncoder().encode(Array(newValue)) {
                 UserDefaults.standard.set(data, forKey: deletedTasksKey)
+            }
+        }
+    }
+    
+    // Tracking deleted category IDs
+    private var deletedCategoryIDs: Set<String> {
+        get {
+            if let data = UserDefaults.standard.data(forKey: deletedCategoriesKey),
+               let ids = try? JSONDecoder().decode([String].self, from: data) {
+                return Set(ids)
+            }
+            return Set<String>()
+        }
+        set {
+            if let data = try? JSONEncoder().encode(Array(newValue)) {
+                UserDefaults.standard.set(data, forKey: deletedCategoriesKey)
             }
         }
     }
@@ -95,6 +113,15 @@ class CloudKitService: ObservableObject {
                 do {
                     // Compare and merge tasks with error handling
                     self.mergeTasksSafely(localTasks: localTasks, remoteTasks: remoteTasks ?? [])
+                    
+                    // Also sync categories
+                    self.syncCategories()
+                    
+                    // Refresh statistics after sync is complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        let statisticsViewModel = StatisticsViewModel()
+                        statisticsViewModel.refreshAfterSync()
+                    }
                 } catch {
                     print("Error during task merging: \(error.localizedDescription)")
                     self.handleSyncError(error)
@@ -132,6 +159,8 @@ class CloudKitService: ObservableObject {
                     self?.handleSyncError(error)
                 } else {
                     print("CloudKitService: Task already deleted or not found in CloudKit")
+                    // Even if the record doesn't exist in CloudKit, we need to keep it in deleted list
+                    // to ensure it doesn't reappear if it gets created remotely later
                 }
             } else if let error = error {
                 print("CloudKitService: Error deleting task: \(error.localizedDescription)")
@@ -142,6 +171,11 @@ class CloudKitService: ObservableObject {
                 DispatchQueue.main.async {
                     self?.lastSyncDate = Date()
                 }
+            }
+            
+            // Ensure task is removed from local TaskManager regardless of CloudKit status
+            DispatchQueue.main.async {
+                self?.applyDeletions(forceDeletion: [task.id.uuidString])
             }
         }
     }
@@ -163,6 +197,229 @@ class CloudKitService: ObservableObject {
     // Check if a task is in the deleted list
     private func isTaskDeleted(taskID: String) -> Bool {
         return deletedTaskIDs.contains(taskID)
+    }
+    
+    // MARK: - Category Sync Methods
+    
+    func saveCategory(_ category: Category) {
+        let record = categoryToRecord(category)
+        
+        saveRecord(record) { [weak self] success, error in
+            if let error = error {
+                self?.handleSyncError(error)
+            }
+        }
+    }
+    
+    func deleteCategory(_ category: Category) {
+        let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
+        
+        print("CloudKitService: Attempting to delete category with ID: \(category.id.uuidString)")
+        
+        // Track this category as deleted even before server confirms
+        addToDeletedCategories(categoryID: category.id.uuidString)
+        
+        privateDatabase.delete(withRecordID: recordID) { [weak self] (recordID, error) in
+            if let error = error as? CKError {
+                // Don't report error if record not found - it's already deleted
+                if error.code != .unknownItem {
+                    print("CloudKitService: Error deleting category: \(error.localizedDescription)")
+                    self?.handleSyncError(error)
+                } else {
+                    print("CloudKitService: Category already deleted or not found in CloudKit")
+                }
+            } else if let error = error {
+                print("CloudKitService: Error deleting category: \(error.localizedDescription)")
+                self?.handleSyncError(error)
+            } else {
+                print("CloudKitService: Category successfully deleted from CloudKit")
+                // Update the last sync date to reflect the change
+                DispatchQueue.main.async {
+                    self?.lastSyncDate = Date()
+                }
+            }
+        }
+    }
+    
+    private func syncCategories() {
+        print("CloudKitService: Syncing categories with CloudKit")
+        
+        // Get local categories
+        let localCategories = CategoryManager.shared.categories
+        
+        // Fetch remote categories
+        fetchAllCategories { [weak self] remoteCategories, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("CloudKitService: Error fetching categories: \(error.localizedDescription)")
+                self.handleSyncError(error)
+                return
+            }
+            
+            // Merge categories
+            self.mergeCategoriesSafely(localCategories: localCategories, remoteCategories: remoteCategories ?? [])
+        }
+    }
+    
+    private func fetchAllCategories(completion: @escaping ([Category]?, Error?) -> Void) {
+        let predicate = NSPredicate(value: true)
+        let query = CKQuery(recordType: categoryRecordType, predicate: predicate)
+        
+        print("CloudKitService: Fetching all categories from CloudKit")
+        
+        privateDatabase.perform(query, inZoneWith: zoneID) { [weak self] (records, error) in
+            guard let self = self else {
+                completion(nil, NSError(domain: "CloudKitService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Self is nil"]))
+                return
+            }
+            
+            if let error = error {
+                print("CloudKitService: Error fetching categories: \(error.localizedDescription)")
+                completion(nil, error)
+                return
+            }
+            
+            guard let records = records else {
+                print("CloudKitService: No category records found")
+                completion([], nil)
+                return
+            }
+            
+            print("CloudKitService: Found \(records.count) category records in CloudKit")
+            
+            // Process records
+            var categories: [Category] = []
+            
+            for record in records {
+                // Skip records for categories we've deleted locally
+                if self.isDeletedCategory(categoryID: record.recordID.recordName) {
+                    print("CloudKitService: Skipping deleted category with ID: \(record.recordID.recordName)")
+                    continue
+                }
+                
+                if let category = self.recordToCategory(record) {
+                    categories.append(category)
+                }
+            }
+            
+            completion(categories, nil)
+        }
+    }
+    
+    private func mergeCategoriesSafely(localCategories: [Category], remoteCategories: [Category]) {
+        print("CloudKitService: mergeCategoriesSafely - Starting merge. Local: \(localCategories.count), Remote: \(remoteCategories.count)")
+        
+        let localCategoriesMap = Dictionary(localCategories.map { ($0.id, $0) }, uniquingKeysWith: { (first, _) in first })
+        let remoteCategoriesMap = Dictionary(remoteCategories.map { ($0.id, $0) }, uniquingKeysWith: { (first, _) in first })
+        
+        var finalCategories = [Category]()
+        var recordsToSaveToCloudKit = [CKRecord]()
+        var recordIDsToDeleteFromCloudKit = [CKRecord.ID]()
+        
+        // Add all deleted categories to the delete queue
+        for deletedID in deletedCategoryIDs {
+            recordIDsToDeleteFromCloudKit.append(CKRecord.ID(recordName: deletedID, zoneID: zoneID))
+        }
+        
+        // Process all category IDs (both local and remote)
+        let allCategoryIDs = Set(localCategoriesMap.keys).union(remoteCategoriesMap.keys)
+        
+        for categoryID in allCategoryIDs {
+            let categoryIDString = categoryID.uuidString
+            
+            // Skip categories marked for deletion
+            if deletedCategoryIDs.contains(categoryIDString) {
+                continue
+            }
+            
+            let localCategory = localCategoriesMap[categoryID]
+            let remoteCategory = remoteCategoriesMap[categoryID]
+            
+            if let local = localCategory, let remote = remoteCategory {
+                // Both exist, keep the most recent version
+                // For simplicity we'll consider local version as most recent
+                // In a real implementation you might want to track lastModifiedDate
+                finalCategories.append(local)
+                recordsToSaveToCloudKit.append(categoryToRecord(local))
+            } else if let local = localCategory {
+                // Only exists locally, upload to CloudKit
+                finalCategories.append(local)
+                recordsToSaveToCloudKit.append(categoryToRecord(local))
+            } else if let remote = remoteCategory {
+                // Only exists remotely, add to local database
+                finalCategories.append(remote)
+            }
+        }
+        
+        // Update local categories
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Import the merged categories into the CategoryManager
+            CategoryManager.shared.importCategories(finalCategories)
+            
+            // Upload changes to CloudKit
+            if !recordsToSaveToCloudKit.isEmpty || !recordIDsToDeleteFromCloudKit.isEmpty {
+                let modifyOp = CKModifyRecordsOperation(recordsToSave: recordsToSaveToCloudKit, recordIDsToDelete: recordIDsToDeleteFromCloudKit)
+                modifyOp.savePolicy = .changedKeys
+                
+                modifyOp.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
+                    DispatchQueue.main.async {
+                        if let error = error {
+                            print("CloudKitService: Category sync error: \(error.localizedDescription)")
+                            self.handleSyncError(error)
+                        } else {
+                            print("CloudKitService: Category sync successful. Saved: \(savedRecords?.count ?? 0), Deleted: \(deletedRecordIDs?.count ?? 0)")
+                            
+                            // Clean up UserDefaults after confirmed server deletion
+                            deletedRecordIDs?.forEach { self.removeFromDeletedCategories(categoryID: $0.recordName) }
+                        }
+                    }
+                }
+                
+                self.privateDatabase.add(modifyOp)
+            }
+        }
+    }
+    
+    private func categoryToRecord(_ category: Category) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: categoryRecordType, recordID: recordID)
+        
+        record["name"] = category.name as CKRecordValue
+        record["color"] = category.color as CKRecordValue
+        
+        return record
+    }
+    
+    private func recordToCategory(_ record: CKRecord) -> Category? {
+        guard let name = record["name"] as? String,
+              let color = record["color"] as? String else {
+            print("CloudKitService: Missing required fields for category")
+            return nil
+        }
+        
+        let uuid = UUID(uuidString: record.recordID.recordName) ?? UUID()
+        
+        return Category(id: uuid, name: name, color: color)
+    }
+    
+    // Helper methods for tracking deleted categories
+    private func addToDeletedCategories(categoryID: String) {
+        var ids = deletedCategoryIDs
+        ids.insert(categoryID)
+        deletedCategoryIDs = ids
+    }
+    
+    private func removeFromDeletedCategories(categoryID: String) {
+        var ids = deletedCategoryIDs
+        ids.remove(categoryID)
+        deletedCategoryIDs = ids
+    }
+    
+    private func isDeletedCategory(categoryID: String) -> Bool {
+        return deletedCategoryIDs.contains(categoryID)
     }
     
     // MARK: - Private Methods
@@ -281,7 +538,8 @@ class CloudKitService: ObservableObject {
             let localTasksIDs = Set(localTasks.map { $0.id.uuidString })
             
             // Registra i timestamp di creazione per poter distinguere tra task nuove e vecchie
-            let newTaskThreshold: TimeInterval = 60 * 5 // 5 minuti
+            // Reduced threshold to better identify truly recent tasks
+            let newTaskThreshold: TimeInterval = 60 * 2 // 2 minuti
             let recentlyCreatedTaskIDs = Set(localTasks
                 .filter { Date().timeIntervalSince($0.creationDate) < newTaskThreshold }
                 .map { $0.id.uuidString })
@@ -301,18 +559,20 @@ class CloudKitService: ObservableObject {
                 guard let records = records else {
                     print("CloudKitService: No records found")
                     
-                    // Non marcare come eliminate le task create di recente che non sono ancora state sincronizzate
+                    // Even for recent tasks, we need to respect the deletion list
+                    // Don't add recently created tasks to deletion list automatically, but
+                    // still respect manual deletions even for recent tasks
                     if !localTasks.isEmpty {
                         print("CloudKitService: No records on server, but \(localTasks.count) local tasks.")
                         for localTask in localTasks {
                             let taskIDString = localTask.id.uuidString
                             
-                            // Se la task non è stata creata di recente e non è già nella lista delle eliminate
+                            // If the task is not recent and not already in deletion list
                             if !recentlyCreatedTaskIDs.contains(taskIDString) && !self.isTaskDeleted(taskID: taskIDString) {
                                 print("CloudKitService: Task \(taskIDString) might have been deleted remotely. Adding to deletion list.")
                                 self.addToDeletedTasks(taskID: taskIDString)
                             } else if recentlyCreatedTaskIDs.contains(taskIDString) {
-                                print("CloudKitService: Task \(taskIDString) was recently created. Not marking as deleted.")
+                                print("CloudKitService: Task \(taskIDString) was recently created. Not automatically marking as deleted.")
                             }
                         }
                     }
@@ -330,12 +590,14 @@ class CloudKitService: ObservableObject {
                 let missingTaskIDs = localTasksIDs.subtracting(remoteTaskIDs)
                 
                 for taskID in missingTaskIDs {
-                    // Se la task non è recente e non è già nella lista delle task eliminate
-                    if !recentlyCreatedTaskIDs.contains(taskID) && !self.isTaskDeleted(taskID: taskID) {
-                        print("CloudKitService: Task \(taskID) exists locally but not remotely. Adding to deletion list.")
+                    // If not in deletion list yet, add it - even for recent tasks that are missing from server
+                    if !self.isTaskDeleted(taskID: taskID) {
+                        if recentlyCreatedTaskIDs.contains(taskID) {
+                            print("CloudKitService: Recently created task \(taskID) missing from server - likely deleted by another device.")
+                        } else {
+                            print("CloudKitService: Task \(taskID) exists locally but not remotely. Adding to deletion list.")
+                        }
                         self.addToDeletedTasks(taskID: taskID)
-                    } else if recentlyCreatedTaskIDs.contains(taskID) {
-                        print("CloudKitService: Task \(taskID) was recently created but not yet on server. Not marking as deleted.")
                     }
                 }
                 
@@ -411,15 +673,22 @@ class CloudKitService: ObservableObject {
         var recordIDsToDeleteFromCloudKit = Set<CKRecord.ID>()
         
         // Registra i timestamp di creazione per poter distinguere tra task nuove e vecchie
-        let newTaskThreshold: TimeInterval = 60 * 5 // 5 minuti
+        // Reduced threshold to better identify truly recent tasks
+        let newTaskThreshold: TimeInterval = 60 * 2 // 2 minuti
         let recentlyCreatedTasks = localTasks.filter { Date().timeIntervalSince($0.creationDate) < newTaskThreshold }
         let recentlyCreatedTaskIDs = Set(recentlyCreatedTasks.map { $0.id.uuidString })
         
-        // Prepara tutte le task recenti per l'upload a CloudKit
+        // For recently created tasks that are NOT in deleted list, prepare them for upload
         for task in recentlyCreatedTasks {
-            print("CloudKitService: Merge - Scheduling recent task '\(task.name)' for upload to CloudKit.")
-            recordsToSaveToCloudKit.append(self.taskToRecord(task))
-            finalLocalState[task.id] = task
+            let taskID = task.id.uuidString
+            if !localDeviceDeletedIDs.contains(taskID) {
+                print("CloudKitService: Merge - Scheduling recent task '\(task.name)' for upload to CloudKit.")
+                recordsToSaveToCloudKit.append(self.taskToRecord(task))
+                finalLocalState[task.id] = task
+            } else {
+                print("CloudKitService: Merge - Recent task '\(task.name)' is in deletion list. Not scheduling for upload.")
+                recordIDsToDeleteFromCloudKit.insert(CKRecord.ID(recordName: taskID, zoneID: self.zoneID))
+            }
         }
         
         // Store task IDs present in the remote dataset
@@ -427,12 +696,9 @@ class CloudKitService: ObservableObject {
 
         // Ensure all tasks this device marked as deleted are indeed queued for server deletion
         localDeviceDeletedIDs.forEach { idString in
-            // Non programmare l'eliminazione delle task create di recente
-            if !recentlyCreatedTaskIDs.contains(idString) {
-                recordIDsToDeleteFromCloudKit.insert(CKRecord.ID(recordName: idString, zoneID: self.zoneID))
-            } else {
-                print("CloudKitService: Merge - Not deleting recently created task with ID: \(idString)")
-            }
+            // Include ALL deleted tasks for deletion, even recent ones
+            recordIDsToDeleteFromCloudKit.insert(CKRecord.ID(recordName: idString, zoneID: self.zoneID))
+            print("CloudKitService: Merge - Scheduling task with ID: \(idString) for deletion from CloudKit")
         }
 
         let localTasksMap = Dictionary(localTasks.map { ($0.id, $0) }, uniquingKeysWith: { (first, _) in first })
@@ -450,7 +716,7 @@ class CloudKitService: ObservableObject {
         for localTask in localTasks {
             let taskIDString = localTask.id.uuidString
             
-            // Non considerare le task recenti
+            // Skip recent tasks that we're already handling specially
             if recentlyCreatedTaskIDs.contains(taskIDString) {
                 continue
             }
@@ -573,15 +839,15 @@ class CloudKitService: ObservableObject {
     }
     
     // Metodo per applicare le eliminazioni localmente
-    private func applyDeletions(protectedIDs: Set<String> = Set<String>()) {
+    private func applyDeletions(protectedIDs: Set<String> = Set<String>(), forceDeletion: [String] = []) {
         let localTasks = TaskManager.shared.tasks
         let deletedIDs = self.deletedTaskIDs
         
         // Trova le task che dovrebbero essere eliminate ma sono ancora presenti localmente
         let tasksToRemove = localTasks.filter { 
             let taskID = $0.id.uuidString
-            // Non eliminare le task protette (come quelle appena create)
-            return deletedIDs.contains(taskID) && !protectedIDs.contains(taskID) 
+            // Non eliminare le task protette (come quelle appena create), a meno che non siano esplicitamente indicate
+            return (deletedIDs.contains(taskID) && !protectedIDs.contains(taskID)) || forceDeletion.contains(taskID)
         }
         
         if !tasksToRemove.isEmpty {
@@ -591,7 +857,7 @@ class CloudKitService: ObservableObject {
             var updatedTasks = localTasks
             updatedTasks.removeAll { task in
                 let taskID = task.id.uuidString
-                let shouldRemove = deletedIDs.contains(taskID) && !protectedIDs.contains(taskID)
+                let shouldRemove = (deletedIDs.contains(taskID) && !protectedIDs.contains(taskID)) || forceDeletion.contains(taskID)
                 if shouldRemove {
                     print("CloudKitService: Removing locally task with ID: \(taskID)")
                 }

@@ -21,12 +21,18 @@ class CategoryManager: ObservableObject {
         }
         saveCategories()
         notifyCategoryUpdates()
+        
+        // Sync with CloudKit
+        syncWithCloudKit(category: category)
     }
     
     func deleteCategory(_ category: Category) {
         categories.removeAll { $0.id == category.id }
         saveCategories()
         notifyCategoryUpdates()
+        
+        // Delete from CloudKit
+        deleteFromCloudKit(category: category)
     }
     
     func clearAllData() {
@@ -112,6 +118,29 @@ class CategoryManager: ObservableObject {
         
         categories = defaultCategories + existingCustomCategories
         saveCategories()
+        
+        // Sync default categories with CloudKit
+        for category in defaultCategories {
+            syncWithCloudKit(category: category)
+        }
+    }
+    
+    // MARK: - CloudKit Integration
+    
+    private func syncWithCloudKit(category: Category) {
+        // Save category to CloudKit
+        CloudKitService.shared.saveCategory(category)
+    }
+    
+    private func deleteFromCloudKit(category: Category) {
+        // Delete category from CloudKit
+        CloudKitService.shared.deleteCategory(category)
+    }
+    
+    // Function to sync all categories with CloudKit
+    func syncAllWithCloudKit() {
+        // This will be called as part of the overall CloudKit sync process
+        // The actual implementation is in CloudKitService.syncCategories()
     }
 }
 

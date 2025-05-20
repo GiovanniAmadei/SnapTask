@@ -81,6 +81,23 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
+    // Method to be called after CloudKit synchronization
+    func refreshAfterSync() {
+        DispatchQueue.main.async { [weak self] in
+            // Invalidate the current statistics
+            self?.categoryStats = []
+            self?.weeklyStats = []
+            self?.currentStreak = 0
+            self?.bestStreak = 0
+            self?.recurringTasks = []
+            
+            // Force a refresh after a short delay to ensure all data is loaded
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self?.updateStats()
+            }
+        }
+    }
+    
     private func setupObservers() {
         // Listen for task updates
         NotificationCenter.default.publisher(for: .tasksDidUpdate)
