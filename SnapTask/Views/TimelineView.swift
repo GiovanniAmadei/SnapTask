@@ -370,7 +370,8 @@ private struct TimelineTaskCard: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
-        let startOfDay = viewModel.selectedDate.startOfDay
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
         if let completion = task.completions[startOfDay] {
             return completion.isCompleted
         }
@@ -379,13 +380,17 @@ private struct TimelineTaskCard: View {
     
     private var completionProgress: Double {
         guard !task.subtasks.isEmpty else { return isCompleted ? 1.0 : 0.0 }
-        let completion = task.completions[viewModel.selectedDate.startOfDay]
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
+        let completion = task.completions[startOfDay]
         let completedCount = completion?.completedSubtasks.count ?? 0
         return Double(completedCount) / Double(task.subtasks.count)
     }
     
     private var completedSubtasks: Set<UUID> {
-        task.completions[viewModel.selectedDate.startOfDay]?.completedSubtasks ?? []
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
+        return task.completions[startOfDay]?.completedSubtasks ?? []
     }
     
     private var subtaskCountText: String {

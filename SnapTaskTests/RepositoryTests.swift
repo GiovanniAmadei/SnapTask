@@ -51,7 +51,8 @@ final class RepositoryTests: XCTestCase {
             guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return nil }
             
             var task = tasks[index]
-            let startOfDay = date.startOfDay
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: date)
             
             if let completion = task.completions[startOfDay] {
                 task.completions[startOfDay] = TaskCompletion(
@@ -75,7 +76,8 @@ final class RepositoryTests: XCTestCase {
             guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return nil }
             
             var task = tasks[index]
-            let startOfDay = date.startOfDay
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: date)
             
             var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
             
@@ -160,7 +162,8 @@ final class RepositoryTests: XCTestCase {
         let task = TodoTask(name: "Task to complete", startTime: Date())
         repository.saveTask(task)
         repository.resetCallRecord()
-        let today = Date().startOfDay
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
         
         // When
         taskManager.toggleTaskCompletion(task.id, on: today)
@@ -185,7 +188,8 @@ final class RepositoryTests: XCTestCase {
         task.subtasks = [subtask]
         repository.saveTask(task)
         repository.resetCallRecord()
-        let today = Date().startOfDay
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
         
         // When
         taskManager.toggleSubtask(taskId: task.id, subtaskId: subtask.id, on: today)

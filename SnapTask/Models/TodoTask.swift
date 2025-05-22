@@ -18,6 +18,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var completionDates: [Date] = []
     var creationDate: Date = Date()
     var lastModifiedDate: Date = Date()
+    // Reward points related properties
+    var hasRewardPoints: Bool = false
+    var rewardPoints: Int = 0
     
     init(
         id: UUID = UUID(),
@@ -31,7 +34,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
         icon: String = "circle",
         recurrence: Recurrence? = nil,
         pomodoroSettings: PomodoroSettings? = nil,
-        subtasks: [Subtask] = []
+        subtasks: [Subtask] = [],
+        hasRewardPoints: Bool = false,
+        rewardPoints: Int = 0
     ) {
         self.id = id
         self.name = name
@@ -45,11 +50,15 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.recurrence = recurrence
         self.pomodoroSettings = pomodoroSettings
         self.subtasks = subtasks
+        self.hasRewardPoints = hasRewardPoints
+        self.rewardPoints = rewardPoints
     }
     
     var completionProgress: Double {
         guard !subtasks.isEmpty else { 
-            if let completion = completions[Date().startOfDay] {
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            if let completion = completions[today] {
                 return completion.isCompleted ? 1.0 : 0.0
             }
             return 0.0
@@ -61,10 +70,11 @@ struct TodoTask: Identifiable, Codable, Equatable {
         guard let recurrence = recurrence else { return 0 }
         
         let calendar = Calendar.current
-        var currentDate = date.startOfDay
+        var currentDate = calendar.startOfDay(for: date)
         var streak = 0
         
-        if currentDate > Date().startOfDay {
+        let today = calendar.startOfDay(for: Date())
+        if currentDate > today {
             return 0
         }
         
@@ -127,6 +137,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.pomodoroSettings == rhs.pomodoroSettings &&
         lhs.completions == rhs.completions &&
         lhs.subtasks == rhs.subtasks &&
-        lhs.completionDates == rhs.completionDates
+        lhs.completionDates == rhs.completionDates &&
+        lhs.hasRewardPoints == rhs.hasRewardPoints &&
+        lhs.rewardPoints == rhs.rewardPoints
     }
 }

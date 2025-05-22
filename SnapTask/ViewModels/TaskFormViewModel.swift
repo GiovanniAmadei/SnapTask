@@ -17,8 +17,18 @@ class TaskFormViewModel: ObservableObject {
     @Published var selectedDays: Set<Int> = []
     @Published var recurrenceEndDate: Date = Date().addingTimeInterval(86400 * 30)
     @Published var trackInStatistics: Bool = true
-    @Published var isPomodoroEnabled: Bool = false
-    @Published var pomodoroSettings = PomodoroSettings.defaultSettings
+    @Published var isPomodoroEnabled = false
+    @Published var pomodoroSettings = PomodoroSettings(
+        workDuration: 25 * 60,
+        breakDuration: 5 * 60,
+        longBreakDuration: 15 * 60,
+        sessionsUntilLongBreak: 4
+    )
+    
+    // Reward points
+    @Published var hasRewardPoints = false
+    @Published var rewardPoints = 0
+    
     @Published private(set) var categories: [Category] = []
     var taskId: UUID?
     
@@ -58,10 +68,13 @@ class TaskFormViewModel: ObservableObject {
         let id = taskId ?? UUID()
         
         let recurrence: Recurrence? = isRecurring ? {
+            let calendar = Calendar.current
+            let startDate = calendar.startOfDay(for: self.startDate)
+            
             if isDailyRecurrence {
-                return Recurrence(type: .daily, startDate: self.startDate, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
+                return Recurrence(type: .daily, startDate: startDate, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
             } else {
-                return Recurrence(type: .weekly(days: selectedDays), startDate: self.startDate, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
+                return Recurrence(type: .weekly(days: selectedDays), startDate: startDate, endDate: recurrenceEndDate, trackInStatistics: trackInStatistics)
             }
         }() : nil
         
@@ -77,7 +90,9 @@ class TaskFormViewModel: ObservableObject {
             icon: icon,
             recurrence: recurrence,
             pomodoroSettings: isPomodoroEnabled ? pomodoroSettings : nil,
-            subtasks: subtasks
+            subtasks: subtasks,
+            hasRewardPoints: hasRewardPoints,
+            rewardPoints: rewardPoints
         )
     }
     

@@ -9,7 +9,9 @@ struct TaskView: View {
     @StateObject private var taskManager = TaskManager.shared
     
     private var isCompleted: Bool {
-        if let completion = task.completions[Date().startOfDay] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        if let completion = task.completions[today] {
             return completion.isCompleted
         }
         return false

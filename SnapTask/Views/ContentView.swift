@@ -18,17 +18,23 @@ struct ContentView: View {
                 }
                 .tag(1)
             
+            RewardsView()
+                .tabItem {
+                    Label("Rewards", systemImage: "gift")
+                }
+                .tag(2)
+            
             TaskStatisticsView()
                 .tabItem {
                     Label("Stats", systemImage: "chart.bar")
                 }
-                .tag(2)
+                .tag(3)
             
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gear")
                 }
-                .tag(3)
+                .tag(4)
         }
     }
 } 

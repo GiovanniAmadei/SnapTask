@@ -72,7 +72,8 @@ class UserDefaultsTaskRepository: TaskRepository {
         guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return nil }
         
         var task = tasks[index]
-        let startOfDay = date.startOfDay
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
         
         // Update completion status
         if let completion = task.completions[startOfDay] {
@@ -107,7 +108,8 @@ class UserDefaultsTaskRepository: TaskRepository {
         guard let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) else { return nil }
         
         var task = tasks[taskIndex]
-        let startOfDay = date.startOfDay
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
         
         var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
         

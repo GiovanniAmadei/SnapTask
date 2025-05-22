@@ -128,6 +128,18 @@ struct TaskFormView: View {
                         }
                     }
                 }
+                
+                Section("Reward Points") {
+                    Toggle("Earn reward points", isOn: $viewModel.hasRewardPoints)
+                    
+                    if viewModel.hasRewardPoints {
+                        Stepper("\(viewModel.rewardPoints) points", value: $viewModel.rewardPoints, in: 1...1000)
+                        
+                        Text("Completing this task will earn you points that can be redeemed for rewards.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
@@ -197,6 +209,10 @@ extension TaskFormView {
         if let pomodoroSettings = initialTask.pomodoroSettings {
             viewModel.pomodoroSettings = pomodoroSettings
         }
+        
+        // Set reward points values
+        viewModel.hasRewardPoints = initialTask.hasRewardPoints
+        viewModel.rewardPoints = initialTask.rewardPoints
         
         self.init(
             viewModel: viewModel,

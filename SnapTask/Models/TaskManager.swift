@@ -91,15 +91,18 @@ class TaskManager: ObservableObject {
     func toggleTaskCompletion(_ taskId: UUID, on date: Date = Date()) {
         if let index = tasks.firstIndex(where: { $0.id == taskId }) {
             var task = tasks[index]
-            let startOfDay = date.startOfDay
+            let startOfDay = Calendar.current.startOfDay(for: date)
             
-            // Aggiorna il completion status
+            // Get current completion status to determine if we're completing or uncompleting
+            let isCompleting: Bool
             if let completion = task.completions[startOfDay] {
+                isCompleting = !completion.isCompleted
                 task.completions[startOfDay] = TaskCompletion(
-                    isCompleted: !completion.isCompleted,
+                    isCompleted: isCompleting,
                     completedSubtasks: completion.completedSubtasks
                 )
             } else {
+                isCompleting = true
                 task.completions[startOfDay] = TaskCompletion(
                     isCompleted: true,
                     completedSubtasks: []
@@ -113,6 +116,20 @@ class TaskManager: ObservableObject {
                 }
             } else {
                 task.completionDates.removeAll { $0 == startOfDay }
+            }
+            
+            // Handle reward points if applicable
+            if task.hasRewardPoints {
+                if isCompleting {
+                    // Add points when completing task
+                    RewardManager.shared.addPoints(task.rewardPoints, on: date)
+                } else {
+                    // Remove points if uncompleting a previously completed task
+                    // Only if it was already completed today
+                    if task.completionDates.contains(startOfDay) {
+                        RewardManager.shared.addPoints(-task.rewardPoints, on: date)
+                    }
+                }
             }
             
             // Aggiorna la data di modifica
@@ -144,17 +161,43 @@ class TaskManager: ObservableObject {
         guard let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) else { return }
         
         var task = tasks[taskIndex]
-        let startOfDay = date.startOfDay
+        let startOfDay = Calendar.current.startOfDay(for: date)
         
         var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
         
-        if completion.completedSubtasks.contains(subtaskId) {
+        // Determine if we're completing or uncompleting the subtask
+        let wasCompleted = completion.completedSubtasks.contains(subtaskId)
+        
+        if wasCompleted {
             completion.completedSubtasks.remove(subtaskId)
         } else {
             completion.completedSubtasks.insert(subtaskId)
         }
         
         task.completions[startOfDay] = completion
+        
+        // Handle reward points for subtasks, but only if all subtasks are completed/uncompleted
+        // and the task has reward points enabled
+        if task.hasRewardPoints && !task.subtasks.isEmpty {
+            // Check if all subtasks are now completed
+            let allSubtasksCompleted = task.subtasks.allSatisfy { subtask in
+                completion.completedSubtasks.contains(subtask.id)
+            }
+            
+            // Check previous completion state
+            let wasAllCompleted = task.subtasks.allSatisfy { subtask in
+                wasCompleted || completion.completedSubtasks.contains(subtask.id)
+            }
+            
+            // Only award points if this is the transition from incomplete to complete
+            if allSubtasksCompleted && !wasAllCompleted {
+                RewardManager.shared.addPoints(task.rewardPoints, on: date)
+            }
+            // Only remove points if this is the transition from complete to incomplete
+            else if !allSubtasksCompleted && wasAllCompleted {
+                RewardManager.shared.addPoints(-task.rewardPoints, on: date)
+            }
+        }
         
         // Aggiorna la data di modifica
         task.lastModifiedDate = Date()

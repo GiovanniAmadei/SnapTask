@@ -16,8 +16,11 @@ struct TaskRowView: View {
                     Button(action: {
                         viewModel.toggleCompletion(for: task, on: date)
                     }) {
-                        Image(systemName: task.completions[date.startOfDay]?.isCompleted == true ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(task.completions[date.startOfDay]?.isCompleted == true ? .green : .gray)
+                        let calendar = Calendar.current
+                        let startOfDay = calendar.startOfDay(for: date)
+                        let isCompleted = task.completions[startOfDay]?.isCompleted == true
+                        Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(isCompleted ? .green : .gray)
                             .font(.title2)
                     }
                     
@@ -81,8 +84,11 @@ struct TaskRowView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(task.subtasks) { subtask in
                             HStack {
-                                Image(systemName: task.completions[date.startOfDay]?.completedSubtasks.contains(subtask.id) == true ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(task.completions[date.startOfDay]?.completedSubtasks.contains(subtask.id) == true ? .green : .gray)
+                                let calendar = Calendar.current
+                                let startOfDay = calendar.startOfDay(for: date)
+                                let isCompleted = task.completions[startOfDay]?.completedSubtasks.contains(subtask.id) == true
+                                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(isCompleted ? .green : .gray)
                                     .font(.subheadline)
                                 Text(subtask.name)
                                     .font(.subheadline)

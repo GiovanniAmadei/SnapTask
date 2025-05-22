@@ -11,7 +11,9 @@ struct TaskCard: View {
     
     // Calcola se la task è completata per la data corrente
     private var isCompleted: Bool {
-        if let completion = task.completions[Date().startOfDay] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        if let completion = task.completions[today] {
             return completion.isCompleted
         }
         return false
@@ -19,7 +21,9 @@ struct TaskCard: View {
     
     // Calcola le subtask completate per la data corrente
     private var completedSubtasks: Set<UUID> {
-        if let completion = task.completions[Date().startOfDay] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        if let completion = task.completions[today] {
             return completion.completedSubtasks
         }
         return []
