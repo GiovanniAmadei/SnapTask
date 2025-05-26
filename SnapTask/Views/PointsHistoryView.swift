@@ -2,7 +2,12 @@ import SwiftUI
 
 struct PointsHistoryView: View {
     @StateObject private var taskManager = TaskManager.shared
+    @StateObject private var rewardManager = RewardManager.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var showingResetAlert = false
+    @State private var selectedTasks = Set<UUID>()
+    @State private var isEditMode = false
+    @State private var showingRemoveSelectedAlert = false
     
     private var pointsEarningTasks: [(TodoTask, [Date])] {
         let allTasks = taskManager.tasks.filter { $0.hasRewardPoints }
@@ -12,29 +17,116 @@ struct PointsHistoryView: View {
         }
     }
     
+    private var totalPoints: Int {
+        rewardManager.totalPoints()
+    }
+    
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    if pointsEarningTasks.isEmpty {
-                        emptyStateView
-                    } else {
-                        ForEach(pointsEarningTasks, id: \.0.id) { task, dates in
-                            TaskPointsCard(task: task, completionDates: dates)
+            VStack(spacing: 0) {
+                // Total Points Header
+                if !pointsEarningTasks.isEmpty {
+                    VStack(spacing: 8) {
+                        Text("Total Points Earned")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Text("\(totalPoints)")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(Color(hex: "5E5CE6"))
+                    }
+                    .padding(.vertical, 16)
+                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                }
+                
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        if pointsEarningTasks.isEmpty {
+                            emptyStateView
+                        } else {
+                            ForEach(pointsEarningTasks, id: \.0.id) { task, dates in
+                                TaskPointsCard(
+                                    task: task, 
+                                    completionDates: dates,
+                                    isSelected: selectedTasks.contains(task.id),
+                                    isEditMode: isEditMode,
+                                    onSelectionChanged: { isSelected in
+                                        if isSelected {
+                                            selectedTasks.insert(task.id)
+                                        } else {
+                                            selectedTasks.remove(task.id)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
+                    .padding(16)
                 }
-                .padding(16)
             }
             .background(Color(UIColor.systemGroupedBackground))
             .navigationTitle("Points History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if !pointsEarningTasks.isEmpty {
+                        Button(isEditMode ? "Cancel" : "Edit") {
+                            withAnimation {
+                                isEditMode.toggle()
+                                if !isEditMode {
+                                    selectedTasks.removeAll()
+                                }
+                            }
+                        }
                     }
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack {
+                        if isEditMode && !selectedTasks.isEmpty {
+                            Button("Remove Selected") {
+                                showingRemoveSelectedAlert = true
+                            }
+                            .foregroundColor(.red)
+                        }
+                        
+                        if !isEditMode {
+                            Menu {
+                                Button("Reset All Points", role: .destructive) {
+                                    showingResetAlert = true
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                            }
+                        }
+                        
+                        Button("Done") {
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .alert("Reset All Points", isPresented: $showingResetAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Reset", role: .destructive) {
+                    rewardManager.resetAllPoints()
+                }
+            } message: {
+                Text("This will permanently delete all earned points. This action cannot be undone.")
+            }
+            .alert("Remove Selected Points", isPresented: $showingRemoveSelectedAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Remove", role: .destructive) {
+                    for taskId in selectedTasks {
+                        if let task = taskManager.tasks.first(where: { $0.id == taskId }) {
+                            rewardManager.removePointsFromTask(task)
+                        }
+                    }
+                    selectedTasks.removeAll()
+                    isEditMode = false
+                }
+            } message: {
+                Text("This will remove points earned from the selected tasks. This action cannot be undone.")
             }
         }
     }
@@ -70,86 +162,131 @@ struct PointsHistoryView: View {
 struct TaskPointsCard: View {
     let task: TodoTask
     let completionDates: [Date]
+    let isSelected: Bool
+    let isEditMode: Bool
+    let onSelectionChanged: (Bool) -> Void
     
     private var totalPointsEarned: Int {
         completionDates.count * task.rewardPoints
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 44, height: 44)
-                    
-                    Image(systemName: task.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
+        HStack(spacing: 12) {
+            // Selection circle in edit mode
+            if isEditMode {
+                Button(action: {
+                    onSelectionChanged(!isSelected)
+                }) {
+                    ZStack {
+                        Circle()
+                            .strokeBorder(isSelected ? Color(hex: "5E5CE6") : Color.gray.opacity(0.3), lineWidth: 2)
+                            .frame(width: 24, height: 24)
+                        
+                        if isSelected {
+                            Circle()
+                                .fill(Color(hex: "5E5CE6"))
+                                .frame(width: 16, height: 16)
+                            
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                    }
                 }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(task.name)
-                        .font(.system(size: 16, weight: .semibold))
-                    
-                    Text("\(task.rewardPoints) points per completion")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("+\(totalPointsEarned)")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(Color(hex: "00C853"))
-                    
-                    Text("\(completionDates.count) times")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                }
+                .buttonStyle(PlainButtonStyle())
             }
             
-            if completionDates.count > 1 {
-                HStack {
-                    Text("Recent completions:")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                }
-                
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                    ForEach(completionDates.prefix(6), id: \.self) { date in
-                        Text(DateFormatter.shortDate.string(from: date))
-                            .font(.system(size: 11))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(hex: "5E5CE6").opacity(0.1))
-                            .foregroundColor(Color(hex: "5E5CE6"))
-                            .cornerRadius(8)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: task.icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
                     }
                     
-                    if completionDates.count > 6 {
-                        Text("+\(completionDates.count - 6)")
-                            .font(.system(size: 11))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.gray.opacity(0.1))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(task.name)
+                            .font(.system(size: 16, weight: .semibold))
+                        
+                        Text("\(task.rewardPoints) points per completion")
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                            .cornerRadius(8)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("+\(totalPointsEarned)")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(Color(hex: "00C853"))
+                        
+                        Text("\(completionDates.count) times")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                if completionDates.count > 1 {
+                    HStack {
+                        Text("Recent completions:")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                    }
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+                        ForEach(completionDates.prefix(6), id: \.self) { date in
+                            Text(DateFormatter.shortDate.string(from: date))
+                                .font(.system(size: 11))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color(hex: "5E5CE6").opacity(0.1))
+                                .foregroundColor(Color(hex: "5E5CE6"))
+                                .cornerRadius(8)
+                        }
+                        
+                        if completionDates.count > 6 {
+                            Text("+\(completionDates.count - 6)")
+                                .font(.system(size: 11))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.gray.opacity(0.1))
+                                .foregroundColor(.secondary)
+                                .cornerRadius(8)
+                        }
                     }
                 }
             }
         }
         .padding(16)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(
+                            isSelected ? Color(hex: "5E5CE6").opacity(0.5) : Color.clear,
+                            lineWidth: 2
+                        )
+                )
+        )
+        .scaleEffect(isSelected ? 0.98 : 1.0)
+        .animation(.spring(response: 0.3), value: isSelected)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .onTapGesture {
+            if isEditMode {
+                onSelectionChanged(!isSelected)
+            }
+        }
     }
 }
 

@@ -133,7 +133,22 @@ struct TaskFormView: View {
                     Toggle("Earn reward points", isOn: $viewModel.hasRewardPoints)
                     
                     if viewModel.hasRewardPoints {
-                        Stepper("\(viewModel.rewardPoints) points", value: $viewModel.rewardPoints, in: 1...1000)
+                        HStack {
+                            Text("Points")
+                            Spacer()
+                            Picker("", selection: $viewModel.rewardPoints) {
+                                ForEach(1...40, id: \.self) { index in
+                                    let points = index * 5
+                                    Text("\(points)")
+                                        .tag(points)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(width: 100, height: 100)
+                            .clipped()
+                            .compositingGroup()
+                            Text("points")
+                        }
                         
                         Text("Completing this task will earn you points that can be redeemed for rewards.")
                             .font(.caption)

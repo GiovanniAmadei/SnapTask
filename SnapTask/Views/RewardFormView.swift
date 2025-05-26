@@ -46,7 +46,21 @@ struct RewardFormView: View {
                 }
                 
                 Section("Points") {
-                    Stepper("Cost: \(pointsCost) points", value: $pointsCost, in: 1...1000)
+                    HStack {
+                        Text("Cost")
+                        Spacer()
+                        Picker("", selection: $pointsCost) {
+                            ForEach(1...40, id: \.self) { index in
+                                let points = index * 5
+                                Text("\(points)")
+                                    .tag(points)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 100, height: 100)
+                        .clipped()
+                        Text("points")
+                    }
                 }
                 
                 Section("Frequency") {
@@ -69,6 +83,10 @@ struct RewardFormView: View {
                             Text("Weekly rewards accumulate Sunday through Saturday")
                         case .monthly:
                             Text("Monthly rewards accumulate for the calendar month")
+                        case .yearly:
+                            Text("Yearly rewards accumulate for the calendar year")
+                        case .oneTime:
+                            Text("One-time rewards can be redeemed only once")
                         }
                     }
                     .font(.caption)

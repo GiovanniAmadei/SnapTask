@@ -4,6 +4,8 @@ enum RewardFrequency: String, Codable, CaseIterable, Identifiable {
     case daily
     case weekly
     case monthly
+    case yearly
+    case oneTime
     
     var id: String { rawValue }
     
@@ -12,6 +14,8 @@ enum RewardFrequency: String, Codable, CaseIterable, Identifiable {
         case .daily: return "Daily"
         case .weekly: return "Weekly"
         case .monthly: return "Monthly"
+        case .yearly: return "Yearly"
+        case .oneTime: return "One Time"
         }
     }
 }
@@ -66,6 +70,15 @@ struct Reward: Identifiable, Codable, Equatable {
             return redemptions.contains { 
                 $0 >= monthStart && $0 < monthEnd
             }
+        case .yearly:
+            let components = calendar.dateComponents([.year], from: date)
+            let yearStart = calendar.date(from: components)!
+            let yearEnd = calendar.date(byAdding: .year, value: 1, to: yearStart)!
+            return redemptions.contains { 
+                $0 >= yearStart && $0 < yearEnd
+            }
+        case .oneTime:
+            return !redemptions.isEmpty
         }
     }
     

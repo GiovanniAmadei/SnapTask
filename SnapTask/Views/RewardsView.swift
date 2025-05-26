@@ -4,57 +4,61 @@ struct RewardsView: View {
     @StateObject private var viewModel = RewardViewModel()
     @State private var showingAddReward = false
     @State private var selectedReward: Reward?
-    @State private var showingEditReward = false
-    @State private var selectedTab = 0
+    @State private var showingPointsHistory = false
+    @State private var showingRedeemedRewards = false
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private var totalPoints: Int {
+        viewModel.dailyPoints + viewModel.weeklyPoints + viewModel.monthlyPoints
+    }
+    
+    private var allRewards: [Reward] {
+        (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards)
+            .sorted { $0.pointsCost < $1.pointsCost }
+    }
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Points Summary
-                HStack(spacing: 20) {
-                    PointsCard(title: "Daily", points: viewModel.dailyPoints, systemImage: "sun.max")
-                    PointsCard(title: "Weekly", points: viewModel.weeklyPoints, systemImage: "calendar.badge.clock")
-                    PointsCard(title: "Monthly", points: viewModel.monthlyPoints, systemImage: "calendar")
-                }
-                .padding()
+            ZStack {
+                Color(UIColor.systemGroupedBackground)
+                    .ignoresSafeArea()
                 
-                // Tab Selector
-                Picker("Frequency", selection: $selectedTab) {
-                    Text("Daily").tag(0)
-                    Text("Weekly").tag(1)
-                    Text("Monthly").tag(2)
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Compact Header with current points
+                        compactHeaderView
+                        
+                        // Quick Actions
+                        quickActionsView
+                        
+                        // Rewards List
+                        rewardsListView
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 100)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
                 
-                // Rewards List
-                TabView(selection: $selectedTab) {
-                    rewardsList(for: .daily)
-                        .tag(0)
+                // Centered Add Button
+                VStack {
+                    Spacer()
                     
-                    rewardsList(for: .weekly)
-                        .tag(1)
-                    
-                    rewardsList(for: .monthly)
-                        .tag(2)
+                    AddRewardButton(isShowingRewardForm: $showingAddReward)
+                        .padding(.bottom, 16)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
             .navigationTitle("Rewards")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showingAddReward = true
-                    }) {
-                        Image(systemName: "plus")
-                    }
-                }
-            }
+            .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingAddReward) {
                 RewardFormView()
             }
             .sheet(item: $selectedReward) { reward in
                 RewardFormView(initialReward: reward)
+            }
+            .sheet(isPresented: $showingPointsHistory) {
+                PointsHistoryView()
+            }
+            .sheet(isPresented: $showingRedeemedRewards) {
+                RedeemedRewardsView()
             }
             .onAppear {
                 viewModel.updatePoints()
@@ -62,157 +66,406 @@ struct RewardsView: View {
         }
     }
     
-    @ViewBuilder
-    private func rewardsList(for frequency: RewardFrequency) -> some View {
-        let rewards = getRewards(for: frequency)
-        
-        if rewards.isEmpty {
-            emptyRewardsView(for: frequency)
-        } else {
-            List {
-                ForEach(rewards) { reward in
-                    RewardRow(reward: reward, 
-                              canRedeem: viewModel.canRedeemReward(reward),
-                              onRedeemTapped: {
-                                  viewModel.redeemReward(reward)
-                              })
-                    .swipeActions {
-                        Button {
-                            selectedReward = reward
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        .tint(.blue)
-                        
-                        Button(role: .destructive) {
-                            viewModel.removeReward(reward)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
+    private var compactHeaderView: some View {
+        HStack(spacing: 12) {
+            PointsMiniCard(title: "Today", points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
+            PointsMiniCard(title: "Week", points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
+            PointsMiniCard(title: "Month", points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
+            PointsMiniCard(title: "Year", points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+        }
+        .padding(.top, 8)
+    }
+    
+    private var quickActionsView: some View {
+        HStack(spacing: 12) {
+            QuickActionCard(
+                title: "Total Points",
+                subtitle: "View all earnings",
+                icon: "chart.line.uptrend.xyaxis",
+                color: Color(hex: "00C853")
+            ) {
+                showingPointsHistory = true
+            }
+            
+            QuickActionCard(
+                title: "Redeemed",
+                subtitle: "Past rewards",
+                icon: "gift.circle",
+                color: Color(hex: "FF6B6B")
+            ) {
+                showingRedeemedRewards = true
+            }
+        }
+    }
+    
+    private var rewardsListView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Available Rewards")
+                    .font(.system(size: 20, weight: .semibold))
+                
+                Spacer()
+                
+                Text("\(allRewards.count) rewards")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            
+            if allRewards.isEmpty {
+                emptyRewardsView
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(allRewards) { reward in
+                        RewardCard(
+                            reward: reward,
+                            canRedeem: viewModel.canRedeemReward(reward),
+                            currentPoints: viewModel.currentPoints(for: reward.frequency),
+                            onRedeemTapped: {
+                                viewModel.redeemReward(reward)
+                            },
+                            onEditTapped: {
+                                selectedReward = reward
+                            },
+                            onDeleteTapped: {
+                                viewModel.removeReward(reward)
+                            }
+                        )
                     }
                 }
             }
         }
     }
     
-    private func getRewards(for frequency: RewardFrequency) -> [Reward] {
-        switch frequency {
-        case .daily:
-            return viewModel.dailyRewards
-        case .weekly:
-            return viewModel.weeklyRewards
-        case .monthly:
-            return viewModel.monthlyRewards
-        }
-    }
-    
-    private func emptyRewardsView(for frequency: RewardFrequency) -> some View {
+    private var emptyRewardsView: some View {
         VStack(spacing: 20) {
-            Image(systemName: "gift")
-                .font(.system(size: 60))
-                .foregroundColor(.secondary)
-            
-            Text("No \(frequency.displayName.lowercased()) rewards yet")
-                .font(.headline)
-            
-            Text("Create rewards to motivate yourself!")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            Button {
-                showingAddReward = true
-            } label: {
-                Text("Add a reward")
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "5E5CE6").opacity(0.1))
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "gift")
+                    .font(.system(size: 32))
+                    .foregroundColor(Color(hex: "5E5CE6"))
             }
-            .padding(.top)
+            
+            VStack(spacing: 8) {
+                Text("No Rewards Yet")
+                    .font(.system(size: 18, weight: .semibold))
+                
+                Text("Create your first reward to start motivating yourself!")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(40)
+        .frame(maxWidth: .infinity)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(16)
     }
 }
 
-// MARK: - Supporting Views
-
-struct PointsCard: View {
-    let title: String
-    let points: Int
-    let systemImage: String
+// Add Reward Button with centered position and purple gradient
+private struct AddRewardButton: View {
+    @Binding var isShowingRewardForm: Bool
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.headline)
+        Button(action: { isShowingRewardForm = true }) {
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(.white)
+                .frame(width: 56, height: 56)
+                .background(
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                        Circle()
+                            .fill(Color(hex: "5E5CE6").opacity(0.3))
+                            .blur(radius: 8)
+                            .scaleEffect(1.2)
+                        
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                    }
+                    .shadow(
+                        color: Color(hex: "5E5CE6").opacity(0.3),
+                        radius: 8,
+                        x: 0,
+                        y: 4
+                    )
+                )
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+struct PointsMiniCard: View {
+    let title: String
+    let points: Int
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            Text("\(points)")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(color)
             
             Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Text("\(points)")
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            Text("points")
-                .font(.caption2)
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(Color.secondary.opacity(0.1))
-        .cornerRadius(12)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(14)
+        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }
 
-struct RewardRow: View {
-    let reward: Reward
-    let canRedeem: Bool
-    let onRedeemTapped: () -> Void
+struct QuickActionCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
     
     var body: some View {
-        HStack {
-            Image(systemName: reward.icon)
-                .font(.title2)
-                .frame(width: 40, height: 40)
-                .foregroundColor(.white)
-                .background(Color.blue)
-                .cornerRadius(8)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(reward.name)
-                    .font(.headline)
-                
-                if let description = reward.description, !description.isEmpty {
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
+        Button(action: action) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(color)
                 }
                 
-                Text("\(reward.pointsCost) points")
-                    .font(.subheadline)
-                    .foregroundColor(.blue)
+                VStack(spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .lineLimit(1)
             }
-            
-            Spacer()
-            
-            Button {
-                onRedeemTapped()
-            } label: {
-                Text("Redeem")
-                    .font(.subheadline)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(canRedeem ? Color.blue : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(6)
-            }
-            .disabled(!canRedeem)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(14)
+            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
         }
-        .padding(.vertical, 4)
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct RewardCard: View {
+    let reward: Reward
+    let canRedeem: Bool
+    let currentPoints: Int
+    let onRedeemTapped: () -> Void
+    let onEditTapped: () -> Void
+    let onDeleteTapped: () -> Void
+    
+    private var progress: Double {
+        min(Double(currentPoints) / Double(reward.pointsCost), 1.0)
+    }
+    
+    var body: some View {
+        ZStack {
+            // Background card
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
+            
+            // Enhanced progress bar with glass morphism effect
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "5E5CE6").opacity(0.15),
+                            Color(hex: "9747FF").opacity(0.20)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .mask(
+                    GeometryReader { geometry in
+                        HStack {
+                            Rectangle()
+                                .frame(width: geometry.size.width * progress)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                )
+                .overlay(
+                    // Glass morphism overlay
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.15),
+                                    Color.white.opacity(0.05),
+                                    Color.white.opacity(0.15)
+                                ],
+                                startPoint: UnitPoint(x: 0, y: 0),
+                                endPoint: UnitPoint(x: 1, y: 1)
+                            )
+                        )
+                        .mask(
+                            GeometryReader { geometry in
+                                HStack {
+                                    Rectangle()
+                                        .frame(width: geometry.size.width * progress)
+                                    Spacer(minLength: 0)
+                                }
+                            }
+                        )
+                        .blendMode(.overlay)
+                )
+                .overlay(
+                    // Animated shimmer effect
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.clear,
+                                    Color.white.opacity(0.2),
+                                    Color.clear
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .mask(
+                            GeometryReader { geometry in
+                                HStack {
+                                    Rectangle()
+                                        .frame(width: geometry.size.width * progress)
+                                    Spacer(minLength: 0)
+                                }
+                            }
+                        )
+                        .animation(
+                            Animation.easeInOut(duration: 2.0)
+                                .repeatForever(autoreverses: true),
+                            value: progress
+                        )
+                )
+            
+            // Card content
+            HStack(spacing: 14) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: canRedeem ? 
+                            [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
+                            [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: reward.icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                
+                // Content
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(reward.name)
+                            .font(.system(size: 16, weight: .semibold))
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 8))
+                            Text(reward.frequency.displayName)
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: "5E5CE6").opacity(0.1))
+                        .foregroundColor(Color(hex: "5E5CE6"))
+                        .cornerRadius(8)
+                    }
+                    
+                    if let description = reward.description, !description.isEmpty {
+                        Text(description)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    
+                    HStack {
+                        Text("\(currentPoints)/\(reward.pointsCost) points")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(canRedeem ? Color(hex: "00C853") : Color(hex: "5E5CE6"))
+                        
+                        Spacer()
+                        
+                        Button(action: onRedeemTapped) {
+                            Text("Redeem")
+                                .font(.system(size: 12, weight: .semibold))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(
+                                    canRedeem ?
+                                    LinearGradient(
+                                        colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ) :
+                                    LinearGradient(
+                                        colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .foregroundColor(.white)
+                                .cornerRadius(16)
+                        }
+                        .disabled(!canRedeem)
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+        }
+        .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 1)
+        .contextMenu {
+            Button {
+                onEditTapped()
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+            
+            Button(role: .destructive) {
+                onDeleteTapped()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 }
 

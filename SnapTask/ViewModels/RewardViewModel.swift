@@ -2,43 +2,38 @@ import Foundation
 import Combine
 
 class RewardViewModel: ObservableObject {
-    @Published var rewards: [Reward] = []
     @Published var dailyRewards: [Reward] = []
     @Published var weeklyRewards: [Reward] = []
     @Published var monthlyRewards: [Reward] = []
-    
     @Published var dailyPoints: Int = 0
     @Published var weeklyPoints: Int = 0
     @Published var monthlyPoints: Int = 0
-    @Published var totalPoints: Int = 0
     
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        // Listen for reward updates
         RewardManager.shared.$rewards
             .sink { [weak self] rewards in
-                self?.updateRewardLists(rewards)
+                self?.updateRewards(rewards)
             }
             .store(in: &cancellables)
         
         // Initial load
-        updateRewardLists(RewardManager.shared.rewards)
+        updateRewards(RewardManager.shared.rewards)
         updatePoints()
     }
     
-    func updateRewardLists(_ rewards: [Reward]) {
-        self.rewards = rewards
-        self.dailyRewards = rewards.filter { $0.frequency == .daily }
-        self.weeklyRewards = rewards.filter { $0.frequency == .weekly }
-        self.monthlyRewards = rewards.filter { $0.frequency == .monthly }
+    func updatePoints() {
+        dailyPoints = RewardManager.shared.availablePoints(for: .daily)
+        weeklyPoints = RewardManager.shared.availablePoints(for: .weekly)
+        monthlyPoints = RewardManager.shared.availablePoints(for: .monthly)
     }
     
-    func updatePoints() {
-        let today = Date()
-        self.dailyPoints = RewardManager.shared.availablePoints(for: .daily, on: today)
-        self.weeklyPoints = RewardManager.shared.availablePoints(for: .weekly, on: today)
-        self.monthlyPoints = RewardManager.shared.availablePoints(for: .monthly, on: today)
-        self.totalPoints = RewardManager.shared.totalPoints()
+    private func updateRewards(_ rewards: [Reward]) {
+        dailyRewards = rewards.filter { $0.frequency == .daily }
+        weeklyRewards = rewards.filter { $0.frequency == .weekly }
+        monthlyRewards = rewards.filter { $0.frequency == .monthly }
     }
     
     func addReward(_ reward: Reward) {
@@ -69,6 +64,25 @@ class RewardViewModel: ObservableObject {
             return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: weeklyPoints)
         case .monthly:
             return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: monthlyPoints)
+        case .yearly:
+            return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: RewardManager.shared.availablePoints(for: .yearly))
+        case .oneTime:
+            return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: dailyPoints + weeklyPoints + monthlyPoints)
+        }
+    }
+    
+    func currentPoints(for frequency: RewardFrequency) -> Int {
+        switch frequency {
+        case .daily:
+            return dailyPoints
+        case .weekly:
+            return weeklyPoints
+        case .monthly:
+            return monthlyPoints
+        case .yearly:
+            return RewardManager.shared.availablePoints(for: .yearly)
+        case .oneTime:
+            return dailyPoints + weeklyPoints + monthlyPoints
         }
     }
 }
