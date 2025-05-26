@@ -164,8 +164,12 @@ class StatisticsViewModel: ObservableObject {
         
         // Get time tracking data from UserDefaults
         let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
+        let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
         
-        categoryStats = categories.map { category in
+        var categoryStatsList: [CategoryStat] = []
+        
+        // Process regular categories
+        for category in categories {
             // Calculate hours from completed tasks
             let categoryTasks = allTasks.filter { task in
                 task.category?.id == category.id
@@ -195,12 +199,44 @@ class StatisticsViewModel: ObservableObject {
             
             let totalHours = taskHours + trackedHours
             
-            return CategoryStat(
-                name: category.name,
-                color: category.color,
-                hours: totalHours
-            )
-        }.filter { $0.hours > 0 }
+            if totalHours > 0 {
+                categoryStatsList.append(CategoryStat(
+                    name: category.name,
+                    color: category.color,
+                    hours: totalHours
+                ))
+            }
+        }
+        
+        // Process individual task tracking
+        let calendar = Calendar.current
+        var currentDate = startDate
+        var taskTracking: [String: Double] = [:]
+        
+        while currentDate <= endDate {
+            let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
+            if let dayData = timeTrackingData[dateKey] {
+                for (key, hours) in dayData {
+                    if key.hasPrefix("task_") {
+                        taskTracking[key, default: 0] += hours
+                    }
+                }
+            }
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+        }
+        
+        // Add individual tasks to statistics
+        for (taskKey, hours) in taskTracking {
+            if hours > 0, let metadata = taskMetadata[taskKey] {
+                categoryStatsList.append(CategoryStat(
+                    name: metadata["name"] ?? "Unknown Task",
+                    color: metadata["color"] ?? "#6366F1",
+                    hours: hours
+                ))
+            }
+        }
+        
+        categoryStats = categoryStatsList
     }
     
     private func updateWeeklyStats() {

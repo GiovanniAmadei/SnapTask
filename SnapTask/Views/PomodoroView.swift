@@ -231,9 +231,7 @@ struct PomodoroView: View {
         }
         .navigationBarBackButtonHidden(false)
         .onAppear {
-            Task { @MainActor in
-                viewModel.setActiveTask(task)
-            }
+            viewModel.setActiveTask(task)
         }
         .onChange(of: viewModel.state) { oldState, newState in
             if newState == .completed {
@@ -437,12 +435,15 @@ struct ModernSessionTimeline: View {
             let workDuration = viewModel.settings.workDuration
             let workProportion = CGFloat(workDuration / totalDuration)
             
-            var workProgress: Double = 1.0
-            if session == viewModel.currentSession && viewModel.state == .working {
+            var workProgress: Double = 0.0
+            if session < viewModel.currentSession {
+                // Completed sessions
+                workProgress = 1.0
+            } else if session == viewModel.currentSession && viewModel.state == .working {
+                // Current session in progress
                 workProgress = viewModel.progress
-            } else if session > viewModel.currentSession {
-                workProgress = 0.0
             }
+            // If session > currentSession or state is .notStarted, progress remains 0.0
             
             segments.append(ProgressSegment(
                 isWork: true,
@@ -456,12 +457,15 @@ struct ModernSessionTimeline: View {
                 let breakDuration = getBreakDuration(for: session)
                 let breakProportion = CGFloat(breakDuration / totalDuration)
                 
-                var breakProgress: Double = 1.0
-                if session == viewModel.currentSession && viewModel.state == .onBreak {
+                var breakProgress: Double = 0.0
+                if session < viewModel.currentSession {
+                    // Completed break sessions
+                    breakProgress = 1.0
+                } else if session == viewModel.currentSession && viewModel.state == .onBreak {
+                    // Current break in progress
                     breakProgress = viewModel.progress
-                } else if session >= viewModel.currentSession {
-                    breakProgress = 0.0
                 }
+                // If session >= currentSession or state is not .onBreak, progress remains 0.0
                 
                 segments.append(ProgressSegment(
                     isWork: false,

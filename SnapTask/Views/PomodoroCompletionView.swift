@@ -370,8 +370,8 @@ struct PomodoroCompletionView: View {
             print("Tracking \(editedFocusTime/60) minutes for task: \(editedTaskName)")
             taskManager.toggleTaskCompletion(task.id)
             
-            // Save time tracking data to statistics
-            await saveToStatistics(categoryId: task.category?.id, timeSpent: editedFocusTime)
+            // Save time tracking data to statistics as individual task
+            await saveToStatistics(categoryId: nil, timeSpent: editedFocusTime, taskName: editedTaskName, taskId: task.id)
         } else if let category = selectedCategory {
             // Track time for selected category
             print("Tracking \(editedFocusTime/60) minutes for category: \(category.name)")
@@ -382,7 +382,7 @@ struct PomodoroCompletionView: View {
         }
     }
     
-    private func saveToStatistics(categoryId: UUID?, timeSpent: TimeInterval) async {
+    private func saveToStatistics(categoryId: UUID?, timeSpent: TimeInterval, taskName: String? = nil, taskId: UUID? = nil) async {
         // Create a simple time tracking entry in UserDefaults
         let trackingKey = "timeTracking"
         let calendar = Calendar.current
@@ -391,7 +391,25 @@ struct PomodoroCompletionView: View {
         var timeTrackingData = UserDefaults.standard.dictionary(forKey: trackingKey) as? [String: [String: Double]] ?? [:]
         
         let dateKey = ISO8601DateFormatter().string(from: today)
-        let categoryKey = categoryId?.uuidString ?? "uncategorized"
+        let categoryKey: String
+        
+        if let categoryId = categoryId {
+            // Regular category tracking
+            categoryKey = categoryId.uuidString
+        } else if let taskId = taskId, let taskName = taskName {
+            // Individual task tracking - use a special prefix to distinguish from categories
+            categoryKey = "task_\(taskId.uuidString)"
+            
+            // Store task metadata for display purposes
+            var taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
+            taskMetadata[categoryKey] = [
+                "name": taskName,
+                "color": task.category?.color ?? "#6366F1"
+            ]
+            UserDefaults.standard.set(taskMetadata, forKey: "taskMetadata")
+        } else {
+            return // Invalid configuration
+        }
         
         if timeTrackingData[dateKey] == nil {
             timeTrackingData[dateKey] = [:]

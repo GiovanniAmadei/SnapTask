@@ -40,6 +40,9 @@ class PomodoroViewModel: ObservableObject {
     }
     
     var progress: Double {
+        // If not started, progress should be 0
+        guard state != .notStarted else { return 0.0 }
+        
         let total = state == .working ? settings.workDuration : 
                    (currentSession % settings.sessionsUntilLongBreak == 0 ? 
                     settings.longBreakDuration : settings.breakDuration)
@@ -61,6 +64,9 @@ class PomodoroViewModel: ObservableObject {
         self.completedWorkSessions = []
         self.completedBreakSessions = []
         self.state = .notStarted
+        self.startDate = nil
+        self.pausedTimeRemaining = nil
+        self.pausedState = nil
     }
     
     // Check if a specific task is the active one
