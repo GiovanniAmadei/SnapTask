@@ -23,46 +23,70 @@ struct PointsHistoryView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Total Points Header
-                if !pointsEarningTasks.isEmpty {
-                    VStack(spacing: 8) {
-                        Text("Total Points Earned")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                        
-                        Text("\(totalPoints)")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(Color(hex: "5E5CE6"))
-                    }
-                    .padding(.vertical, 16)
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                }
-                
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        if pointsEarningTasks.isEmpty {
-                            emptyStateView
-                        } else {
-                            ForEach(pointsEarningTasks, id: \.0.id) { task, dates in
-                                TaskPointsCard(
-                                    task: task, 
-                                    completionDates: dates,
-                                    isSelected: selectedTasks.contains(task.id),
-                                    isEditMode: isEditMode,
-                                    onSelectionChanged: { isSelected in
-                                        if isSelected {
-                                            selectedTasks.insert(task.id)
-                                        } else {
-                                            selectedTasks.remove(task.id)
-                                        }
-                                    }
-                                )
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    // Total Points Header - integrated into the scroll view
+                    if !pointsEarningTasks.isEmpty {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(LinearGradient(
+                                    colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .shadow(color: Color(hex: "5E5CE6").opacity(0.3), radius: 8, x: 0, y: 4)
+                            
+                            HStack {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Total Points Earned")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.9))
+                                    
+                                    Text("\(totalPoints)")
+                                        .font(.system(size: 32, weight: .bold))
+                                        .foregroundColor(Color(hex: "FFD700"))
+                                }
+                                
+                                Spacer()
+                                
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.2))
+                                        .frame(width: 50, height: 50)
+                                    
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(Color(hex: "FFD700"))
+                                }
                             }
+                            .padding(20)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                    }
+                    
+                    if pointsEarningTasks.isEmpty {
+                        emptyStateView
+                    } else {
+                        ForEach(pointsEarningTasks, id: \.0.id) { task, dates in
+                            TaskPointsCard(
+                                task: task, 
+                                completionDates: dates,
+                                isSelected: selectedTasks.contains(task.id),
+                                isEditMode: isEditMode,
+                                onSelectionChanged: { isSelected in
+                                    if isSelected {
+                                        selectedTasks.insert(task.id)
+                                    } else {
+                                        selectedTasks.remove(task.id)
+                                    }
+                                }
+                            )
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(16)
                 }
+                .padding(.bottom, 16)
             }
             .background(Color(UIColor.systemGroupedBackground))
             .navigationTitle("Points History")

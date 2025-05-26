@@ -8,10 +8,6 @@ struct RewardsView: View {
     @State private var showingRedeemedRewards = false
     @Environment(\.colorScheme) private var colorScheme
     
-    private var totalPoints: Int {
-        viewModel.dailyPoints + viewModel.weeklyPoints + viewModel.monthlyPoints
-    }
-    
     private var allRewards: [Reward] {
         (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards)
             .sorted { $0.pointsCost < $1.pointsCost }
@@ -294,99 +290,145 @@ struct RewardCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(UIColor.secondarySystemGroupedBackground))
             
-            // Enhanced progress bar with glass morphism effect
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hex: "5E5CE6").opacity(0.15),
-                            Color(hex: "9747FF").opacity(0.20)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            // Multi-layer translucent progress effect
+            ZStack {
+                // Base progress layer with stronger opacity
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: "5E5CE6").opacity(0.25),
+                                Color(hex: "9747FF").opacity(0.35)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .mask(
-                    GeometryReader { geometry in
-                        HStack {
-                            Rectangle()
-                                .frame(width: geometry.size.width * progress)
-                            Spacer(minLength: 0)
+                    .mask(
+                        GeometryReader { geometry in
+                            HStack {
+                                Rectangle()
+                                    .frame(width: geometry.size.width * progress)
+                                Spacer(minLength: 0)
+                            }
                         }
-                    }
-                )
-                .overlay(
-                    // Glass morphism overlay
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.15),
-                                    Color.white.opacity(0.05),
-                                    Color.white.opacity(0.15)
-                                ],
-                                startPoint: UnitPoint(x: 0, y: 0),
-                                endPoint: UnitPoint(x: 1, y: 1)
-                            )
+                    )
+                
+                // Glass morphism layer with blur effect simulation
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.white.opacity(0.4),
+                                Color.white.opacity(0.1),
+                                Color.clear
+                            ],
+                            center: .topLeading,
+                            startRadius: 10,
+                            endRadius: 100
                         )
-                        .mask(
-                            GeometryReader { geometry in
-                                HStack {
-                                    Rectangle()
-                                        .frame(width: geometry.size.width * progress)
-                                    Spacer(minLength: 0)
-                                }
+                    )
+                    .mask(
+                        GeometryReader { geometry in
+                            HStack {
+                                Rectangle()
+                                    .frame(width: geometry.size.width * progress)
+                                Spacer(minLength: 0)
                             }
+                        }
+                    )
+                    .blendMode(.overlay)
+                
+                // Animated shimmer wave
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                Color.white.opacity(0.6),
+                                Color.clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
-                        .blendMode(.overlay)
-                )
-                .overlay(
-                    // Animated shimmer effect
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.clear,
-                                    Color.white.opacity(0.2),
-                                    Color.clear
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .mask(
-                            GeometryReader { geometry in
-                                HStack {
-                                    Rectangle()
-                                        .frame(width: geometry.size.width * progress)
-                                    Spacer(minLength: 0)
-                                }
+                    )
+                    .mask(
+                        GeometryReader { geometry in
+                            HStack {
+                                Rectangle()
+                                    .frame(width: geometry.size.width * progress)
+                                Spacer(minLength: 0)
                             }
-                        )
-                        .animation(
-                            Animation.easeInOut(duration: 2.0)
-                                .repeatForever(autoreverses: true),
-                            value: progress
-                        )
-                )
+                        }
+                    )
+                    .animation(
+                        Animation.easeInOut(duration: 2.5)
+                            .repeatForever(autoreverses: true),
+                        value: progress
+                    )
+                
+                // Edge highlight for depth
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: "5E5CE6").opacity(0.3),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+                    .mask(
+                        GeometryReader { geometry in
+                            HStack {
+                                Rectangle()
+                                    .frame(width: geometry.size.width * progress)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    )
+            }
             
             // Card content
             HStack(spacing: 14) {
-                // Icon
+                // Enhanced icon with better shadow
                 ZStack {
+                    // Icon shadow
+                    Circle()
+                        .fill(Color.black.opacity(0.1))
+                        .frame(width: 46, height: 46)
+                        .offset(x: 1, y: 2)
+                    
                     Circle()
                         .fill(LinearGradient(
                             colors: canRedeem ? 
                             [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
-                            [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
+                            [Color.gray.opacity(0.4), Color.gray.opacity(0.5)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ))
                         .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        colors: [
+                                            Color.white.opacity(0.3),
+                                            Color.clear
+                                        ],
+                                        center: .topLeading,
+                                        startRadius: 5,
+                                        endRadius: 20
+                                    )
+                                )
+                        )
                     
                     Image(systemName: reward.icon)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
                 }
                 
                 // Content
@@ -405,9 +447,15 @@ struct RewardCard: View {
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(Color(hex: "5E5CE6").opacity(0.1))
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(hex: "5E5CE6").opacity(0.12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(Color(hex: "5E5CE6").opacity(0.2), lineWidth: 0.5)
+                                )
+                        )
                         .foregroundColor(Color(hex: "5E5CE6"))
-                        .cornerRadius(8)
                     }
                     
                     if let description = reward.description, !description.isEmpty {
@@ -430,20 +478,39 @@ struct RewardCard: View {
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 6)
                                 .background(
-                                    canRedeem ?
-                                    LinearGradient(
-                                        colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ) :
-                                    LinearGradient(
-                                        colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(
+                                                canRedeem ?
+                                                LinearGradient(
+                                                    colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                ) :
+                                                LinearGradient(
+                                                    colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                        
+                                        if canRedeem {
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [
+                                                            Color.white.opacity(0.3),
+                                                            Color.clear
+                                                        ],
+                                                        startPoint: .top,
+                                                        endPoint: .bottom
+                                                    )
+                                                )
+                                        }
+                                    }
                                 )
                                 .foregroundColor(.white)
-                                .cornerRadius(16)
+                                .shadow(color: canRedeem ? Color(hex: "5E5CE6").opacity(0.3) : Color.clear, radius: 2, x: 0, y: 1)
                         }
                         .disabled(!canRedeem)
                     }
@@ -452,7 +519,7 @@ struct RewardCard: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
         }
-        .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
         .contextMenu {
             Button {
                 onEditTapped()
