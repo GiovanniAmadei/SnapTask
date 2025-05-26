@@ -52,13 +52,7 @@ class PomodoroViewModel: ObservableObject {
     
     // Set active task and configure settings
     @MainActor func setActiveTask(_ task: TodoTask) {
-        // Check if this is already the active task
-        if let activeTask = self.activeTask, activeTask.id == task.id {
-            // The same task is already active, don't reset
-            return
-        }
-        
-        // It's a different task, reset and set up the new one
+        // Always reset when setting a new task to ensure clean state
         stop()
         self.activeTask = task
         self.settings = task.pomodoroSettings ?? PomodoroSettings.defaultSettings

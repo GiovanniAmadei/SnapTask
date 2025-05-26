@@ -115,6 +115,14 @@ class StatisticsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
+        // Listen for time tracking updates
+        NotificationCenter.default.publisher(for: .timeTrackingUpdated)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateStats()
+            }
+            .store(in: &cancellables)
+        
         // Listen for category manager updates
         categoryManager.$categories
             .receive(on: DispatchQueue.main)
@@ -154,11 +162,15 @@ class StatisticsViewModel: ObservableObject {
         let allTasks = taskManager.tasks
         let (startDate, endDate) = selectedTimeRange.dateRange
         
+        // Get time tracking data from UserDefaults
+        let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
+        
         categoryStats = categories.map { category in
+            // Calculate hours from completed tasks
             let categoryTasks = allTasks.filter { task in
                 task.category?.id == category.id
             }
-            let totalHours = categoryTasks.reduce(0.0) { total, task in
+            let taskHours = categoryTasks.reduce(0.0) { total, task in
                 let taskHours = task.completions
                     .filter { $0.key >= startDate && $0.key <= endDate && $0.value.isCompleted }
                     .reduce(0.0) { sum, completion in
@@ -166,6 +178,22 @@ class StatisticsViewModel: ObservableObject {
                     }
                 return total + taskHours
             }
+            
+            // Add tracked time from Pomodoro sessions
+            let calendar = Calendar.current
+            var trackedHours = 0.0
+            
+            var currentDate = startDate
+            while currentDate <= endDate {
+                let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
+                if let dayData = timeTrackingData[dateKey],
+                   let categoryHours = dayData[category.id.uuidString] {
+                    trackedHours += categoryHours
+                }
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+            }
+            
+            let totalHours = taskHours + trackedHours
             
             return CategoryStat(
                 name: category.name,

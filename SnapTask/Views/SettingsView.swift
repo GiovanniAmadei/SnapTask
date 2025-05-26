@@ -1,13 +1,16 @@
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var cloudKitService = CloudKitService.shared
+    @StateObject private var donationService = DonationService.shared
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var showingLanguagePicker = false
+    @State private var showingDonationSheet = false
     
     var body: some View {
         NavigationStack {
@@ -49,6 +52,35 @@ struct SettingsView: View {
                         .padding(.vertical, 5)
                 }
                 
+                Section("Support SnapTask") {
+                    Button {
+                        showingDonationSheet = true
+                    } label: {
+                        HStack {
+                            Label("Support Development", systemImage: "heart.fill")
+                                .foregroundColor(.pink)
+                            Spacer()
+                            if donationService.hasEverDonated {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    if let lastDonation = donationService.lastDonationDate {
+                        HStack {
+                            Image(systemName: "calendar")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                            Text("Last donation: \(lastDonation, style: .date)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
                 Section("customization".localized) {
                     NavigationLink {
                         CategoriesView(viewModel: viewModel)
@@ -60,6 +92,12 @@ struct SettingsView: View {
                         PrioritiesView(viewModel: viewModel)
                     } label: {
                         Label("priorities".localized, systemImage: "flag.fill")
+                    }
+                    
+                    NavigationLink {
+                        PomodoroColorsView()
+                    } label: {
+                        Label("Pomodoro Colors", systemImage: "paintbrush.fill")
                     }
                 }
                 
@@ -90,9 +128,9 @@ struct SettingsView: View {
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
+                    await donationService.loadProducts()
                 }
                 
-                // Verifica la sincronizzazione con CloudKit
                 cloudKitService.syncTasks()
             }
             .actionSheet(isPresented: $showingLanguagePicker) {
@@ -105,6 +143,9 @@ struct SettingsView: View {
                         }
                     } + [.cancel()]
                 )
+            }
+            .sheet(isPresented: $showingDonationSheet) {
+                DonationView()
             }
         }
     }
@@ -152,7 +193,6 @@ struct PriorityFormView: View {
         Form {
             TextField("Priority Name", text: $name)
             
-            // Preview how the priority will look
             if let priority = Priority(rawValue: name.lowercased()) {
                 HStack {
                     Image(systemName: priority.icon)
@@ -179,4 +219,4 @@ struct PriorityFormView: View {
             }
         }
     }
-} 
+}
