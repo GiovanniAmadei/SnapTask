@@ -8,6 +8,13 @@ struct TaskRowView: View {
     let date: Date
     @State private var offset: CGFloat = 0
     
+    private var hasDescription: Bool {
+        if let description = task.description {
+            return !description.isEmpty
+        }
+        return false
+    }
+    
     var body: some View {
         List {
             VStack(spacing: 8) {
@@ -37,11 +44,22 @@ struct TaskRowView: View {
                             }
                         }
                         
-                        if ((task.description?.isNilOrEmpty) == nil) {
+                        if hasDescription {
                             Text(task.description ?? "")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .lineLimit(2)
+                        }
+                        
+                        if let location = task.location, !location.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: "location")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                Text(location)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         // Task details
@@ -163,7 +181,9 @@ struct TaskRowView: View {
         .listStyle(PlainListStyle())
         .sheet(isPresented: $showingEditSheet) {
             NavigationStack {
-                TaskFormView(initialTask: task)
+                TaskFormView(initialTask: task, onSave: { updatedTask in
+                    TaskManager.shared.updateTask(updatedTask)
+                })
             }
         }
         .onAppear {
@@ -212,4 +232,4 @@ extension String {
     var isNilOrEmpty: Bool {
         self.isEmpty
     }
-} 
+}

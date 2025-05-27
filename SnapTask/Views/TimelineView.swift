@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct TimelineView: View {
     @StateObject var viewModel: TimelineViewModel
@@ -21,6 +22,10 @@ struct TimelineView: View {
                     .background(Color(.systemBackground))
                     .zIndex(1)
                     
+                    FilterBarView(viewModel: viewModel)
+                        .background(Color(.systemBackground))
+                        .zIndex(1)
+                    
                     // Lista task e pulsante aggiungi
                     TaskListView(
                         viewModel: viewModel,
@@ -32,7 +37,7 @@ struct TimelineView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showingNewTask) {
                 TaskFormView(
-                    viewModel: TaskFormViewModel(initialDate: viewModel.selectedDate),
+                    initialDate: viewModel.selectedDate,
                     onSave: { task in
                         viewModel.addTask(task)
                     }
@@ -46,6 +51,76 @@ struct TimelineView: View {
                     scrollProxy: scrollProxy
                 )
             }
+            .sheet(isPresented: $viewModel.showingFilterSheet) {
+                TimelineFilterView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $viewModel.showingTimelineView) {
+                DayTimelineView(viewModel: viewModel)
+                    .presentationDetents([.large])
+            }
+        }
+    }
+}
+
+struct FilterBarView: View {
+    @ObservedObject var viewModel: TimelineViewModel
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Filter status
+            HStack(spacing: 6) {
+                Image(systemName: filterIcon)
+                    .font(.system(size: 14))
+                    .foregroundColor(.pink)
+                
+                Text(viewModel.filterStatusText)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.pink.opacity(0.1))
+            )
+            
+            Spacer()
+            
+            // Filter button
+            Button(action: {
+                viewModel.showingFilterSheet = true
+            }) {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.system(size: 20))
+                    .foregroundColor(.pink)
+            }
+            
+            // Clear filters button (if filters are active)
+            if viewModel.activeFilter != .all {
+                Button(action: {
+                    viewModel.clearFilters()
+                }) {
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+    
+    private var filterIcon: String {
+        switch viewModel.activeFilter {
+        case .all:
+            return "list.bullet"
+        case .time:
+            return "clock"
+        case .category:
+            return "folder"
+        case .priority:
+            return "exclamationmark.triangle"
         }
     }
 }
@@ -702,9 +777,9 @@ private struct TimelineTaskCard: View {
             }
         }
         .sheet(isPresented: $showingEditSheet) {
-            NavigationStack {
-                TaskFormView(initialTask: task)
-            }
+            TaskFormView(initialTask: task, onSave: { updatedTask in
+                TaskManager.shared.updateTask(updatedTask)
+            })
         }
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
@@ -786,4 +861,4 @@ private struct TimelineSubtaskRow: View {
         }
         .padding(.leading, 16) // Add more padding to move subtasks to the right
     }
-} 
+}
