@@ -1,492 +1,610 @@
 import SwiftUI
 import Charts
 
-// Completamente ridisegnato per rimuovere tutti i contenitori limitanti
-struct TaskConsistencyView: View {
-    @ObservedObject var viewModel: StatisticsViewModel
-    @State private var timeRange: TaskConsistencyChartView.TimeRange = .week
-    @State private var selectedTaskId: UUID? = nil
-    
-    var body: some View {
-        // Break down the complex view into smaller components
-        ConsistencyContentView(
-            viewModel: viewModel,
-            timeRange: $timeRange,
-            selectedTaskId: $selectedTaskId
-        )
-        .background(Color.clear)
-        .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets())
-        .padding(0)
-        .frame(width: UIScreen.main.bounds.width)
-    }
+enum ConsistencyTimeRange: String, CaseIterable {
+    case week = "Week"
+    case month = "Month"
+    case year = "Year"
 }
 
-// Extracted content view to simplify the main view
-private struct ConsistencyContentView: View {
+struct TaskConsistencyView: View {
     @ObservedObject var viewModel: StatisticsViewModel
-    @Binding var timeRange: TaskConsistencyChartView.TimeRange
-    @Binding var selectedTaskId: UUID?
+    @State private var timeRange: ConsistencyTimeRange = .week
+    @State private var selectedTaskId: UUID? = nil
+    @State private var penalizeMissedTasks: Bool = true
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("task_consistency".localized)
-                .font(.title3.bold())
-                .padding(.horizontal, 16)
+        VStack(alignment: .leading, spacing: 20) {
+            HeaderSection()
             
             if viewModel.consistency.isEmpty {
                 EmptyConsistencyView()
             } else {
-                // Time range selector
-                ConsistencyTimeRangeSelector(timeRange: $timeRange)
+                VStack(alignment: .leading, spacing: 16) {
+                    TimeRangeSection(timeRange: $timeRange)
+                    
+                    PenaltyToggleSection(penalizeMissedTasks: $penalizeMissedTasks)
+                }
                 
-                // Chart with task lines
-                ConsistencyChartContainer(
-                    viewModel: viewModel,
+                ModernConsistencyChart(
+                    tasks: viewModel.consistency,
                     timeRange: timeRange,
-                    selectedTaskId: $selectedTaskId
+                    selectedTaskId: $selectedTaskId,
+                    penalizeMissedTasks: penalizeMissedTasks,
+                    viewModel: viewModel
                 )
+                .animation(.smooth(duration: 0.8), value: timeRange)
+                .animation(.smooth(duration: 0.8), value: penalizeMissedTasks)
                 
-                // Task legend
-                ConsistencyLegendGrid(
+                TaskLegendSection(
                     tasks: viewModel.consistency,
                     selectedTaskId: $selectedTaskId
                 )
+                
+                HelpTextSection()
             }
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+    }
+}
+
+private struct HeaderSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Task Progress Over Time")
+                .font(.system(.title3, design: .rounded, weight: .semibold))
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text("shows_consistency".localized)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text("x_axis_y_axis".localized)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text("how_to_read".localized)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Text("points_explanation".localized)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal, 16)
+            Text("Track completion patterns and consistency trends")
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundColor(.secondary)
         }
     }
 }
 
-// Time range selector component
-private struct ConsistencyTimeRangeSelector: View {
-    @Binding var timeRange: TaskConsistencyChartView.TimeRange
+private struct TimeRangeSection: View {
+    @Binding var timeRange: ConsistencyTimeRange
     
     var body: some View {
-        Picker("Time Range", selection: $timeRange) {
-            ForEach(TaskConsistencyChartView.TimeRange.allCases, id: \.self) { range in
-                Text(range.rawValue.localized).tag(range)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Time Period")
+                .font(.system(.headline, design: .rounded, weight: .medium))
+                .foregroundColor(.primary)
+            
+            Picker("Time Range", selection: $timeRange) {
+                ForEach(ConsistencyTimeRange.allCases, id: \.self) { range in
+                    Text(range.rawValue).tag(range)
+                }
             }
+            .pickerStyle(.segmented)
         }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, 16)
     }
 }
 
-// Chart container component
-private struct ConsistencyChartContainer: View {
-    @ObservedObject var viewModel: StatisticsViewModel
-    let timeRange: TaskConsistencyChartView.TimeRange
+private struct PenaltyToggleSection: View {
+    @Binding var penalizeMissedTasks: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Penalize Missed Tasks")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    Text("Decrease progress when recurring tasks are not completed")
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: $penalizeMissedTasks)
+                    .labelsHidden()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.gray.opacity(0.1), lineWidth: 1)
+                    )
+            )
+        }
+    }
+}
+
+private struct TaskLegendSection: View {
+    let tasks: [TodoTask]
     @Binding var selectedTaskId: UUID?
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Background grid lines with Y-axis labels
-                VStack(spacing: geometry.size.height / 4) {
-                    ForEach(0..<5) { index in
-                        ZStack {
-                            // Grid line
-                            Divider().background(Color.gray.opacity(0.2))
-                            
-                            // Y-axis label
-                            if index < 4 { // Skip the bottom line label (0)
-                                Text("\(4-index)")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.leading, 4)
-                                    .zIndex(1)
-                            }
-                        }
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tasks")
+                .font(.system(.headline, design: .rounded, weight: .medium))
+                .foregroundColor(.primary)
+            
+            LazyVGrid(columns: gridColumns, spacing: 12) {
+                ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
+                    ModernLegendItem(
+                        task: task,
+                        taskIndex: index,
+                        isSelected: selectedTaskId == nil || selectedTaskId == task.id,
+                        isHighlighted: selectedTaskId == task.id
+                    ) {
+                        toggleTaskSelection(taskId: task.id)
                     }
                 }
-                
-                // Y-axis title
-                Text("Progress")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .rotationEffect(Angle(degrees: -90))
-                    .position(x: 8, y: geometry.size.height / 2)
-                
-                // X-axis date labels
-                DateLabelsView(
-                    timeRange: timeRange,
-                    width: geometry.size.width,
-                    height: geometry.size.height
-                )
-                
-                // Task lines
-                TaskLinesContainer(
-                    tasks: viewModel.consistency,
-                    timeRange: timeRange,
-                    viewModel: viewModel,
-                    width: geometry.size.width - 20,
-                    height: geometry.size.height - 40,
-                    selectedTaskId: selectedTaskId
-                )
-                .padding(.leading, 20) // Make space for Y-axis labels
             }
         }
-        .frame(height: 300)
+    }
+    
+    private var gridColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 12)]
+    }
+    
+    private func toggleTaskSelection(taskId: UUID) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if selectedTaskId == taskId {
+                selectedTaskId = nil
+            } else {
+                selectedTaskId = taskId
+            }
+        }
     }
 }
 
-// Date labels component
-private struct DateLabelsView: View {
-    let timeRange: TaskConsistencyChartView.TimeRange
-    let width: CGFloat
-    let height: CGFloat
+private struct HelpTextSection: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("How to Read")
+                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .foregroundColor(.primary)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HelpTextRow(
+                    color: .blue,
+                    text: "Each line shows a task's completion progress over time"
+                )
+                
+                HelpTextRow(
+                    color: .green,
+                    text: "Higher points indicate better consistency"
+                )
+                
+                HelpTextRow(
+                    color: .orange,
+                    text: "Tap legend items to highlight specific tasks"
+                )
+            }
+        }
+        .padding(.top, 8)
+    }
+}
+
+private struct HelpTextRow: View {
+    let color: Color
+    let text: String
     
     var body: some View {
-        VStack {
-            // Date markers
-            HStack(spacing: 0) {
-                ForEach(getDateLabels(for: timeRange), id: \.self) { label in
-                    Text(label)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity)
+        HStack(spacing: 8) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            
+            Text(text)
+                .font(.system(.caption, design: .rounded))
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+private struct ModernConsistencyChart: View {
+    let tasks: [TodoTask]
+    let timeRange: ConsistencyTimeRange
+    @Binding var selectedTaskId: UUID?
+    let penalizeMissedTasks: Bool
+    @ObservedObject var viewModel: StatisticsViewModel
+    
+    private let distinctColors: [Color] = [
+        .red, .blue, .green, .purple, .orange, .cyan,
+        .pink, .yellow, .mint, .indigo, .teal, .brown
+    ]
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Chart {
+                ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
+                    createTaskLines(for: task, at: index)
                 }
             }
-            .padding(.horizontal, 10)
-            
-            // X-axis title
-            Text(getAxisTitle(for: timeRange))
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 4)
+            .frame(height: 320)
+            .chartXAxis {
+                AxisMarks(position: .bottom, values: getXAxisDateValues()) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(Color.gray.opacity(0.2))
+                    AxisValueLabel() {
+                        if let dateValue = value.as(Date.self) {
+                            Text(formatDateLabel(dateValue))
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(Color.gray.opacity(0.2))
+                    AxisValueLabel() {
+                        if let intValue = value.as(Int.self) {
+                            Text("\(intValue)")
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+            .chartYAxisLabel("Completed Tasks", position: .leading)
+            .chartXAxisLabel("Date", position: .bottom)
+            .chartPlotStyle { plotArea in
+                plotArea.background(chartBackground)
+            }
+            .animation(.smooth(duration: 0.8), value: selectedTaskId)
+            .animation(.smooth(duration: 0.8), value: timeRange)
+            .padding(.horizontal, 8)
         }
-        .offset(y: height / 2 - 15)
     }
     
-    // Helper for generating date labels
-    private func getDateLabels(for timeRange: TaskConsistencyChartView.TimeRange) -> [String] {
-        let formatter = DateFormatter()
-        
+    private var chartBackground: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.gray.opacity(0.02),
+                        Color.gray.opacity(0.05)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.gray.opacity(0.1),
+                                Color.gray.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+    }
+    
+    private func getXAxisDateValues() -> [Date] {
         let calendar = Calendar.current
         let today = Date()
         
+        let daysToAnalyze: Int
+        let interval: Int
+        
         switch timeRange {
         case .week:
-            formatter.dateFormat = "d MMM"
-            let dates = [-6, -4, -2, 0].map { offset in
-                let date = calendar.date(byAdding: .day, value: offset, to: today)!
-                return formatter.string(from: date)
-            }
-            return dates
+            daysToAnalyze = 7
+            interval = 1
         case .month:
-            formatter.dateFormat = "d MMM"
-            let dates = [-30, -20, -10, 0].map { offset in
-                let date = calendar.date(byAdding: .day, value: offset, to: today)!
-                return formatter.string(from: date)
-            }
-            return dates
+            daysToAnalyze = 30
+            interval = 4
         case .year:
-            formatter.dateFormat = "MMM"
-            let dates = [-12, -9, -6, -3, 0].map { offset in
-                let date = calendar.date(byAdding: .month, value: offset, to: today)!
-                return formatter.string(from: date)
+            daysToAnalyze = 365
+            interval = 30
+        }
+        
+        var dates: [Date] = []
+        
+        for dayOffset in stride(from: 1-daysToAnalyze, through: 0, by: interval) {
+            if let date = calendar.date(byAdding: .day, value: dayOffset, to: today) {
+                dates.append(calendar.startOfDay(for: date))
             }
-            return dates
+        }
+        
+        if !dates.contains(where: { calendar.isDate($0, inSameDayAs: today) }) {
+            dates.append(calendar.startOfDay(for: today))
+        }
+        
+        return dates.sorted()
+    }
+    
+    private func formatDateLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        
+        switch timeRange {
+        case .week:
+            formatter.dateFormat = "E dd"
+        case .month:
+            formatter.dateFormat = "dd MMM"
+        case .year:
+            formatter.dateFormat = "MMM yyyy"
+        }
+        
+        return formatter.string(from: date)
+    }
+    
+    @ChartContentBuilder
+    private func createTaskLines(for task: TodoTask, at index: Int) -> some ChartContent {
+        let points = getRealConsistencyPoints(for: task, timeRange: timeRange)
+        let taskColor = getTaskColor(for: task, at: index)
+        let isSelected = selectedTaskId == nil || selectedTaskId == task.id
+        let opacity = isSelected ? 0.9 : 0.3
+        let lineWidth: Double = isSelected ? 3.5 : 2
+        let symbolSize: Double = isSelected ? 80 : 50
+        
+        if !points.isEmpty {
+            ForEach(Array(points.enumerated()), id: \.offset) { pointIndex, point in
+                LineMark(
+                    x: .value("Date", point.0),
+                    y: .value("Progress", point.1),
+                    series: .value("Task", task.name)
+                )
+                .foregroundStyle(taskColor.opacity(opacity))
+                .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                .symbol(.circle)
+                .symbolSize(symbolSize)
+                .interpolationMethod(.linear)
+            }
         }
     }
     
-    // Return a title for the x-axis based on time range
-    private func getAxisTitle(for timeRange: TaskConsistencyChartView.TimeRange) -> String {
+    private func getRealConsistencyPoints(for task: TodoTask, timeRange: ConsistencyTimeRange) -> [(Date, Int)] {
+        guard let recurrence = task.recurrence else { 
+            return [] 
+        }
+        
+        let calendar = Calendar.current
+        let today = Date()
+        let taskCreationDay = calendar.startOfDay(for: task.startTime)
+        var points: [(Date, Int)] = []
+        
+        let daysToAnalyze: Int
         switch timeRange {
         case .week:
-            return "Last 7 days"
+            daysToAnalyze = 7
         case .month:
-            return "Last 30 days"
+            daysToAnalyze = 30
         case .year:
-            return "Last 12 months"
+            daysToAnalyze = 365
         }
-    }
-}
-
-// Task lines container
-private struct TaskLinesContainer: View {
-    let tasks: [TodoTask]
-    let timeRange: TaskConsistencyChartView.TimeRange
-    let viewModel: StatisticsViewModel
-    let width: CGFloat
-    let height: CGFloat
-    let selectedTaskId: UUID?
-    
-    var body: some View {
-        ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
-            let isSelected = selectedTaskId == nil || selectedTaskId == task.id
+        
+        var cumulativeProgress: Int = 0
+        var foundFirstValidDay = false
+        
+        for dayOffset in (1-daysToAnalyze)...0 {
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!
+            let startOfDay = calendar.startOfDay(for: date)
             
-            TaskLineView(
-                task: task,
-                timeRange: timeRange,
-                viewModel: viewModel,
-                width: width,
-                height: height,
-                taskIndex: index,
-                isSelected: isSelected
-            )
-            .padding(.horizontal, 10)
-            .opacity(isSelected ? 1.0 : 0.3)
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
+            if startOfDay < taskCreationDay {
+                continue
+            }
+            
+            if !foundFirstValidDay {
+                foundFirstValidDay = true
+                points.append((startOfDay, 0))
+            }
+            
+            if shouldTaskOccurOnDate(task: task, date: startOfDay) {
+                let isCompleted = task.completions[startOfDay]?.isCompleted == true
+                
+                if isCompleted {
+                    cumulativeProgress += 1
+                } else if penalizeMissedTasks {
+                    cumulativeProgress = max(0, cumulativeProgress - 1)
+                }
+                
+                points.append((startOfDay, cumulativeProgress))
+            }
+        }
+        
+        if points.count == 1 {
+            points.append((today, points[0].1))
+        }
+        
+        return points
+    }
+    
+    private func shouldTaskOccurOnDate(task: TodoTask, date: Date) -> Bool {
+        guard let recurrence = task.recurrence else { return false }
+        
+        let calendar = Calendar.current
+        
+        if date < calendar.startOfDay(for: task.startTime) {
+            return false
+        }
+        
+        if let endDate = recurrence.endDate, date > endDate {
+            return false
+        }
+        
+        switch recurrence.type {
+        case .daily:
+            return true
+        case .weekly(let days):
+            let weekday = calendar.component(.weekday, from: date)
+            return days.contains(weekday)
+        case .monthly(let days):
+            let day = calendar.component(.day, from: date)
+            return days.contains(day)
+        }
+    }
+    
+    private func getTaskColor(for task: TodoTask, at index: Int) -> Color {
+        if let categoryColor = task.category?.color {
+            return Color(hex: categoryColor)
+        } else {
+            let colorIndex = index % distinctColors.count
+            return distinctColors[colorIndex]
         }
     }
 }
 
-// Rename this to avoid the redeclaration
-struct TaskLineView: View {
+private struct ModernLegendItem: View {
     let task: TodoTask
-    let timeRange: TaskConsistencyChartView.TimeRange
-    let viewModel: StatisticsViewModel
-    let width: CGFloat
-    let height: CGFloat
     let taskIndex: Int
     let isSelected: Bool
-    
-    // Array of colors to use if task has no category
-    private let fallbackColors: [Color] = [.blue, .green, .orange, .purple, .pink, .yellow, .red]
-    
-    var body: some View {
-        let points = viewModel.consistencyPoints(for: task, in: timeRange)
-        let taskColor = task.category.map { Color(hex: $0.color) } ?? fallbackColors[taskIndex % fallbackColors.count]
-        
-        // Only draw if we have points
-        if !points.isEmpty {
-            ZStack {
-                // Draw the line
-                Path { path in
-                    // Start from the first point
-                    let firstPoint = points[0]
-                    let x = firstPoint.x * width
-                    
-                    let maxProgress = points.map { $0.y }.max() ?? 1.0
-                    let scale = min(height / (maxProgress + 1), 20.0)
-                    let y = height - (firstPoint.y * scale)
-                    
-                    path.move(to: CGPoint(x: x, y: y))
-                    
-                    // Connect all points
-                    for i in 1..<points.count {
-                        let point = points[i]
-                        let x = point.x * width
-                        let y = height - (point.y * scale)
-                        path.addLine(to: CGPoint(x: x, y: y))
-                    }
-                }
-                .stroke(
-                    taskColor.opacity(isSelected ? 0.9 : 0.5),
-                    style: StrokeStyle(
-                        lineWidth: isSelected ? 3 : 2,
-                        lineCap: .round,
-                        lineJoin: .round
-                    )
-                )
-                
-                // Draw dots at each point
-                ForEach(0..<points.count, id: \.self) { i in
-                    let point = points[i]
-                    let x = point.x * width
-                    let maxProgress = points.map { $0.y }.max() ?? 1.0
-                    let scale = min(height / (maxProgress + 1), 20.0)
-                    let y = height - (point.y * scale)
-                    
-                    Circle()
-                        .fill(taskColor)
-                        .frame(width: isSelected ? 8 : 5, height: isSelected ? 8 : 5)
-                        .position(x: x, y: y)
-                }
-            }
-            .offset(y: CGFloat(taskIndex % 3) * 1.0)
-        }
-    }
-}
-
-// Legend grid component
-private struct ConsistencyLegendGrid: View {
-    let tasks: [TodoTask]
-    @Binding var selectedTaskId: UUID?
-    
-    var body: some View {
-        LazyVGrid(columns: [
-            GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 8)
-        ], spacing: 8) {
-            ForEach(tasks) { task in
-                LegendButton(
-                    task: task,
-                    isSelected: selectedTaskId == task.id,
-                    action: {
-                        withAnimation {
-                            if selectedTaskId == task.id {
-                                selectedTaskId = nil
-                            } else {
-                                selectedTaskId = task.id
-                            }
-                        }
-                    }
-                )
-            }
-        }
-        .padding(.horizontal, 16)
-    }
-}
-
-// Individual legend button
-private struct LegendButton: View {
-    let task: TodoTask
-    let isSelected: Bool
+    let isHighlighted: Bool
     let action: () -> Void
+    
+    private let distinctColors: [Color] = [
+        .red, .blue, .green, .purple, .orange, .cyan,
+        .pink, .yellow, .mint, .indigo, .teal, .brown
+    ]
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(task.category.map { Color(hex: $0.color) } ?? .blue)
-                    .frame(width: 8, height: 8)
-                
-                Text(task.name)
-                    .font(.caption)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                
-                Spacer()
+            HStack(spacing: 12) {
+                colorIndicator
+                taskInfo
+                Spacer(minLength: 0)
+                highlightIcon
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? 
-                          Color.accentColor.opacity(0.15) : 
-                          Color.gray.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(
-                                isSelected ? Color.accentColor : Color.clear,
-                                lineWidth: 1
-                            )
-                    )
-            )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(backgroundStyle)
+            .scaleEffect(isHighlighted ? 1.03 : 1.0)
+            .opacity(isSelected ? 1.0 : 0.5)
         }
         .buttonStyle(PlainButtonStyle())
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHighlighted)
+        .animation(.easeInOut(duration: 0.25), value: isSelected)
     }
-}
-
-// Semplifichiamo la struttura rimuovendo componenti non necessari
-struct EmptyConsistencyView: View {
-    var body: some View {
-        Text("No consistency data available")
-            .foregroundColor(.secondary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 300)
-    }
-}
-
-// Simplified chart view
-struct SimpleChartView: View {
-    let tasks: [TodoTask]
-    @Binding var selectedTaskId: UUID?
     
-    var body: some View {
-        Chart {
-            ForEach(tasks) { task in
-                let completionRate = calculateCompletionRate(for: task)
-                let isSelected = selectedTaskId == task.id || selectedTaskId == nil
-                
-                BarMark(
-                    x: .value("Task", task.name),
-                    y: .value("Completion Rate", completionRate)
+    private var colorIndicator: some View {
+        RoundedRectangle(cornerRadius: 4)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        taskColor,
+                        taskColor.opacity(0.8)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-                .foregroundStyle(
-                    isSelected 
-                        ? Color.pink.gradient 
-                        : Color.pink.opacity(0.3).gradient
-                )
-                .annotation(position: .top) {
-                    Text("\(Int(completionRate * 100))%")
-                        .font(.caption)
-                        .foregroundColor(isSelected ? .secondary : .secondary.opacity(0.5))
-                }
-                .opacity(isSelected ? 1.0 : 0.6)
+            )
+            .frame(width: 6, height: 28)
+            .shadow(color: taskColor.opacity(0.3), radius: 2, x: 0, y: 1)
+    }
+    
+    private var taskInfo: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(task.name)
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+            
+            if let category = task.category {
+                Text(category.name)
+                    .font(.system(.caption, design: .rounded, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
         }
-        .chartLegend(.hidden)
-        .chartYAxis {
-            AxisMarks(position: .leading)
+    }
+    
+    @ViewBuilder
+    private var highlightIcon: some View {
+        if isHighlighted {
+            Image(systemName: "eye.fill")
+                .font(.system(.caption, weight: .semibold))
+                .foregroundColor(.accentColor)
+                .scaleEffect(1.1)
         }
-        .chartXAxis {
-            AxisMarks(position: .bottom)
-        }
-        .padding(4)
-        .animation(.easeInOut, value: selectedTaskId)
-        .overlay(
-            GeometryReader { geometry in
-                Color.clear.contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onEnded { value in
-                                handleTap(at: value.location, in: geometry.size, tasks: tasks)
-                            }
-                    )
-            }
+    }
+    
+    private var backgroundStyle: some View {
+        RoundedRectangle(cornerRadius: 14)
+            .fill(backgroundFill)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(backgroundBorder, lineWidth: isHighlighted ? 1.5 : 0.5)
+            )
+            .shadow(
+                color: isHighlighted ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.05),
+                radius: isHighlighted ? 4 : 2,
+                x: 0,
+                y: isHighlighted ? 2 : 1
+            )
+    }
+    
+    private var backgroundFill: some ShapeStyle {
+        LinearGradient(
+            colors: isHighlighted ? [
+                Color.accentColor.opacity(0.12),
+                Color.accentColor.opacity(0.08)
+            ] : [
+                Color.gray.opacity(0.06),
+                Color.gray.opacity(0.03)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
     }
     
-    private func handleTap(at location: CGPoint, in size: CGSize, tasks: [TodoTask]) {
-        let barWidth = size.width / CGFloat(tasks.count)
-        let index = Int(location.x / barWidth)
-        
-        if index >= 0 && index < tasks.count {
-            withAnimation {
-                let tappedTaskId = tasks[index].id
-                if selectedTaskId == tappedTaskId {
-                    selectedTaskId = nil
-                } else {
-                    selectedTaskId = tappedTaskId
-                }
-            }
-        }
+    private var backgroundBorder: some ShapeStyle {
+        LinearGradient(
+            colors: isHighlighted ? [
+                Color.accentColor.opacity(0.4),
+                Color.accentColor.opacity(0.2)
+            ] : [
+                Color.gray.opacity(0.1),
+                Color.clear
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
     
-    private func calculateCompletionRate(for task: TodoTask) -> Double {
-        let completions = task.completions.values
-        if completions.isEmpty {
-            return 0.0
+    private var taskColor: Color {
+        if let categoryColor = task.category?.color {
+            return Color(hex: categoryColor)
+        } else {
+            let colorIndex = taskIndex % distinctColors.count
+            return distinctColors[colorIndex]
         }
-        
-        let completedCount = completions.filter { $0.isCompleted }.count
-        return Double(completedCount) / Double(completions.count)
     }
 }
 
-// Keep the original ConsistencyChartView for backward compatibility
-struct ConsistencyChartView: View {
-    let consistencyData: [TodoTask]
-    
+struct EmptyConsistencyView: View {
     var body: some View {
-        if consistencyData.isEmpty {
-            EmptyConsistencyView()
-        } else {
-            SimpleChartView(tasks: consistencyData, selectedTaskId: .constant(nil))
-                .frame(height: 300)
+        VStack(spacing: 20) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 56))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            VStack(spacing: 10) {
+                Text("No Consistency Data")
+                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                Text("Complete some recurring tasks to see your progress patterns and consistency trends over time")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+            }
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: 220)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
     }
 }

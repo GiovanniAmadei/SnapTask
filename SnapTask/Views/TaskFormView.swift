@@ -24,7 +24,7 @@ struct TaskFormView: View {
             vm.taskId = initialTask.id
             vm.name = initialTask.name
             vm.description = initialTask.description ?? ""
-            vm.location = initialTask.location ?? ""
+            vm.location = initialTask.location
             vm.startDate = initialTask.startTime
             vm.hasDuration = initialTask.hasDuration
             vm.duration = initialTask.duration
@@ -80,11 +80,29 @@ struct TaskFormView: View {
                                 lineLimit: 3...6
                             )
                             
-                            ModernTextField(
-                                title: "Location",
-                                text: $viewModel.location,
-                                placeholder: "Add location..."
-                            )
+                            NavigationLink {
+                                LocationPickerView(selectedLocation: $viewModel.location)
+                            } label: {
+                                HStack {
+                                    Text("Location")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    if let location = viewModel.location {
+                                        Text(location.shortDisplayName)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                    } else {
+                                        Text("Add Location")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                             
                             NavigationLink {
                                 IconPickerView(selectedIcon: $viewModel.icon)

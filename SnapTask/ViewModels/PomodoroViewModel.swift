@@ -23,7 +23,10 @@ class PomodoroViewModel: ObservableObject {
     @Published var currentSession: Int = 1
     @Published var settings: PomodoroSettings
     
-    let totalSessions: Int
+    // Use settings.totalSessions instead of sessionsUntilLongBreak
+    var totalSessions: Int {
+        return settings.totalSessions
+    }
     @MainActor private var timer: AnyCancellable? {
         didSet { Logger.pomodoro("Timer state updated: \(self.timer != nil)", level: .debug) }
     }
@@ -36,7 +39,6 @@ class PomodoroViewModel: ObservableObject {
     init(settings: PomodoroSettings) {
         self.settings = settings
         self.timeRemaining = settings.workDuration
-        self.totalSessions = settings.sessionsUntilLongBreak
     }
     
     var progress: Double {
@@ -155,7 +157,8 @@ class PomodoroViewModel: ObservableObject {
         
         completedWorkSessions.insert(currentSession - 1)
         
-        if currentSession >= totalSessions {
+        // Use settings.totalSessions instead of hardcoded totalSessions
+        if currentSession >= settings.totalSessions {
             state = .completed
             return
         }
@@ -175,7 +178,8 @@ class PomodoroViewModel: ObservableObject {
         completedBreakSessions.insert(currentSession - 1)
         currentSession += 1
         
-        if currentSession > totalSessions {
+        // Use settings.totalSessions instead of hardcoded totalSessions
+        if currentSession > settings.totalSessions {
             state = .completed
             return
         }

@@ -1,10 +1,13 @@
 import SwiftUI
+import MapKit
+import CoreLocation
 
 struct TaskRowView: View {
     @Binding var task: TodoTask
     @StateObject private var viewModel = TaskViewModel()
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingEditSheet = false
+    @State private var showingDetailView = false
     let date: Date
     @State private var offset: CGFloat = 0
     
@@ -51,15 +54,20 @@ struct TaskRowView: View {
                                 .lineLimit(2)
                         }
                         
-                        if let location = task.location, !location.isEmpty {
-                            HStack(spacing: 4) {
-                                Image(systemName: "location")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                                Text(location)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                        if let location = task.location {
+                            Button(action: {
+                                openInMaps(location: location)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "location")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.blue)
+                                    Text(location.shortDisplayName)
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
                             }
+                            .buttonStyle(BorderlessButtonStyle())
                         }
                         
                         // Task details
@@ -124,6 +132,9 @@ struct TaskRowView: View {
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
             .contentShape(Rectangle())
+            .onTapGesture {
+                showingDetailView = true
+            }
             .offset(x: offset)
             .gesture(
                 DragGesture()
@@ -186,6 +197,9 @@ struct TaskRowView: View {
                 })
             }
         }
+        .navigationDestination(isPresented: $showingDetailView) {
+            TaskDetailView(task: task)
+        }
         .onAppear {
             viewModel.refreshTask(task, for: date)
         }
@@ -225,6 +239,31 @@ struct TaskRowView: View {
     
     private func editTask() {
         showingEditSheet = true
+    }
+    
+    private func openInMaps(location: TaskLocation) {
+        let mapItem: MKMapItem
+        
+        if let coordinate = location.coordinate {
+            let placemark = MKPlacemark(coordinate: coordinate)
+            mapItem = MKMapItem(placemark: placemark)
+        } else {
+            // Fallback to address search
+            let geocoder = CLGeocoder()
+            geocoder.geocodeAddressString(location.displayName) { placemarks, error in
+                if let placemark = placemarks?.first,
+                   let clLocation = placemark.location {
+                    let mapPlacemark = MKPlacemark(coordinate: clLocation.coordinate)
+                    let mapItem = MKMapItem(placemark: mapPlacemark)
+                    mapItem.name = location.name
+                    mapItem.openInMaps()
+                }
+            }
+            return
+        }
+        
+        mapItem.name = location.name
+        mapItem.openInMaps()
     }
 }
 

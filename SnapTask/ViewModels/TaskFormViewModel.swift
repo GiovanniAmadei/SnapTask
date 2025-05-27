@@ -11,7 +11,7 @@ enum RecurrenceType: String, CaseIterable {
 class TaskFormViewModel: ObservableObject {
     @Published var name: String = ""
     @Published var description: String = ""
-    @Published var location: String = ""
+    @Published var location: TaskLocation?
     @Published var startDate: Date = Date()
     @Published var hasDuration: Bool = false
     @Published var duration: TimeInterval = 3600
@@ -32,7 +32,9 @@ class TaskFormViewModel: ObservableObject {
         workDuration: 25 * 60,
         breakDuration: 5 * 60,
         longBreakDuration: 15 * 60,
-        sessionsUntilLongBreak: 4
+        sessionsUntilLongBreak: 4,
+        totalSessions: 4,
+        totalDuration: 120
     )
     
     @Published var hasRewardPoints = false
@@ -122,7 +124,7 @@ class TaskFormViewModel: ObservableObject {
             id: id,
             name: name,
             description: description.isEmpty ? nil : description,
-            location: location.isEmpty ? nil : location,
+            location: location,
             startTime: startDate,
             duration: duration,
             hasDuration: hasDuration,
@@ -149,7 +151,7 @@ class TaskFormViewModel: ObservableObject {
     func reset() {
         name = ""
         description = ""
-        location = ""
+        location = nil
         startDate = Date()
         hasDuration = false
         duration = 3600
@@ -170,7 +172,9 @@ class TaskFormViewModel: ObservableObject {
             workDuration: 25 * 60,
             breakDuration: 5 * 60,
             longBreakDuration: 15 * 60,
-            sessionsUntilLongBreak: 4
+            sessionsUntilLongBreak: 4,
+            totalSessions: 4,
+            totalDuration: 120
         )
         hasRewardPoints = false
         rewardPoints = 5

@@ -4,18 +4,30 @@ import os.log
 import Foundation
 
 class StatisticsViewModel: ObservableObject {
-    struct CategoryStat: Identifiable {
+    struct CategoryStat: Identifiable, Equatable {
         let id = UUID()
         let name: String
         let color: String
         let hours: Double
+        
+        static func == (lhs: CategoryStat, rhs: CategoryStat) -> Bool {
+            return lhs.name == rhs.name && 
+                   lhs.color == rhs.color && 
+                   lhs.hours == rhs.hours
+        }
     }
     
-    struct WeeklyStat: Identifiable {
+    struct WeeklyStat: Identifiable, Equatable {
         let id = UUID()
         let day: String
         let completedTasks: Int
         let totalTasks: Int
+        
+        static func == (lhs: WeeklyStat, rhs: WeeklyStat) -> Bool {
+            return lhs.day == rhs.day && 
+                   lhs.completedTasks == rhs.completedTasks && 
+                   lhs.totalTasks == rhs.totalTasks
+        }
     }
     
     enum TimeRange: String, CaseIterable {
@@ -150,11 +162,13 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func updateStats() {
-        updateCategoryStats()
-        updateWeeklyStats()
-        updateStreakStats()
-        updateRecurringTasks()
-        objectWillChange.send()
+        withAnimation(.smooth(duration: 0.8)) {
+            updateCategoryStats()
+            updateWeeklyStats()
+            updateStreakStats()
+            updateRecurringTasks()
+            objectWillChange.send()
+        }
     }
     
     private func updateCategoryStats() {

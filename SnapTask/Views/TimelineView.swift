@@ -441,6 +441,7 @@ private struct TimelineTaskCard: View {
     @State private var isExpanded = false
     @State private var showingPomodoro = false
     @State private var showingEditSheet = false
+    @State private var showingDetailView = false
     @State private var offset: CGFloat = 0
     @Environment(\.colorScheme) private var colorScheme
     
@@ -776,6 +777,21 @@ private struct TimelineTaskCard: View {
                 }
             }
         }
+        .onLongPressGesture(
+            minimumDuration: 0.5,
+            maximumDistance: 10,
+            perform: {
+                showingDetailView = true
+            },
+            onPressingChanged: { pressing in
+                // Il gesture si attiva anche se stiamo ancora premendo
+                if pressing {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showingDetailView = true
+                    }
+                }
+            }
+        )
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in
                 TaskManager.shared.updateTask(updatedTask)
@@ -783,6 +799,11 @@ private struct TimelineTaskCard: View {
         }
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
+        }
+        .fullScreenCover(isPresented: $showingDetailView) {
+            NavigationStack {
+                TaskDetailView(task: task)
+            }
         }
     }
 }

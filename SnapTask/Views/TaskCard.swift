@@ -8,6 +8,7 @@ struct TaskCard: View {
     @ObservedObject var viewModel: TimelineViewModel
     @State private var isExpanded = false
     @State private var showingPomodoro = false
+    @State private var showingDetailView = false
     
     // Calcola se la task è completata per la data corrente
     private var isCompleted: Bool {
@@ -62,6 +63,21 @@ struct TaskCard: View {
                 
                 Spacer()
                 
+                // Info button per aprire i dettagli
+                Button(action: {
+                    showingDetailView = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(Color.gray.opacity(0.1))
+                        )
+                }
+                .buttonStyle(BorderlessButtonStyle())
+                
                 // Pulsante Pomodoro (se disponibile)
                 if task.pomodoroSettings != nil {
                     Button(action: {
@@ -99,29 +115,13 @@ struct TaskCard: View {
                             .padding(8)
                     }
                     .buttonStyle(BorderlessButtonStyle())
-                    .padding(.leading, -8) // Spostato più a sinistra
+                    .padding(.leading, -8)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             
             // Subtasks (se espanso)
-            if isExpanded {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(task.subtasks) { subtask in
-                        SubtaskRow(
-                            subtask: subtask,
-                            isCompleted: completedSubtasks.contains(subtask.id),
-                            onToggle: {
-                                onToggleSubtask(subtask.id)
-                            }
-                        )
-                        .padding(.horizontal, 12)
-                    }
-                }
-                .padding(.vertical, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
         }
         .background(
             RoundedRectangle(cornerRadius: 12)
@@ -133,6 +133,9 @@ struct TaskCard: View {
         )
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
+        }
+        .navigationDestination(isPresented: $showingDetailView) {
+            TaskDetailView(task: task)
         }
     }
 }
@@ -206,4 +209,4 @@ struct SubtaskCheckmark: View {
             }
         }
     }
-} 
+}

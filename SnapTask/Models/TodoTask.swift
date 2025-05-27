@@ -5,7 +5,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
     var description: String?
-    var location: String?
+    var location: TaskLocation?
     var startTime: Date
     var duration: TimeInterval
     var hasDuration: Bool
@@ -27,7 +27,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         id: UUID = UUID(),
         name: String,
         description: String? = nil,
-        location: String? = nil,
+        location: TaskLocation? = nil,
         startTime: Date,
         duration: TimeInterval = 0,
         hasDuration: Bool = false,
