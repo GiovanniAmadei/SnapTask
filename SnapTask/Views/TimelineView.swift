@@ -777,20 +777,11 @@ private struct TimelineTaskCard: View {
                 }
             }
         }
-        .onLongPressGesture(
-            minimumDuration: 0.5,
-            maximumDistance: 10,
-            perform: {
-                showingDetailView = true
-            },
-            onPressingChanged: { pressing in
-                // Il gesture si attiva anche se stiamo ancora premendo
-                if pressing {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showingDetailView = true
-                    }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.6, maximumDistance: 10)
+                .onEnded { _ in
+                    showingDetailView = true
                 }
-            }
         )
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in

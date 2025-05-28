@@ -25,8 +25,7 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Assicurati che la task venga salvata su CloudKit
-        CloudKitService.shared.saveTask(updatedTask)
+        // CloudKitService.shared.saveTask(updatedTask)
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
@@ -47,8 +46,9 @@ class TaskManager: ObservableObject {
             saveTasks()
             notifyTasksUpdated()
             
-            // Sincronizza con CloudKit
-            CloudKitService.shared.saveTask(task)
+            Task { @MainActor in
+                CloudKitService.shared.saveTask(task)
+            }
             
             // Sincronizza con Apple Watch
             synchronizeWithWatch()
@@ -76,16 +76,16 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Assicurati che la task venga eliminata su CloudKit
-        CloudKitService.shared.deleteTask(task)
+        Task { @MainActor in
+            CloudKitService.shared.deleteTask(task)
+            
+            // Use syncInBackground after deletion
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+            CloudKitService.shared.syncInBackground()
+        }
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
-        
-        // Forza una sincronizzazione per assicurarti che tutti i dispositivi vedano l'eliminazione
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            CloudKitService.shared.syncTasksSafely()
-        }
     }
     
     func toggleTaskCompletion(_ taskId: UUID, on date: Date = Date()) {
@@ -146,9 +146,9 @@ class TaskManager: ObservableObject {
                 // Sincronizza con CloudKit
                 CloudKitService.shared.saveTask(task)
                 
-                // Forza una sincronizzazione completa per assicurarsi che tutti i dispositivi vedano l'aggiornamento
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    CloudKitService.shared.syncTasksSafely()
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
+                    CloudKitService.shared.syncInBackground()
                 }
                 
                 // Sincronizza con Apple Watch
@@ -213,9 +213,9 @@ class TaskManager: ObservableObject {
             // Sincronizza con CloudKit
             CloudKitService.shared.saveTask(task)
             
-            // Forza una sincronizzazione completa per assicurarsi che tutti i dispositivi vedano l'aggiornamento
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                CloudKitService.shared.syncTasksSafely()
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
+                CloudKitService.shared.syncInBackground()
             }
             
             // Sincronizza con Apple Watch
@@ -272,18 +272,21 @@ class TaskManager: ObservableObject {
         synchronizeWithWatch()
     }
     
-    // Aggiungo un metodo per sincronizzare regolarmente con CloudKit
+    // Update method to use syncInBackground
     func startRegularSync() {
-        // Sincronizza all'avvio
-        CloudKitService.shared.syncTasksSafely()
+        Task { @MainActor in
+            CloudKitService.shared.syncInBackground()
+        }
         
         // Configura un timer per sincronizzare ogni 30 secondi
         Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
-            CloudKitService.shared.syncTasksSafely()
+            Task { @MainActor in
+                CloudKitService.shared.syncInBackground()
+            }
         }
     }
 }
 
 extension Notification.Name {
     static let tasksDidUpdate = Notification.Name("tasksDidUpdate")
-} 
+}

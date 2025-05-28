@@ -404,75 +404,45 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
-    func consistencyPoints(for task: TodoTask, in timeRange: TaskConsistencyChartView.TimeRange) -> [(x: CGFloat, y: CGFloat)] {
-        guard let recurrence = task.recurrence else { 
-            return [] 
-        }
+    func consistencyPoints(for task: TodoTask, in timeRange: ConsistencyTimeRange) -> [(x: CGFloat, y: CGFloat)] {
+        guard let recurrence = task.recurrence else { return [] }
         
         let calendar = Calendar.current
         let today = Date()
-        let taskCreationDay = calendar.startOfDay(for: task.startTime)
         var points: [(x: CGFloat, y: CGFloat)] = []
         
-        // Determine time range to analyze
+        // Determine the number of days to analyze based on time range
         let daysToAnalyze: Int
         switch timeRange {
         case .week:
             daysToAnalyze = 7
         case .month:
-            daysToAnalyze = 30
+            daysToAnalyze = 30  
         case .year:
             daysToAnalyze = 365
         }
         
-        // Start with zero progress
-        var cumulativeProgress: Int = 0
-        var foundFirstValidDay = false
+        // Calculate cumulative progress points
+        var cumulativeProgress: Double = 0
         
-        // Calculate points for each day in the period
         for dayOffset in (1-daysToAnalyze)...0 {
-            let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!
-            let startOfDay = calendar.startOfDay(for: date)
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!.startOfDay
             
-            // Normalize x position between 0 and 1
-            let normalizedX = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
-            
-            // Skip days before task was created
-            if startOfDay < taskCreationDay {
-                continue
-            }
-            
-            // We've found the first valid day for this task
-            foundFirstValidDay = true
-            
-            // Check if task should occur on this date based on recurrence pattern
-            if shouldTaskOccurOnDate(task: task, date: startOfDay) {
-                // Check if task was completed on this day
-                let isCompleted = task.completions[startOfDay]?.isCompleted == true
+            // Check if task should occur on this date
+            if shouldTaskOccurOnDate(task: task, date: date) {
+                let isCompleted = task.completions[date]?.isCompleted == true
                 
-                // Update progress: +1 if completed, -1 if not completed
+                // Update cumulative progress
                 if isCompleted {
                     cumulativeProgress += 1
                 } else {
-                    // Penalize missed tasks by decreasing the score
-                    cumulativeProgress = max(0, cumulativeProgress - 1)
+                    // Optional: penalize missed tasks
+                    cumulativeProgress = max(0, cumulativeProgress - 0.5)
                 }
                 
-                points.append((x: normalizedX, y: CGFloat(cumulativeProgress)))
-            }
-        }
-        
-        // If we have no points but the task exists in the time range, add a starting point
-        if points.isEmpty && foundFirstValidDay {
-            // Calculate normalized X for task creation date
-            let daysDiff = calendar.dateComponents([.day], from: calendar.startOfDay(for: today.addingTimeInterval(-Double(daysToAnalyze-1) * 86400)), to: taskCreationDay).day ?? 0
-            let startX = CGFloat(max(0, min(daysToAnalyze, daysDiff))) / CGFloat(daysToAnalyze)
-            
-            points.append((x: startX, y: 0))
-            
-            // Add another point at current date if we only have one point
-            if points.count == 1 {
-                points.append((x: 1.0, y: 0))
+                // Calculate position (0 to 1 range)
+                let xPosition = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
+                points.append((x: xPosition, y: CGFloat(cumulativeProgress)))
             }
         }
         

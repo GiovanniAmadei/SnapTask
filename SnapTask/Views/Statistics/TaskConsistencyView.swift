@@ -44,6 +44,8 @@ struct TaskConsistencyView: View {
                 HelpTextSection()
             }
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
     }
@@ -51,14 +53,16 @@ struct TaskConsistencyView: View {
 
 private struct HeaderSection: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Task Progress Over Time")
-                .font(.system(.title3, design: .rounded, weight: .semibold))
+                .font(.system(.title2, design: .rounded, weight: .semibold))
+                .foregroundColor(.primary)
             
             Text("Track completion patterns and consistency trends")
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundColor(.secondary)
         }
+        .padding(.bottom, 8)
     }
 }
 
@@ -66,9 +70,9 @@ private struct TimeRangeSection: View {
     @Binding var timeRange: ConsistencyTimeRange
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Time Period")
-                .font(.system(.headline, design: .rounded, weight: .medium))
+                .font(.system(.headline, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
             
             Picker("Time Range", selection: $timeRange) {
@@ -85,31 +89,52 @@ private struct PenaltyToggleSection: View {
     @Binding var penalizeMissedTasks: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Penalize Missed Tasks")
-                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundColor(.primary)
                     
                     Text("Decrease progress when recurring tasks are not completed")
                         .font(.system(.caption, design: .rounded))
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 
                 Spacer()
                 
                 Toggle("", isOn: $penalizeMissedTasks)
                     .labelsHidden()
+                    .scaleEffect(1.1)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.06))
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.gray.opacity(0.06),
+                                Color.gray.opacity(0.03)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.gray.opacity(0.1), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [
+                                        Color.gray.opacity(0.12),
+                                        Color.gray.opacity(0.05)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
                     )
             )
         }
@@ -123,26 +148,25 @@ private struct TaskLegendSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tasks")
-                .font(.system(.headline, design: .rounded, weight: .medium))
+                .font(.system(.callout, design: .rounded, weight: .medium))
                 .foregroundColor(.primary)
             
-            LazyVGrid(columns: gridColumns, spacing: 12) {
-                ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
-                    ModernLegendItem(
-                        task: task,
-                        taskIndex: index,
-                        isSelected: selectedTaskId == nil || selectedTaskId == task.id,
-                        isHighlighted: selectedTaskId == task.id
-                    ) {
-                        toggleTaskSelection(taskId: task.id)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
+                        CompactLegendItem(
+                            task: task,
+                            taskIndex: index,
+                            isSelected: selectedTaskId == nil || selectedTaskId == task.id,
+                            isHighlighted: selectedTaskId == task.id
+                        ) {
+                            toggleTaskSelection(taskId: task.id)
+                        }
                     }
                 }
+                .padding(.horizontal, 4)
             }
         }
-    }
-    
-    private var gridColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 12)]
     }
     
     private func toggleTaskSelection(taskId: UUID) {
@@ -156,14 +180,95 @@ private struct TaskLegendSection: View {
     }
 }
 
+private struct CompactLegendItem: View {
+    let task: TodoTask
+    let taskIndex: Int
+    let isSelected: Bool
+    let isHighlighted: Bool
+    let action: () -> Void
+    
+    private let distinctColors: [Color] = [
+        .red, .blue, .green, .purple, .orange, .cyan,
+        .pink, .yellow, .mint, .indigo, .teal, .brown
+    ]
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                colorIndicator
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(task.name)
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    if let category = task.category {
+                        Text(category.name)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                
+                if isHighlighted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(.caption2, weight: .medium))
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(backgroundStyle)
+            .scaleEffect(isHighlighted ? 1.02 : 1.0)
+            .opacity(isSelected ? 1.0 : 0.6)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.2), value: isHighlighted)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+    
+    private var colorIndicator: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(taskColor)
+            .frame(width: 3, height: 20)
+    }
+    
+    private var backgroundStyle: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(backgroundFill)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(backgroundBorder, lineWidth: isHighlighted ? 1 : 0.5)
+            )
+    }
+    
+    private var backgroundFill: Color {
+        isHighlighted ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.05)
+    }
+    
+    private var backgroundBorder: Color {
+        isHighlighted ? Color.accentColor.opacity(0.3) : Color.gray.opacity(0.1)
+    }
+    
+    private var taskColor: Color {
+        if let categoryColor = task.category?.color {
+            return Color(hex: categoryColor)
+        } else {
+            let colorIndex = taskIndex % distinctColors.count
+            return distinctColors[colorIndex]
+        }
+    }
+}
+
 private struct HelpTextSection: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("How to Read")
-                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
                 HelpTextRow(
                     color: .blue,
                     text: "Each line shows a task's completion progress over time"
@@ -180,7 +285,8 @@ private struct HelpTextSection: View {
                 )
             }
         }
-        .padding(.top, 8)
+        .padding(.top, 12)
+        .padding(.horizontal, 4)
     }
 }
 
@@ -189,14 +295,15 @@ private struct HelpTextRow: View {
     let text: String
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Circle()
                 .fill(color)
-                .frame(width: 6, height: 6)
+                .frame(width: 8, height: 8)
             
             Text(text)
                 .font(.system(.caption, design: .rounded))
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -214,13 +321,13 @@ private struct ModernConsistencyChart: View {
     ]
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Chart {
                 ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                     createTaskLines(for: task, at: index)
                 }
             }
-            .frame(height: 320)
+            .frame(height: 280)
             .chartXAxis {
                 AxisMarks(position: .bottom, values: getXAxisDateValues()) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -254,7 +361,6 @@ private struct ModernConsistencyChart: View {
             }
             .animation(.smooth(duration: 0.8), value: selectedTaskId)
             .animation(.smooth(duration: 0.8), value: timeRange)
-            .padding(.horizontal, 8)
         }
     }
     
@@ -446,132 +552,6 @@ private struct ModernConsistencyChart: View {
             return Color(hex: categoryColor)
         } else {
             let colorIndex = index % distinctColors.count
-            return distinctColors[colorIndex]
-        }
-    }
-}
-
-private struct ModernLegendItem: View {
-    let task: TodoTask
-    let taskIndex: Int
-    let isSelected: Bool
-    let isHighlighted: Bool
-    let action: () -> Void
-    
-    private let distinctColors: [Color] = [
-        .red, .blue, .green, .purple, .orange, .cyan,
-        .pink, .yellow, .mint, .indigo, .teal, .brown
-    ]
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                colorIndicator
-                taskInfo
-                Spacer(minLength: 0)
-                highlightIcon
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(backgroundStyle)
-            .scaleEffect(isHighlighted ? 1.03 : 1.0)
-            .opacity(isSelected ? 1.0 : 0.5)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHighlighted)
-        .animation(.easeInOut(duration: 0.25), value: isSelected)
-    }
-    
-    private var colorIndicator: some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        taskColor,
-                        taskColor.opacity(0.8)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: 6, height: 28)
-            .shadow(color: taskColor.opacity(0.3), radius: 2, x: 0, y: 1)
-    }
-    
-    private var taskInfo: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(task.name)
-                .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-            
-            if let category = task.category {
-                Text(category.name)
-                    .font(.system(.caption, design: .rounded, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var highlightIcon: some View {
-        if isHighlighted {
-            Image(systemName: "eye.fill")
-                .font(.system(.caption, weight: .semibold))
-                .foregroundColor(.accentColor)
-                .scaleEffect(1.1)
-        }
-    }
-    
-    private var backgroundStyle: some View {
-        RoundedRectangle(cornerRadius: 14)
-            .fill(backgroundFill)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(backgroundBorder, lineWidth: isHighlighted ? 1.5 : 0.5)
-            )
-            .shadow(
-                color: isHighlighted ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.05),
-                radius: isHighlighted ? 4 : 2,
-                x: 0,
-                y: isHighlighted ? 2 : 1
-            )
-    }
-    
-    private var backgroundFill: some ShapeStyle {
-        LinearGradient(
-            colors: isHighlighted ? [
-                Color.accentColor.opacity(0.12),
-                Color.accentColor.opacity(0.08)
-            ] : [
-                Color.gray.opacity(0.06),
-                Color.gray.opacity(0.03)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-    
-    private var backgroundBorder: some ShapeStyle {
-        LinearGradient(
-            colors: isHighlighted ? [
-                Color.accentColor.opacity(0.4),
-                Color.accentColor.opacity(0.2)
-            ] : [
-                Color.gray.opacity(0.1),
-                Color.clear
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-    
-    private var taskColor: Color {
-        if let categoryColor = task.category?.color {
-            return Color(hex: categoryColor)
-        } else {
-            let colorIndex = taskIndex % distinctColors.count
             return distinctColors[colorIndex]
         }
     }

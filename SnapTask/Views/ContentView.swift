@@ -1,40 +1,32 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var timelineViewModel = TimelineViewModel()
-    @AppStorage("selectedTab") private var selectedTab = 0
-    
     var body: some View {
-        TabView(selection: $selectedTab) {
-            TimelineView(viewModel: timelineViewModel)
+        TabView {
+            TimelineView(viewModel: TimelineViewModel())
                 .tabItem {
                     Label("Timeline", systemImage: "calendar")
                 }
-                .tag(0)
             
             PomodoroTabView()
                 .tabItem {
-                    Label("Pomodoro", systemImage: "timer")
+                    Label("Focus", systemImage: "timer")
                 }
-                .tag(1)
             
             RewardsView()
                 .tabItem {
-                    Label("Rewards", systemImage: "gift")
+                    Label("Rewards", systemImage: "star")
                 }
-                .tag(2)
             
-            TaskStatisticsView()
+            StatisticsView()
                 .tabItem {
-                    Label("Stats", systemImage: "chart.bar")
+                    Label("Statistics", systemImage: "chart.bar")
                 }
-                .tag(3)
             
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gear")
+                    Label("Settings", systemImage: "gearshape")
                 }
-                .tag(4)
         }
     }
-} 
+}

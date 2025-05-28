@@ -2,17 +2,27 @@ import SwiftUI
 import WatchConnectivity
 import CloudKit
 import UserNotifications
+import Firebase
 
 @main
 struct SnapTaskApp: App {
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var taskManager = TaskManager.shared
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
-    @StateObject private var cloudKitService = CloudKitService.shared
+    // @StateObject private var cloudKitService = CloudKitService.shared
+    @StateObject private var firebaseService = FirebaseService.shared
     @Environment(\.scenePhase) var scenePhase
     @AppStorage("isDarkMode") private var isDarkMode = false
     
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    
+    init() {
+        // Inizializza Firebase il prima possibile
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+            print("🔥 Firebase configured in app init")
+        }
+    }
     
     var body: some Scene {
         WindowGroup {
@@ -24,11 +34,8 @@ struct SnapTaskApp: App {
                     }
                     
                     registerForRemoteNotifications()
-                    
-                    // Abilita sincronizzazione CloudKit regolare
-                    cloudKitService.syncTasksSafely()
-                    taskManager.startRegularSync()
-                    
+                    // cloudKitService.syncInBackground()
+                    // taskManager.startRegularSync()
                     connectivityManager.updateWatchContext()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
@@ -36,10 +43,7 @@ struct SnapTaskApp: App {
                         Task {
                             await quoteManager.checkAndUpdateQuote()
                         }
-                        
-                        // Sincronizza all'attivazione dell'app
-                        cloudKitService.syncTasksSafely()
-                        
+                        // cloudKitService.syncInBackground()
                         connectivityManager.updateWatchContext()
                     }
                 }
@@ -65,6 +69,15 @@ struct SnapTaskApp: App {
 
 // MARK: - UIApplicationDelegate
 class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Backup Firebase configuration
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+            print("🔥 Firebase configured in AppDelegate")
+        }
+        return true
+    }
+    
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         if let cloudKitDict = userInfo as? [String: NSObject],
            let cloudKitNotification = CKNotification(fromRemoteNotificationDictionary: cloudKitDict) {
@@ -77,4 +90,4 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
         completionHandler(.noData)
     }
-} 
+}

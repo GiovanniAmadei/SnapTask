@@ -4,146 +4,163 @@ import Combine
 class CategoryManager: ObservableObject {
     static let shared = CategoryManager()
     
-    @Published private(set) var categories: [Category] = []
-    private let categoriesKey = "savedCategories"
-    private var cancellables = Set<AnyCancellable>()
+    @Published var categories: [Category] = []
     
-    init() {
+    private let categoriesKey = "savedCategories"
+    
+    private init() {
         loadCategories()
-        setupNotifications()
+    }
+    
+    func addCategory(_ category: Category) {
+        guard !categories.contains(where: { $0.id == category.id || $0.name == category.name }) else {
+            print("CategoryManager: Category already exists, skipping: \(category.name)")
+            return
+        }
+        
+        categories.append(category)
+        saveCategories()
+        
+        Task { @MainActor in
+            CloudKitService.shared.saveCategory(category)
+        }
+        print("CategoryManager: Added category locally: \(category.name)")
+    }
+    
+    func removeCategory(_ category: Category) {
+        categories.removeAll { $0.id == category.id }
+        saveCategories()
+        
+        Task { @MainActor in
+            CloudKitService.shared.deleteCategory(category)
+        }
+        print("CategoryManager: Removed category locally: \(category.name)")
     }
     
     func updateCategory(_ category: Category) {
         if let index = categories.firstIndex(where: { $0.id == category.id }) {
             categories[index] = category
-        } else {
-            categories.append(category)
+            saveCategories()
+            
+            Task { @MainActor in
+                CloudKitService.shared.saveCategory(category)
+            }
+            print("CategoryManager: Updated category locally: \(category.name)")
         }
-        saveCategories()
-        notifyCategoryUpdates()
-        
-        // Sync with CloudKit
-        syncWithCloudKit(category: category)
-    }
-    
-    func deleteCategory(_ category: Category) {
-        categories.removeAll { $0.id == category.id }
-        saveCategories()
-        notifyCategoryUpdates()
-        
-        // Delete from CloudKit
-        deleteFromCloudKit(category: category)
-    }
-    
-    func clearAllData() {
-        categories = []
-        UserDefaults.standard.removeObject(forKey: categoriesKey)
-        UserDefaults.standard.synchronize()
-        notifyCategoryUpdates()
     }
     
     func importCategories(_ newCategories: [Category]) {
-        // Create a dictionary of existing categories by ID for quick lookup
-        let existingCategoriesDict = Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0) })
-        
-        // Merge new categories with existing ones, prioritizing new ones in case of conflict
-        var updatedCategories = existingCategoriesDict
-        
-        for category in newCategories {
-            updatedCategories[category.id] = category
-        }
-        
-        // Convert back to array
-        categories = Array(updatedCategories.values)
-        
-        // Save the updated categories
+        categories = newCategories
         saveCategories()
-    }
-    
-    private func loadCategories() {
-        var shouldAddDefaults = true
-        
-        if let data = UserDefaults.standard.data(forKey: categoriesKey),
-           let decoded = try? JSONDecoder().decode([Category].self, from: data) {
-            categories = decoded
-            // Check if we have the default categories
-            let defaultNames = ["Work", "Personal Care", "Leisure"]
-            shouldAddDefaults = categories.filter { defaultNames.contains($0.name) }.count != defaultNames.count
-        }
-        
-        if shouldAddDefaults {
-            addDefaultCategories()
-        }
     }
     
     private func saveCategories() {
-        if let encoded = try? JSONEncoder().encode(categories) {
-            UserDefaults.standard.set(encoded, forKey: categoriesKey)
-            UserDefaults.standard.synchronize() // Ensure changes are saved immediately
-            notifyCategoryUpdates()
+        do {
+            let data = try JSONEncoder().encode(categories)
+            UserDefaults.standard.set(data, forKey: categoriesKey)
+        } catch {
+            print("Error saving categories: \(error)")
         }
     }
     
-    private func notifyCategoryUpdates() {
-        NotificationCenter.default.post(name: .categoriesDidUpdate, object: nil)
-        objectWillChange.send()
+    private func loadCategories() {
+        if let data = UserDefaults.standard.data(forKey: categoriesKey) {
+            do {
+                categories = try JSONDecoder().decode([Category].self, from: data)
+            } catch {
+                print("Error loading categories: \(error)")
+            }
+        }
     }
     
-    private func setupNotifications() {
-        NotificationCenter.default.publisher(for: .categoriesDidUpdate)
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
-            }
-            .store(in: &cancellables)
-            
-        // Add observer for UserDefaults changes
-        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
-            .sink { [weak self] _ in
-                self?.loadCategories()
-            }
-            .store(in: &cancellables)
-    }
-    
-    private func addDefaultCategories() {
+    func resetToDefaults() {
+        print("CategoryManager: Resetting to default categories")
+        
+        categories.removeAll()
+        UserDefaults.standard.removeObject(forKey: categoriesKey)
+        
+        UserDefaults.standard.removeObject(forKey: "deletedCategoryIDs")
+        
         let defaultCategories = [
-            Category(id: UUID(), name: "Work", color: "#E74C3C"),        // Rosso più piacevole
-            Category(id: UUID(), name: "Personal Care", color: "#2ECC71"), // Verde più piacevole
-            Category(id: UUID(), name: "Leisure", color: "#3498DB")      // Blu più piacevole
+            Category(id: UUID(), name: "Work", color: "007AFF"),
+            Category(id: UUID(), name: "Personal", color: "34C759"), 
+            Category(id: UUID(), name: "Health", color: "FF3B30")
         ]
         
-        // Merge with existing categories, keeping any custom ones
-        let existingCustomCategories = categories.filter { category in
-            !defaultCategories.contains { $0.name == category.name }
-        }
-        
-        categories = defaultCategories + existingCustomCategories
+        categories = defaultCategories
         saveCategories()
         
-        // Sync default categories with CloudKit
-        for category in defaultCategories {
-            syncWithCloudKit(category: category)
+        Task { @MainActor in
+            for category in defaultCategories {
+                CloudKitService.shared.saveCategory(category)
+            }
+        }
+        
+        print("CategoryManager: Reset completed with \(categories.count) default categories")
+    }
+    
+    private func clearAllCloudKitCategories() async {
+        print("CategoryManager: Clearing CloudKit categories")
+    }
+    
+    func ensureDefaultCategoriesExistAndSync() {
+        if categories.isEmpty {
+            print("CategoryManager: No categories found locally or from CloudKit after initial sync. Creating defaults.")
+            let defaultCategories = [
+                Category(id: UUID(), name: "Work", color: "007AFF"),
+                Category(id: UUID(), name: "Personal", color: "34C759"),
+                Category(id: UUID(), name: "Health", color: "FF3B30")
+            ]
+            
+            categories = defaultCategories
+            saveCategories() // Salva localmente
+            
+            Task { @MainActor in
+                for category in defaultCategories {
+                    CloudKitService.shared.saveCategory(category)
+                }
+            }
+            print("CategoryManager: Created and synced \(defaultCategories.count) default categories.")
+        } else {
+            print("CategoryManager: Categories already exist. No need to create defaults.")
         }
     }
     
-    // MARK: - CloudKit Integration
-    
-    private func syncWithCloudKit(category: Category) {
-        // Save category to CloudKit
-        CloudKitService.shared.saveCategory(category)
+    func addCategoryWithCheck(_ category: Category) {
+        guard !categories.contains(where: { $0.id == category.id || $0.name == category.name }) else {
+            print("CategoryManager: Category already exists, skipping: \(category.name)")
+            return
+        }
+        
+        categories.append(category)
+        saveCategories()
+        
+        Task { @MainActor in
+            CloudKitService.shared.saveCategory(category)
+        }
     }
     
-    private func deleteFromCloudKit(category: Category) {
-        // Delete category from CloudKit
-        CloudKitService.shared.deleteCategory(category)
-    }
-    
-    // Function to sync all categories with CloudKit
-    func syncAllWithCloudKit() {
-        // This will be called as part of the overall CloudKit sync process
-        // The actual implementation is in CloudKitService.syncCategories()
+    func importCategoriesWithCheck(_ newCategories: [Category]) {
+        print("CategoryManager: Importing \(newCategories.count) categories")
+        
+        var uniqueCategories: [Category] = []
+        var seenIDs = Set<UUID>()
+        var seenNames = Set<String>()
+        
+        for category in newCategories {
+            if !seenIDs.contains(category.id) && !seenNames.contains(category.name) {
+                uniqueCategories.append(category)
+                seenIDs.insert(category.id)
+                seenNames.insert(category.name)
+            }
+        }
+        
+        categories = uniqueCategories
+        saveCategories()
+        print("CategoryManager: Imported \(uniqueCategories.count) unique categories")
     }
 }
 
 extension Notification.Name {
     static let categoriesDidUpdate = Notification.Name("categoriesDidUpdate")
-} 
+}

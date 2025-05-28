@@ -31,7 +31,8 @@ class RewardManager: ObservableObject {
     func addReward(_ reward: Reward) {
         rewards.append(reward)
         saveRewards()
-        objectWillChange.send()
+        
+        // CloudKitService.shared.saveReward(reward)
     }
     
     func updateReward(_ updatedReward: Reward) {
@@ -39,13 +40,34 @@ class RewardManager: ObservableObject {
             rewards[index] = updatedReward
             saveRewards()
             objectWillChange.send()
+            
+            // CloudKitService.shared.saveReward(updatedReward)
         }
     }
     
     func removeReward(_ reward: Reward) {
         rewards.removeAll { $0.id == reward.id }
         saveRewards()
-        objectWillChange.send()
+        
+        // CloudKitService.shared.deleteReward(reward)
+    }
+    
+    func importRewards(_ newRewards: [Reward]) {
+        // Create a dictionary of existing rewards by ID for quick lookup
+        let existingRewardsDict = Dictionary(uniqueKeysWithValues: rewards.map { ($0.id, $0) })
+        
+        // Merge new rewards with existing ones, prioritizing new ones in case of conflict
+        var updatedRewards = existingRewardsDict
+        
+        for reward in newRewards {
+            updatedRewards[reward.id] = reward
+        }
+        
+        // Convert back to array
+        rewards = Array(updatedRewards.values)
+        
+        // Save the updated rewards
+        saveRewards()
     }
     
     func redeemReward(_ reward: Reward, on date: Date = Date()) {
@@ -104,6 +126,40 @@ class RewardManager: ObservableObject {
             oneTimePointsHistory[startOfDay] = currentOneTimePoints + points
             saveOneTimePointsHistory()
         }
+        
+        objectWillChange.send()
+    }
+    
+    func importPointsHistory(_ pointsHistory: [PointsHistory]) {
+        // Clear existing data
+        dailyPointsHistory.removeAll()
+        weeklyPointsHistory.removeAll()
+        monthlyPointsHistory.removeAll()
+        yearlyPointsHistory.removeAll()
+        oneTimePointsHistory.removeAll()
+        
+        // Import new data
+        for points in pointsHistory {
+            switch points.frequency {
+            case .daily:
+                dailyPointsHistory[points.date] = points.points
+            case .weekly:
+                weeklyPointsHistory[points.date] = points.points
+            case .monthly:
+                monthlyPointsHistory[points.date] = points.points
+            case .yearly:
+                yearlyPointsHistory[points.date] = points.points
+            case .oneTime:
+                oneTimePointsHistory[points.date] = points.points
+            }
+        }
+        
+        // Save all changes
+        saveDailyPointsHistory()
+        saveWeeklyPointsHistory()
+        saveMonthlyPointsHistory()
+        saveYearlyPointsHistory()
+        saveOneTimePointsHistory()
         
         objectWillChange.send()
     }
@@ -181,6 +237,7 @@ class RewardManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(rewards)
             UserDefaults.standard.set(data, forKey: rewardsKey)
+            UserDefaults.standard.synchronize()
         } catch {
             print("Error saving rewards: \(error)")
         }
@@ -200,6 +257,7 @@ class RewardManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(dailyPointsHistory)
             UserDefaults.standard.set(data, forKey: dailyPointsHistoryKey)
+            UserDefaults.standard.synchronize()
         } catch {
             print("Error saving daily points history: \(error)")
         }
@@ -219,6 +277,7 @@ class RewardManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(weeklyPointsHistory)
             UserDefaults.standard.set(data, forKey: weeklyPointsHistoryKey)
+            UserDefaults.standard.synchronize()
         } catch {
             print("Error saving weekly points history: \(error)")
         }
@@ -238,6 +297,7 @@ class RewardManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(monthlyPointsHistory)
             UserDefaults.standard.set(data, forKey: monthlyPointsHistoryKey)
+            UserDefaults.standard.synchronize()
         } catch {
             print("Error saving monthly points history: \(error)")
         }
@@ -257,6 +317,7 @@ class RewardManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(yearlyPointsHistory)
             UserDefaults.standard.set(data, forKey: yearlyPointsHistoryKey)
+            UserDefaults.standard.synchronize()
         } catch {
             print("Error saving yearly points history: \(error)")
         }
@@ -276,6 +337,7 @@ class RewardManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(oneTimePointsHistory)
             UserDefaults.standard.set(data, forKey: oneTimePointsHistoryKey)
+            UserDefaults.standard.synchronize()
         } catch {
             print("Error saving one-time points history: \(error)")
         }

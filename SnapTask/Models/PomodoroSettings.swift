@@ -1,6 +1,6 @@
 import Foundation
 
-struct PomodoroSettings: Codable, Equatable {
+struct PomodoroSettings: Codable, Equatable, Hashable {
     var workDuration: Double
     var breakDuration: Double
     var longBreakDuration: Double

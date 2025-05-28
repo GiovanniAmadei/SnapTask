@@ -26,7 +26,7 @@ class SettingsViewModel: ObservableObject {
     }
     
     func addCategory(_ category: Category) {
-        categoryManager.updateCategory(category)
+        categoryManager.addCategory(category)
     }
     
     func updateCategory(_ category: Category) {
@@ -34,14 +34,21 @@ class SettingsViewModel: ObservableObject {
     }
     
     func deleteCategory(_ category: Category) {
-        categoryManager.deleteCategory(category)
+        categoryManager.removeCategory(category)
     }
     
     func removeCategory(at indexSet: IndexSet) {
         indexSet.forEach { index in
             if index < categories.count {
-                categoryManager.deleteCategory(categories[index])
+                categoryManager.removeCategory(categories[index])
             }
+        }
+    }
+    
+    func deleteCategories(at offsets: IndexSet) {
+        let categoriesToDelete = offsets.map { CategoryManager.shared.categories[$0] }
+        for category in categoriesToDelete {
+            CategoryManager.shared.removeCategory(category)
         }
     }
     
@@ -55,6 +62,18 @@ class SettingsViewModel: ObservableObject {
     
     func removePriority(at indexSet: IndexSet) {
         priorities.remove(atOffsets: indexSet)
+        savePriorities()
+    }
+    
+    func importPriorities(_ newPriorities: [Priority]) {
+        // Merge with existing priorities, avoiding duplicates
+        let existingPrioritiesSet = Set(priorities)
+        let newPrioritiesSet = Set(newPriorities)
+        
+        // Combine both sets to get all unique priorities
+        let allPriorities = existingPrioritiesSet.union(newPrioritiesSet)
+        
+        priorities = Array(allPriorities)
         savePriorities()
     }
     
@@ -72,6 +91,7 @@ class SettingsViewModel: ObservableObject {
     private func savePriorities() {
         if let encoded = try? JSONEncoder().encode(priorities) {
             UserDefaults.standard.set(encoded, forKey: prioritiesKey)
+            UserDefaults.standard.synchronize()
         }
     }
-} 
+}

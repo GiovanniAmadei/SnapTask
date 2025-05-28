@@ -1,6 +1,6 @@
 import Foundation
 
-struct Subtask: Identifiable, Codable, Equatable {
+struct Subtask: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     var name: String
     var isCompleted: Bool
@@ -10,4 +10,4 @@ struct Subtask: Identifiable, Codable, Equatable {
         self.name = name
         self.isCompleted = isCompleted
     }
-} 
+}

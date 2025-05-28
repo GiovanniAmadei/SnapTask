@@ -144,6 +144,13 @@ struct TaskDetailView: View {
                 x: 0,
                 y: colorScheme == .dark ? 1 : 4
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(
+                        colorScheme == .dark ? .white.opacity(0.15) : .clear,
+                        lineWidth: colorScheme == .dark ? 1 : 0
+                    )
+            )
     }
     
     private var detailsSection: some View {
@@ -350,7 +357,19 @@ struct TaskDetailView: View {
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(.red)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.red, Color.red.opacity(0.8)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                    )
+                    .shadow(
+                        color: Color.red.opacity(colorScheme == .dark ? 0.4 : 0.3),
+                        radius: colorScheme == .dark ? 4 : 6,
+                        x: 0,
+                        y: colorScheme == .dark ? 2 : 3
                     )
                 }
                 .padding(.top, 8)
@@ -536,10 +555,17 @@ struct DetailCard<Content: View>: View {
         RoundedRectangle(cornerRadius: 16)
             .fill(Color(.systemBackground))
             .shadow(
-                color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.06),
+                color: colorScheme == .dark ? .white.opacity(0.1) : .black.opacity(0.08),
                 radius: colorScheme == .dark ? 0.5 : 8,
                 x: 0,
                 y: colorScheme == .dark ? 1 : 2
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        colorScheme == .dark ? .white.opacity(0.15) : .clear,
+                        lineWidth: colorScheme == .dark ? 1 : 0
+                    )
             )
     }
 }

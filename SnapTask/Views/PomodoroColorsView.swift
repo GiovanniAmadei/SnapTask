@@ -112,6 +112,13 @@ struct PomodoroColorsView: View {
                     .padding(.vertical, 8)
                 }
             }
+            Button {
+                UserDefaults.standard.set(focusColor, forKey: "pomodoroFocusColor")
+                UserDefaults.standard.set(breakColor, forKey: "pomodoroBreakColor")
+                // CloudKitService.shared.savePomodoroColors(focusColor: focusColor, breakColor: breakColor)
+            } label: {
+                Text("Save")
+            }
         }
         .navigationTitle("Colors")
         .navigationBarTitleDisplayMode(.inline)

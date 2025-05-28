@@ -1,7 +1,7 @@
 import Foundation
 
-struct Recurrence: Codable, Equatable {
-    enum RecurrenceType: Codable, Equatable {
+struct Recurrence: Codable, Equatable, Hashable {
+    enum RecurrenceType: Codable, Equatable, Hashable {
         case daily
         case weekly(days: Set<Int>)
         case monthly(days: Set<Int>)

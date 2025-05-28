@@ -4,9 +4,9 @@ import StoreKit
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var quoteManager = QuoteManager.shared
-    @StateObject private var languageManager = LanguageManager.shared
-    @StateObject private var cloudKitService = CloudKitService.shared
     @StateObject private var donationService = DonationService.shared
+    @StateObject private var languageManager = LanguageManager.shared
+    
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var showingLanguagePicker = false
@@ -15,127 +15,111 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("quote_of_the_day".localized) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if quoteManager.isLoading {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.vertical, 8)
-                        } else {
-                            Text(quoteManager.currentQuote.text)
-                                .font(.body)
-                                .italic()
-                            
-                            Text("- \(quoteManager.currentQuote.author)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                // Quote Section
+                Section {
+                    QuoteCard()
+                }
+                
+                // Appearance Section
+                Section("Appearance") {
+                    HStack {
+                        Image(systemName: "moon.fill")
+                            .foregroundColor(.indigo)
+                            .frame(width: 24)
                         
-                        Button {
-                            Task {
-                                await quoteManager.forceUpdateQuote()
-                            }
-                        } label: {
-                            Label("new_quote".localized, systemImage: "arrow.clockwise")
-                                .font(.caption)
-                                .foregroundColor(.accentColor)
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
-                        .padding(.top, 4)
+                        Text("Dark Mode")
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: $isDarkMode)
                     }
-                    .padding(.vertical, 4)
-                }
-                
-                Section("iCloud Sync") {
-                    CloudSyncStatusView()
-                        .listRowInsets(EdgeInsets())
-                        .padding(.vertical, 5)
-                }
-                
-                Section("Support SnapTask") {
-                    Button {
-                        showingDonationSheet = true
-                    } label: {
-                        HStack {
-                            Label("Support Development", systemImage: "heart.fill")
-                                .foregroundColor(.pink)
-                            Spacer()
-                            if donationService.hasEverDonated {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    if let lastDonation = donationService.lastDonationDate {
-                        HStack {
-                            Image(systemName: "calendar")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
-                            Text("Last donation: \(lastDonation, style: .date)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                
-                Section("customization".localized) {
-                    NavigationLink {
-                        CategoriesView(viewModel: viewModel)
-                    } label: {
-                        Label("categories".localized, systemImage: "folder.fill")
-                    }
-                    
-                    NavigationLink {
-                        PrioritiesView(viewModel: viewModel)
-                    } label: {
-                        Label("priorities".localized, systemImage: "flag.fill")
-                    }
-                    
-                    NavigationLink {
-                        PomodoroColorsView()
-                    } label: {
-                        Label("Pomodoro Colors", systemImage: "paintbrush.fill")
-                    }
-                }
-                
-                Section("appearance".localized) {
-                    Toggle("dark_mode".localized, isOn: $isDarkMode)
                     
                     Button {
                         showingLanguagePicker = true
                     } label: {
                         HStack {
-                            Label("language".localized, systemImage: "globe")
+                            Image(systemName: "globe")
+                                .foregroundColor(.blue)
+                                .frame(width: 24)
+                            
+                            Text("Language")
+                            
                             Spacer()
+                            
                             Text(languageManager.currentLanguage.name)
                                 .foregroundColor(.secondary)
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
+                
+                // Customization Section
+                Section("Customization") {
+                    NavigationLink(destination: CustomizationView(viewModel: viewModel)) {
+                        HStack {
+                            Image(systemName: "paintbrush.fill")
+                                .foregroundColor(.purple)
+                                .frame(width: 24)
+                            
+                            Text("Categories, Priorities & Colors")
                         }
                     }
                 }
                 
-                Section("performance".localized) {
-                    NavigationLink {
-                        BiohackingView()
-                    } label: {
-                        Label("biohacking".localized, systemImage: "bolt.heart")
+                // Community Section
+                Section("Community") {
+                    NavigationLink(destination: FeedbackView()) {
+                        HStack {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .foregroundColor(.green)
+                                .frame(width: 24)
+                            
+                            Text("Feedback & Suggestions")
+                        }
                     }
                 }
+                
+                // Support Section
+                Section("Support") {
+                    Button {
+                        showingDonationSheet = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "heart.fill")
+                                .foregroundColor(.pink)
+                                .frame(width: 24)
+                            
+                            Text("Support SnapTask")
+                            
+                            Spacer()
+                            
+                            if donationService.hasEverDonated {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            }
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundColor(.primary)
+                }
             }
-            .navigationTitle("settings".localized)
+            .navigationTitle("Settings")
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
                     await donationService.loadProducts()
                 }
-                
-                cloudKitService.syncTasks()
             }
             .actionSheet(isPresented: $showingLanguagePicker) {
                 ActionSheet(
-                    title: Text("language".localized),
+                    title: Text("Language"),
                     message: Text("Choose a language"),
                     buttons: languageManager.availableLanguages.map { language in
                         .default(Text(language.name)) {
@@ -151,72 +135,345 @@ struct SettingsView: View {
     }
 }
 
-struct PrioritiesView: View {
-    @ObservedObject var viewModel: SettingsViewModel
-    @State private var showingNewPrioritySheet = false
+struct QuoteCard: View {
+    @StateObject private var quoteManager = QuoteManager.shared
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        List {
-            ForEach(viewModel.priorities, id: \.self) { priority in
-                HStack {
-                    Image(systemName: priority.icon)
-                        .foregroundColor(Color(hex: priority.color))
-                    Text(priority.rawValue.capitalized)
-                    Spacer()
-                }
-            }
-            .onDelete { indexSet in
-                viewModel.removePriority(at: indexSet)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "quote.bubble.fill")
+                    .font(.title3)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.orange, .pink],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Text("Quote of the Day")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                
+                Spacer()
             }
             
-            Button(action: { showingNewPrioritySheet = true }) {
-                Label("Add Priority", systemImage: "plus")
-            }
-        }
-        .navigationTitle("Priorities")
-        .sheet(isPresented: $showingNewPrioritySheet) {
-            NavigationStack {
-                PriorityFormView { priority in
-                    viewModel.addPriority(priority)
+            if quoteManager.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 12)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(quoteManager.currentQuote.text)
+                        .font(.subheadline)
+                        .italic()
+                        .foregroundColor(.primary)
+                        .lineLimit(3)
+                    
+                    HStack {
+                        Text("— \(quoteManager.currentQuote.author)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Button {
+                            Task {
+                                await quoteManager.forceUpdateQuote()
+                            }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                                .padding(6)
+                                .background(Circle().fill(Material.ultraThinMaterial))
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                 }
             }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Material.ultraThinMaterial)
+        )
+    }
+}
+
+struct CompactSettingsCard: View {
+    let title: String
+    let icon: String
+    let iconColor: Color
+    let destination: AnyView
+    
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        NavigationLink(destination: destination) {
+            VStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    iconColor.opacity(0.3),
+                                    iconColor.opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: icon)
+                        .font(.title3)
+                        .foregroundColor(iconColor)
+                }
+                
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Material.ultraThinMaterial)
+                    .shadow(
+                        color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                        radius: 6,
+                        x: 0,
+                        y: 3
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct AppearanceCompactCard: View {
+    @StateObject private var languageManager = LanguageManager.shared
+    @AppStorage("isDarkMode") private var isDarkMode = false
+    @State private var showingLanguagePicker = false
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.indigo.opacity(0.3),
+                                Color.indigo.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "paintpalette.fill")
+                    .font(.title3)
+                    .foregroundColor(.indigo)
+            }
+            
+            Text("Appearance")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 8) {
+                Toggle("Dark Mode", isOn: $isDarkMode)
+                    .toggleStyle(SwitchToggleStyle(tint: .indigo))
+                    .scaleEffect(0.8)
+                
+                Button {
+                    showingLanguagePicker = true
+                } label: {
+                    Text(languageManager.currentLanguage.name)
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Material.ultraThinMaterial))
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Material.ultraThinMaterial)
+                .shadow(
+                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                    radius: 6,
+                    x: 0,
+                    y: 3
+                )
+        )
+        .actionSheet(isPresented: $showingLanguagePicker) {
+            ActionSheet(
+                title: Text("Language"),
+                message: Text("Choose a language"),
+                buttons: languageManager.availableLanguages.map { language in
+                    .default(Text(language.name)) {
+                        languageManager.setLanguage(language.code)
+                    }
+                } + [.cancel()]
+            )
         }
     }
 }
 
-struct PriorityFormView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    var onSave: (Priority) -> Void
+struct SyncCompactCard: View {
+    @StateObject private var cloudKitService = CloudKitService.shared
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        Form {
-            TextField("Priority Name", text: $name)
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.blue.opacity(0.3),
+                                Color.blue.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "icloud.fill")
+                    .font(.title3)
+                    .foregroundColor(.blue)
+            }
             
-            if let priority = Priority(rawValue: name.lowercased()) {
-                HStack {
-                    Image(systemName: priority.icon)
-                        .foregroundColor(Color(hex: priority.color))
-                    Text("Preview")
-                        .foregroundColor(.secondary)
-                }
+            Text("iCloud Sync")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 4) {
+                Circle()
+                    .fill(syncStatusColor)
+                    .frame(width: 8, height: 8)
+                
+                Text(cloudKitService.syncStatus.description)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
         }
-        .navigationTitle("New Priority")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    if let priority = Priority(rawValue: name.lowercased()) {
-                        onSave(priority)
-                    }
-                    dismiss()
-                }
-                .disabled(Priority(rawValue: name.lowercased()) == nil)
-            }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Material.ultraThinMaterial)
+                .shadow(
+                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                    radius: 6,
+                    x: 0,
+                    y: 3
+                )
+        )
+    }
+    
+    private var syncStatusColor: Color {
+        switch cloudKitService.syncStatus {
+        case .success:
+            return .green
+        case .syncing:
+            return .orange
+        case .error(_):
+            return .red
+        case .idle:
+            return .gray
         }
     }
+}
+
+struct SupportCard: View {
+    @StateObject private var donationService = DonationService.shared
+    @State private var showingDonationSheet = false
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "heart.fill")
+                    .font(.title3)
+                    .foregroundColor(.pink)
+                
+                Text("Support SnapTask")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                
+                Spacer()
+            }
+            
+            Text("Help us continue improving SnapTask")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Button {
+                showingDonationSheet = true
+            } label: {
+                HStack {
+                    Text("Support Development")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Spacer()
+                    
+                    if donationService.hasEverDonated {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                    }
+                    
+                    Image(systemName: "arrow.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .background(
+                    LinearGradient(
+                        colors: [.pink.opacity(0.15), .purple.opacity(0.15)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(10)
+                .foregroundColor(.primary)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Material.ultraThinMaterial)
+                .shadow(
+                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                    radius: 6,
+                    x: 0,
+                    y: 3
+                )
+        )
+        .sheet(isPresented: $showingDonationSheet) {
+            DonationView()
+        }
+    }
+}
+
+#Preview {
+    SettingsView()
 }

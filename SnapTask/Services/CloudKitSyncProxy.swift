@@ -18,10 +18,14 @@ class CloudKitSyncProxy {
         }
         
         // Wrappa tutto in un blocco do-catch per evitare errori non gestiti
-        do {
-            CloudKitService.shared.setup()
-        } catch {
-            handleError(error, operation: "CloudKit setup")
+        Task { @MainActor in
+            do {
+                CloudKitService.shared.syncNow()
+            } catch {
+                await MainActor.run {
+                    self.handleError(error, operation: "CloudKit setup")
+                }
+            }
         }
     }
     
@@ -33,10 +37,14 @@ class CloudKitSyncProxy {
         }
         
         // Wrappa tutto in un blocco do-catch per evitare errori non gestiti
-        do {
-            CloudKitService.shared.syncTasksSafely()
-        } catch {
-            handleError(error, operation: "Task synchronization")
+        Task { @MainActor in
+            do {
+                CloudKitService.shared.syncNow()
+            } catch {
+                await MainActor.run {
+                    self.handleError(error, operation: "Task synchronization")
+                }
+            }
         }
     }
     
@@ -48,10 +56,14 @@ class CloudKitSyncProxy {
         }
         
         // Wrappa tutto in un blocco do-catch per evitare errori non gestiti
-        do {
-            CloudKitService.shared.saveTask(task)
-        } catch {
-            handleError(error, operation: "Task saving")
+        Task { @MainActor in
+            do {
+                CloudKitService.shared.saveTask(task)
+            } catch {
+                await MainActor.run {
+                    self.handleError(error, operation: "Task saving")
+                }
+            }
         }
     }
     
@@ -63,10 +75,14 @@ class CloudKitSyncProxy {
         }
         
         // Wrappa tutto in un blocco do-catch per evitare errori non gestiti
-        do {
-            CloudKitService.shared.deleteTask(task)
-        } catch {
-            handleError(error, operation: "Task deletion")
+        Task { @MainActor in
+            do {
+                CloudKitService.shared.deleteTask(task)
+            } catch {
+                await MainActor.run {
+                    self.handleError(error, operation: "Task deletion")
+                }
+            }
         }
     }
     
@@ -85,4 +101,4 @@ class CloudKitSyncProxy {
             }
         }
     }
-} 
+}
