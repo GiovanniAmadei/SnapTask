@@ -7,6 +7,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var description: String?
     var location: TaskLocation?
     var startTime: Date
+    var hasSpecificTime: Bool = true
     var duration: TimeInterval
     var hasDuration: Bool
     var category: Category?
@@ -29,6 +30,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         description: String? = nil,
         location: TaskLocation? = nil,
         startTime: Date,
+        hasSpecificTime: Bool = true,
         duration: TimeInterval = 0,
         hasDuration: Bool = false,
         category: Category? = nil,
@@ -45,6 +47,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.description = description
         self.location = location
         self.startTime = startTime
+        self.hasSpecificTime = hasSpecificTime
         self.duration = duration
         self.hasDuration = hasDuration
         self.category = category
@@ -132,6 +135,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.description == rhs.description &&
         lhs.location == rhs.location &&
         lhs.startTime == rhs.startTime &&
+        lhs.hasSpecificTime == rhs.hasSpecificTime &&
         lhs.duration == rhs.duration &&
         lhs.hasDuration == rhs.hasDuration &&
         lhs.category == rhs.category &&

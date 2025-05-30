@@ -26,9 +26,7 @@ struct TaskFormView: View {
             vm.description = initialTask.description ?? ""
             vm.location = initialTask.location
             vm.startDate = initialTask.startTime
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: initialTask.startTime)
-            vm.hasSpecificTime = !calendar.isDate(initialTask.startTime, equalTo: startOfDay, toGranularity: .minute)
+            vm.hasSpecificTime = initialTask.hasSpecificTime
             vm.hasDuration = initialTask.hasDuration
             vm.duration = initialTask.duration
             vm.selectedCategory = initialTask.category
@@ -122,10 +120,16 @@ struct TaskFormView: View {
                     // Time Card
                     ModernCard(title: "Time", icon: "clock") {
                         VStack(spacing: 16) {
+                            // Two separate toggles, aligned vertically
                             HStack {
-                                Text("Specific Time")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Specific Time")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.primary)
+                                    Text("Set exact time")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                                 Spacer()
                                 ModernToggle(isOn: $viewModel.hasSpecificTime)
                             }
@@ -142,13 +146,26 @@ struct TaskFormView: View {
                             }
                             
                             HStack {
-                                Text("Duration")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
-                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Duration")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.primary)
+                                    Text("Add duration")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                                 Spacer()
-                                
-                                if viewModel.hasDuration {
+                                ModernToggle(isOn: $viewModel.hasDuration)
+                            }
+                            
+                            if viewModel.hasDuration {
+                                HStack {
+                                    Text("Duration Value")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.primary)
+                                    
+                                    Spacer()
+                                    
                                     Button(action: { showDurationPicker = true }) {
                                         let hours = Int(viewModel.duration) / 3600
                                         let minutes = (Int(viewModel.duration) % 3600) / 60
@@ -163,9 +180,6 @@ struct TaskFormView: View {
                                             )
                                     }
                                 }
-                                
-                                ModernToggle(isOn: $viewModel.hasDuration)
-                                    .frame(width: 50)
                             }
                         }
                     }
@@ -432,6 +446,17 @@ struct TaskFormView: View {
                         dismiss()
                     }
                     .foregroundColor(.secondary)
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        let task = viewModel.createTask()
+                        onSave(task)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundColor(.pink)
+                    .disabled(!viewModel.isValid)
                 }
             }
             .sheet(isPresented: $showDurationPicker) {

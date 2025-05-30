@@ -180,12 +180,14 @@ class TaskManager: ObservableObject {
                 task.completionDates.removeAll { $0 == startOfDay }
             }
             
-            // Handle reward points
-            if task.hasRewardPoints {
+            // Tasks with subtasks get points handled in toggleSubtask
+            if task.hasRewardPoints && task.subtasks.isEmpty {
                 if isCompleting {
                     RewardManager.shared.addPoints(task.rewardPoints, on: date)
+                    print("🎯 Added \(task.rewardPoints) points for completing task without subtasks")
                 } else if wasCompleted {
                     RewardManager.shared.addPoints(-task.rewardPoints, on: date)
+                    print("🎯 Removed \(task.rewardPoints) points for uncompleting task without subtasks")
                 }
             }
             
@@ -242,8 +244,9 @@ class TaskManager: ObservableObject {
             task.subtasks[subtaskIndex].isCompleted = !wasCompleted
         }
         
-        // Handle reward points for subtasks
-        if task.hasRewardPoints && !task.subtasks.isEmpty {
+        let shouldAutoComplete = SettingsViewModel.shared.autoCompleteTaskWithSubtasks
+        
+        if !task.subtasks.isEmpty {
             let allSubtasksCompleted = task.subtasks.allSatisfy { subtask in
                 completion.completedSubtasks.contains(subtask.id)
             }
@@ -252,11 +255,33 @@ class TaskManager: ObservableObject {
                 subtask.id == subtaskId ? wasCompleted : completion.completedSubtasks.contains(subtask.id)
             }
             
-            // Award/remove points only on transition
-            if allSubtasksCompleted && !wasAllCompleted {
-                RewardManager.shared.addPoints(task.rewardPoints, on: date)
-            } else if !allSubtasksCompleted && wasAllCompleted {
-                RewardManager.shared.addPoints(-task.rewardPoints, on: date)
+            // Handle reward points
+            if task.hasRewardPoints {
+                if allSubtasksCompleted && !wasAllCompleted {
+                    RewardManager.shared.addPoints(task.rewardPoints, on: date)
+                    print("🎯 Added \(task.rewardPoints) points - all subtasks completed")
+                } else if !allSubtasksCompleted && wasAllCompleted {
+                    RewardManager.shared.addPoints(-task.rewardPoints, on: date)
+                    print("🎯 Removed \(task.rewardPoints) points - not all subtasks completed")
+                }
+            }
+            
+            if shouldAutoComplete {
+                if allSubtasksCompleted && !wasAllCompleted {
+                    // All subtasks completed -> mark task as completed
+                    completion.isCompleted = true
+                    task.completions[startOfDay] = completion
+                    if !task.completionDates.contains(startOfDay) {
+                        task.completionDates.append(startOfDay)
+                    }
+                    print("✅ Auto-completed task - all subtasks done")
+                } else if !allSubtasksCompleted && wasAllCompleted {
+                    // Not all subtasks completed -> mark task as uncompleted
+                    completion.isCompleted = false
+                    task.completions[startOfDay] = completion
+                    task.completionDates.removeAll { $0 == startOfDay }
+                    print("❌ Auto-uncompleted task - not all subtasks done")
+                }
             }
         }
         

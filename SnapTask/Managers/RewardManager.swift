@@ -93,8 +93,15 @@ class RewardManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         
         let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
-        dailyPointsHistory[startOfDay] = currentDailyPoints + points
+        let newTotal = currentDailyPoints + points
+        
+        // Prevent extremely negative values that indicate corruption
+        let finalTotal = max(newTotal, -200) // Allow some negative for legitimate corrections
+        
+        dailyPointsHistory[startOfDay] = finalTotal
         saveDailyPointsHistory()
+        
+        print("🎯 Points updated for \(startOfDay): \(currentDailyPoints) + \(points) = \(finalTotal)")
         
         // Sync with CloudKit
         let pointsEntry = PointsHistory(date: startOfDay, points: points, frequency: .daily)
@@ -176,6 +183,7 @@ class RewardManager: ObservableObject {
     }
     
     func resetAllPoints() {
+        print("🎯 Resetting all points - current total: \(totalPoints())")
         dailyPointsHistory.removeAll()
         saveDailyPointsHistory()
         
@@ -183,31 +191,29 @@ class RewardManager: ObservableObject {
         // We don't delete individual records here to avoid conflicts
         
         objectWillChange.send()
-    }
-    
-    func debugPointsStatus() {
-        print("=== REWARD MANAGER DEBUG ===")
-        print("Total daily points entries: \(dailyPointsHistory.count)")
-        print("Total points: \(totalPoints())")
-        print("Today's points: \(availablePoints(for: .daily))")
-        print("This week's points: \(availablePoints(for: .weekly))")
-        print("This month's points: \(availablePoints(for: .monthly))")
-        
-        // Show recent entries
-        let sortedEntries = dailyPointsHistory.sorted { $0.key > $1.key }
-        print("Recent entries:")
-        for (date, points) in sortedEntries.prefix(5) {
-            print("  \(date): \(points) points")
-        }
-        print("===========================")
+        print("🎯 All points reset - new total: \(totalPoints())")
     }
     
     func removePointsFromTask(_ task: TodoTask) {
+        guard task.hasRewardPoints && task.rewardPoints > 0 else { return }
+        
         let pointsToRemove = task.rewardPoints
         
-        // Remove points from each completion date
         for date in task.completionDates {
-            addPoints(-pointsToRemove, on: date)
+            let startOfDay = Calendar.current.startOfDay(for: date)
+            let currentPoints = dailyPointsHistory[startOfDay] ?? 0
+            
+            // Only subtract if we have positive points to subtract from
+            if currentPoints >= pointsToRemove {
+                addPoints(-pointsToRemove, on: date)
+                print("🎯 Removed \(pointsToRemove) points from \(date) (had \(currentPoints))")
+            } else if currentPoints > 0 {
+                // If we have some points but not enough, remove what we can
+                addPoints(-currentPoints, on: date)
+                print("🎯 Removed \(currentPoints) points from \(date) (partial removal)")
+            } else {
+                print("🎯 Skipped removing points from \(date) - no points to remove")
+            }
         }
         
         objectWillChange.send()

@@ -194,10 +194,37 @@ struct TimelineContentView: View {
     
     private let hourHeight: CGFloat = 80
     
+    private var allDayTasks: [TodoTask] {
+        return viewModel.tasksForSelectedDate().filter { !$0.hasSpecificTime }
+    }
+    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
+                    if !allDayTasks.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("All Day")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal)
+                                Spacer()
+                            }
+                            
+                            ForEach(allDayTasks, id: \.id) { task in
+                                CompactTimelineTaskView(task: task, viewModel: viewModel)
+                                    .padding(.horizontal)
+                            }
+                        }
+                        .padding(.vertical, 12)
+                        .background(Color.blue.opacity(0.05))
+                        
+                        Divider()
+                            .padding(.horizontal)
+                    }
+                    
+                    // Existing hourly timeline
                     ForEach(viewModel.effectiveStartHour...viewModel.effectiveEndHour, id: \.self) { hour in
                         TimelineHourRow(
                             hour: hour,
@@ -222,6 +249,8 @@ struct TimelineContentView: View {
     private func tasksForHour(_ hour: Int) -> [TodoTask] {
         let calendar = Calendar.current
         return viewModel.tasksForSelectedDate().filter { task in
+            // Only include tasks with specific time for timeline view
+            guard task.hasSpecificTime else { return false }
             let taskHour = calendar.component(.hour, from: task.startTime)
             return taskHour == hour
         }
@@ -238,7 +267,7 @@ struct TimelineContentView: View {
                 proxy.scrollTo(currentHour, anchor: .top)
             }
         } else {
-            let tasks = viewModel.tasksForSelectedDate()
+            let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
             if let firstTask = tasks.first {
                 let firstTaskHour = calendar.component(.hour, from: firstTask.startTime)
                 withAnimation(.easeInOut(duration: 0.5)) {
@@ -787,11 +816,19 @@ private struct TimelineTaskCard: View {
                             Spacer()
                             
                             if !task.subtasks.isEmpty {
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                                    .animation(.easeInOut(duration: 0.2), value: isExpanded)
+                                VStack {
+                                    if task.description != nil {
+                                        Spacer()
+                                    }
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                                        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+                                    if task.description != nil {
+                                        Spacer()
+                                    }
+                                }
                             }
                         }
                         
@@ -811,6 +848,32 @@ private struct TimelineTaskCard: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    
+                    if task.hasSpecificTime {
+                        let calendar = Calendar.current
+                        let hour = calendar.component(.hour, from: task.startTime)
+                        let minute = calendar.component(.minute, from: task.startTime)
+                        Text(String(format: "%02d:%02d", hour, minute))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(4)
+                    } else {
+                        Text("All Day")
+                            .font(.caption2)
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(4)
+                    }
+                    
+                    // Priority indicator
+                    Image(systemName: task.priority.icon)
+                        .foregroundColor(Color(hex: task.priority.color))
+                        .font(.system(size: 12))
                     
                     if task.pomodoroSettings != nil {
                         Button(action: {
@@ -940,6 +1003,12 @@ private struct TimelineTaskCard: View {
             }
         }
     }
+    
+    let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
 }
 
 private struct AddTaskButton: View {
@@ -1122,13 +1191,28 @@ struct CompactTimelineTaskView: View {
                     
                     Spacer()
                     
-                    Text(taskTime)
-                        .font(.system(.caption2, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(3)
+                    // Priority indicator
+                    Image(systemName: task.priority.icon)
+                        .foregroundColor(Color(hex: task.priority.color))
+                        .font(.system(size: 12))
+                    
+                    if task.hasSpecificTime {
+                        Text(taskTime)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(4)
+                    } else {
+                        Text("All Day")
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(4)
+                    }
                 }
                 
                 if let description = task.description, !description.isEmpty {

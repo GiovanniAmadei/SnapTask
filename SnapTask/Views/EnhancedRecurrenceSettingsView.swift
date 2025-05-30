@@ -17,124 +17,198 @@ struct EnhancedRecurrenceSettingsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Custom Picker instead of segmented
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     Text("Recurrence Type")
                         .font(.headline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                     
-                    VStack(spacing: 8) {
+                    // Horizontal segmented-style picker
+                    HStack(spacing: 4) {
                         ForEach(RecurrenceType.allCases, id: \.self) { type in
                             Button(action: {
-                                viewModel.recurrenceType = type
-                            }) {
-                                HStack {
-                                    Text(type.rawValue)
-                                        .font(.body)
-                                        .foregroundColor(viewModel.recurrenceType == type ? .white : .primary)
-                                    Spacer()
-                                    if viewModel.recurrenceType == type {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.white)
-                                    }
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.recurrenceType = type
                                 }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(viewModel.recurrenceType == type ? Color.pink : Color(.systemGray6))
-                                )
+                            }) {
+                                Text(type.rawValue)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(viewModel.recurrenceType == type ? .white : .pink)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(viewModel.recurrenceType == type ? Color.pink : Color.clear)
+                                    )
                             }
                             .buttonStyle(BorderlessButtonStyle())
                         }
                     }
+                    .padding(4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.pink.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1)
+                            )
+                    )
                     .padding(.horizontal)
                 }
-                .padding(.top)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
                 
-                Form {
-                    switch viewModel.recurrenceType {
-                    case .daily:
-                        Section("Daily Recurrence") {
-                            Text("Task will repeat every day")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
-                        }
-                        
-                    case .weekly:
-                        Section("Weekly Recurrence") {
-                            ForEach(weekdays, id: \.0) { weekday in
-                                HStack {
-                                    Text(weekday.1)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                    
-                                    if viewModel.selectedDays.contains(weekday.0) {
-                                        DatePicker("", selection: Binding(
-                                            get: { 
-                                                viewModel.weeklyTimes[weekday.0] ?? viewModel.startDate
-                                            },
-                                            set: { newTime in
-                                                viewModel.weeklyTimes[weekday.0] = newTime
-                                            }
-                                        ), displayedComponents: .hourAndMinute)
-                                        .labelsHidden()
-                                        .frame(width: 80)
-                                    }
-                                    
-                                    Toggle("", isOn: Binding(
-                                        get: { viewModel.selectedDays.contains(weekday.0) },
-                                        set: { isSelected in
-                                            if isSelected {
-                                                viewModel.selectedDays.insert(weekday.0)
-                                            } else {
-                                                viewModel.selectedDays.remove(weekday.0)
-                                            }
-                                        }
-                                    ))
-                                    .toggleStyle(SwitchToggleStyle(tint: .pink))
-                                    .frame(width: 50)
-                                }
+                ScrollView {
+                    VStack(spacing: 20) {
+                        switch viewModel.recurrenceType {
+                        case .daily:
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Daily Recurrence")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                Text("Task will repeat every day")
+                                    .foregroundColor(.secondary)
+                                    .font(.subheadline)
+                                    .padding(.horizontal)
                             }
-                        }
-                        
-                    case .monthly:
-                        Section("Monthly Recurrence") {
-                            Text("Select days of the month")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemGray6))
+                            )
+                            .padding(.horizontal)
                             
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-                                ForEach(1...31, id: \.self) { day in
-                                    Button(action: {
-                                        if viewModel.selectedMonthlyDays.contains(day) {
-                                            viewModel.selectedMonthlyDays.remove(day)
-                                        } else {
-                                            viewModel.selectedMonthlyDays.insert(day)
+                        case .weekly:
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Weekly Recurrence")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                VStack(spacing: 12) {
+                                    ForEach(weekdays, id: \.0) { weekday in
+                                        HStack {
+                                            Text(weekday.1)
+                                                .font(.subheadline)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                            
+                                            if viewModel.selectedDays.contains(weekday.0) {
+                                                DatePicker("", selection: Binding(
+                                                    get: { 
+                                                        viewModel.weeklyTimes[weekday.0] ?? viewModel.startDate
+                                                    },
+                                                    set: { newTime in
+                                                        viewModel.weeklyTimes[weekday.0] = newTime
+                                                    }
+                                                ), displayedComponents: .hourAndMinute)
+                                                .labelsHidden()
+                                                .frame(width: 80)
+                                            }
+                                            
+                                            Toggle("", isOn: Binding(
+                                                get: { viewModel.selectedDays.contains(weekday.0) },
+                                                set: { isSelected in
+                                                    if isSelected {
+                                                        viewModel.selectedDays.insert(weekday.0)
+                                                    } else {
+                                                        viewModel.selectedDays.remove(weekday.0)
+                                                    }
+                                                }
+                                            ))
+                                            .toggleStyle(SwitchToggleStyle(tint: .pink))
+                                            .frame(width: 50)
                                         }
-                                    }) {
-                                        Text("\(day)")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(viewModel.selectedMonthlyDays.contains(day) ? .white : .primary)
-                                            .frame(width: 32, height: 32)
-                                            .background(
-                                                Circle()
-                                                    .fill(viewModel.selectedMonthlyDays.contains(day) ? Color.pink : Color.gray.opacity(0.1))
-                                            )
+                                        .padding(.horizontal)
                                     }
-                                    .buttonStyle(BorderlessButtonStyle())
                                 }
                             }
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemGray6))
+                            )
+                            .padding(.horizontal)
+                            
+                        case .monthly:
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Monthly Recurrence")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                Text("Select days of the month")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal)
+                                
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
+                                    ForEach(1...31, id: \.self) { day in
+                                        Button(action: {
+                                            if viewModel.selectedMonthlyDays.contains(day) {
+                                                viewModel.selectedMonthlyDays.remove(day)
+                                            } else {
+                                                viewModel.selectedMonthlyDays.insert(day)
+                                            }
+                                        }) {
+                                            Text("\(day)")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(viewModel.selectedMonthlyDays.contains(day) ? .white : .primary)
+                                                .frame(width: 32, height: 32)
+                                                .background(
+                                                    Circle()
+                                                        .fill(viewModel.selectedMonthlyDays.contains(day) ? Color.pink : Color.gray.opacity(0.1))
+                                                )
+                                        }
+                                        .buttonStyle(BorderlessButtonStyle())
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemGray6))
+                            )
+                            .padding(.horizontal)
                         }
-                    }
-                    
-                    Section("End Date") {
-                        Toggle("Set end date", isOn: $viewModel.hasRecurrenceEndDate)
-                            .toggleStyle(SwitchToggleStyle(tint: .pink))
                         
-                        if viewModel.hasRecurrenceEndDate {
-                            DatePicker("End Date", selection: $viewModel.recurrenceEndDate, displayedComponents: .date)
+                        // End Date Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("End Date")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            VStack(spacing: 12) {
+                                HStack {
+                                    Text("Set end date")
+                                        .font(.subheadline)
+                                    Spacer()
+                                    Toggle("", isOn: $viewModel.hasRecurrenceEndDate)
+                                        .toggleStyle(SwitchToggleStyle(tint: .pink))
+                                }
+                                .padding(.horizontal)
+                                
+                                if viewModel.hasRecurrenceEndDate {
+                                    HStack {
+                                        Text("End Date")
+                                            .font(.subheadline)
+                                        Spacer()
+                                        DatePicker("", selection: $viewModel.recurrenceEndDate, displayedComponents: .date)
+                                            .labelsHidden()
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
                         }
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(.systemGray6))
+                        )
+                        .padding(.horizontal)
+                        
+                        Spacer()
+                            .frame(height: 50)
                     }
                 }
             }
@@ -146,6 +220,7 @@ struct EnhancedRecurrenceSettingsView: View {
                         dismiss()
                     }
                     .fontWeight(.medium)
+                    .foregroundColor(.pink)
                 }
             }
         }

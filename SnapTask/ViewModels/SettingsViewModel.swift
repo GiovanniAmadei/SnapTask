@@ -8,7 +8,21 @@ class SettingsViewModel: ObservableObject {
     @Published private(set) var priorities: [Priority] = []
     private let prioritiesKey = "savedPriorities"
     
+    @Published var autoCompleteTaskWithSubtasks: Bool {
+        didSet {
+            UserDefaults.standard.set(autoCompleteTaskWithSubtasks, forKey: "autoCompleteTaskWithSubtasks")
+            UserDefaults.standard.synchronize()
+        }
+    }
+    
     init() {
+        self.autoCompleteTaskWithSubtasks = UserDefaults.standard.bool(forKey: "autoCompleteTaskWithSubtasks")
+        // Default to true if first time
+        if !UserDefaults.standard.objectExists(forKey: "autoCompleteTaskWithSubtasks") {
+            self.autoCompleteTaskWithSubtasks = true
+            UserDefaults.standard.set(true, forKey: "autoCompleteTaskWithSubtasks")
+        }
+        
         loadPriorities()
         // Add default categories if none exist
         if categories.isEmpty {
@@ -94,5 +108,11 @@ class SettingsViewModel: ObservableObject {
             UserDefaults.standard.set(encoded, forKey: prioritiesKey)
             UserDefaults.standard.synchronize()
         }
+    }
+}
+
+extension UserDefaults {
+    func objectExists(forKey key: String) -> Bool {
+        return object(forKey: key) != nil
     }
 }

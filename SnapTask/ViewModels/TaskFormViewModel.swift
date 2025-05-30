@@ -137,6 +137,7 @@ class TaskFormViewModel: ObservableObject {
             description: description.isEmpty ? nil : description,
             location: location,
             startTime: taskStartTime,
+            hasSpecificTime: hasSpecificTime,
             duration: duration,
             hasDuration: hasDuration,
             category: selectedCategory,

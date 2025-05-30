@@ -773,6 +773,7 @@ class CloudKitService: ObservableObject {
         record["name"] = task.name.isEmpty ? "Untitled Task" : task.name
         record["taskDescription"] = task.description
         record["startTime"] = task.startTime
+        record["hasSpecificTime"] = task.hasSpecificTime 
         record["duration"] = max(0, task.duration) // Ensure non-negative
         record["hasDuration"] = task.hasDuration
         record["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
@@ -808,6 +809,7 @@ class CloudKitService: ObservableObject {
         
         let description = record["taskDescription"] as? String
         let startTime = record["startTime"] as? Date ?? Date()
+        let hasSpecificTime = record["hasSpecificTime"] as? Bool ?? true 
         let duration = record["duration"] as? TimeInterval ?? 0
         let hasDuration = record["hasDuration"] as? Bool ?? false
         let icon = record["icon"] as? String ?? "circle"
@@ -831,6 +833,7 @@ class CloudKitService: ObservableObject {
             description: description,
             location: location,
             startTime: startTime,
+            hasSpecificTime: hasSpecificTime, 
             duration: duration,
             hasDuration: hasDuration,
             category: category,
@@ -1272,6 +1275,7 @@ class CloudKitService: ObservableObject {
         existingRecord["name"] = task.name.isEmpty ? "Untitled Task" : task.name
         existingRecord["taskDescription"] = task.description
         existingRecord["startTime"] = task.startTime
+        existingRecord["hasSpecificTime"] = task.hasSpecificTime 
         existingRecord["duration"] = max(0, task.duration)
         existingRecord["hasDuration"] = task.hasDuration
         existingRecord["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon

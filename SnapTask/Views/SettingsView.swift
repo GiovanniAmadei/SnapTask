@@ -52,6 +52,7 @@ struct SettingsView: View {
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.secondary)
                                 .font(.caption)
+                                .frame(width: 12, height: 12)
                         }
                     }
                     .foregroundColor(.primary)
@@ -66,6 +67,31 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             
                             Text("Categories, Priorities & Colors")
+                        }
+                    }
+                }
+                
+                // Behavior Section
+                Section("Behavior") {
+                    NavigationLink(destination: BehaviorSettingsView(viewModel: viewModel)) {
+                        HStack {
+                            Image(systemName: "gearshape.2")
+                                .foregroundColor(.green)
+                                .frame(width: 24)
+                            
+                            Text("App Behavior")
+                            
+                            Spacer()
+                            
+                            // Show current auto-complete status as preview
+                            Text(viewModel.autoCompleteTaskWithSubtasks ? "Auto-complete On" : "Manual")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                                .frame(width: 12, height: 12)
                         }
                     }
                 }
@@ -152,6 +178,7 @@ struct SettingsView: View {
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.secondary)
                                 .font(.caption)
+                                .frame(width: 12, height: 12)
                         }
                     }
                     .foregroundColor(.primary)
@@ -214,6 +241,7 @@ struct SyncStatusIndicator: View {
             Image(systemName: "chevron.right")
                 .foregroundColor(.secondary)
                 .font(.caption)
+                .frame(width: 12, height: 12)
         }
     }
 }
