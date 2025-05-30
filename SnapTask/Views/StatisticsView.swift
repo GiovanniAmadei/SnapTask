@@ -36,7 +36,7 @@ struct StatisticsView: View {
                             .foregroundStyle(Color(hex: stat.color))
                         }
                         .frame(height: 220)
-                        // Removed animations to fix the strange up-down movement
+                        .animation(.smooth(duration: 0.8), value: viewModel.categoryStats)
                         
                         VStack(spacing: 16) {
                             HStack {
@@ -47,6 +47,7 @@ struct StatisticsView: View {
                                 Text("Total: \(String(format: "%.1fh", viewModel.categoryStats.reduce(0) { $0 + $1.hours }))")
                                     .font(.system(.caption, design: .rounded, weight: .medium))
                                     .foregroundColor(.secondary)
+                                    .animation(.smooth(duration: 0.8), value: viewModel.categoryStats.reduce(0) { $0 + $1.hours })
                             }
                             
                             LazyVGrid(columns: [
@@ -77,6 +78,7 @@ struct StatisticsView: View {
                                             Text(String(format: "%.1fh", stat.hours))
                                                 .font(.system(.caption2, design: .rounded, weight: .medium))
                                                 .foregroundColor(.secondary)
+                                                .animation(.smooth(duration: 0.8), value: stat.hours)
                                         }
                                         
                                         Spacer(minLength: 0)
@@ -113,7 +115,7 @@ struct StatisticsView: View {
                                 }
                             }
                             .padding(.horizontal, 4)
-                            // Removed animation to fix the legend movement
+                            .animation(.smooth(duration: 0.8), value: viewModel.categoryStats.count)
                         }
                     }
                 } header: {
@@ -142,6 +144,7 @@ struct StatisticsView: View {
                                 .font(.caption)
                         }
                     }
+                    .animation(.smooth(duration: 0.8), value: viewModel.weeklyStats)
                 }
                 
                 Section("Streak") {
@@ -352,8 +355,8 @@ private struct TimeRangeButton: View {
     
     private var buttonBackground: some View {
         RoundedRectangle(cornerRadius: 10)
-            .fill(isSelected ? 
-                Color.accentColor.opacity(0.15) : 
+            .fill(isSelected ?
+                Color.accentColor.opacity(0.15) :
                 Color.gray.opacity(0.1))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
