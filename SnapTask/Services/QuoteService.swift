@@ -6,22 +6,36 @@ class QuoteService {
     private init() {}
     
     func fetchDailyQuote() async throws -> Quote {
-        // Use a free API like https://api.quotable.io/random
-        guard let url = URL(string: "https://api.quotable.io/random") else {
+        // Use ZenQuotes API - more reliable than quotable.io
+        guard let url = URL(string: "https://zenquotes.io/api/random") else {
             throw URLError(.badURL)
         }
         
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let quoteResponse = try JSONDecoder().decode(QuoteResponse.self, from: data)
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 10.0
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        
+        let quotes = try JSONDecoder().decode([ZenQuoteResponse].self, from: data)
+        
+        guard let firstQuote = quotes.first else {
+            throw URLError(.cannotParseResponse)
+        }
         
         return Quote(
-            text: quoteResponse.content,
-            author: quoteResponse.author
+            text: firstQuote.q,
+            author: firstQuote.a
         )
     }
 }
 
-struct QuoteResponse: Codable {
-    let content: String
-    let author: String
-} 
+struct ZenQuoteResponse: Codable {
+    let q: String  // quote text
+    let a: String  // author
+}

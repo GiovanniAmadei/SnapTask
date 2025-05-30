@@ -1,5 +1,6 @@
 import SwiftUI
 import StoreKit
+import UserNotifications
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
@@ -9,15 +10,87 @@ struct SettingsView: View {
     
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("dailyQuoteNotificationsEnabled") private var dailyQuoteNotificationsEnabled = false
+    @AppStorage("dailyQuoteNotificationTime") private var dailyQuoteNotificationTime = "09:00"
     @State private var showingLanguagePicker = false
     @State private var showingDonationSheet = false
+    @State private var showingTimePicker = false
+    @State private var selectedNotificationTime = Date()
+    @State private var notificationPermissionStatus = UNAuthorizationStatus.notDetermined
+    @State private var showingPermissionAlert = false
     
     var body: some View {
         NavigationStack {
             List {
-                // Quote Section
-                Section {
-                    QuoteCard()
+                // Quote Section - iOS style
+                Section("Quote of the Day") {
+                    IOSQuoteCard()
+                }
+                
+                // Daily Quote Notifications Section
+                Section("Daily Notifications") {
+                    HStack {
+                        Image(systemName: "bell.fill")
+                            .foregroundColor(.orange)
+                            .frame(width: 24)
+                        
+                        Text("Daily Quote Reminder")
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: $dailyQuoteNotificationsEnabled)
+                            .onChange(of: dailyQuoteNotificationsEnabled) { _, newValue in
+                                handleNotificationToggle(newValue)
+                            }
+                    }
+                    
+                    if dailyQuoteNotificationsEnabled {
+                        Button {
+                            showingTimePicker = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "clock")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 24)
+                                
+                                Text("Notification Time")
+                                
+                                Spacer()
+                                
+                                Text(dailyQuoteNotificationTime)
+                                    .foregroundColor(.secondary)
+                                
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                                    .frame(width: 12, height: 12)
+                            }
+                        }
+                        .foregroundColor(.primary)
+                        
+                        // Show notification permission status
+                        if notificationPermissionStatus == .denied {
+                            Button {
+                                showingPermissionAlert = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                        .frame(width: 24)
+                                    
+                                    Text("Enable in Settings")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "arrow.up.right")
+                                        .font(.caption2)
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                        }
+                    }
                 }
                 
                 // Appearance Section
@@ -114,35 +187,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // CloudKit Debug Section (only in debug builds)
-#if DEBUG
-                Section("CloudKit Debug") {
-                    Button("Debug Category Status") {
-                        CategoryManager.shared.debugCategoryStatus()
-                    }
-                    .foregroundColor(.blue)
-                    
-                    Button("Reset Categories Completely") {
-                        Task {
-                            await CategoryManager.shared.performCompleteReset()
-                        }
-                    }
-                    .foregroundColor(.orange)
-                    
-                    Button("Reset CloudKit Sync State") {
-                        Task {
-                            await CloudKitService.shared.resetSyncState()
-                        }
-                    }
-                    .foregroundColor(.red)
-                    
-                    Button("Clear CloudKit Deletion Markers") {
-                        CloudKitService.shared.clearDeletionMarkers()
-                    }
-                    .foregroundColor(.purple)
-                }
-#endif
-                
                 // Community Section
                 Section("Community") {
                     NavigationLink(destination: FeedbackView()) {
@@ -190,6 +234,8 @@ struct SettingsView: View {
                     await quoteManager.checkAndUpdateQuote()
                     await donationService.loadProducts()
                 }
+                loadNotificationTime()
+                checkNotificationPermissionStatus()
             }
             .actionSheet(isPresented: $showingLanguagePicker) {
                 ActionSheet(
@@ -205,12 +251,224 @@ struct SettingsView: View {
             .sheet(isPresented: $showingDonationSheet) {
                 DonationView()
             }
+            .sheet(isPresented: $showingTimePicker) {
+                TimePickerView(
+                    selectedTime: $selectedNotificationTime,
+                    isPresented: $showingTimePicker
+                ) {
+                    saveNotificationTime()
+                    scheduleDailyQuoteNotification()
+                }
+            }
+            .alert("Enable Notifications", isPresented: $showingPermissionAlert) {
+                Button("Settings") {
+                    openAppSettings()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("To receive daily quote reminders, please enable notifications in Settings > SnapTask > Notifications.")
+            }
+        }
+    }
+    
+    private func handleNotificationToggle(_ newValue: Bool) {
+        print(" Toggle notification: \(newValue)")
+        if newValue {
+            Task {
+                await requestNotificationPermission()
+            }
+        } else {
+            cancelDailyQuoteNotification()
+        }
+    }
+    
+    @MainActor
+    private func requestNotificationPermission() async {
+        print(" Requesting notification permission...")
+        
+        do {
+            let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+            print(" Notification permission result: \(granted)")
+            
+            if granted {
+                scheduleDailyQuoteNotification()
+            } else {
+                dailyQuoteNotificationsEnabled = false
+                showingPermissionAlert = true
+            }
+            
+            checkNotificationPermissionStatus()
+        } catch {
+            print(" Notification permission error: \(error)")
+            dailyQuoteNotificationsEnabled = false
+        }
+    }
+    
+    private func checkNotificationPermissionStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                self.notificationPermissionStatus = settings.authorizationStatus
+                print(" Current notification status: \(settings.authorizationStatus.rawValue)")
+                
+                // If permissions were denied, disable the toggle
+                if settings.authorizationStatus == .denied && self.dailyQuoteNotificationsEnabled {
+                    self.dailyQuoteNotificationsEnabled = false
+                }
+            }
+        }
+    }
+    
+    private func openAppSettings() {
+        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsUrl)
+        }
+    }
+    
+    private func scheduleDailyQuoteNotification() {
+        // Cancel existing notifications
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyQuote"])
+        
+        guard dailyQuoteNotificationsEnabled else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Your Daily Motivation"
+        content.body = quoteManager.getCurrentQuoteText()
+        content.sound = .default
+        content.badge = 1
+        
+        // Parse the time from dailyQuoteNotificationTime
+        let timeComponents = dailyQuoteNotificationTime.split(separator: ":")
+        guard timeComponents.count == 2,
+              let hour = Int(timeComponents[0]),
+              let minute = Int(timeComponents[1]) else { return }
+        
+        var dateComponents = DateComponents()
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+        
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "dailyQuote", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print(" Error scheduling notification: \(error)")
+            } else {
+                print("  Daily quote notification scheduled for \(self.dailyQuoteNotificationTime)")
+            }
+        }
+    }
+    
+    private func cancelDailyQuoteNotification() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyQuote"])
+        print("  Daily quote notification cancelled")
+    }
+    
+    private func loadNotificationTime() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        selectedNotificationTime = formatter.date(from: dailyQuoteNotificationTime) ?? Date()
+    }
+    
+    private func saveNotificationTime() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        dailyQuoteNotificationTime = formatter.string(from: selectedNotificationTime)
+    }
+}
+
+struct IOSQuoteCard: View {
+    @StateObject private var quoteManager = QuoteManager.shared
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if quoteManager.isLoading {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Loading inspiration...")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 8)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(quoteManager.currentQuote.text)
+                        .font(.body)
+                        .italic()
+                        .foregroundColor(.primary)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    HStack {
+                        Text("— \(quoteManager.currentQuote.author)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Button {
+                            Task {
+                                await quoteManager.forceUpdateQuote()
+                            }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                        .disabled(quoteManager.isLoading)
+                        .opacity(quoteManager.isLoading ? 0.6 : 1.0)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct TimePickerView: View {
+    @Binding var selectedTime: Date
+    @Binding var isPresented: Bool
+    let onSave: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                DatePicker(
+                    "Notification Time",
+                    selection: $selectedTime,
+                    displayedComponents: [.hourAndMinute]
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Notification Time")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        onSave()
+                        isPresented = false
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
         }
     }
 }
 
 struct SyncStatusIndicator: View {
     @StateObject private var cloudKitService = CloudKitService.shared
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         HStack(spacing: 4) {
@@ -243,73 +501,6 @@ struct SyncStatusIndicator: View {
                 .font(.caption)
                 .frame(width: 12, height: 12)
         }
-    }
-}
-
-struct QuoteCard: View {
-    @StateObject private var quoteManager = QuoteManager.shared
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "quote.bubble.fill")
-                    .font(.title3)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.orange, .pink],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                
-                Text("Quote of the Day")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-            }
-            
-            if quoteManager.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 12)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(quoteManager.currentQuote.text)
-                        .font(.subheadline)
-                        .italic()
-                        .foregroundColor(.primary)
-                        .lineLimit(3)
-                    
-                    HStack {
-                        Text("— \(quoteManager.currentQuote.author)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Button {
-                            Task {
-                                await quoteManager.forceUpdateQuote()
-                            }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.caption)
-                                .padding(6)
-                                .background(Circle().fill(Material.ultraThinMaterial))
-                                .foregroundColor(.blue)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Material.ultraThinMaterial)
-        )
     }
 }
 

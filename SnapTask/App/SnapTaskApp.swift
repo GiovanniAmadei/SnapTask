@@ -15,7 +15,7 @@ struct SnapTaskApp: App {
     @Environment(\.scenePhase) var scenePhase
     @AppStorage("isDarkMode") private var isDarkMode = false
     
-    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     init() {
         // Initialize Firebase as early as possible
@@ -30,6 +30,7 @@ struct SnapTaskApp: App {
             ContentView()
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .onAppear {
+                    setupNotifications()
                     Task {
                         await quoteManager.checkAndUpdateQuote()
                     }
@@ -53,6 +54,10 @@ struct SnapTaskApp: App {
                     }
                 }
         }
+    }
+    
+    private func setupNotifications() {
+        UNUserNotificationCenter.current().delegate = appDelegate
     }
     
     private func initializeAppData() {
@@ -87,14 +92,33 @@ struct SnapTaskApp: App {
 }
 
 // MARK: - UIApplicationDelegate
-class AppDelegate: NSObject, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Set up notification center delegate
+        UNUserNotificationCenter.current().delegate = self
+        
         // Backup Firebase configuration
         if FirebaseApp.app() == nil {
             FirebaseApp.configure()
             print("🔥 Firebase configured in AppDelegate")
         }
         return true
+    }
+    
+    // Handle notification when app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.alert, .badge, .sound])
+    }
+    
+    // Handle notification tap
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.notification.request.identifier == "dailyQuote" {
+            // User tapped daily quote notification
+            Task {
+                await QuoteManager.shared.forceUpdateQuote()
+            }
+        }
+        completionHandler()
     }
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {

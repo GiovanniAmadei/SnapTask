@@ -14,13 +14,13 @@ struct TaskConsistencyView: View {
     @State private var penalizeMissedTasks: Bool = true
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             HeaderSection()
             
             if viewModel.consistency.isEmpty {
                 EmptyConsistencyView()
             } else {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
                     TimeRangeSection(timeRange: $timeRange)
                     
                     PenaltyToggleSection(penalizeMissedTasks: $penalizeMissedTasks)
@@ -44,8 +44,9 @@ struct TaskConsistencyView: View {
                 HelpTextSection()
             }
         }
-        .padding(.horizontal, 20)
         .padding(.vertical, 16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
     }
@@ -53,7 +54,7 @@ struct TaskConsistencyView: View {
 
 private struct HeaderSection: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Task Progress Over Time")
                 .font(.system(.title2, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
@@ -62,7 +63,8 @@ private struct HeaderSection: View {
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundColor(.secondary)
         }
-        .padding(.bottom, 8)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 4)
     }
 }
 
@@ -70,7 +72,7 @@ private struct TimeRangeSection: View {
     @Binding var timeRange: ConsistencyTimeRange
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Time Period")
                 .font(.system(.headline, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
@@ -82,6 +84,7 @@ private struct TimeRangeSection: View {
             }
             .pickerStyle(.segmented)
         }
+        .padding(.horizontal, 16)
     }
 }
 
@@ -91,7 +94,7 @@ private struct PenaltyToggleSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Penalize Missed Tasks")
                         .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundColor(.primary)
@@ -108,10 +111,10 @@ private struct PenaltyToggleSection: View {
                     .labelsHidden()
                     .scaleEffect(1.1)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(
                         LinearGradient(
                             colors: [
@@ -123,7 +126,7 @@ private struct PenaltyToggleSection: View {
                         )
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .strokeBorder(
                                 LinearGradient(
                                     colors: [
@@ -138,6 +141,7 @@ private struct PenaltyToggleSection: View {
                     )
             )
         }
+        .padding(.horizontal, 16)
     }
 }
 
@@ -146,13 +150,14 @@ private struct TaskLegendSection: View {
     @Binding var selectedTaskId: UUID?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Tasks")
                 .font(.system(.callout, design: .rounded, weight: .medium))
                 .foregroundColor(.primary)
+                .padding(.horizontal, 16)
             
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                         CompactLegendItem(
                             task: task,
@@ -164,7 +169,7 @@ private struct TaskLegendSection: View {
                         }
                     }
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 16)
             }
         }
     }
@@ -180,95 +185,14 @@ private struct TaskLegendSection: View {
     }
 }
 
-private struct CompactLegendItem: View {
-    let task: TodoTask
-    let taskIndex: Int
-    let isSelected: Bool
-    let isHighlighted: Bool
-    let action: () -> Void
-    
-    private let distinctColors: [Color] = [
-        .red, .blue, .green, .purple, .orange, .cyan,
-        .pink, .yellow, .mint, .indigo, .teal, .brown
-    ]
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                colorIndicator
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(task.name)
-                        .font(.system(.caption, design: .rounded, weight: .medium))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    if let category = task.category {
-                        Text(category.name)
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-                
-                if isHighlighted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(.caption2, weight: .medium))
-                        .foregroundColor(.accentColor)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(backgroundStyle)
-            .scaleEffect(isHighlighted ? 1.02 : 1.0)
-            .opacity(isSelected ? 1.0 : 0.6)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.easeInOut(duration: 0.2), value: isHighlighted)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
-    }
-    
-    private var colorIndicator: some View {
-        RoundedRectangle(cornerRadius: 2)
-            .fill(taskColor)
-            .frame(width: 3, height: 20)
-    }
-    
-    private var backgroundStyle: some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(backgroundFill)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(backgroundBorder, lineWidth: isHighlighted ? 1 : 0.5)
-            )
-    }
-    
-    private var backgroundFill: Color {
-        isHighlighted ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.05)
-    }
-    
-    private var backgroundBorder: Color {
-        isHighlighted ? Color.accentColor.opacity(0.3) : Color.gray.opacity(0.1)
-    }
-    
-    private var taskColor: Color {
-        if let categoryColor = task.category?.color {
-            return Color(hex: categoryColor)
-        } else {
-            let colorIndex = taskIndex % distinctColors.count
-            return distinctColors[colorIndex]
-        }
-    }
-}
-
 private struct HelpTextSection: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("How to Read")
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
             
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 HelpTextRow(
                     color: .blue,
                     text: "Each line shows a task's completion progress over time"
@@ -285,26 +209,8 @@ private struct HelpTextSection: View {
                 )
             }
         }
-        .padding(.top, 12)
-        .padding(.horizontal, 4)
-    }
-}
-
-private struct HelpTextRow: View {
-    let color: Color
-    let text: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(color)
-                .frame(width: 8, height: 8)
-            
-            Text(text)
-                .font(.system(.caption, design: .rounded))
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 }
 
@@ -321,13 +227,13 @@ private struct ModernConsistencyChart: View {
     ]
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Chart {
                 ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                     createTaskLines(for: task, at: index)
                 }
             }
-            .frame(height: 280)
+            .frame(height: 320)
             .chartXAxis {
                 AxisMarks(position: .bottom, values: getXAxisDateValues()) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -354,6 +260,7 @@ private struct ModernConsistencyChart: View {
                     }
                 }
             }
+            .chartYScale(domain: 0...getMaxYValue())
             .chartYAxisLabel("Completed Tasks", position: .leading)
             .chartXAxisLabel("Date", position: .bottom)
             .chartPlotStyle { plotArea in
@@ -362,10 +269,20 @@ private struct ModernConsistencyChart: View {
             .animation(.smooth(duration: 0.8), value: selectedTaskId)
             .animation(.smooth(duration: 0.8), value: timeRange)
         }
+        .padding(.horizontal, 16)
+    }
+    
+    private func getMaxYValue() -> Int {
+        let allPoints = tasks.compactMap { task in
+            getRealConsistencyPoints(for: task, timeRange: timeRange)
+        }.flatMap { $0 }
+        
+        let maxValue = allPoints.map { $0.1 }.max() ?? 1
+        return max(maxValue, 1)
     }
     
     private var chartBackground: some View {
-        RoundedRectangle(cornerRadius: 16)
+        RoundedRectangle(cornerRadius: 14)
             .fill(
                 LinearGradient(
                     colors: [
@@ -377,7 +294,7 @@ private struct ModernConsistencyChart: View {
                 )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
@@ -467,8 +384,8 @@ private struct ModernConsistencyChart: View {
     }
     
     private func getRealConsistencyPoints(for task: TodoTask, timeRange: ConsistencyTimeRange) -> [(Date, Int)] {
-        guard let recurrence = task.recurrence else { 
-            return [] 
+        guard let recurrence = task.recurrence else {
+            return []
         }
         
         let calendar = Calendar.current
@@ -499,7 +416,6 @@ private struct ModernConsistencyChart: View {
             
             if !foundFirstValidDay {
                 foundFirstValidDay = true
-                points.append((startOfDay, 0))
             }
             
             if shouldTaskOccurOnDate(task: task, date: startOfDay) {
@@ -515,8 +431,8 @@ private struct ModernConsistencyChart: View {
             }
         }
         
-        if points.count == 1 {
-            points.append((today, points[0].1))
+        if points.isEmpty && foundFirstValidDay {
+            points.append((today, 0))
         }
         
         return points
@@ -553,6 +469,105 @@ private struct ModernConsistencyChart: View {
         } else {
             let colorIndex = index % distinctColors.count
             return distinctColors[colorIndex]
+        }
+    }
+}
+
+private struct CompactLegendItem: View {
+    let task: TodoTask
+    let taskIndex: Int
+    let isSelected: Bool
+    let isHighlighted: Bool
+    let action: () -> Void
+    
+    private let distinctColors: [Color] = [
+        .red, .blue, .green, .purple, .orange, .cyan,
+        .pink, .yellow, .mint, .indigo, .teal, .brown
+    ]
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                colorIndicator
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(task.name)
+                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    if let category = task.category {
+                        Text(category.name)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                
+                if isHighlighted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(.caption2, weight: .medium))
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(backgroundStyle)
+            .scaleEffect(isHighlighted ? 1.02 : 1.0)
+            .opacity(isSelected ? 1.0 : 0.6)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.2), value: isHighlighted)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+    
+    private var colorIndicator: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(taskColor)
+            .frame(width: 3, height: 20)
+    }
+    
+    private var backgroundStyle: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(backgroundFill)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(backgroundBorder, lineWidth: isHighlighted ? 1 : 0.5)
+            )
+    }
+    
+    private var backgroundFill: Color {
+        isHighlighted ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.05)
+    }
+    
+    private var backgroundBorder: Color {
+        isHighlighted ? Color.accentColor.opacity(0.3) : Color.gray.opacity(0.1)
+    }
+    
+    private var taskColor: Color {
+        if let categoryColor = task.category?.color {
+            return Color(hex: categoryColor)
+        } else {
+            let colorIndex = taskIndex % distinctColors.count
+            return distinctColors[colorIndex]
+        }
+    }
+}
+
+private struct HelpTextRow: View {
+    let color: Color
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            
+            Text(text)
+                .font(.system(.caption, design: .rounded))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

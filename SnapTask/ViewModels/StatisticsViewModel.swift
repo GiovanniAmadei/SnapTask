@@ -12,8 +12,8 @@ class StatisticsViewModel: ObservableObject {
         let hours: Double
         
         static func == (lhs: CategoryStat, rhs: CategoryStat) -> Bool {
-            return lhs.name == rhs.name && 
-                   lhs.color == rhs.color && 
+            return lhs.name == rhs.name &&
+                   lhs.color == rhs.color &&
                    lhs.hours == rhs.hours
         }
     }
@@ -25,8 +25,8 @@ class StatisticsViewModel: ObservableObject {
         let totalTasks: Int
         
         static func == (lhs: WeeklyStat, rhs: WeeklyStat) -> Bool {
-            return lhs.day == rhs.day && 
-                   lhs.completedTasks == rhs.completedTasks && 
+            return lhs.day == rhs.day &&
+                   lhs.completedTasks == rhs.completedTasks &&
                    lhs.totalTasks == rhs.totalTasks
         }
     }
@@ -82,6 +82,7 @@ class StatisticsViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let taskManager: TaskManager
     private let categoryManager = CategoryManager.shared
+    private let cloudKitService = CloudKitService.shared
     
     init(taskManager: TaskManager = .shared) {
         self.taskManager = taskManager
@@ -97,13 +98,6 @@ class StatisticsViewModel: ObservableObject {
     // Method to be called after CloudKit synchronization
     func refreshAfterSync() {
         DispatchQueue.main.async { [weak self] in
-            // Invalidate the current statistics
-            self?.categoryStats = []
-            self?.weeklyStats = []
-            self?.currentStreak = 0
-            self?.bestStreak = 0
-            self?.recurringTasks = []
-            
             // Force a refresh after a short delay to ensure all data is loaded
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self?.updateStats()
@@ -116,6 +110,7 @@ class StatisticsViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: .tasksDidUpdate)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                print("📊 Tasks updated, refreshing statistics")
                 self?.updateStats()
             }
             .store(in: &cancellables)
@@ -124,6 +119,7 @@ class StatisticsViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: .categoriesDidUpdate)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                print("📊 Categories updated, refreshing statistics")
                 self?.updateStats()
             }
             .store(in: &cancellables)
@@ -132,6 +128,7 @@ class StatisticsViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: .timeTrackingUpdated)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                print("📊 Time tracking updated, refreshing statistics")
                 self?.updateStats()
             }
             .store(in: &cancellables)
@@ -140,6 +137,7 @@ class StatisticsViewModel: ObservableObject {
         categoryManager.$categories
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                print("📊 Category manager updated, refreshing statistics")
                 self?.updateStats()
             }
             .store(in: &cancellables)
@@ -148,7 +146,44 @@ class StatisticsViewModel: ObservableObject {
         taskManager.$tasks
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                print("📊 Task manager updated, refreshing statistics")
                 self?.updateStats()
+            }
+            .store(in: &cancellables)
+        
+        NotificationCenter.default.publisher(for: .cloudKitDataChanged)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("📊 CloudKit data changed, refreshing statistics")
+                // Add a small delay to ensure all data is fully loaded
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self?.updateStats()
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Listen for CloudKit sync completion
+        cloudKitService.$syncStatus
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                if status == .success {
+                    print("📊 CloudKit sync completed, refreshing statistics")
+                    // Refresh statistics after successful sync
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self?.refreshAfterSync()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+        
+        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("📊 App became active, refreshing statistics")
+                // Refresh when app becomes active (e.g., switching from iPad)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self?.updateStats()
+                }
             }
             .store(in: &cancellables)
         
@@ -157,19 +192,18 @@ class StatisticsViewModel: ObservableObject {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                print("📊 Time range changed, refreshing statistics")
                 self?.updateStats()
             }
             .store(in: &cancellables)
     }
     
     private func updateStats() {
-        withAnimation(.smooth(duration: 0.8)) {
-            updateCategoryStats()
-            updateWeeklyStats()
-            updateStreakStats()
-            updateRecurringTasks()
-            objectWillChange.send()
-        }
+        updateCategoryStats()
+        updateWeeklyStats()
+        updateStreakStats()
+        updateRecurringTasks()
+        objectWillChange.send()
     }
     
     private func updateCategoryStats() {
@@ -177,7 +211,10 @@ class StatisticsViewModel: ObservableObject {
         let allTasks = taskManager.tasks
         let (startDate, endDate) = selectedTimeRange.dateRange
         
-        // Get time tracking data from UserDefaults
+        print("📊 Date range: \(startDate) to \(endDate)")
+        print("📊 Available categories: \(categories.map { "\($0.name) (ID: \($0.id.uuidString.prefix(8)))" })")
+        
+        // Get time tracking data from UserDefaults (local only)
         let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
         let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
         
@@ -185,20 +222,55 @@ class StatisticsViewModel: ObservableObject {
         
         // Process regular categories
         for category in categories {
-            // Calculate hours from completed tasks
             let categoryTasks = allTasks.filter { task in
-                task.category?.id == category.id
-            }
-            let taskHours = categoryTasks.reduce(0.0) { total, task in
-                let taskHours = task.completions
-                    .filter { $0.key >= startDate && $0.key <= endDate && $0.value.isCompleted }
-                    .reduce(0.0) { sum, completion in
-                        sum + (task.hasDuration ? task.duration / 3600.0 : 0)
-                    }
-                return total + taskHours
+                // First try ID match (exact)
+                if task.category?.id == category.id {
+                    return true
+                }
+                // Fallback to name match for cross-device compatibility
+                if let taskCategoryName = task.category?.name,
+                   taskCategoryName.lowercased() == category.name.lowercased() {
+                    print("📊 Found task '\(task.name)' with category name match: '\(taskCategoryName)' -> '\(category.name)'")
+                    return true
+                }
+                return false
             }
             
-            // Add tracked time from Pomodoro sessions
+            print("📊 Category '\(category.name)': found \(categoryTasks.count) tasks")
+            
+            // Calculate hours from completed tasks with duration
+            let taskHours = categoryTasks.reduce(0.0) { total, task in
+                let completionHours = task.completions
+                    .compactMap { (date, completion) -> Double? in
+                        // Fix date range check - include entire end date
+                        let startOfStartDate = Calendar.current.startOfDay(for: startDate)
+                        let endOfEndDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: endDate))!
+                        
+                        print("📊 Checking task '\(task.name)': date=\(date), startRange=\(startOfStartDate), endRange=\(endOfEndDate), isCompleted=\(completion.isCompleted)")
+                        
+                        // Check if completion is in our date range and is completed
+                        guard date >= startOfStartDate &&
+                              date < endOfEndDate &&
+                              completion.isCompleted else {
+                            print("📊   -> Excluded: outside date range or not completed")
+                            return nil
+                        }
+                        
+                        // ONLY count if task has REAL duration set
+                        if task.hasDuration && task.duration > 0 {
+                            print("📊   -> Included: Task '\(task.name)' completed on \(date) with duration: \(task.duration/3600.0)h")
+                            return task.duration / 3600.0 // Convert seconds to hours
+                        } else {
+                            print("📊   -> Excluded: Task '\(task.name)' completed on \(date) but has NO duration set")
+                            return nil // Don't count tasks without real duration
+                        }
+                    }
+                    .reduce(0.0, +)
+                
+                return total + completionHours
+            }
+            
+            // Add tracked time from Pomodoro sessions (local data)
             let calendar = Calendar.current
             var trackedHours = 0.0
             
@@ -208,6 +280,7 @@ class StatisticsViewModel: ObservableObject {
                 if let dayData = timeTrackingData[dateKey],
                    let categoryHours = dayData[category.id.uuidString] {
                     trackedHours += categoryHours
+                    print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from Pomodoro tracking")
                 }
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
             }
@@ -220,10 +293,13 @@ class StatisticsViewModel: ObservableObject {
                     color: category.color,
                     hours: totalHours
                 ))
+                print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from Pomodoro = \(String(format: "%.2f", totalHours))h total")
+            } else {
+                print("📊 Category \(category.name): 0 hours (no tasks with duration or Pomodoro sessions)")
             }
         }
         
-        // Process individual task tracking
+        // Process individual task tracking (local Pomodoro data only)
         let calendar = Calendar.current
         var currentDate = startDate
         var taskTracking: [String: Double] = [:]
@@ -240,7 +316,7 @@ class StatisticsViewModel: ObservableObject {
             currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
         }
         
-        // Add individual tasks to statistics
+        // Add individual tasks to statistics (from local Pomodoro tracking only)
         for (taskKey, hours) in taskTracking {
             if hours > 0, let metadata = taskMetadata[taskKey] {
                 categoryStatsList.append(CategoryStat(
@@ -248,10 +324,14 @@ class StatisticsViewModel: ObservableObject {
                     color: metadata["color"] ?? "#6366F1",
                     hours: hours
                 ))
+                print("📊 Individual task \(metadata["name"] ?? "Unknown"): \(String(format: "%.2f", hours))h from Pomodoro tracking")
             }
         }
         
         categoryStats = categoryStatsList
+        print("📊 FINAL STATISTICS: \(categoryStatsList.count) categories with total hours: \(String(format: "%.2f", categoryStatsList.reduce(0) { $0 + $1.hours }))")
+        print("📊 All tasks in system: \(allTasks.count)")
+        print("📊 Tasks with duration set: \(allTasks.filter { $0.hasDuration && $0.duration > 0 }.count)")
     }
     
     private func updateWeeklyStats() {
@@ -400,7 +480,7 @@ class StatisticsViewModel: ObservableObject {
     
     private func updateRecurringTasks() {
         // Include all recurring tasks regardless of trackInStatistics setting
-        recurringTasks = taskManager.tasks.filter { task in 
+        recurringTasks = taskManager.tasks.filter { task in
             task.recurrence != nil
         }
     }
@@ -418,7 +498,7 @@ class StatisticsViewModel: ObservableObject {
         case .week:
             daysToAnalyze = 7
         case .month:
-            daysToAnalyze = 30  
+            daysToAnalyze = 30
         case .year:
             daysToAnalyze = 365
         }

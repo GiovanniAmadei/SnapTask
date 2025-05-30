@@ -90,107 +90,100 @@ struct ViewControlBarView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // View mode toggle - CHANGE: Fixed layout for iPhone 13 mini
-            HStack(spacing: 2) {
+            // View mode toggle - better sized for iPhone 13 mini
+            HStack(spacing: 3) {
                 ForEach(TimelineViewMode.allCases, id: \.self) { mode in
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.viewMode = mode
                         }
                     }) {
-                        HStack(spacing: 2) {
+                        HStack(spacing: 3) {
                             Image(systemName: mode.icon)
-                                .font(.system(size: 10))
+                                .font(.system(size: 11, weight: .medium))
                             Text(mode == .list ? "List" : "Time")
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: 11, weight: .semibold))
                         }
                         .foregroundColor(viewModel.viewMode == mode ? .white : .pink)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
                         .background(
-                            RoundedRectangle(cornerRadius: 4)
+                            RoundedRectangle(cornerRadius: 6)
                                 .fill(viewModel.viewMode == mode ? Color.pink : Color.clear)
                         )
                     }
                 }
             }
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.pink.opacity(0.1))
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.pink.opacity(0.08))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.pink.opacity(0.25), lineWidth: 1)
                     )
             )
             
             Spacer()
             
-            // Organization status - CHANGE: Made more compact
-            HStack(spacing: 4) {
+            // Organization status
+            HStack(spacing: 5) {
                 Image(systemName: viewModel.organization.icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 Text(viewModel.organizationStatusText)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
             .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.gray.opacity(0.1))
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.gray.opacity(0.08))
             )
             
-            // Sync status indicator
-            if cloudKitService.isCloudKitEnabled {
-                HStack(spacing: 2) {
-                    if cloudKitService.isSyncing {
-                        ProgressView()
-                            .scaleEffect(0.5)
-                    } else {
-                        Image(systemName: syncStatusIcon)
-                            .font(.system(size: 10))
-                            .foregroundColor(syncStatusColor)
-                    }
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(syncStatusColor.opacity(0.1))
-                )
-            }
             
-            // Organization button
+            // Filter button - properly sized for iPhone 13 mini
             Button(action: {
                 viewModel.showingFilterSheet = true
             }) {
                 Image(systemName: "line.3.horizontal.decrease.circle")
-                    .font(.system(size: 18))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundColor(.pink)
+                    .frame(width: 38, height: 38)
+                    .background(
+                        Circle()
+                            .fill(Color.pink.opacity(0.08))
+                    )
             }
             
-            // Reset view button (if organization is active)
+            // Reset button
             if viewModel.organization != .none {
                 Button(action: {
                     viewModel.resetView()
                 }) {
                     Image(systemName: "arrow.clockwise.circle")
-                        .font(.system(size: 16))
+                        .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.secondary)
+                        .frame(width: 34, height: 34)
+                        .background(
+                            Circle()
+                                .fill(Color.gray.opacity(0.08))
+                        )
                 }
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }
 
 struct TimelineContentView: View {
     @ObservedObject var viewModel: TimelineViewModel
+    @StateObject private var cloudKitService = CloudKitService.shared
     @State private var scrollProxy: ScrollViewProxy?
+    @State private var isRefreshing = false
     
     private let hourHeight: CGFloat = 80
     
@@ -208,7 +201,6 @@ struct TimelineContentView: View {
                                 Text("All Day")
                                     .font(.headline)
                                     .foregroundColor(.primary)
-                                    .padding(.horizontal)
                                 Spacer()
                             }
                             
@@ -237,12 +229,38 @@ struct TimelineContentView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 100)
             }
+            .refreshable {
+                await performCloudKitSync()
+            }
             .onAppear {
                 scrollProxy = proxy
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     scrollToRelevantTime()
                 }
             }
+        }
+    }
+    
+    private func performCloudKitSync() async {
+        guard cloudKitService.isCloudKitEnabled else { return }
+        
+        await MainActor.run {
+            isRefreshing = true
+        }
+        
+        // Trigger CloudKit sync
+        cloudKitService.syncNow()
+        
+        // Wait for sync to complete
+        for _ in 0..<10 { // Max 5 seconds wait
+            if cloudKitService.syncStatus == .success || cloudKitService.syncStatus.description.contains("error") {
+                break
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        }
+        
+        await MainActor.run {
+            isRefreshing = false
         }
     }
     
@@ -407,7 +425,9 @@ struct TaskListView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var showingNewTask: Bool
     @StateObject private var pomodoroViewModel = PomodoroViewModel.shared
+    @StateObject private var cloudKitService = CloudKitService.shared
     @State private var showingActivePomodoroSession = false
+    @State private var isRefreshing = false
     
     var body: some View {
         ZStack {
@@ -441,6 +461,9 @@ struct TaskListView: View {
                 .padding(.horizontal, 4)
                 .padding(.bottom, 100)
             }
+            .refreshable {
+                await performCloudKitSync()
+            }
             
             VStack {
                 Spacer()
@@ -465,6 +488,29 @@ struct TaskListView: View {
                     PomodoroView(task: pomodoroViewModel.activeTask!)
                 }
             }
+        }
+    }
+    
+    private func performCloudKitSync() async {
+        guard cloudKitService.isCloudKitEnabled else { return }
+        
+        await MainActor.run {
+            isRefreshing = true
+        }
+        
+        // Trigger CloudKit sync
+        cloudKitService.syncNow()
+        
+        // Wait for sync to complete
+        for _ in 0..<10 { // Max 5 seconds wait
+            if cloudKitService.syncStatus == .success || cloudKitService.syncStatus.description.contains("error") {
+                break
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        }
+        
+        await MainActor.run {
+            isRefreshing = false
         }
     }
 }

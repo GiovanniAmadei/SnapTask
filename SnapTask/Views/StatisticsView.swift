@@ -36,8 +36,7 @@ struct StatisticsView: View {
                             .foregroundStyle(Color(hex: stat.color))
                         }
                         .frame(height: 220)
-                        .animation(.smooth(duration: 0.8), value: viewModel.categoryStats)
-                        .animation(.smooth(duration: 0.8), value: viewModel.selectedTimeRange)
+                        // Removed animations to fix the strange up-down movement
                         
                         VStack(spacing: 16) {
                             HStack {
@@ -114,7 +113,7 @@ struct StatisticsView: View {
                                 }
                             }
                             .padding(.horizontal, 4)
-                            .animation(.smooth(duration: 0.8), value: viewModel.categoryStats)
+                            // Removed animation to fix the legend movement
                         }
                     }
                 } header: {
@@ -229,8 +228,6 @@ private struct PieChartView: View {
             .foregroundStyle(Color(hex: stat.color))
         }
         .frame(height: 220)
-        .animation(.smooth(duration: 0.8), value: viewModel.categoryStats)
-        .animation(.smooth(duration: 0.8), value: viewModel.selectedTimeRange)
     }
 }
 
@@ -258,7 +255,6 @@ private struct LegendView: View {
                 }
             }
             .padding(.horizontal, 4)
-            .animation(.smooth(duration: 0.8), value: viewModel.categoryStats)
         }
     }
 }
@@ -381,7 +377,6 @@ private struct CategoryLegendItem: View {
         .padding(.horizontal, 4)
         .padding(.vertical, 10)
         .background(categoryBackground)
-        .animation(.smooth(duration: 0.6), value: stat.hours)
     }
     
     private var categoryCircle: some View {
