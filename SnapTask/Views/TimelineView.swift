@@ -22,16 +22,20 @@ struct TimelineView: View {
                     .background(Color(.systemBackground))
                     .zIndex(1)
                     
-                    FilterBarView(viewModel: viewModel)
+                    ViewControlBarView(viewModel: viewModel)
                         .background(Color(.systemBackground))
                         .zIndex(1)
                     
-                    // Lista task e pulsante aggiungi
-                    TaskListView(
-                        viewModel: viewModel,
-                        showingNewTask: $showingNewTask
-                    )
-                    .frame(maxHeight: .infinity)
+                    if viewModel.viewMode == .timeline {
+                        TimelineContentView(viewModel: viewModel)
+                            .frame(maxHeight: .infinity)
+                    } else {
+                        TaskListView(
+                            viewModel: viewModel,
+                            showingNewTask: $showingNewTask
+                        )
+                        .frame(maxHeight: .infinity)
+                    }
                 }
             }
             .navigationBarHidden(true)
@@ -52,17 +56,13 @@ struct TimelineView: View {
                 )
             }
             .sheet(isPresented: $viewModel.showingFilterSheet) {
-                TimelineFilterView(viewModel: viewModel)
-            }
-            .sheet(isPresented: $viewModel.showingTimelineView) {
-                DayTimelineView(viewModel: viewModel)
-                    .presentationDetents([.large])
+                TimelineOrganizationView(viewModel: viewModel)
             }
         }
     }
 }
 
-struct FilterBarView: View {
+struct ViewControlBarView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @StateObject private var cloudKitService = CloudKitService.shared
     
@@ -90,62 +90,95 @@ struct FilterBarView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Filter status
-            HStack(spacing: 6) {
-                Image(systemName: filterIcon)
-                    .font(.system(size: 14))
-                    .foregroundColor(.pink)
-                
-                Text(viewModel.filterStatusText)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
+            // View mode toggle - CHANGE: Fixed layout for iPhone 13 mini
+            HStack(spacing: 2) {
+                ForEach(TimelineViewMode.allCases, id: \.self) { mode in
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.viewMode = mode
+                        }
+                    }) {
+                        HStack(spacing: 2) {
+                            Image(systemName: mode.icon)
+                                .font(.system(size: 10))
+                            Text(mode == .list ? "List" : "Time")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundColor(viewModel.viewMode == mode ? .white : .pink)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(viewModel.viewMode == mode ? Color.pink : Color.clear)
+                        )
+                    }
+                }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 6)
                     .fill(Color.pink.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1)
+                    )
             )
             
             Spacer()
             
+            // Organization status - CHANGE: Made more compact
+            HStack(spacing: 4) {
+                Image(systemName: viewModel.organization.icon)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                
+                Text(viewModel.organizationStatusText)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.1))
+            )
+            
             // Sync status indicator
             if cloudKitService.isCloudKitEnabled {
-                HStack(spacing: 4) {
+                HStack(spacing: 2) {
                     if cloudKitService.isSyncing {
                         ProgressView()
-                            .scaleEffect(0.6)
+                            .scaleEffect(0.5)
                     } else {
                         Image(systemName: syncStatusIcon)
-                            .font(.system(size: 12))
+                            .font(.system(size: 10))
                             .foregroundColor(syncStatusColor)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(syncStatusColor.opacity(0.1))
                 )
             }
             
-            // Filter button
+            // Organization button
             Button(action: {
                 viewModel.showingFilterSheet = true
             }) {
                 Image(systemName: "line.3.horizontal.decrease.circle")
-                    .font(.system(size: 20))
+                    .font(.system(size: 18))
                     .foregroundColor(.pink)
             }
             
-            // Clear filters button (if filters are active)
-            if viewModel.activeFilter != .all {
+            // Reset view button (if organization is active)
+            if viewModel.organization != .none {
                 Button(action: {
-                    viewModel.clearFilters()
+                    viewModel.resetView()
                 }) {
-                    Image(systemName: "xmark.circle")
-                        .font(.system(size: 18))
+                    Image(systemName: "arrow.clockwise.circle")
+                        .font(.system(size: 16))
                         .foregroundColor(.secondary)
                 }
             }
@@ -153,22 +186,69 @@ struct FilterBarView: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
     }
+}
+
+struct TimelineContentView: View {
+    @ObservedObject var viewModel: TimelineViewModel
+    @State private var scrollProxy: ScrollViewProxy?
     
-    private var filterIcon: String {
-        switch viewModel.activeFilter {
-        case .all:
-            return "list.bullet"
-        case .time:
-            return "clock"
-        case .category:
-            return "folder"
-        case .priority:
-            return "exclamationmark.triangle"
+    private let hourHeight: CGFloat = 80
+    
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(viewModel.effectiveStartHour...viewModel.effectiveEndHour, id: \.self) { hour in
+                        TimelineHourRow(
+                            hour: hour,
+                            tasks: tasksForHour(hour),
+                            viewModel: viewModel
+                        )
+                        .id(hour)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 100)
+            }
+            .onAppear {
+                scrollProxy = proxy
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    scrollToRelevantTime()
+                }
+            }
+        }
+    }
+    
+    private func tasksForHour(_ hour: Int) -> [TodoTask] {
+        let calendar = Calendar.current
+        return viewModel.tasksForSelectedDate().filter { task in
+            let taskHour = calendar.component(.hour, from: task.startTime)
+            return taskHour == hour
+        }
+    }
+    
+    private func scrollToRelevantTime() {
+        guard let proxy = scrollProxy else { return }
+        
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: Date())
+        
+        if viewModel.isToday {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                proxy.scrollTo(currentHour, anchor: .top)
+            }
+        } else {
+            let tasks = viewModel.tasksForSelectedDate()
+            if let firstTask = tasks.first {
+                let firstTaskHour = calendar.component(.hour, from: firstTask.startTime)
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    proxy.scrollTo(firstTaskHour, anchor: .top)
+                }
+            }
         }
     }
 }
 
-// MARK: - Header View
 struct TimelineHeaderView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var selectedDayOffset: Int
@@ -177,7 +257,6 @@ struct TimelineHeaderView: View {
     
     var body: some View {
         VStack(spacing: 4) {
-            // Titolo mese e anno
             HStack {
                 Text(viewModel.monthYearString)
                     .font(.title2.bold())
@@ -190,7 +269,6 @@ struct TimelineHeaderView: View {
             .padding(.horizontal)
             .padding(.top, 8)
             
-            // Selettore date orizzontale
             DateSelectorView(
                 viewModel: viewModel,
                 selectedDayOffset: $selectedDayOffset,
@@ -200,7 +278,6 @@ struct TimelineHeaderView: View {
     }
 }
 
-// MARK: - Date Selector
 struct DateSelectorView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var selectedDayOffset: Int
@@ -210,8 +287,6 @@ struct DateSelectorView: View {
     
     var body: some View {
         ZStack {
-            // Indicatore centrale fisso (rimosso il rettangolo azzurro)
-            
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
@@ -230,7 +305,6 @@ struct DateSelectorView: View {
                                     viewModel.selectDate(offset)
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     
-                                    // Assicurati che la data selezionata sia centrata
                                     proxy.scrollTo(offset, anchor: .center)
                                 }
                             }
@@ -240,20 +314,17 @@ struct DateSelectorView: View {
                         }
                     }
                     .padding(.horizontal)
-                    .padding(.vertical, 6) // Aggiunto padding verticale per evitare il taglio
+                    .padding(.vertical, 6)
                 }
                 .onAppear {
                     scrollProxy = proxy
-                    // Centra la data selezionata all'avvio
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
                             proxy.scrollTo(selectedDayOffset, anchor: .center)
                         }
                     }
                 }
-                // Aggiornato per iOS 17+
                 .onChange(of: selectedDayOffset) { _, newValue in
-                    // Centra la data selezionata quando cambia
                     withAnimation {
                         proxy.scrollTo(newValue, anchor: .center)
                     }
@@ -279,8 +350,7 @@ struct DateSelectorView: View {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 }
                             } else {
-                                // Calcola l'offset più vicino in base alla posizione di trascinamento
-                                let cellWidth: CGFloat = 62 // 50 (width) + 12 (spacing)
+                                let cellWidth: CGFloat = 62
                                 let estimatedOffset = Int(round(dragOffset / cellWidth))
                                 let newOffset = selectedDayOffset - estimatedOffset
                                 
@@ -292,7 +362,6 @@ struct DateSelectorView: View {
                                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     }
                                 } else {
-                                    // Se non cambia l'offset, assicurati che la vista torni alla posizione centrale
                                     withAnimation {
                                         proxy.scrollTo(selectedDayOffset, anchor: .center)
                                     }
@@ -305,7 +374,6 @@ struct DateSelectorView: View {
     }
 }
 
-// MARK: - Task List View
 struct TaskListView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var showingNewTask: Bool
@@ -315,33 +383,40 @@ struct TaskListView: View {
     var body: some View {
         ZStack {
             ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(viewModel.tasksForSelectedDate().indices, id: \.self) { index in
-                        TimelineTaskCard(
-                            task: viewModel.tasksForSelectedDate()[index],
-                            onToggleComplete: { viewModel.toggleTaskCompletion(viewModel.tasksForSelectedDate()[index].id) },
-                            onToggleSubtask: { subtaskId in
-                                viewModel.toggleSubtask(taskId: viewModel.tasksForSelectedDate()[index].id, subtaskId: subtaskId)
-                            },
-                            viewModel: viewModel
-                        )
-                        .padding(.horizontal, 4)
-                        .padding(.top, index == 0 ? 8 : 0)
-                        .padding(.bottom, 0)
-                        .frame(maxWidth: .infinity)
+                LazyVStack(spacing: 12) {
+                    switch viewModel.organizedTasksForSelectedDate() {
+                    case .single(let tasks):
+                        ForEach(tasks.indices, id: \.self) { index in
+                            TimelineTaskCard(
+                                task: tasks[index],
+                                onToggleComplete: { viewModel.toggleTaskCompletion(tasks[index].id) },
+                                onToggleSubtask: { subtaskId in
+                                    viewModel.toggleSubtask(taskId: tasks[index].id, subtaskId: subtaskId)
+                                },
+                                viewModel: viewModel
+                            )
+                            .padding(.horizontal, 4)
+                            .padding(.top, index == 0 ? 8 : 0)
+                        }
+                    
+                    case .sections(let sections):
+                        ForEach(sections) { section in
+                            OrganizedTaskSection(
+                                section: section,
+                                viewModel: viewModel
+                            )
+                            .padding(.horizontal, 4)
+                        }
                     }
                 }
                 .padding(.horizontal, 4)
                 .padding(.bottom, 100)
             }
             
-            // Centered Add Button and Active Pomodoro Widget
             VStack {
                 Spacer()
                 
-                // Position the floating widget above the add button
                 VStack(spacing: 0) {
-                    // Active Pomodoro Widget (if available)
                     if pomodoroViewModel.hasActiveTask {
                         MiniPomodoroWidget(viewModel: pomodoroViewModel) {
                             showingActivePomodoroSession = true
@@ -350,7 +425,6 @@ struct TaskListView: View {
                         .zIndex(1)
                     }
                     
-                    // Add Button
                     AddTaskButton(isShowingTaskForm: $showingNewTask)
                 }
                 .padding(.bottom, 16)
@@ -366,7 +440,64 @@ struct TaskListView: View {
     }
 }
 
-// MARK: - Calendar Picker View
+struct OrganizedTaskSection: View {
+    let section: TaskSection
+    @ObservedObject var viewModel: TimelineViewModel
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                if let color = section.color {
+                    Circle()
+                        .fill(Color(hex: color))
+                        .frame(width: 12, height: 12)
+                }
+                
+                if let icon = section.icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(section.color.map { Color(hex: $0) } ?? .secondary)
+                }
+                
+                Text(section.title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text("\(section.tasks.count)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(4)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.gray.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(section.color.map { Color(hex: $0).opacity(0.2) } ?? Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+            )
+            
+            ForEach(section.tasks.indices, id: \.self) { index in
+                TimelineTaskCard(
+                    task: section.tasks[index],
+                    onToggleComplete: { viewModel.toggleTaskCompletion(section.tasks[index].id) },
+                    onToggleSubtask: { subtaskId in
+                        viewModel.toggleSubtask(taskId: section.tasks[index].id, subtaskId: subtaskId)
+                    },
+                    viewModel: viewModel
+                )
+            }
+        }
+    }
+}
+
 struct CalendarPickerView: View {
     @Binding var selectedDate: Date
     @Binding var selectedDayOffset: Int
@@ -405,14 +536,12 @@ struct CalendarPickerView: View {
     }
 }
 
-// Day Cell Component
 private struct DayCell: View {
     let date: Date
     let isSelected: Bool
     let offset: Int
     let action: (Int) -> Void
     
-    // Explicit initializer to handle closure parameter
     init(date: Date, isSelected: Bool, offset: Int, action: @escaping (Int) -> Void) {
         self.date = date
         self.isSelected = isSelected
@@ -440,7 +569,7 @@ private struct DayCell: View {
         .scaleEffect(isSelected ? 1.1 : 1.0)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(isSelected ? 
+                .fill(isSelected ?
                     AnyShapeStyle(
                         LinearGradient(
                             colors: [.pink, .pink.opacity(0.8)],
@@ -448,13 +577,13 @@ private struct DayCell: View {
                             endPoint: .bottom
                         )
                     ) :
-                    (isToday ? 
-                        AnyShapeStyle(Color.pink.opacity(0.1)) : 
+                    (isToday ?
+                        AnyShapeStyle(Color.pink.opacity(0.1)) :
                         AnyShapeStyle(Color.clear)))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(isSelected ? Color.clear : (isToday ? Color.pink.opacity(0.3) : Color.gray.opacity(0.2)), 
+                .strokeBorder(isSelected ? Color.clear : (isToday ? Color.pink.opacity(0.3) : Color.gray.opacity(0.2)),
                             lineWidth: 1)
         )
         .onTapGesture {
@@ -475,7 +604,6 @@ private struct DayCell: View {
     }
 }
 
-// Enhanced Task Card
 private struct TimelineTaskCard: View {
     let task: TodoTask
     let onToggleComplete: () -> Void
@@ -522,38 +650,28 @@ private struct TimelineTaskCard: View {
     private var currentStreak: Int {
         guard let recurrence = task.recurrence else { return 0 }
         
-        // Ottieni la data selezionata
         let selectedDate = viewModel.selectedDate.startOfDay
         
-        // Calcola lo streak fino alla data selezionata
         var streak = 0
         var currentDate = selectedDate
         
-        // Controlla se la task è completata nella data selezionata
         let isCompletedOnSelectedDate = task.completions[selectedDate]?.isCompleted == true
         
-        // Se la task è completata nella data selezionata, inizia il conteggio da 1
         if isCompletedOnSelectedDate {
             streak = 1
-            // Vai indietro di un giorno per continuare il conteggio
             currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
         }
         
-        // Controlla all'indietro per trovare lo streak
         while true {
-            // Verifica se la data corrente è una data in cui la task dovrebbe essere eseguita
             guard recurrence.shouldOccurOn(date: currentDate) else {
-                // Se la task non doveva essere eseguita in questa data, passa alla data precedente
                 currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
                 continue
             }
             
-            // Verifica se la task è stata completata in questa data
             if task.completions[currentDate]?.isCompleted == true {
                 streak += 1
                 currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
             } else {
-                // Lo streak è interrotto
                 break
             }
         }
@@ -563,12 +681,9 @@ private struct TimelineTaskCard: View {
     
     var body: some View {
         ZStack(alignment: .leading) {
-            // Action buttons background
-            // This is the container that will be visible when swiping
             HStack(spacing: 4) {
                 Spacer()
                 
-                // Edit button
                 Button(action: {
                     showingEditSheet = true
                     withAnimation(.spring()) {
@@ -597,7 +712,6 @@ private struct TimelineTaskCard: View {
                     }
                 }
                 
-                // Delete button
                 Button(action: {
                     withAnimation(.spring()) {
                         TaskManager.shared.removeTask(task)
@@ -630,11 +744,8 @@ private struct TimelineTaskCard: View {
             .frame(maxWidth: .infinity, minHeight: 60)
             .opacity(offset < -20 ? 1 : 0)
             
-            // Card principale
             VStack(alignment: .leading, spacing: 2) {
-                // Task header con tutti i contenuti
                 HStack(alignment: .center, spacing: 8) {
-                    // Barra colorata della categoria
                     Rectangle()
                         .fill(
                             LinearGradient(
@@ -656,7 +767,6 @@ private struct TimelineTaskCard: View {
                                 .font(.headline)
                                 .foregroundColor(.primary)
                             
-                            // Streak indicator migliorato
                             if task.recurrence != nil && currentStreak > 0 {
                                 HStack(spacing: 2) {
                                     Image(systemName: "flame.fill")
@@ -676,7 +786,6 @@ private struct TimelineTaskCard: View {
                             
                             Spacer()
                             
-                            // Freccia per espandere se ci sono subtask
                             if !task.subtasks.isEmpty {
                                 Image(systemName: "chevron.down")
                                     .font(.system(size: 12))
@@ -704,7 +813,7 @@ private struct TimelineTaskCard: View {
                     }
                     
                     if task.pomodoroSettings != nil {
-                        Button(action: { 
+                        Button(action: {
                             PomodoroViewModel.shared.setActiveTask(task)
                             showingPomodoro = true
                         }) {
@@ -731,12 +840,10 @@ private struct TimelineTaskCard: View {
                         }
                     }) {
                         ZStack {
-                            // Background circle
                             Circle()
                                 .stroke(Color.gray.opacity(0.3), lineWidth: 2)
                                 .frame(width: 32, height: 32)
                             
-                            // Progress circle
                             if !task.subtasks.isEmpty {
                                 Circle()
                                     .trim(from: 0, to: completionProgress)
@@ -746,7 +853,6 @@ private struct TimelineTaskCard: View {
                                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: completionProgress)
                             }
                             
-                            // Checkmark
                             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                                 .foregroundColor(isCompleted ? .green : .gray)
                                 .font(.title2)
@@ -758,7 +864,6 @@ private struct TimelineTaskCard: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 
-                // Subtasks (mostrati solo se espanso)
                 if isExpanded && !task.subtasks.isEmpty {
                     VStack(spacing: 8) {
                         ForEach(task.subtasks) { subtask in
@@ -784,14 +889,11 @@ private struct TimelineTaskCard: View {
         .gesture(
             DragGesture(minimumDistance: 5)
                 .onChanged { gesture in
-                    // Verifico che lo swipe sia orizzontale (non verticale)
                     if abs(gesture.translation.width) > abs(gesture.translation.height) * 1.5 {
                         withAnimation(.interactiveSpring(response: 0.4, dampingFraction: 0.8)) {
-                            // Limito lo swipe verso sinistra a -140, impedisco lo swipe verso destra
                             if gesture.translation.width <= 0 {
                                 offset = max(-140, gesture.translation.width)
                             } else if offset < 0 {
-                                // Permetto lo swipe verso destra solo per chiudere
                                 offset = min(0, offset + gesture.translation.width)
                             }
                         }
@@ -800,10 +902,8 @@ private struct TimelineTaskCard: View {
                 .onEnded { gesture in
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                         if offset < -40 {
-                            // Se lo swipe è stato significativo, apri completamente
                             offset = -140
                         } else {
-                            // Altrimenti, chiudi
                             offset = 0
                         }
                     }
@@ -842,7 +942,6 @@ private struct TimelineTaskCard: View {
     }
 }
 
-// Add Task Button
 private struct AddTaskButton: View {
     @Binding var isShowingTaskForm: Bool
     @Environment(\.colorScheme) private var colorScheme
@@ -897,7 +996,6 @@ private struct TimelineSubtaskRow: View {
     var body: some View {
         HStack {
             Button(action: {
-                // Disable implicit animations
                 withAnimation(.none) {
                     onToggle()
                 }
@@ -914,6 +1012,157 @@ private struct TimelineSubtaskRow: View {
             
             Spacer()
         }
-        .padding(.leading, 16) // Add more padding to move subtasks to the right
+        .padding(.leading, 16)
+    }
+}
+
+struct TimelineHourRow: View {
+    let hour: Int
+    let tasks: [TodoTask]
+    @ObservedObject var viewModel: TimelineViewModel
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private var isCurrentHour: Bool {
+        viewModel.isToday && Calendar.current.component(.hour, from: Date()) == hour
+    }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(spacing: 4) {
+                Text(hourString)
+                    .font(.system(.caption, design: .monospaced))
+                    .fontWeight(.medium)
+                    .foregroundColor(isCurrentHour ? .pink : .secondary)
+                
+                if isCurrentHour {
+                    Circle()
+                        .fill(Color.pink)
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .frame(width: 50)
+            
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(isCurrentHour ? Color.pink.opacity(0.3) : Color.gray.opacity(0.2))
+                    .frame(width: 2, height: tasks.isEmpty ? 60 : CGFloat(max(60, tasks.count * 80)))
+            }
+            
+            VStack(alignment: .leading, spacing: 8) {
+                if tasks.isEmpty {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.clear)
+                        .frame(height: 60)
+                } else {
+                    ForEach(tasks, id: \.id) { task in
+                        CompactTimelineTaskView(task: task, viewModel: viewModel)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private var hourString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        let date = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
+        return formatter.string(from: date)
+    }
+}
+
+struct CompactTimelineTaskView: View {
+    let task: TodoTask
+    @ObservedObject var viewModel: TimelineViewModel
+    @State private var showingPomodoro = false
+    @State private var showingEditSheet = false
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private var isCompleted: Bool {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
+        if let completion = task.completions[startOfDay] {
+            return completion.isCompleted
+        }
+        return false
+    }
+    
+    private var taskTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: task.startTime)
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    viewModel.toggleTaskCompletion(task.id)
+                }
+            }) {
+                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isCompleted ? .green : .gray)
+                    .font(.system(size: 18))
+            }
+            .buttonStyle(BorderlessButtonStyle())
+            
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    if let category = task.category {
+                        Circle()
+                            .fill(Color(hex: category.color))
+                            .frame(width: 6, height: 6)
+                    }
+                    
+                    Text(task.name)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Text(taskTime)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(3)
+                }
+                
+                if let description = task.description, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            
+            if task.pomodoroSettings != nil {
+                Button(action: {
+                    PomodoroViewModel.shared.setActiveTask(task)
+                    showingPomodoro = true
+                }) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white)
+                        .frame(width: 24, height: 24)
+                        .background(Color.pink)
+                        .clipShape(Circle())
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
+        )
+        .opacity(isCompleted ? 0.6 : 1.0)
+        .sheet(isPresented: $showingPomodoro) {
+            PomodoroView(task: task)
+        }
     }
 }

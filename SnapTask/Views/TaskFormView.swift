@@ -26,6 +26,9 @@ struct TaskFormView: View {
             vm.description = initialTask.description ?? ""
             vm.location = initialTask.location
             vm.startDate = initialTask.startTime
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: initialTask.startTime)
+            vm.hasSpecificTime = !calendar.isDate(initialTask.startTime, equalTo: startOfDay, toGranularity: .minute)
             vm.hasDuration = initialTask.hasDuration
             vm.duration = initialTask.duration
             vm.selectedCategory = initialTask.category
@@ -120,12 +123,22 @@ struct TaskFormView: View {
                     ModernCard(title: "Time", icon: "clock") {
                         VStack(spacing: 16) {
                             HStack {
-                                Text("Start Time")
+                                Text("Specific Time")
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 Spacer()
-                                DatePicker("", selection: $viewModel.startDate)
-                                    .labelsHidden()
+                                ModernToggle(isOn: $viewModel.hasSpecificTime)
+                            }
+                            
+                            if viewModel.hasSpecificTime {
+                                HStack {
+                                    Text("Start Time")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    DatePicker("", selection: $viewModel.startDate)
+                                        .labelsHidden()
+                                }
                             }
                             
                             HStack {

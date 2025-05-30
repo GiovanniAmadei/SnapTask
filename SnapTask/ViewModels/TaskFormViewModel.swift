@@ -14,6 +14,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var description: String = ""
     @Published var location: TaskLocation?
     @Published var startDate: Date = Date()
+    @Published var hasSpecificTime: Bool = true
     @Published var hasDuration: Bool = false
     @Published var duration: TimeInterval = 3600
     @Published var icon: String = "circle.fill"
@@ -106,9 +107,18 @@ class TaskFormViewModel: ObservableObject {
     func createTask() -> TodoTask {
         let id = taskId ?? UUID()
         
+        let taskStartTime: Date
+        if hasSpecificTime {
+            taskStartTime = startDate
+        } else {
+            // For tasks without specific time, use start of day
+            let calendar = Calendar.current
+            taskStartTime = calendar.startOfDay(for: startDate)
+        }
+        
         let recurrence: Recurrence? = isRecurring ? {
             let calendar = Calendar.current
-            let startDate = calendar.startOfDay(for: self.startDate)
+            let startDate = calendar.startOfDay(for: taskStartTime)
             let endDate = hasRecurrenceEndDate ? recurrenceEndDate : nil
             
             switch recurrenceType {
@@ -126,7 +136,7 @@ class TaskFormViewModel: ObservableObject {
             name: name,
             description: description.isEmpty ? nil : description,
             location: location,
-            startTime: startDate,
+            startTime: taskStartTime,
             duration: duration,
             hasDuration: hasDuration,
             category: selectedCategory,
@@ -154,6 +164,7 @@ class TaskFormViewModel: ObservableObject {
         description = ""
         location = nil
         startDate = Date()
+        hasSpecificTime = true
         hasDuration = false
         duration = 3600
         icon = "circle.fill"

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct TimelineFilterView: View {
+struct TimelineOrganizationView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Environment(\.dismiss) private var dismiss
     

@@ -3,18 +3,46 @@ import SwiftUI
 import Combine
 
 // Filter enums
-enum TimelineFilterType: String, CaseIterable {
-    case all = "all"
-    case time = "time"
-    case category = "category"
-    case priority = "priority"
+enum TimelineViewMode: String, CaseIterable {
+    case list = "list"
+    case timeline = "timeline"
     
     var displayName: String {
         switch self {
-        case .all: return "All"
-        case .time: return "Time"
-        case .category: return "Category"
-        case .priority: return "Priority"
+        case .list: return "List View"
+        case .timeline: return "Timeline View"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .list: return "list.bullet"
+        case .timeline: return "clock"
+        }
+    }
+}
+
+enum TimelineOrganization: String, CaseIterable {
+    case time = "time"
+    case category = "category" 
+    case priority = "priority"
+    case none = "none"
+    
+    var displayName: String {
+        switch self {
+        case .time: return "By Time"
+        case .category: return "By Category"
+        case .priority: return "By Priority"
+        case .none: return "Default"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .time: return "clock"
+        case .category: return "folder"
+        case .priority: return "exclamationmark.triangle"
+        case .none: return "list.bullet"
         }
     }
 }
@@ -39,10 +67,9 @@ class TimelineViewModel: ObservableObject {
     @Published var timelineEndHour: Int = 22
     private let taskManager = TaskManager.shared
     
-    // Filter properties
-    @Published var activeFilter: TimelineFilterType = .all
-    @Published var selectedCategory: Category?
-    @Published var selectedPriority: Priority?
+    // New view mode and organization properties
+    @Published var viewMode: TimelineViewMode = .list
+    @Published var organization: TimelineOrganization = .none
     @Published var timeSortOrder: TimeSortOrder = .ascending
     @Published var showingFilterSheet = false
     @Published var showingTimelineView = false
@@ -156,11 +183,11 @@ class TimelineViewModel: ObservableObject {
         ) ?? Date()
     }
     
-    func tasksForSelectedDate() -> [TodoTask] {
+    func organizedTasksForSelectedDate() -> OrganizedTasks {
         let calendar = Calendar.current
         let selectedStartOfDay = calendar.startOfDay(for: selectedDate)
         
-        var filteredTasks = tasks.filter { task in
+        let filteredTasks = tasks.filter { task in
             // For non-recurring tasks
             if task.recurrence == nil {
                 return calendar.isDate(task.startTime, inSameDayAs: selectedDate)
@@ -188,59 +215,94 @@ class TimelineViewModel: ObservableObject {
             }
         }
         
-        // Apply filters
-        switch activeFilter {
-        case .all:
-            break
+        // Organize tasks based on organization mode
+        switch organization {
+        case .none:
+            return OrganizedTasks.single(filteredTasks.sorted { $0.startTime < $1.startTime })
+            
         case .time:
-            filteredTasks = filteredTasks.sorted { task1, task2 in
+            let sortedTasks = filteredTasks.sorted { task1, task2 in
                 let time1 = calendar.component(.hour, from: task1.startTime) * 60 + calendar.component(.minute, from: task1.startTime)
                 let time2 = calendar.component(.hour, from: task2.startTime) * 60 + calendar.component(.minute, from: task2.startTime)
                 return timeSortOrder == .ascending ? time1 < time2 : time1 > time2
             }
+            return OrganizedTasks.single(sortedTasks)
+            
         case .category:
-            if let selectedCategory = selectedCategory {
-                filteredTasks = filteredTasks.filter { $0.category?.id == selectedCategory.id }
-            }
+            return organizeByCategory(filteredTasks)
+            
         case .priority:
-            if let selectedPriority = selectedPriority {
-                filteredTasks = filteredTasks.filter { $0.priority == selectedPriority }
-            }
+            return organizeByPriority(filteredTasks)
         }
-        
-        // Default sort by start time if not filtering by time
-        if activeFilter != .time {
-            filteredTasks = filteredTasks.sorted { $0.startTime < $1.startTime }
-        }
-        
-        return filteredTasks
     }
     
-    // Available categories for filtering
+    private func organizeByCategory(_ tasks: [TodoTask]) -> OrganizedTasks {
+        let grouped = Dictionary(grouping: tasks) { task in
+            task.category?.name ?? "No Category"
+        }
+        
+        let sections = grouped.map { categoryName, tasks in
+            let category = tasks.first?.category
+            return TaskSection(
+                id: category?.id.uuidString ?? "no-category",
+                title: categoryName,
+                color: category?.color,
+                icon: "folder", 
+                tasks: tasks.sorted { $0.startTime < $1.startTime }
+            )
+        }.sorted { $0.title < $1.title }
+        
+        return OrganizedTasks.sections(sections)
+    }
+    
+    private func organizeByPriority(_ tasks: [TodoTask]) -> OrganizedTasks {
+        let priorityOrder: [Priority] = [.high, .medium, .low]
+        let grouped = Dictionary(grouping: tasks) { $0.priority }
+        
+        let sections = priorityOrder.compactMap { priority -> TaskSection? in 
+            guard let tasks = grouped[priority], !tasks.isEmpty else { return nil }
+            return TaskSection(
+                id: priority.rawValue,
+                title: priority.rawValue.capitalized + " Priority",
+                color: priority.color,
+                icon: priority.icon,
+                tasks: tasks.sorted { $0.startTime < $1.startTime }
+            )
+        }
+        
+        return OrganizedTasks.sections(sections)
+    }
+    
+    func tasksForSelectedDate() -> [TodoTask] {
+        switch organizedTasksForSelectedDate() {
+        case .single(let tasks):
+            return tasks
+        case .sections(let sections):
+            return sections.flatMap { $0.tasks }
+        }
+    }
+    
     var availableCategories: [Category] {
         let taskCategories = tasks.compactMap { $0.category }
         return Array(Set(taskCategories)).sorted { $0.name < $1.name }
     }
     
-    // Clear filters
-    func clearFilters() {
-        activeFilter = .all
-        selectedCategory = nil
-        selectedPriority = nil
+    func resetView() {
+        organization = .none
         timeSortOrder = .ascending
+        viewMode = .list
     }
     
-    // Filter status text
-    var filterStatusText: String {
-        switch activeFilter {
-        case .all:
-            return "All Tasks"
+    var organizationStatusText: String {
+        switch organization {
+        case .none:
+            return "Default View"
         case .time:
             return "By Time (\(timeSortOrder.displayName))"
         case .category:
-            return selectedCategory?.name ?? "By Category"
+            return "By Category"
         case .priority:
-            return "Priority: \(selectedPriority?.rawValue.capitalized ?? "All")"
+            return "By Priority"
         }
     }
     
@@ -407,4 +469,17 @@ class TimelineViewModel: ObservableObject {
         formatter.dateFormat = "MMMM yyyy"
         monthYearString = formatter.string(from: selectedDate)
     }
+}
+
+enum OrganizedTasks {
+    case single([TodoTask])
+    case sections([TaskSection])
+}
+
+struct TaskSection: Identifiable {
+    let id: String
+    let title: String
+    let color: String?
+    let icon: String?
+    let tasks: [TodoTask]
 }
