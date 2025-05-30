@@ -2,17 +2,35 @@ import Foundation
 import Combine
 import WatchConnectivity
 
+@MainActor
 class TaskManager: ObservableObject {
     static let shared = TaskManager()
     
     @Published private(set) var tasks: [TodoTask] = []
     private let tasksKey = "savedTasks"
+    private var isUpdatingFromSync = false
+    private var cancellables: Set<AnyCancellable> = []
     
     init() {
         loadTasks()
+        setupCloudKitObservers()
+    }
+    
+    private func setupCloudKitObservers() {
+        // Listen for CloudKit data changes
+        NotificationCenter.default.publisher(for: .cloudKitDataChanged)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                // CloudKit data changed, but we'll let the sync process handle it
+                // to avoid infinite loops
+                print("📥 CloudKit data changed notification received")
+            }
+            .store(in: &cancellables)
     }
     
     func addTask(_ task: TodoTask) {
+        guard !isUpdatingFromSync else { return }
+        
         print("Adding task: \(task.name)")
         print("Has recurrence: \(task.recurrence != nil)")
         
@@ -25,30 +43,48 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // CloudKitService.shared.saveTask(updatedTask)
+        // Sync with CloudKit
+        CloudKitService.shared.saveTask(updatedTask)
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
     }
     
     func updateTask(_ updatedTask: TodoTask) {
+        guard !isUpdatingFromSync else { return }
+        
         if let index = tasks.firstIndex(where: { $0.id == updatedTask.id }) {
+            let oldTask = tasks[index]
+            
             // Preserva i dati di completamento esistenti
             let existingCompletions = tasks[index].completions
             var task = updatedTask
             task.completions = existingCompletions
             
-            // Aggiorna la data di modifica
-            task.lastModifiedDate = Date()
+            // Aggiorna la data di modifica solo se non stiamo sincronizzando
+            if !isUpdatingFromSync {
+                task.lastModifiedDate = Date()
+            }
+            
+            if task.hasRewardPoints && oldTask.rewardPoints != task.rewardPoints {
+                // Per ogni data di completamento, aggiorna i punti
+                for completionDate in task.completionDates {
+                    // Rimuovi i vecchi punti
+                    if oldTask.hasRewardPoints {
+                        RewardManager.shared.addPoints(-oldTask.rewardPoints, on: completionDate)
+                    }
+                    // Aggiungi i nuovi punti
+                    RewardManager.shared.addPoints(task.rewardPoints, on: completionDate)
+                }
+            }
             
             tasks[index] = task
             
             saveTasks()
             notifyTasksUpdated()
             
-            Task { @MainActor in
-                CloudKitService.shared.saveTask(task)
-            }
+            // Sync with CloudKit
+            CloudKitService.shared.saveTask(task)
             
             // Sincronizza con Apple Watch
             synchronizeWithWatch()
@@ -56,17 +92,75 @@ class TaskManager: ObservableObject {
     }
     
     func updateAllTasks(_ newTasks: [TodoTask]) {
-        tasks = newTasks
+        isUpdatingFromSync = true
+        
+        // Merge tasks more intelligently
+        var mergedTasks: [TodoTask] = []
+        let existingTasksMap = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        
+        for newTask in newTasks {
+            if let existingTask = existingTasksMap[newTask.id] {
+                // Merge completion data from both tasks
+                var mergedTask = newTask
+                
+                // Preserve local completions if they're more recent
+                for (date, existingCompletion) in existingTask.completions {
+                    if mergedTask.completions[date] == nil {
+                        mergedTask.completions[date] = existingCompletion
+                    }
+                }
+                
+                // Merge completion dates
+                let allCompletionDates = Set(mergedTask.completionDates + existingTask.completionDates)
+                mergedTask.completionDates = Array(allCompletionDates).sorted()
+                
+                // Sync subtask completion states
+                syncSubtaskStates(&mergedTask)
+                
+                mergedTasks.append(mergedTask)
+            } else {
+                var newTaskCopy = newTask
+                syncSubtaskStates(&newTaskCopy)
+                mergedTasks.append(newTaskCopy)
+            }
+        }
+        
+        tasks = mergedTasks
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
+        isUpdatingFromSync = false
         
-        // Sincronizza con Apple Watch
+        // Sync with Apple Watch
         synchronizeWithWatch()
     }
     
+    private func syncSubtaskStates(_ task: inout TodoTask) {
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        if let todayCompletion = task.completions[today] {
+            // Update subtask completion states based on today's completion data
+            for i in 0..<task.subtasks.count {
+                let subtaskId = task.subtasks[i].id
+                task.subtasks[i].isCompleted = todayCompletion.completedSubtasks.contains(subtaskId)
+            }
+        } else {
+            // No completion data for today, mark all subtasks as incomplete
+            for i in 0..<task.subtasks.count {
+                task.subtasks[i].isCompleted = false
+            }
+        }
+    }
+    
     func removeTask(_ task: TodoTask) {
+        guard !isUpdatingFromSync else { return }
+        
         print("TaskManager iOS: Removing task with ID: \(task.id.uuidString)")
+        
+        // Rimuovi i punti reward associati alla task se presente
+        if task.hasRewardPoints {
+            RewardManager.shared.removePointsFromTask(task)
+        }
         
         // Rimuovi la task dall'array locale
         tasks.removeAll { $0.id == task.id }
@@ -76,41 +170,49 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        Task { @MainActor in
-            CloudKitService.shared.deleteTask(task)
-            
-            // Use syncInBackground after deletion
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-            CloudKitService.shared.syncInBackground()
-        }
+        // Delete from CloudKit
+        CloudKitService.shared.deleteTask(task)
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
     }
     
     func toggleTaskCompletion(_ taskId: UUID, on date: Date = Date()) {
+        guard !isUpdatingFromSync else { return }
+        
         if let index = tasks.firstIndex(where: { $0.id == taskId }) {
             var task = tasks[index]
             let startOfDay = Calendar.current.startOfDay(for: date)
             
-            // Get current completion status to determine if we're completing or uncompleting
-            let isCompleting: Bool
-            if let completion = task.completions[startOfDay] {
-                isCompleting = !completion.isCompleted
-                task.completions[startOfDay] = TaskCompletion(
-                    isCompleted: isCompleting,
-                    completedSubtasks: completion.completedSubtasks
-                )
-            } else {
-                isCompleting = true
-                task.completions[startOfDay] = TaskCompletion(
-                    isCompleted: true,
-                    completedSubtasks: []
-                )
+            // Get current completion status
+            let currentCompletion = task.completions[startOfDay]
+            let wasCompleted = currentCompletion?.isCompleted ?? false
+            let isCompleting = !wasCompleted
+            
+            // Update completion
+            var completion = currentCompletion ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
+            completion.isCompleted = isCompleting
+            
+            // If completing the main task, mark all subtasks as completed
+            if isCompleting && !task.subtasks.isEmpty {
+                completion.completedSubtasks = Set(task.subtasks.map { $0.id })
+                // Update subtask models
+                for i in 0..<task.subtasks.count {
+                    task.subtasks[i].isCompleted = true
+                }
+            } else if !isCompleting {
+                // If uncompleting, clear all subtask completions
+                completion.completedSubtasks.removeAll()
+                // Update subtask models
+                for i in 0..<task.subtasks.count {
+                    task.subtasks[i].isCompleted = false
+                }
             }
             
-            // Aggiorna completionDates
-            if task.completions[startOfDay]?.isCompleted == true {
+            task.completions[startOfDay] = completion
+            
+            // Update completionDates
+            if completion.isCompleted {
                 if !task.completionDates.contains(startOfDay) {
                     task.completionDates.append(startOfDay)
                 }
@@ -118,46 +220,36 @@ class TaskManager: ObservableObject {
                 task.completionDates.removeAll { $0 == startOfDay }
             }
             
-            // Handle reward points if applicable
+            // Handle reward points
             if task.hasRewardPoints {
                 if isCompleting {
-                    // Add points when completing task
                     RewardManager.shared.addPoints(task.rewardPoints, on: date)
-                } else {
-                    // Remove points if uncompleting a previously completed task
-                    // Only if it was already completed today
-                    if task.completionDates.contains(startOfDay) {
-                        RewardManager.shared.addPoints(-task.rewardPoints, on: date)
-                    }
+                } else if wasCompleted {
+                    RewardManager.shared.addPoints(-task.rewardPoints, on: date)
                 }
             }
             
-            // Aggiorna la data di modifica
+            // Update modification date
             task.lastModifiedDate = Date()
-            
             tasks[index] = task
             
-            // Forza l'aggiornamento
+            // Save and sync
             DispatchQueue.main.async { [weak self] in
                 self?.saveTasks()
                 self?.notifyTasksUpdated()
                 self?.objectWillChange.send()
                 
-                // Sincronizza con CloudKit
+                // Sync with CloudKit
                 CloudKitService.shared.saveTask(task)
                 
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
-                    CloudKitService.shared.syncInBackground()
-                }
-                
-                // Sincronizza con Apple Watch
+                // Sync with Apple Watch
                 self?.synchronizeWithWatch()
             }
         }
     }
     
     func toggleSubtask(taskId: UUID, subtaskId: UUID, on date: Date = Date()) {
+        guard !isUpdatingFromSync else { return }
         guard let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) else { return }
         
         var task = tasks[taskIndex]
@@ -176,56 +268,50 @@ class TaskManager: ObservableObject {
         
         task.completions[startOfDay] = completion
         
-        // Handle reward points for subtasks, but only if all subtasks are completed/uncompleted
-        // and the task has reward points enabled
+        // Update subtask completion state in the task model
+        if let subtaskIndex = task.subtasks.firstIndex(where: { $0.id == subtaskId }) {
+            task.subtasks[subtaskIndex].isCompleted = !wasCompleted
+        }
+        
+        // Handle reward points for subtasks
         if task.hasRewardPoints && !task.subtasks.isEmpty {
-            // Check if all subtasks are now completed
             let allSubtasksCompleted = task.subtasks.allSatisfy { subtask in
                 completion.completedSubtasks.contains(subtask.id)
             }
             
-            // Check previous completion state
             let wasAllCompleted = task.subtasks.allSatisfy { subtask in
-                wasCompleted || completion.completedSubtasks.contains(subtask.id)
+                subtask.id == subtaskId ? wasCompleted : completion.completedSubtasks.contains(subtask.id)
             }
             
-            // Only award points if this is the transition from incomplete to complete
+            // Award/remove points only on transition
             if allSubtasksCompleted && !wasAllCompleted {
                 RewardManager.shared.addPoints(task.rewardPoints, on: date)
-            }
-            // Only remove points if this is the transition from complete to incomplete
-            else if !allSubtasksCompleted && wasAllCompleted {
+            } else if !allSubtasksCompleted && wasAllCompleted {
                 RewardManager.shared.addPoints(-task.rewardPoints, on: date)
             }
         }
         
-        // Aggiorna la data di modifica
+        // Update modification date
         task.lastModifiedDate = Date()
-        
         tasks[taskIndex] = task
         
-        // Ensure UI updates happen on the main thread
+        // Save and sync
         DispatchQueue.main.async { [weak self] in
             self?.saveTasks()
             self?.notifyTasksUpdated()
             self?.objectWillChange.send()
             
-            // Sincronizza con CloudKit
+            // Sync with CloudKit
             CloudKitService.shared.saveTask(task)
             
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
-                CloudKitService.shared.syncInBackground()
-            }
-            
-            // Sincronizza con Apple Watch
+            // Sync with Apple Watch
             self?.synchronizeWithWatch()
         }
     }
     
     func syncWithCloudKit() {
-        // Sincronizza in modo sicuro tramite proxy
-        // CloudKitSyncProxy.shared.syncTasks()
+        // Trigger CloudKit sync
+        CloudKitService.shared.syncNow()
     }
     
     private func saveTasks() {
@@ -266,22 +352,23 @@ class TaskManager: ObservableObject {
         objectWillChange.send()
         
         // Sincronizza con CloudKit in modo sicuro
-        // CloudKitSyncProxy.shared.syncTasks()
+        CloudKitService.shared.syncNow()
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
     }
     
-    // Update method to use syncInBackground
+    // Start regular sync if CloudKit is enabled
     func startRegularSync() {
-        Task { @MainActor in
-            CloudKitService.shared.syncInBackground()
-        }
+        guard CloudKitService.shared.isCloudKitEnabled else { return }
         
-        // Configura un timer per sincronizzare ogni 30 secondi
-        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
-            Task { @MainActor in
-                CloudKitService.shared.syncInBackground()
+        // Initial sync
+        CloudKitService.shared.syncNow()
+        
+        // Setup periodic sync every 60 seconds
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            if CloudKitService.shared.isCloudKitEnabled {
+                CloudKitService.shared.syncNow()
             }
         }
     }

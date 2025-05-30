@@ -1,6 +1,7 @@
 import Foundation
 import WatchConnectivity
 
+@MainActor
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
     

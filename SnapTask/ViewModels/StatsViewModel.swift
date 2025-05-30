@@ -4,6 +4,7 @@ import OSLog
 import Foundation
 import CoreGraphics
 
+@MainActor
 class StatsViewModel: ObservableObject {
     struct ConsistencyPoint {
         let date: Date

@@ -44,7 +44,8 @@ struct TaskListView: View {
         .navigationTitle("Tasks (Simplified)")
         .sheet(isPresented: $isShowingCreateTask) {
             WatchTaskFormView(
-                viewModel: editingTask != nil ? TaskFormViewModel(task: editingTask!, initialDate: date) : TaskFormViewModel(initialDate: date),
+                task: editingTask,
+                initialDate: date,
                 isPresented: $isShowingCreateTask
             )
             .onDisappear {
@@ -52,7 +53,7 @@ struct TaskListView: View {
             }
         }
         .sheet(item: $showTaskDetail) { task in
-            WatchTaskDetailView(task: task, date: date)
+            WatchTaskDetailView(task: task, selectedDate: date)
         }
         .sheet(isPresented: $showingActionSheet) {
             if let task = selectedTask {
@@ -197,7 +198,7 @@ struct WatchTaskRow: View {
             }
             .padding(.vertical, 2)
             .sheet(isPresented: $showTaskDetail) {
-                WatchTaskDetailView(task: currentTask, date: Date())
+                WatchTaskDetailView(task: currentTask, selectedDate: Date())
             }
         } else {
             Text("Task not found")
@@ -236,5 +237,4 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
-} 
-
+}

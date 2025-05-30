@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class RewardViewModel: ObservableObject {
     @Published var dailyRewards: [Reward] = []
     @Published var weeklyRewards: [Reward] = []
@@ -19,15 +20,21 @@ class RewardViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
+        RewardManager.shared.$dailyPointsHistory
+            .sink { [weak self] _ in
+                self?.updatePoints()
+            }
+            .store(in: &cancellables)
+        
         // Initial load
         updateRewards(RewardManager.shared.rewards)
         updatePoints()
     }
     
     func updatePoints() {
-        dailyPoints = RewardManager.shared.availablePoints(for: .daily)
-        weeklyPoints = RewardManager.shared.availablePoints(for: .weekly)
-        monthlyPoints = RewardManager.shared.availablePoints(for: .monthly)
+        dailyPoints = RewardManager.shared.availablePoints(for: .daily, on: Date())
+        weeklyPoints = RewardManager.shared.availablePoints(for: .weekly, on: Date())
+        monthlyPoints = RewardManager.shared.availablePoints(for: .monthly, on: Date())
     }
     
     private func updateRewards(_ rewards: [Reward]) {
@@ -52,37 +59,15 @@ class RewardViewModel: ObservableObject {
     }
     
     func redeemReward(_ reward: Reward) {
-        RewardManager.shared.redeemReward(reward)
+        RewardManager.shared.redeemReward(reward, on: Date())
         updatePoints()
     }
     
     func canRedeemReward(_ reward: Reward) -> Bool {
-        switch reward.frequency {
-        case .daily:
-            return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: dailyPoints)
-        case .weekly:
-            return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: weeklyPoints)
-        case .monthly:
-            return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: monthlyPoints)
-        case .yearly:
-            return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: RewardManager.shared.availablePoints(for: .yearly))
-        case .oneTime:
-            return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: dailyPoints + weeklyPoints + monthlyPoints)
-        }
+        return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: currentPoints(for: reward.frequency))
     }
     
     func currentPoints(for frequency: RewardFrequency) -> Int {
-        switch frequency {
-        case .daily:
-            return dailyPoints
-        case .weekly:
-            return weeklyPoints
-        case .monthly:
-            return monthlyPoints
-        case .yearly:
-            return RewardManager.shared.availablePoints(for: .yearly)
-        case .oneTime:
-            return dailyPoints + weeklyPoints + monthlyPoints
-        }
+        return RewardManager.shared.availablePoints(for: frequency, on: Date())
     }
 }

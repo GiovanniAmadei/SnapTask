@@ -10,26 +10,39 @@ class CloudKitService: ObservableObject {
     // MARK: - Configuration
     private let container: CKContainer
     internal let privateDatabase: CKDatabase
-    internal let publicDatabase: CKDatabase
     internal let zoneID: CKRecordZone.ID
     private let recordZone: CKRecordZone
     
-    internal let taskRecordType = "TodoTask"
+    // Record Types
+    private let taskRecordType = "TodoTask"
     internal let categoryRecordType = "Category"
-    internal let feedbackRecordType = "FeedbackItem"
-    internal let voteRecordType = "FeedbackVote"
+    private let rewardRecordType = "Reward"
+    private let pointsHistoryRecordType = "PointsHistory"
+    private let settingsRecordType = "AppSettings"
+    private let deletionMarkerRecordType = "DeletionMarker"
+    
+    // Subscription IDs
     private let subscriptionID = "SnapTaskZone-changes"
     
     // MARK: - State Management
     @Published var syncStatus: SyncStatus = .idle
     @Published var lastSyncDate: Date?
     @Published var isSyncing = false
+    @Published var isCloudKitEnabled: Bool = true {
+        didSet {
+            UserDefaults.standard.set(isCloudKitEnabled, forKey: "cloudkit_sync_enabled")
+            if isCloudKitEnabled {
+                Task { await initializeCloudKit() }
+            }
+        }
+    }
     
     enum SyncStatus: Equatable {
         case idle
         case syncing
         case success
         case error(String)
+        case disabled
         
         var description: String {
             switch self {
@@ -37,197 +50,136 @@ class CloudKitService: ObservableObject {
             case .syncing: return "Syncing..."
             case .success: return "Up to date"
             case .error(let message): return message
+            case .disabled: return "Sync disabled"
+            }
+        }
+    }
+    
+    // MARK: - Change Tokens
+    private let changeTokenKey = "cloudkit_change_token"
+    private var serverChangeToken: CKServerChangeToken? {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: changeTokenKey) else { return nil }
+            return try? NSKeyedUnarchiver.unarchivedObject(ofClass: CKServerChangeToken.self, from: data)
+        }
+        set {
+            if let token = newValue {
+                let data = try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
+                UserDefaults.standard.set(data, forKey: changeTokenKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: changeTokenKey)
             }
         }
     }
     
     // MARK: - Sync Control
     private var lastSyncTime: Date = .distantPast
-    private let minSyncInterval: TimeInterval = 3.0
+    private let minSyncInterval: TimeInterval = 5.0
     private var activeSyncTask: Task<Void, Never>?
+    private var syncRetryCount: Int = 0
+    private let maxSyncRetries: Int = 3
+    private var lastErrorTime: Date = .distantPast
     
     // MARK: - Deletion Tracking
-    private let deletedTasksKey = "cloudkit_deleted_tasks"
-    private let deletedCategoriesKey = "cloudkit_deleted_categories"
-    
-    private var deletedTaskIDs: Set<String> {
-        get { loadDeletedIDs(key: deletedTasksKey) }
-        set { saveDeletedIDs(newValue, key: deletedTasksKey) }
+    struct DeletionTracker: Codable {
+        var tasks: Set<String> = []
+        var categories: Set<String> = []
+        var rewards: Set<String> = []
+        var pointsHistory: Set<String> = []
     }
     
-    private var deletedCategoryIDs: Set<String> {
-        get { loadDeletedIDs(key: deletedCategoriesKey) }
-        set { saveDeletedIDs(newValue, key: deletedCategoriesKey) }
+    private var deletedItems: DeletionTracker {
+        get {
+            let data = UserDefaults.standard.data(forKey: "cloudkit_deleted_items")
+            guard let data = data else { return DeletionTracker() }
+            return (try? JSONDecoder().decode(DeletionTracker.self, from: data)) ?? DeletionTracker()
+        }
+        set {
+            let data = try? JSONEncoder().encode(newValue)
+            UserDefaults.standard.set(data, forKey: "cloudkit_deleted_items")
+        }
     }
     
     // MARK: - Initialization
     private init() {
         container = CKContainer.default()
         privateDatabase = container.privateCloudDatabase
-        publicDatabase = container.publicCloudDatabase
         zoneID = CKRecordZone.ID(zoneName: "SnapTaskZone", ownerName: CKCurrentUserDefaultName)
         recordZone = CKRecordZone(zoneID: zoneID)
         
+        // Load sync preference
+        isCloudKitEnabled = UserDefaults.standard.bool(forKey: "cloudkit_sync_enabled")
+        
         Task {
-            await initializeCloudKit()
+            if isCloudKitEnabled {
+                await initializeCloudKit()
+            } else {
+                syncStatus = .disabled
+            }
         }
     }
     
-    // MARK: - Feedback Operations
-    func saveFeedback(_ feedback: FeedbackItem) async throws {
-        let record = createFeedbackRecord(from: feedback)
-        _ = try await publicDatabase.save(record)
-        print("✅ Feedback saved to CloudKit: \(feedback.title)")
-    }
-    
-    func fetchFeedback() async throws -> [FeedbackItem] {
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = CKQuery(recordType: feedbackRecordType, predicate: NSPredicate(value: true))
-            query.sortDescriptors = [NSSortDescriptor(key: "votes", ascending: false)]
+    // MARK: - CloudKit Setup
+    private func initializeCloudKit() async {
+        guard isCloudKitEnabled else {
+            syncStatus = .disabled
+            return
+        }
+        
+        do {
+            let accountStatus = try await container.accountStatus()
             
-            let operation = CKQueryOperation(query: query)
-            operation.resultsLimit = 100
-            
-            var items: [FeedbackItem] = []
-            
-            operation.recordMatchedBlock = { [weak self] (recordID, recordResult) in
-                switch recordResult {
-                case .success(let record):
-                    if let feedback = self?.createFeedbackItem(from: record) {
-                        items.append(feedback)
-                    }
-                case .failure(let error):
-                    print("⚠️ Failed to process feedback record: \(error)")
-                }
+            guard accountStatus == .available else {
+                await updateSyncStatus(for: accountStatus)
+                return
             }
             
-            operation.queryResultBlock = { operationResult in
-                switch operationResult {
-                case .success(_):
-                    continuation.resume(returning: items)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                }
+            try await ensureZoneExists()
+            await setupSubscription()
+            await performFullSync()
+            
+        } catch {
+            await handleSyncError(error)
+        }
+    }
+    
+    private func ensureZoneExists() async throws {
+        do {
+            _ = try await privateDatabase.recordZone(for: zoneID)
+            print("✅ Zone exists")
+        } catch let error as CKError where error.code == .zoneNotFound {
+            print("📦 Creating zone...")
+            _ = try await privateDatabase.save(recordZone)
+            print("✅ Zone created")
+        }
+    }
+    
+    private func setupSubscription() async {
+        do {
+            // Check if subscription already exists
+            let existingSubscriptions = try await privateDatabase.allSubscriptions()
+            let hasSubscription = existingSubscriptions.contains { $0.subscriptionID == subscriptionID }
+            
+            if !hasSubscription {
+                let subscription = CKRecordZoneSubscription(zoneID: zoneID, subscriptionID: subscriptionID)
+                
+                let notificationInfo = CKSubscription.NotificationInfo()
+                notificationInfo.shouldSendContentAvailable = true
+                subscription.notificationInfo = notificationInfo
+                
+                _ = try await privateDatabase.save(subscription)
+                print("✅ Subscription created")
+            } else {
+                print("✅ Subscription already exists")
             }
-            
-            publicDatabase.add(operation)
+        } catch {
+            print("❌ Failed to setup subscription: \(error)")
         }
     }
     
-    func toggleVote(for feedback: FeedbackItem) async throws -> Bool {
-        let userId = getCurrentUserId()
-        let hasVoted = try await checkIfUserVoted(for: feedback, userId: userId)
-        
-        if hasVoted {
-            try await removeVote(for: feedback, userId: userId)
-            return false
-        } else {
-            try await addVote(for: feedback, userId: userId)
-            return true
-        }
-    }
-    
-    private func addVote(for feedback: FeedbackItem, userId: String) async throws {
-        // Add vote record
-        let voteRecord = CKRecord(recordType: voteRecordType)
-        voteRecord["feedbackId"] = feedback.id.uuidString
-        voteRecord["userId"] = userId
-        _ = try await publicDatabase.save(voteRecord)
-        
-        // Update feedback vote count
-        let feedbackRecordID = CKRecord.ID(recordName: feedback.id.uuidString)
-        let feedbackRecord = try await publicDatabase.record(for: feedbackRecordID)
-        let currentVotes = feedbackRecord["votes"] as? Int ?? 0
-        feedbackRecord["votes"] = currentVotes + 1
-        _ = try await publicDatabase.save(feedbackRecord)
-    }
-    
-    private func removeVote(for feedback: FeedbackItem, userId: String) async throws {
-        // Find and remove vote record
-        let predicate = NSPredicate(format: "feedbackId == %@ AND userId == %@", feedback.id.uuidString, userId)
-        let query = CKQuery(recordType: voteRecordType, predicate: predicate)
-        
-        let results = try await publicDatabase.records(matching: query)
-        let records = results.matchResults.compactMap { try? $0.1.get() }
-        
-        if let voteRecord = records.first {
-            _ = try await publicDatabase.deleteRecord(withID: voteRecord.recordID)
-            
-            // Update feedback vote count
-            let feedbackRecordID = CKRecord.ID(recordName: feedback.id.uuidString)
-            let feedbackRecord = try await publicDatabase.record(for: feedbackRecordID)
-            let currentVotes = feedbackRecord["votes"] as? Int ?? 0
-            feedbackRecord["votes"] = max(0, currentVotes - 1)
-            _ = try await publicDatabase.save(feedbackRecord)
-        }
-    }
-    
-    private func checkIfUserVoted(for feedback: FeedbackItem, userId: String) async throws -> Bool {
-        let predicate = NSPredicate(format: "feedbackId == %@ AND userId == %@", feedback.id.uuidString, userId)
-        let query = CKQuery(recordType: voteRecordType, predicate: predicate)
-        
-        let results = try await publicDatabase.records(matching: query)
-        return !results.matchResults.isEmpty
-    }
-    
-    private func createFeedbackRecord(from feedback: FeedbackItem) -> CKRecord {
-        let record = CKRecord(recordType: feedbackRecordType, recordID: CKRecord.ID(recordName: feedback.id.uuidString))
-        
-        record["title"] = feedback.title
-        record["description"] = feedback.description
-        record["category"] = feedback.category.rawValue
-        record["status"] = feedback.status.rawValue
-        record["submissionDate"] = feedback.creationDate // Changed from creationDate
-        record["authorId"] = feedback.authorId
-        record["authorName"] = feedback.authorName
-        record["votes"] = feedback.votes
-        
-        return record
-    }
-    
-    private func createFeedbackItem(from record: CKRecord) -> FeedbackItem? {
-        guard let title = record["title"] as? String,
-              let description = record["description"] as? String,
-              let categoryRaw = record["category"] as? String,
-              let category = FeedbackCategory(rawValue: categoryRaw),
-              let statusRaw = record["status"] as? String,
-              let status = FeedbackStatus(rawValue: statusRaw),
-              let submissionDate = record["submissionDate"] as? Date,
-              let uuid = UUID(uuidString: record.recordID.recordName) else {
-            return nil
-        }
-        
-        let votes = record["votes"] as? Int ?? 0
-        let authorId = record["authorId"] as? String
-        let authorName = record["authorName"] as? String
-        
-        return FeedbackItem(
-            id: uuid,
-            title: title,
-            description: description,
-            category: category,
-            status: status,
-            creationDate: submissionDate,
-            authorId: authorId,
-            authorName: authorName,
-            votes: votes
-        )
-    }
-    
-    private func getCurrentUserId() -> String {
-        // Use a persistent random ID instead of device ID
-        let userIdKey = "feedback_user_id"
-        if let existingId = UserDefaults.standard.string(forKey: userIdKey) {
-            return existingId
-        } else {
-            let newId = UUID().uuidString
-            UserDefaults.standard.set(newId, forKey: userIdKey)
-            return newId
-        }
-    }
-
     // MARK: - Public API
     func syncNow() {
+        guard isCloudKitEnabled else { return }
         guard canPerformSync() else { return }
         
         activeSyncTask?.cancel()
@@ -236,116 +188,207 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    func enableCloudKitSync() {
+        isCloudKitEnabled = true
+    }
+    
+    func disableCloudKitSync() {
+        isCloudKitEnabled = false
+        syncStatus = .disabled
+        activeSyncTask?.cancel()
+    }
+    
+    // MARK: - Task Operations
     func saveTask(_ task: TodoTask) {
+        guard isCloudKitEnabled else { return }
+        
         Task {
-            await performTaskOperation(.save(task))
+            do {
+                let record = createTaskRecord(from: task)
+                _ = try await privateDatabase.save(record)
+                print("✅ Task saved: \(task.name)")
+            } catch let error as CKError {
+                print("❌ CloudKit error saving task: \(error.localizedDescription)")
+                await handleCloudKitError(error)
+            } catch {
+                print("❌ Failed to save task: \(error)")
+                await handleSyncError(error)
+            }
         }
     }
     
     func deleteTask(_ task: TodoTask) {
-        markAsDeleted(taskID: task.id.uuidString)
+        guard isCloudKitEnabled else { return }
+        
+        markAsDeleted(itemID: task.id.uuidString, type: .task)
+        
         Task {
-            await performTaskOperation(.delete(task.id))
+            do {
+                let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                print("✅ Task deleted: \(task.name)")
+            } catch let error as CKError {
+                if error.code == .unknownItem {
+                    print("ℹ️ Task already deleted from CloudKit: \(task.name)")
+                } else {
+                    print("❌ CloudKit error deleting task: \(error.localizedDescription)")
+                    await handleCloudKitError(error)
+                }
+            } catch {
+                print("❌ Failed to delete task: \(error)")
+                await handleSyncError(error)
+            }
         }
     }
     
+    // MARK: - Category Operations
     func saveCategory(_ category: Category) {
+        guard isCloudKitEnabled else { return }
+        
         Task {
-            await performCategoryOperation(.save(category))
+            do {
+                let record = createCategoryRecord(from: category)
+                _ = try await privateDatabase.save(record)
+                print("✅ Category saved: \(category.name)")
+            } catch let error as CKError {
+                print("❌ CloudKit error saving category: \(error.localizedDescription)")
+                await handleCloudKitError(error)
+            } catch {
+                print("❌ Failed to save category: \(error)")
+                await handleSyncError(error)
+            }
         }
     }
     
     func deleteCategory(_ category: Category) {
-        markAsDeleted(categoryID: category.id.uuidString)
+        guard isCloudKitEnabled else { return }
+        
+        markAsDeleted(itemID: category.id.uuidString, type: .category)
+        
         Task {
-            await performCategoryOperation(.delete(category.id))
+            do {
+                let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                print("✅ Category deleted: \(category.name)")
+            } catch let error as CKError {
+                if error.code == .unknownItem {
+                    print("ℹ️ Category already deleted from CloudKit: \(category.name)")
+                } else {
+                    print("❌ CloudKit error deleting category: \(error.localizedDescription)")
+                    await handleCloudKitError(error)
+                }
+            } catch {
+                print("❌ Failed to delete category: \(error)")
+                await handleSyncError(error)
+            }
         }
     }
     
-    // MARK: - CloudKit Operations
-    private enum TaskOperation {
-        case save(TodoTask)
-        case delete(UUID)
-    }
-    
-    private enum CategoryOperation {
-        case save(Category)
-        case delete(UUID)
-    }
-    
-    private func performTaskOperation(_ operation: TaskOperation) async {
-        do {
-            switch operation {
-            case .save(let task):
-                await withCheckedContinuation { continuation in
-                    let record = createTaskRecord(from: task)
-                    self.privateDatabase.save(record) { savedRecord, error in
-                        if let error = error {
-                            print("❌ Failed to save task: \(error)")
-                        } else {
-                            print("✅ Task saved: \(task.name)")
-                        }
-                        continuation.resume()
-                    }
-                }
-                
-            case .delete(let taskID):
-                await withCheckedContinuation { continuation in
-                    let recordID = CKRecord.ID(recordName: taskID.uuidString, zoneID: self.zoneID)
-                    self.privateDatabase.delete(withRecordID: recordID) { [weak self] deletedRecordID, error in
-                        if let error = error as? CKError, error.code != .unknownItem {
-                            print("❌ Failed to delete task: \(error)")
-                        } else {
-                            print("✅ Task deleted: \(taskID)")
-                            self?.removeFromDeleted(taskID: taskID.uuidString)
-                        }
-                        continuation.resume()
-                    }
-                }
+    // MARK: - Reward Operations
+    func saveReward(_ reward: Reward) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createRewardRecord(from: reward)
+                _ = try await privateDatabase.save(record)
+                print("✅ Reward saved: \(reward.name)")
+            } catch {
+                print("❌ Failed to save reward: \(error)")
             }
-        } catch {
-            await handleOperationError(error, context: "Task operation")
         }
     }
     
-    private func performCategoryOperation(_ operation: CategoryOperation) async {
-        do {
-            switch operation {
-            case .save(let category):
-                await withCheckedContinuation { continuation in
-                    let record = createCategoryRecord(from: category)
-                    self.privateDatabase.save(record) { savedRecord, error in
-                        if let error = error {
-                            print("❌ Failed to save category: \(error)")
-                        } else {
-                            print("✅ Category saved: \(category.name)")
+    func deleteReward(_ reward: Reward) {
+        guard isCloudKitEnabled else { return }
+        
+        markAsDeleted(itemID: reward.id.uuidString, type: .reward)
+        
+        Task {
+            do {
+                let recordID = CKRecord.ID(recordName: reward.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                await saveDeletionMarker(type: "Reward", id: reward.id.uuidString)
+                print("✅ Reward deleted: \(reward.name)")
+            } catch let error as CKError where error.code == .unknownItem {
+                print("ℹ️ Reward already deleted")
+            } catch {
+                print("❌ Failed to delete reward: \(error)")
+            }
+        }
+    }
+    
+    // MARK: - Points History Operations
+    func savePointsEntry(_ entry: PointsHistory) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createPointsHistoryRecord(from: entry)
+                _ = try await privateDatabase.save(record)
+                print("✅ Points entry saved: \(entry.points) points")
+            } catch {
+                print("❌ Failed to save points entry: \(error)")
+            }
+        }
+    }
+    
+    func syncPointsHistory(_ history: [Date: Int]) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                var records: [CKRecord] = []
+                
+                for (date, points) in history {
+                    let entry = PointsHistory(date: date, points: points, frequency: .daily)
+                    let record = createPointsHistoryRecord(from: entry)
+                    records.append(record)
+                }
+                
+                // Batch save for efficiency - reduced size to prevent memory issues
+                let batchSize = 50
+                for i in stride(from: 0, to: records.count, by: batchSize) {
+                    let batch = Array(records[i..<min(i + batchSize, records.count)])
+                    let operation = CKModifyRecordsOperation(recordsToSave: batch)
+                    _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                        operation.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
+                            if let error = error {
+                                continuation.resume(throwing: error)
+                            } else {
+                                continuation.resume(returning: ())
+                            }
                         }
-                        continuation.resume()
+                        privateDatabase.add(operation)
                     }
                 }
                 
-            case .delete(let categoryID):
-                await withCheckedContinuation { continuation in
-                    let recordID = CKRecord.ID(recordName: categoryID.uuidString, zoneID: self.zoneID)
-                    self.privateDatabase.delete(withRecordID: recordID) { [weak self] deletedRecordID, error in
-                        if let error = error as? CKError, error.code != .unknownItem {
-                            print("❌ Failed to delete category: \(error)")
-                        } else {
-                            print("✅ Category deleted: \(categoryID)")
-                            self?.removeFromDeleted(categoryID: categoryID.uuidString)
-                        }
-                        continuation.resume()
-                    }
-                }
+                print("✅ Synced \(records.count) points entries")
+            } catch {
+                print("❌ Failed to sync points history: \(error)")
             }
-        } catch {
-            await handleOperationError(error, context: "Category operation")
+        }
+    }
+    
+    // MARK: - Settings Operations
+    func saveAppSettings(_ settings: [String: Any]) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createSettingsRecord(from: settings)
+                _ = try await privateDatabase.save(record)
+                print("✅ App settings saved")
+            } catch {
+                print("❌ Failed to save app settings: \(error)")
+            }
         }
     }
     
     // MARK: - Sync Implementation
     private func performFullSync() async {
         guard !isSyncing else { return }
+        guard isCloudKitEnabled else { return }
         
         isSyncing = true
         syncStatus = .syncing
@@ -356,410 +399,322 @@ class CloudKitService: ObservableObject {
         }
         
         do {
-            // Parallel sync for better performance
-            async let tasksSync = syncTasks()
-            async let categoriesSync = syncCategories()
+            let changes = try await fetchChanges()
+            await processChanges(changes)
             
-            let (tasksResult, categoriesResult) = await (tasksSync, categoriesSync)
+            syncStatus = .success
+            lastSyncDate = Date()
+            syncRetryCount = 0 // Reset retry count on success
+            print("✅ Full sync completed successfully")
             
-            if tasksResult && categoriesResult {
-                syncStatus = .success
-                lastSyncDate = Date()
-                print("✅ Full sync completed successfully")
+        } catch {
+            await handleSyncError(error)
+        }
+    }
+    
+    private struct SyncChanges {
+        var tasks: [TodoTask] = []
+        var categories: [Category] = []
+        var rewards: [Reward] = []
+        var pointsHistory: [PointsHistory] = []
+        var settings: [String: Any] = [:]
+        var deletedRecordIDs: [CKRecord.ID] = []
+    }
+    
+    private func fetchChanges() async throws -> SyncChanges {
+        let operation = CKFetchRecordZoneChangesOperation(recordZoneIDs: [zoneID])
+        
+        var changes = SyncChanges()
+        
+        if let token = serverChangeToken {
+            operation.configurationsByRecordZoneID = [
+                zoneID: CKFetchRecordZoneChangesOperation.ZoneConfiguration(
+                    previousServerChangeToken: token
+                )
+            ]
+        }
+        
+        operation.recordChangedBlock = { [weak self] record in
+            guard let self = self else { return }
+            
+            switch record.recordType {
+            case self.taskRecordType:
+                if let task = self.createTask(from: record) {
+                    changes.tasks.append(task)
+                }
+            case self.categoryRecordType:
+                if let category = self.createCategory(from: record) {
+                    changes.categories.append(category)
+                }
+            case self.rewardRecordType:
+                if let reward = self.createReward(from: record) {
+                    changes.rewards.append(reward)
+                }
+            case self.pointsHistoryRecordType:
+                if let pointsEntry = self.createPointsHistory(from: record) {
+                    changes.pointsHistory.append(pointsEntry)
+                }
+            case self.settingsRecordType:
+                if let settings = self.createSettings(from: record) {
+                    changes.settings = settings
+                }
+            default:
+                break
+            }
+        }
+        
+        operation.recordWithIDWasDeletedBlock = { recordID, _ in
+            changes.deletedRecordIDs.append(recordID)
+        }
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            operation.recordZoneChangeTokensUpdatedBlock = { [weak self] _, token, _ in
+                self?.serverChangeToken = token
+            }
+            
+            operation.recordZoneFetchCompletionBlock = { [weak self] _, token, _, _, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    self?.serverChangeToken = token
+                    continuation.resume(returning: changes)
+                }
+            }
+            
+            privateDatabase.add(operation)
+        }
+    }
+    
+    private func processChanges(_ changes: SyncChanges) async {
+        // Process deletions first
+        await processDeletions(changes.deletedRecordIDs)
+        
+        // Merge and apply changes
+        await mergeTasks(changes.tasks)
+        await mergeCategories(changes.categories)
+        await mergeRewards(changes.rewards)
+        await mergePointsHistory(changes.pointsHistory)
+        
+        if !changes.settings.isEmpty {
+            await applySettings(changes.settings)
+        }
+        
+        // Notify UI
+        NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
+    }
+    
+    private func processDeletions(_ deletedIDs: [CKRecord.ID]) async {
+        for recordID in deletedIDs {
+            let id = recordID.recordName
+            
+            // Handle task deletions
+            if let uuid = UUID(uuidString: id) {
+                let tasks = TaskManager.shared.tasks
+                if let taskIndex = tasks.firstIndex(where: { $0.id == uuid }) {
+                    let task = tasks[taskIndex]
+                    TaskManager.shared.removeTask(task)
+                    print("🗑️ Deleted task from remote: \(task.name)")
+                }
+                
+                // Handle category deletions
+                let categories = CategoryManager.shared.categories
+                if let categoryIndex = categories.firstIndex(where: { $0.id == uuid }) {
+                    let category = categories[categoryIndex]
+                    CategoryManager.shared.removeCategory(category)
+                    print("🗑️ Deleted category from remote: \(category.name)")
+                }
+                
+                // Handle reward deletions
+                let rewards = RewardManager.shared.rewards
+                if let rewardIndex = rewards.firstIndex(where: { $0.id == uuid }) {
+                    let reward = rewards[rewardIndex]
+                    RewardManager.shared.removeReward(reward)
+                    print("🗑️ Deleted reward from remote: \(reward.name)")
+                }
+            }
+        }
+    }
+    
+    private func mergeTasks(_ remoteTasks: [TodoTask]) async {
+        guard !remoteTasks.isEmpty else { return }
+        
+        let localTasks = TaskManager.shared.tasks
+        let localMap = Dictionary(uniqueKeysWithValues: localTasks.map { ($0.id, $0) })
+        
+        var mergedTasks = localTasks
+        var hasChanges = false
+        
+        for remoteTask in remoteTasks {
+            if deletedItems.tasks.contains(remoteTask.id.uuidString) {
+                continue // Skip deleted items
+            }
+            
+            if let localTask = localMap[remoteTask.id] {
+                // Conflict resolution: prefer most recent modification
+                if remoteTask.lastModifiedDate > localTask.lastModifiedDate {
+                    if let index = mergedTasks.firstIndex(where: { $0.id == remoteTask.id }) {
+                        mergedTasks[index] = remoteTask
+                        hasChanges = true
+                        print("🔄 Updated task from remote: \(remoteTask.name)")
+                    }
+                }
             } else {
-                syncStatus = .error("Partial sync failure")
-                print("⚠️ Sync completed with some errors")
-            }
-            
-        } catch {
-            await handleSyncError(error)
-        }
-    }
-    
-    private func syncTasks() async -> Bool {
-        do {
-            let remoteTasks = try await fetchRemoteTasks()
-            let localTasks = TaskManager.shared.tasks
-            
-            let syncResult = await mergeTasks(local: localTasks, remote: remoteTasks)
-            
-            // Apply changes
-            TaskManager.shared.updateAllTasks(syncResult.mergedTasks)
-            
-            // Upload changes to CloudKit
-            if !syncResult.toSave.isEmpty || !syncResult.toDelete.isEmpty {
-                try await applyTaskChanges(toSave: syncResult.toSave, toDelete: syncResult.toDelete)
-            }
-            
-            return true
-        } catch {
-            print("❌ Task sync failed: \(error)")
-            return false
-        }
-    }
-    
-    private func syncCategories() async -> Bool {
-        do {
-            let remoteCategories = try await fetchRemoteCategories()
-            let localCategories = CategoryManager.shared.categories
-            
-            let syncResult = await mergeCategories(local: localCategories, remote: remoteCategories)
-            
-            // Apply changes
-            CategoryManager.shared.importCategoriesWithCheck(syncResult.mergedCategories)
-            
-            // Upload changes to CloudKit
-            if !syncResult.toSave.isEmpty || !syncResult.toDelete.isEmpty {
-                try await applyCategoryChanges(toSave: syncResult.toSave, toDelete: syncResult.toDelete)
-            }
-            
-            return true
-        } catch {
-            print("❌ Category sync failed: \(error)")
-            return false
-        }
-    }
-    
-    // MARK: - Data Fetching
-    private func fetchRemoteTasks() async throws -> [TodoTask] {
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = CKQuery(recordType: taskRecordType, predicate: NSPredicate(value: true))
-            let operation = CKQueryOperation(query: query)
-            operation.zoneID = zoneID
-            operation.resultsLimit = CKQueryOperation.maximumResults
-            
-            var tasks: [TodoTask] = []
-            
-            operation.recordMatchedBlock = { [weak self] (recordID, recordResult) in
-                switch recordResult {
-                case .success(let record):
-                    if let self = self, !self.deletedTaskIDs.contains(record.recordID.recordName) {
-                        if let task = self.createTask(from: record) {
-                            tasks.append(task)
-                        }
-                    }
-                case .failure(let error):
-                    print("⚠️ Failed to process task record: \(error)")
-                }
-            }
-            
-            operation.queryResultBlock = { operationResult in
-                switch operationResult {
-                case .success(_):
-                    continuation.resume(returning: tasks)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                }
-            }
-            
-            self.privateDatabase.add(operation)
-        }
-    }
-    
-    private func fetchRemoteCategories() async throws -> [Category] {
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = CKQuery(recordType: categoryRecordType, predicate: NSPredicate(value: true))
-            let operation = CKQueryOperation(query: query)
-            operation.zoneID = zoneID
-            operation.resultsLimit = CKQueryOperation.maximumResults
-            
-            var categories: [Category] = []
-            
-            operation.recordMatchedBlock = { [weak self] (recordID, recordResult) in
-                switch recordResult {
-                case .success(let record):
-                    if let self = self, !self.deletedCategoryIDs.contains(record.recordID.recordName) {
-                        if let category = self.createCategory(from: record) {
-                            categories.append(category)
-                        }
-                    }
-                case .failure(let error):
-                    print("⚠️ Failed to process category record: \(error)")
-                }
-            }
-            
-            operation.queryResultBlock = { operationResult in
-                switch operationResult {
-                case .success(_):
-                    continuation.resume(returning: categories)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                }
-            }
-            
-            self.privateDatabase.add(operation)
-        }
-    }
-    
-    // MARK: - Data Merging
-    private struct TaskSyncResult {
-        let mergedTasks: [TodoTask]
-        let toSave: [CKRecord]
-        let toDelete: [CKRecord.ID]
-    }
-    
-    private struct CategorySyncResult {
-        let mergedCategories: [Category]
-        let toSave: [CKRecord]
-        let toDelete: [CKRecord.ID]
-    }
-    
-    private func mergeTasks(local: [TodoTask], remote: [TodoTask]) async -> TaskSyncResult {
-        let localMap = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
-        let remoteMap = Dictionary(uniqueKeysWithValues: remote.map { ($0.id, $0) })
-        let allIDs = Set(localMap.keys).union(Set(remoteMap.keys))
-        
-        var mergedTasks: [TodoTask] = []
-        var toSave: [CKRecord] = []
-        var toDelete: [CKRecord.ID] = []
-        
-        for id in allIDs {
-            let localTask = localMap[id]
-            let remoteTask = remoteMap[id]
-            
-            // Handle deleted tasks
-            if deletedTaskIDs.contains(id.uuidString) {
-                if remoteTask != nil {
-                    toDelete.append(CKRecord.ID(recordName: id.uuidString, zoneID: zoneID))
-                }
-                continue
-            }
-            
-            // Merge logic
-            if let local = localTask, let remote = remoteTask {
-                // Both exist - use most recent
-                if local.lastModifiedDate >= remote.lastModifiedDate {
-                    mergedTasks.append(local)
-                    if local.lastModifiedDate > remote.lastModifiedDate {
-                        toSave.append(createTaskRecord(from: local))
-                    }
-                } else {
-                    mergedTasks.append(remote)
-                }
-            } else if let local = localTask {
-                // Local only
-                mergedTasks.append(local)
-                toSave.append(createTaskRecord(from: local))
-            } else if let remote = remoteTask {
-                // Remote only
-                mergedTasks.append(remote)
+                // New remote task
+                mergedTasks.append(remoteTask)
+                hasChanges = true
+                print("📥 Added task from remote: \(remoteTask.name)")
             }
         }
         
-        return TaskSyncResult(mergedTasks: mergedTasks, toSave: toSave, toDelete: toDelete)
+        if hasChanges {
+            TaskManager.shared.updateAllTasks(mergedTasks)
+        }
     }
     
-    private func mergeCategories(local: [Category], remote: [Category]) async -> CategorySyncResult {
-        let localMap = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
-        let remoteMap = Dictionary(uniqueKeysWithValues: remote.map { ($0.id, $0) })
-        let allIDs = Set(localMap.keys).union(Set(remoteMap.keys))
+    private func mergeCategories(_ remoteCategories: [Category]) async {
+        guard !remoteCategories.isEmpty else { return }
         
+        let localCategories = CategoryManager.shared.categories
+        
+        // Create a comprehensive merge
         var mergedCategories: [Category] = []
-        var toSave: [CKRecord] = []
-        var toDelete: [CKRecord.ID] = []
+        var processedIds = Set<UUID>()
+        var processedNames = Set<String>()
         
-        for id in allIDs {
-            let localCategory = localMap[id]
-            let remoteCategory = remoteMap[id]
-            
-            // Handle deleted categories
-            if deletedCategoryIDs.contains(id.uuidString) {
-                if remoteCategory != nil {
-                    toDelete.append(CKRecord.ID(recordName: id.uuidString, zoneID: zoneID))
-                }
+        // Add existing local categories first
+        for localCategory in localCategories {
+            let normalizedName = localCategory.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            if !processedIds.contains(localCategory.id) && !processedNames.contains(normalizedName) {
+                mergedCategories.append(localCategory)
+                processedIds.insert(localCategory.id)
+                processedNames.insert(normalizedName)
+            }
+        }
+        
+        // Add remote categories that aren't duplicates or deleted
+        var hasChanges = false
+        for remoteCategory in remoteCategories {
+            // Skip deleted categories
+            if deletedItems.categories.contains(remoteCategory.id.uuidString) {
                 continue
             }
             
-            // Merge logic
-            if let local = localCategory, let remote = remoteCategory {
-                // Both exist - local wins, but check for changes
-                mergedCategories.append(local)
-                if local.name != remote.name || local.color != remote.color {
-                    toSave.append(createCategoryRecord(from: local))
-                }
-            } else if let local = localCategory {
-                // Local only
-                mergedCategories.append(local)
-                toSave.append(createCategoryRecord(from: local))
-            } else if let remote = remoteCategory {
-                // Remote only
-                mergedCategories.append(remote)
+            let normalizedName = remoteCategory.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Only add if we haven't seen this ID or name
+            if !processedIds.contains(remoteCategory.id) && !processedNames.contains(normalizedName) {
+                mergedCategories.append(remoteCategory)
+                processedIds.insert(remoteCategory.id)
+                processedNames.insert(normalizedName)
+                hasChanges = true
+                print("📥 Added category from remote: \(remoteCategory.name)")
             }
         }
         
-        return CategorySyncResult(mergedCategories: mergedCategories, toSave: toSave, toDelete: toDelete)
+        if hasChanges {
+            CategoryManager.shared.importCategories(mergedCategories)
+        }
     }
     
-    // MARK: - CloudKit Change Application
-    private func applyTaskChanges(toSave: [CKRecord], toDelete: [CKRecord.ID]) async throws {
-        guard !toSave.isEmpty || !toDelete.isEmpty else { return }
+    private func mergeRewards(_ remoteRewards: [Reward]) async {
+        guard !remoteRewards.isEmpty else { return }
         
-        await withCheckedContinuation { continuation in
-            let operation = CKModifyRecordsOperation(recordsToSave: toSave, recordIDsToDelete: toDelete)
-            operation.savePolicy = .changedKeys
-            
-            operation.modifyRecordsCompletionBlock = { [weak self] savedRecords, deletedRecordIDs, error in
-                if let error = error {
-                    print("❌ Failed to apply task changes: \(error)")
-                } else {
-                    print("✅ Applied task changes: \(savedRecords?.count ?? 0) saved, \(deletedRecordIDs?.count ?? 0) deleted")
-                    
-                    // Clean up successful deletions
-                    deletedRecordIDs?.forEach { recordID in
-                        self?.removeFromDeleted(taskID: recordID.recordName)
-                    }
-                }
-                continuation.resume()
-            }
-            
-            self.privateDatabase.add(operation)
-        }
-    }
-    
-    private func applyCategoryChanges(toSave: [CKRecord], toDelete: [CKRecord.ID]) async throws {
-        guard !toSave.isEmpty || !toDelete.isEmpty else { return }
+        let localRewards = RewardManager.shared.rewards
+        let localMap = Dictionary(uniqueKeysWithValues: localRewards.map { ($0.id, $0) })
         
-        await withCheckedContinuation { continuation in
-            let operation = CKModifyRecordsOperation(recordsToSave: toSave, recordIDsToDelete: toDelete)
-            operation.savePolicy = .changedKeys
-            
-            operation.modifyRecordsCompletionBlock = { [weak self] savedRecords, deletedRecordIDs, error in
-                if let error = error {
-                    print("❌ Failed to apply category changes: \(error)")
-                } else {
-                    print("✅ Applied category changes: \(savedRecords?.count ?? 0) saved, \(deletedRecordIDs?.count ?? 0) deleted")
-                    
-                    // Clean up successful deletions
-                    deletedRecordIDs?.forEach { recordID in
-                        self?.removeFromDeleted(categoryID: recordID.recordName)
-                    }
-                }
-                continuation.resume()
+        var mergedRewards = localRewards
+        var hasChanges = false
+        
+        for remoteReward in remoteRewards {
+            if deletedItems.rewards.contains(remoteReward.id.uuidString) {
+                continue
             }
             
-            self.privateDatabase.add(operation)
+            if let localReward = localMap[remoteReward.id] {
+                // Merge redemptions
+                let allRedemptions = Set(localReward.redemptions + remoteReward.redemptions)
+                var updatedReward = remoteReward
+                updatedReward.redemptions = Array(allRedemptions).sorted()
+                
+                if let index = mergedRewards.firstIndex(where: { $0.id == remoteReward.id }) {
+                    mergedRewards[index] = updatedReward
+                    hasChanges = true
+                }
+            } else {
+                mergedRewards.append(remoteReward)
+                hasChanges = true
+                print("📥 Added reward from remote: \(remoteReward.name)")
+            }
+        }
+        
+        if hasChanges {
+            RewardManager.shared.importRewards(mergedRewards)
         }
     }
     
-    // MARK: - CloudKit Setup
-    private func initializeCloudKit() async {
-        do {
-            let accountStatus = try await container.accountStatus()
-            
-            guard accountStatus == .available else {
-                await updateSyncStatus(for: accountStatus)
-                return
-            }
-            
-            syncStatus = .idle
-            
-            // Setup CloudKit infrastructure
-            try await ensureZoneExists()
-            await setupSubscription()
-            
-            // Perform initial sync
-            await performFullSync()
-            
-        } catch {
-            await handleSyncError(error)
+    private func mergePointsHistory(_ remoteHistory: [PointsHistory]) async {
+        guard !remoteHistory.isEmpty else { return }
+        
+        // Convert to daily points dictionary format
+        var dailyPoints: [Date: Int] = [:]
+        
+        for entry in remoteHistory {
+            let startOfDay = Calendar.current.startOfDay(for: entry.date)
+            dailyPoints[startOfDay] = (dailyPoints[startOfDay] ?? 0) + entry.points
         }
-    }
-    
-    private func ensureZoneExists() async throws {
-        await withCheckedContinuation { continuation in
-            self.privateDatabase.fetch(withRecordZoneID: self.zoneID) { [weak self] fetchedZone, error in
-                guard let self = self else {
-                    continuation.resume()
-                    return
-                }
-                
-                if let error = error as? CKError, error.code == .zoneNotFound {
-                    print("📦 Creating zone...")
-                    self.privateDatabase.save(self.recordZone) { savedZone, saveError in
-                        if let saveError = saveError {
-                            print("❌ Failed to create zone: \(saveError)")
-                        } else {
-                            print("✅ Zone created")
-                        }
-                        continuation.resume()
-                    }
-                } else if let error = error {
-                    print("❌ Zone check error: \(error)")
-                    continuation.resume()
-                } else {
-                    print("✅ Zone exists")
-                    continuation.resume()
-                }
+        
+        // Merge with existing points
+        let existingPoints = RewardManager.shared.dailyPointsHistory
+        for (date, points) in dailyPoints {
+            if existingPoints[date] == nil {
+                RewardManager.shared.addPoints(points, on: date)
             }
         }
+        
+        print("📥 Merged \(remoteHistory.count) points history entries")
     }
     
-    private func setupSubscription() async {
-        await withCheckedContinuation { continuation in
-            self.privateDatabase.fetchAllSubscriptions { [weak self] subscriptions, error in
-                guard let self = self else {
-                    continuation.resume()
-                    return
-                }
-                
-                if let error = error {
-                    print("⚠️ Subscription setup failed: \(error)")
-                    continuation.resume()
-                    return
-                }
-                
-                let exists = subscriptions?.contains {
-                    ($0 as? CKRecordZoneSubscription)?.zoneID == self.zoneID
-                } ?? false
-                
-                if !exists {
-                    let subscription = CKRecordZoneSubscription(zoneID: self.zoneID, subscriptionID: self.subscriptionID)
-                    let notificationInfo = CKSubscription.NotificationInfo()
-                    notificationInfo.shouldSendContentAvailable = true
-                    subscription.notificationInfo = notificationInfo
-                    
-                    self.privateDatabase.save(subscription) { savedSubscription, saveError in
-                        if let saveError = saveError {
-                            print("⚠️ Subscription creation failed: \(saveError)")
-                        } else {
-                            print("✅ Subscription created")
-                        }
-                        continuation.resume()
-                    }
-                } else {
-                    print("ℹ️ Subscription already exists")
-                    continuation.resume()
-                }
-            }
+    private func applySettings(_ settings: [String: Any]) async {
+        // Apply remote settings to UserDefaults
+        for (key, value) in settings {
+            UserDefaults.standard.set(value, forKey: "cloudkit_\(key)")
         }
+        
+        // Notify about settings changes
+        NotificationCenter.default.post(name: .cloudKitSettingsChanged, object: settings)
+        print("📥 Applied remote settings: \(settings.keys)")
     }
     
-    // MARK: - Record Conversion
+    // MARK: - Record Creation
     private func createTaskRecord(from task: TodoTask) -> CKRecord {
         let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
-        var record = CKRecord(recordType: taskRecordType, recordID: recordID)
+        let record = CKRecord(recordType: taskRecordType, recordID: recordID)
         
-        // Basic properties
-        record["name"] = task.name as CKRecordValue
-        record["creationDate"] = task.creationDate as NSDate
-        record["lastModifiedDate"] = task.lastModifiedDate as NSDate
-        record["startTime"] = task.startTime as NSDate
-        record["duration"] = task.duration as CKRecordValue
-        record["hasDuration"] = task.hasDuration as CKRecordValue
-        record["icon"] = task.icon as CKRecordValue
-        record["priority"] = task.priority.rawValue as CKRecordValue
+        // Safely set basic fields
+        record["name"] = task.name.isEmpty ? "Untitled Task" : task.name
+        record["taskDescription"] = task.description
+        record["startTime"] = task.startTime
+        record["duration"] = max(0, task.duration) // Ensure non-negative
+        record["hasDuration"] = task.hasDuration
+        record["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
+        record["priority"] = task.priority.rawValue
+        record["hasRewardPoints"] = task.hasRewardPoints
+        record["rewardPoints"] = max(0, task.rewardPoints) // Ensure non-negative
+        record["taskCreationDate"] = task.creationDate
+        record["taskLastModifiedDate"] = task.lastModifiedDate
         
-        if let description = task.description, !description.isEmpty {
-            record["description"] = description as CKRecordValue
+        // Safely encode complex objects
+        do {
+            encodeToRecord(record, key: "category", value: task.category)
+            encodeToRecord(record, key: "location", value: task.location)
+            encodeToRecord(record, key: "recurrence", value: task.recurrence)
+            encodeToRecord(record, key: "pomodoroSettings", value: task.pomodoroSettings)
+            encodeToRecord(record, key: "subtasks", value: task.subtasks)
+            encodeToRecord(record, key: "completions", value: task.completions)
+            encodeToRecord(record, key: "completionDates", value: task.completionDates)
+        } catch {
+            print("⚠️ Error encoding complex objects for task: \(error)")
         }
-        
-        // Complex properties as encoded data
-        encodeToRecord(&record, key: "category", value: task.category)
-        encodeToRecord(&record, key: "recurrence", value: task.recurrence)
-        encodeToRecord(&record, key: "pomodoroSettings", value: task.pomodoroSettings)
-        encodeToRecord(&record, key: "subtasks", value: task.subtasks.isEmpty ? nil : task.subtasks)
-        encodeToRecord(&record, key: "completions", value: task.completions.isEmpty ? nil : task.completions)
-        encodeToRecord(&record, key: "completionDates", value: task.completionDates.isEmpty ? nil : task.completionDates)
         
         return record
     }
@@ -770,19 +725,21 @@ class CloudKitService: ObservableObject {
             return nil
         }
         
-        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
-        let lastModifiedDate = record["lastModifiedDate"] as? Date ?? record.modificationDate ?? creationDate
-        let startTime = record["startTime"] as? Date ?? creationDate
-        let duration = record["duration"] as? TimeInterval ?? 0.0
+        let description = record["taskDescription"] as? String
+        let startTime = record["startTime"] as? Date ?? Date()
+        let duration = record["duration"] as? TimeInterval ?? 0
         let hasDuration = record["hasDuration"] as? Bool ?? false
-        let icon = record["icon"] as? String ?? "circle.fill"
-        let description = record["description"] as? String
+        let icon = record["icon"] as? String ?? "circle"
         let priority = Priority(rawValue: record["priority"] as? String ?? "") ?? .medium
+        let hasRewardPoints = record["hasRewardPoints"] as? Bool ?? false
+        let rewardPoints = record["rewardPoints"] as? Int ?? 0
+        let creationDate = record["taskCreationDate"] as? Date ?? record.creationDate
+        let lastModifiedDate = record["taskLastModifiedDate"] as? Date ?? record.modificationDate ?? creationDate
         
-        // Decode complex properties
         let category: Category? = decodeFromRecord(record, key: "category")
+        let location: TaskLocation? = decodeFromRecord(record, key: "location")
         let recurrence: Recurrence? = decodeFromRecord(record, key: "recurrence")
-        let pomodoroSettings: PomodoroSettings? = decodeFromRecord(record, key: "pomodoroSettings") ?? .defaultSettings
+        let pomodoroSettings: PomodoroSettings? = decodeFromRecord(record, key: "pomodoroSettings")
         let subtasks: [Subtask] = decodeFromRecord(record, key: "subtasks") ?? []
         let completions: [Date: TaskCompletion] = decodeFromRecord(record, key: "completions") ?? [:]
         let completionDates: [Date] = decodeFromRecord(record, key: "completionDates") ?? []
@@ -791,6 +748,7 @@ class CloudKitService: ObservableObject {
             id: uuid,
             name: name,
             description: description,
+            location: location,
             startTime: startTime,
             duration: duration,
             hasDuration: hasDuration,
@@ -799,23 +757,39 @@ class CloudKitService: ObservableObject {
             icon: icon,
             recurrence: recurrence,
             pomodoroSettings: pomodoroSettings,
-            subtasks: subtasks
+            subtasks: subtasks,
+            hasRewardPoints: hasRewardPoints,
+            rewardPoints: rewardPoints
         )
         
         task.completions = completions
         task.completionDates = completionDates
-        task.creationDate = creationDate
-        task.lastModifiedDate = lastModifiedDate
+        task.creationDate = creationDate ?? Date()
+        task.lastModifiedDate = lastModifiedDate ?? Date()
+        
+        syncSubtaskCompletionStates(&task)
         
         return task
+    }
+    
+    private func syncSubtaskCompletionStates(_ task: inout TodoTask) {
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        if let todayCompletion = task.completions[today] {
+            // Update subtask completion states based on today's completion data
+            for i in 0..<task.subtasks.count {
+                let subtaskId = task.subtasks[i].id
+                task.subtasks[i].isCompleted = todayCompletion.completedSubtasks.contains(subtaskId)
+            }
+        }
     }
     
     private func createCategoryRecord(from category: Category) -> CKRecord {
         let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
         let record = CKRecord(recordType: categoryRecordType, recordID: recordID)
         
-        record["name"] = category.name as CKRecordValue
-        record["color"] = category.color as CKRecordValue
+        record["name"] = category.name
+        record["color"] = category.color
         
         return record
     }
@@ -830,11 +804,162 @@ class CloudKitService: ObservableObject {
         return Category(id: uuid, name: name, color: color)
     }
     
+    private func createRewardRecord(from reward: Reward) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: reward.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: rewardRecordType, recordID: recordID)
+        
+        record["name"] = reward.name
+        record["rewardDescription"] = reward.description
+        record["pointsCost"] = reward.pointsCost
+        record["frequency"] = reward.frequency.rawValue
+        record["icon"] = reward.icon
+        record["rewardCreationDate"] = reward.creationDate
+        record["rewardLastModifiedDate"] = reward.lastModifiedDate
+        
+        encodeToRecord(record, key: "redemptions", value: reward.redemptions)
+        
+        return record
+    }
+    
+    private func createReward(from record: CKRecord) -> Reward? {
+        guard let name = record["name"] as? String,
+              let pointsCost = record["pointsCost"] as? Int,
+              let frequencyRaw = record["frequency"] as? String,
+              let frequency = RewardFrequency(rawValue: frequencyRaw),
+              let icon = record["icon"] as? String,
+              let uuid = UUID(uuidString: record.recordID.recordName) else {
+            return nil
+        }
+        
+        let description = record["rewardDescription"] as? String
+        let creationDate = record["rewardCreationDate"] as? Date ?? record.creationDate
+        let lastModifiedDate = record["rewardLastModifiedDate"] as? Date ?? record.modificationDate ?? creationDate
+        let redemptions: [Date] = decodeFromRecord(record, key: "redemptions") ?? []
+        
+        var reward = Reward(
+            id: uuid,
+            name: name,
+            description: description,
+            pointsCost: pointsCost,
+            frequency: frequency,
+            icon: icon
+        )
+        
+        reward.redemptions = redemptions
+        reward.creationDate = creationDate ?? Date()
+        reward.lastModifiedDate = lastModifiedDate ?? Date()
+        
+        return reward
+    }
+    
+    private func createPointsHistoryRecord(from entry: PointsHistory) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: pointsHistoryRecordType, recordID: recordID)
+        
+        record["date"] = entry.date
+        record["points"] = entry.points
+        record["frequency"] = entry.frequency.rawValue
+        
+        return record
+    }
+    
+    private func createPointsHistory(from record: CKRecord) -> PointsHistory? {
+        guard let date = record["date"] as? Date,
+              let points = record["points"] as? Int,
+              let frequencyRaw = record["frequency"] as? String,
+              let frequency = RewardFrequency(rawValue: frequencyRaw),
+              let uuid = UUID(uuidString: record.recordID.recordName) else {
+            return nil
+        }
+        
+        return PointsHistory(id: uuid, date: date, points: points, frequency: frequency)
+    }
+    
+    private func createSettingsRecord(from settings: [String: Any]) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: "AppSettings", zoneID: zoneID)
+        let record = CKRecord(recordType: settingsRecordType, recordID: recordID)
+        
+        // Ensure settings are JSON-compatible before serialization
+        let jsonCompatibleSettings = makeJSONCompatible(settings)
+        
+        // Convert settings to Data manually since [String: Any] doesn't conform to Codable
+        if let data = try? JSONSerialization.data(withJSONObject: jsonCompatibleSettings) {
+            record["settings"] = data
+        }
+        record["lastUpdated"] = Date()
+        
+        return record
+    }
+    
+    private func makeJSONCompatible(_ dictionary: [String: Any]) -> [String: Any] {
+        var result: [String: Any] = [:]
+        
+        for (key, value) in dictionary {
+            switch value {
+            case let date as Date:
+                result[key] = date.timeIntervalSince1970
+            case let uuid as UUID:
+                result[key] = uuid.uuidString
+            case let data as Data:
+                result[key] = data.base64EncodedString()
+            case let string as String:
+                result[key] = string
+            case let number as NSNumber:
+                result[key] = number
+            case let bool as Bool:
+                result[key] = bool
+            case let int as Int:
+                result[key] = int
+            case let double as Double:
+                result[key] = double
+            case let float as Float:
+                result[key] = Double(float)
+            default:
+                // Skip non-JSON-serializable types
+                print("⚠️ Skipping non-JSON-serializable value for key \(key): \(type(of: value))")
+            }
+        }
+        
+        return result
+    }
+    
+    private func createSettings(from record: CKRecord) -> [String: Any]? {
+        guard let data = record["settings"] as? Data else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+    
+    // MARK: - Deletion Markers
+    private func createDeletionMarker(type: String, id: String) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: "\(type)-\(id)", zoneID: zoneID)
+        let record = CKRecord(recordType: deletionMarkerRecordType, recordID: recordID)
+        
+        record["type"] = type
+        record["itemId"] = id
+        record["deletedAt"] = Date()
+        
+        return record
+    }
+    
+    private func saveDeletionMarker(type: String, id: String) async {
+        let record = createDeletionMarker(type: type, id: id)
+        do {
+            _ = try await privateDatabase.save(record)
+            print("✅ Saved deletion marker for \(type) \(id)")
+        } catch {
+            print("❌ Failed to save deletion marker for \(type) \(id): \(error)")
+        }
+    }
+    
     // MARK: - Helper Methods
-    private func encodeToRecord<T: Codable>(_ record: inout CKRecord, key: String, value: T?) {
-        guard let value = value,
-              let data = try? JSONEncoder().encode(value) else { return }
-        record[key] = data as NSData
+    private func encodeToRecord<T: Codable>(_ record: CKRecord, key: String, value: T?) {
+        guard let value = value else { return }
+        
+        do {
+            let data = try JSONEncoder().encode(value)
+            record[key] = data
+        } catch {
+            print("⚠️ Failed to encode \(key): \(error)")
+        }
     }
     
     private func decodeFromRecord<T: Codable>(_ record: CKRecord, key: String, type: T.Type = T.self) -> T? {
@@ -854,45 +979,64 @@ class CloudKitService: ObservableObject {
             return false
         }
         
+        guard isCloudKitEnabled else {
+            print("🔄 CloudKit sync is disabled")
+            return false
+        }
+        
+        // Check retry limits
+        if syncRetryCount >= maxSyncRetries {
+            let timeSinceLastError = now.timeIntervalSince(lastErrorTime)
+            if timeSinceLastError < 300 { // 5 minutes cooldown
+                print("🔄 Max sync retries reached, cooling down")
+                return false
+            } else {
+                syncRetryCount = 0 // Reset after cooldown
+            }
+        }
+        
         return true
     }
     
-    private func markAsDeleted(taskID: String) {
-        var ids = deletedTaskIDs
-        ids.insert(taskID)
-        deletedTaskIDs = ids
+    // MARK: - Deletion Tracking
+    private enum ItemType {
+        case task, category, reward, pointsHistory
     }
     
-    private func markAsDeleted(categoryID: String) {
-        var ids = deletedCategoryIDs
-        ids.insert(categoryID)
-        deletedCategoryIDs = ids
-    }
-    
-    private func removeFromDeleted(taskID: String) {
-        var ids = deletedTaskIDs
-        ids.remove(taskID)
-        deletedTaskIDs = ids
-    }
-    
-    private func removeFromDeleted(categoryID: String) {
-        var ids = deletedCategoryIDs
-        ids.remove(categoryID)
-        deletedCategoryIDs = ids
-    }
-    
-    private func loadDeletedIDs(key: String) -> Set<String> {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let ids = try? JSONDecoder().decode([String].self, from: data) else {
-            return Set<String>()
+    private func markAsDeleted(itemID: String, type: ItemType) {
+        var tracker = deletedItems
+        
+        switch type {
+        case .task:
+            tracker.tasks.insert(itemID)
+        case .category:
+            tracker.categories.insert(itemID)
+        case .reward:
+            tracker.rewards.insert(itemID)
+        case .pointsHistory:
+            tracker.pointsHistory.insert(itemID)
         }
-        return Set(ids)
+        
+        deletedItems = tracker
+        print("🗑️ Marked \(type) as deleted: \(itemID)")
     }
     
-    private func saveDeletedIDs(_ ids: Set<String>, key: String) {
-        if let data = try? JSONEncoder().encode(Array(ids)) {
-            UserDefaults.standard.set(data, forKey: key)
+    private func removeFromDeleted(itemID: String, type: ItemType) {
+        var tracker = deletedItems
+        
+        switch type {
+        case .task:
+            tracker.tasks.remove(itemID)
+        case .category:
+            tracker.categories.remove(itemID)
+        case .reward:
+            tracker.rewards.remove(itemID)
+        case .pointsHistory:
+            tracker.pointsHistory.remove(itemID)
         }
+        
+        deletedItems = tracker
+        print("✅ Removed from deleted \(type): \(itemID)")
     }
     
     private func updateSyncStatus(for accountStatus: CKAccountStatus) async {
@@ -913,6 +1057,9 @@ class CloudKitService: ObservableObject {
     private func handleSyncError(_ error: Error) async {
         print("❌ Sync error: \(error)")
         
+        syncRetryCount += 1
+        lastErrorTime = Date()
+        
         if let ckError = error as? CKError {
             switch ckError.code {
             case .networkFailure, .networkUnavailable:
@@ -923,32 +1070,97 @@ class CloudKitService: ObservableObject {
                 syncStatus = .error("Authentication failed")
             case .zoneNotFound:
                 syncStatus = .error("Zone missing")
-                // Attempt to recreate zone
                 try? await ensureZoneExists()
+            case .serverRecordChanged:
+                syncStatus = .error("Sync conflict")
+                // Only retry if under limit
+                if syncRetryCount < maxSyncRetries {
+                    Task { 
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                        await performFullSync() 
+                    }
+                }
             default:
-                syncStatus = .error("Sync failed")
+                syncStatus = .error("Sync failed: \(ckError.localizedDescription)")
             }
         } else {
             syncStatus = .error("Sync failed")
         }
     }
     
-    private func handleOperationError(_ error: Error, context: String) async {
-        print("❌ \(context) error: \(error)")
+    private func handleCloudKitError(_ error: CKError) async {
+        print("❌ CloudKit error: \(error.localizedDescription)")
         
-        // Don't update global sync status for individual operations
-        // unless it's a critical error
-        if let ckError = error as? CKError {
-            switch ckError.code {
-            case .unknownItem:
-                print("ℹ️ Item not found - may have been already deleted")
-            case .serverRecordChanged:
-                print("⚠️ Record conflict - triggering sync")
+        switch error.code {
+        case .networkFailure, .networkUnavailable:
+            syncStatus = .error("Network unavailable")
+        case .quotaExceeded:
+            syncStatus = .error("iCloud storage full")
+        case .notAuthenticated:
+            syncStatus = .error("Not signed into iCloud")
+        case .invalidArguments:
+            syncStatus = .error("Invalid data format")
+        case .serverRecordChanged:
+            print("⚠️ Record conflict detected, will retry sync")
+            if syncRetryCount < maxSyncRetries {
+                Task { 
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                    await performFullSync() 
+                }
+            }
+        case .unknownItem:
+            print("ℹ️ Item already deleted")
+        case .constraintViolation:
+            syncStatus = .error("Data constraint violation")
+        case .zoneNotFound:
+            syncStatus = .error("Zone missing, recreating...")
+            try? await ensureZoneExists()
+            if syncRetryCount < maxSyncRetries {
+                Task { 
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+                    await performFullSync() 
+                }
+            }
+        case .limitExceeded:
+            syncStatus = .error("Rate limit exceeded")
+        default:
+            syncStatus = .error("CloudKit error: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Remote Notifications
+    func processRemoteNotification(_ userInfo: [AnyHashable: Any]) {
+        guard isCloudKitEnabled else { return }
+        
+        if let notification = CKNotification(fromRemoteNotificationDictionary: userInfo) {
+            if notification.subscriptionID == subscriptionID {
+                print("📱 Received CloudKit notification")
                 syncNow()
-            default:
-                break
             }
         }
+    }
+    
+    func clearDeletionMarkers() {
+        deletedItems = DeletionTracker()
+        print("🗑️ Cleared all deletion markers")
+    }
+    
+    func resetSyncState() async {
+        print("🔄 Resetting CloudKit sync state")
+        
+        // Clear change token
+        serverChangeToken = nil
+        
+        // Clear deletion markers
+        clearDeletionMarkers()
+        
+        // Reset sync status
+        syncStatus = .idle
+        lastSyncDate = nil
+        syncRetryCount = 0
+        
+        // Perform fresh sync
+        await performFullSync()
     }
 }
 
@@ -957,7 +1169,7 @@ extension CloudKitService {
     func syncTasks() { syncNow() }
     func syncInBackground() { syncNow() }
     func performInitialSync() { syncNow() }
-    func setup() { 
+    func setup() {
         print("ℹ️ Legacy setup() called - handled automatically")
     }
     
@@ -972,19 +1184,5 @@ extension CloudKitService {
 // MARK: - Notifications
 extension Notification.Name {
     static let cloudKitDataChanged = Notification.Name("cloudKitDataChanged")
-}
-
-// MARK: - Task Content Hashing
-extension TodoTask {
-    func contentHash() -> Int {
-        var hasher = Hasher()
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(startTime)
-        hasher.combine(duration)
-        hasher.combine(hasDuration)
-        hasher.combine(priority)
-        hasher.combine(icon)
-        return hasher.finalize()
-    }
+    static let cloudKitSettingsChanged = Notification.Name("cloudKitSettingsChanged")
 }

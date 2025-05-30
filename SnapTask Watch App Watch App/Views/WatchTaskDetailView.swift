@@ -1,237 +1,259 @@
 import SwiftUI
 
-struct DetailRow: View {
-    let icon: String
-    let text: String
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .foregroundColor(.secondary)
-                .frame(width: 16)
-            
-            Text(text)
-                .font(.subheadline)
-        }
-    }
-}
-
 struct WatchTaskDetailView: View {
     let task: TodoTask
-    let date: Date
-    @State private var isShowingEditTask = false
-    @State private var isShowingPomodoro = false
-    @State private var refreshUI = false
+    let selectedDate: Date
     @Environment(\.dismiss) private var dismiss
     @StateObject private var taskManager = TaskManager.shared
-    @State private var hapticEngine = WKHapticType.click
+    @State private var showingEditForm = false
+    @State private var showingPomodoro = false
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                // Header with task name and icon
-                HStack {
-                    ZStack {
-                        Circle()
-                            .fill(task.category != nil ? Color(hex: task.category!.color) : Color.gray)
-                            .frame(width: 30, height: 30)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Task Header
+                    VStack(spacing: 8) {
+                        Text(task.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .multilineTextAlignment(.center)
                         
-                        Image(systemName: task.icon)
-                            .foregroundColor(.white)
-                            .font(.system(size: 14))
-                    }
-                    
-                    Text(task.name)
-                        .font(.headline)
-                        .lineLimit(2)
-                }
-                .padding(.bottom, 4)
-                
-                // Task details
-                if let category = task.category {
-                    DetailRow(icon: "folder", text: category.name)
-                }
-                
-                DetailRow(icon: "calendar", text: formattedDate(task.startTime))
-                
-                if task.hasDuration {
-                    DetailRow(icon: "clock", text: "\(task.duration) min")
-                }
-                
-                DetailRow(icon: "flag", text: task.priority.rawValue.capitalized)
-                
-                if let recurrence = task.recurrence {
-                    DetailRow(icon: "repeat", text: recurrenceText(recurrence))
-                }
-                
-                // Subtasks section with progress
-                if !task.subtasks.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Subtasks")
-                                .font(.headline)
-                            
-                            Spacer()
-                            
-                            // Progress indicator
-                            Text("\(completedSubtasksCount)/\(task.subtasks.count)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.top, 8)
-                        
-                        // Progress bar
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.2))
-                                    .frame(height: 4)
-                                    .cornerRadius(2)
+                        if let category = task.category {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color(hex: category.color))
+                                    .frame(width: 8, height: 8)
                                 
-                                Rectangle()
-                                    .fill(Color.green)
-                                    .frame(width: geometry.size.width * CGFloat(completedSubtasksCount) / CGFloat(task.subtasks.count), height: 4)
-                                    .cornerRadius(2)
+                                Text(category.name)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
                             }
                         }
-                        .frame(height: 4)
-                        .padding(.bottom, 4)
+                    }
+                    
+                    // Task Details
+                    VStack(spacing: 8) {
+                        if task.hasDuration {
+                            DetailRow(
+                                icon: "clock",
+                                label: "Time",
+                                value: formatDateTime(task.startTime, duration: task.duration)
+                            )
+                        }
                         
-                        ForEach(task.subtasks) { subtask in
-                            Button(action: {
-                                taskManager.toggleSubtask(taskId: task.id, subtaskId: subtask.id, on: date)
-                                WKInterfaceDevice.current().play(hapticEngine)
-                                refreshUI.toggle()
-                            }) {
-                                HStack {
-                                    Image(systemName: isSubtaskCompleted(subtask) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(isSubtaskCompleted(subtask) ? .green : .gray)
-                                        .font(.system(size: 18))
+                        DetailRow(
+                            icon: "flag",
+                            label: "Priority",
+                            value: task.priority.rawValue.capitalized,
+                            color: Color(hex: task.priority.color)
+                        )
+                        
+                        if let description = task.description, !description.isEmpty {
+                            DetailRow(
+                                icon: "text.alignleft",
+                                label: "Description",
+                                value: description
+                            )
+                        }
+                        
+                        if task.recurrence != nil {
+                            DetailRow(
+                                icon: "repeat",
+                                label: "Recurrence",
+                                value: recurrenceText
+                            )
+                        }
+                        
+                        if task.pomodoroSettings != nil {
+                            DetailRow(
+                                icon: "timer",
+                                label: "Pomodoro",
+                                value: pomodoroText
+                            )
+                        }
+                    }
+                    
+                    // Subtasks
+                    if !task.subtasks.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Subtasks")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                            
+                            ForEach(task.subtasks) { subtask in
+                                HStack(spacing: 8) {
+                                    Image(systemName: subtask.isCompleted ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(subtask.isCompleted ? .green : .gray)
                                     
                                     Text(subtask.name)
-                                        .font(.subheadline)
-                                        .foregroundColor(.primary)
+                                        .font(.system(size: 12))
+                                        .strikethrough(subtask.isCompleted)
+                                        .foregroundColor(subtask.isCompleted ? .secondary : .primary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
                             }
-                            .buttonStyle(PlainButtonStyle())
-                            .padding(.vertical, 6)
                         }
                     }
-                }
-                
-                // Button actions
-                Button(action: {
-                    taskManager.toggleTaskCompletion(task.id, on: date)
-                    WKInterfaceDevice.current().play(hapticEngine)
-                }) {
-                    Label(
-                        isCompleted ? "Mark Incomplete" : "Mark Complete",
-                        systemImage: isCompleted ? "circle" : "checkmark.circle"
-                    )
-                    .font(.system(size: 14))
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .padding(.top, 8)
-                
-                if task.pomodoroSettings != nil {
-                    Button(action: {
-                        isShowingPomodoro = true
-                    }) {
-                        Label("Start Pomodoro", systemImage: "timer")
-                            .font(.system(size: 14))
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .padding(.top, 4)
-                }
-                
-                HStack {
-                    Button(action: {
-                        isShowingEditTask = true
-                    }) {
-                        Label("Edit", systemImage: "pencil")
-                            .font(.system(size: 14))
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
                     
-                    Button(role: .destructive, action: {
-                        taskManager.removeTask(task)
-                        dismiss()
-                    }) {
-                        Label("Delete", systemImage: "trash")
-                            .font(.system(size: 14))
+                    // Action Buttons
+                    VStack(spacing: 8) {
+                        // Complete/Incomplete Button
+                        Button(action: toggleCompletion) {
+                            HStack {
+                                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 14))
+                                
+                                Text(isCompleted ? "Mark Incomplete" : "Mark Complete")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(isCompleted ? Color.orange : Color.green)
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Pomodoro Button
+                        if task.pomodoroSettings != nil {
+                            Button(action: { showingPomodoro = true }) {
+                                HStack {
+                                    Image(systemName: "timer")
+                                        .font(.system(size: 14))
+                                    
+                                    Text("Start Pomodoro")
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.blue)
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                        
+                        // Edit Button
+                        Button(action: { showingEditForm = true }) {
+                            HStack {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 14))
+                                
+                                Text("Edit Task")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundColor(.blue)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.blue, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(.bordered)
                 }
-                .padding(.top, 4)
+                .padding()
             }
-            .padding()
+            .navigationTitle("Task Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
         }
-        .navigationTitle("Task Details")
-        .sheet(isPresented: $isShowingEditTask) {
-            WatchTaskFormView(
-                viewModel: TaskFormViewModel(task: task),
-                isPresented: $isShowingEditTask
-            )
+        .sheet(isPresented: $showingEditForm) {
+            WatchTaskFormView(task: task, initialDate: selectedDate, isPresented: $showingEditForm)
         }
-        .sheet(isPresented: $isShowingPomodoro) {
-            WatchPomodoroView(task: task)
+        .sheet(isPresented: $showingPomodoro) {
+            WatchTaskPomodoroView(task: task)
         }
     }
     
     private var isCompleted: Bool {
-        if let completion = task.completions[date.startOfDay] {
+        if let completion = task.completions[selectedDate.startOfDay] {
             return completion.isCompleted
         }
         return false
     }
     
-    private func isSubtaskCompleted(_ subtask: Subtask) -> Bool {
-        if let completion = task.completions[date.startOfDay] {
-            return completion.completedSubtasks.contains(subtask.id)
-        }
-        return false
+    private func toggleCompletion() {
+        taskManager.toggleTaskCompletion(task.id, on: selectedDate)
     }
     
-    private var completedSubtasksCount: Int {
-        if let completion = task.completions[date.startOfDay] {
-            return task.subtasks.filter { completion.completedSubtasks.contains($0.id) }.count
-        }
-        return 0
-    }
-    
-    private func formattedDate(_ date: Date) -> String {
+    private func formatDateTime(_ date: Date, duration: TimeInterval) -> String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
         formatter.timeStyle = .short
-        return formatter.string(from: date)
+        let startTime = formatter.string(from: date)
+        
+        if duration > 0 {
+            let endTime = formatter.string(from: date.addingTimeInterval(duration))
+            return "\(startTime) - \(endTime)"
+        }
+        
+        return startTime
     }
     
-    private func recurrenceText(_ recurrence: Recurrence) -> String {
+    private var recurrenceText: String {
+        guard let recurrence = task.recurrence else { return "None" }
+        
         switch recurrence.type {
-        case .daily:
-            return "Daily"
-        case .weekly(let days):
-            if !days.isEmpty {
-                let dayNames = days.sorted().map { dayOfWeekName($0) }.joined(separator: ", ")
-                return "Weekly on \(dayNames)"
-            }
-            return "Weekly"
-        case .monthly(let days):
-            if !days.isEmpty {
-                return "Monthly on day\(days.count > 1 ? "s" : "") \(days.sorted().map { "\($0)" }.joined(separator: ", "))"
-            }
-            return "Monthly"
+        case .daily: return "Daily"
+        case .weekly: return "Weekly"
+        case .monthly: return "Monthly"
         }
     }
     
-    private func dayOfWeekName(_ day: Int) -> String {
-        let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        return days[day - 1]
+    private var pomodoroText: String {
+        guard let settings = task.pomodoroSettings else { return "None" }
+        
+        let workMin = Int(settings.workDuration / 60)
+        let breakMin = Int(settings.breakDuration / 60)
+        return "\(workMin)m work, \(breakMin)m break"
     }
-} 
+}
+
+struct DetailRow: View {
+    let icon: String
+    let label: String
+    let value: String
+    let color: Color?
+    
+    init(icon: String, label: String, value: String, color: Color? = nil) {
+        self.icon = icon
+        self.label = label
+        self.value = value
+        self.color = color
+    }
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(color ?? .secondary)
+                .frame(width: 16)
+            
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 60, alignment: .leading)
+            
+            Text(value)
+                .font(.system(size: 11))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.gray.opacity(0.1))
+        )
+    }
+}

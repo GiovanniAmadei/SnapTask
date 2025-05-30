@@ -8,6 +8,7 @@ enum RecurrenceType: String, CaseIterable {
     case monthly = "Monthly"
 }
 
+@MainActor
 class TaskFormViewModel: ObservableObject {
     @Published var name: String = ""
     @Published var description: String = ""

@@ -1,8 +1,22 @@
 import SwiftUI
 
 struct WatchTaskFormView: View {
-    @ObservedObject var viewModel: TaskFormViewModel
+    let task: TodoTask?
+    let initialDate: Date
     @Binding var isPresented: Bool
+    
+    @State private var name = ""
+    @State private var description = ""
+    @State private var startTime = Date()
+    @State private var duration: TimeInterval = 1800
+    @State private var hasDuration = false
+    @State private var category: Category?
+    @State private var priority = Priority.medium
+    @State private var subtasks: [Subtask] = []
+    @State private var pomodoroSettings: PomodoroSettings?
+    @State private var isRecurring = false
+    @State private var recurrenceType = "daily"
+    
     @State private var showCategoryPicker = false
     @State private var showPriorityPicker = false
     @State private var showRecurrencePicker = false
@@ -10,269 +24,391 @@ struct WatchTaskFormView: View {
     @State private var showDurationPicker = false
     @State private var showPomodoroPicker = false
     @State private var newSubtaskName = ""
-    @State private var editingSubtaskId: UUID?
-    @State private var hapticEngine = WKHapticType.click
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                // Form header
-                Text(viewModel.editingTask == nil ? "New Task" : "Edit Task")
-                    .font(.headline)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, alignment: .center)
-
-                // Task Name
-                TextField("Task Name", text: $viewModel.name)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.gray.opacity(0.15))
-                    .cornerRadius(8)
-                    .padding(.horizontal, -4)  // Compensate for the parent padding
-
-                // Date selection
-                formRowButton(icon: "calendar", label: "Date", value: formattedDate, action: { showDatePicker = true })
-                
-                // Duration
-                formRowButton(icon: "clock", label: "Duration", value: viewModel.hasDuration ? "\(Int(viewModel.duration / 60.0)) min" : "Not set", action: { showDurationPicker = true })
-                
-                // Category
-                formRowButton(icon: "folder", label: "Category", value: viewModel.category?.name ?? "Not set", color: viewModel.category != nil ? Color(hex: viewModel.category!.color) : nil, action: { showCategoryPicker = true })
-                
-                // Priority
-                formRowButton(icon: "flag", label: "Priority", value: viewModel.priority.rawValue.capitalized, action: { showPriorityPicker = true })
-                
-                // Recurrence
-                formRowButton(icon: "repeat", label: "Recurrence", value: viewModel.isRecurring ? recurrenceTypeText : "Not set", action: { showRecurrencePicker = true })
-                
-                // Pomodoro Settings
-                formRowButton(icon: "timer", label: "Pomodoro", value: viewModel.pomodoroSettings != nil ? "\(Int(viewModel.pomodoroSettings!.workDuration / 60.0))m work" : "Not set", action: { showPomodoroPicker = true })
-                
-                // Subtasks section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Subtasks")
-                        .font(.headline)
-                        .padding(.top, 8)
-                    
-                    // Subtask input field
-                    HStack {
-                        TextField("Add subtask", text: $newSubtaskName)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.gray.opacity(0.15))
-                            .cornerRadius(8)
-                            .submitLabel(.done)
-                            .onSubmit {
-                                addSubtask()
-                            }
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    // Task Name
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Task Name")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        TextField("Enter task name", text: $name)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.gray.opacity(0.2))
+                            )
                     }
                     
-                    // Existing subtasks
-                    if !viewModel.subtasks.isEmpty {
-                        ForEach(viewModel.subtasks) { subtask in
-                            HStack {
-                                if editingSubtaskId == subtask.id {
-                                    TextField("Edit subtask", text: Binding(
-                                        get: { subtask.name },
-                                        set: { newName in
-                                            if let index = viewModel.subtasks.firstIndex(where: { $0.id == subtask.id }) {
-                                                viewModel.subtasks[index].name = newName
-                                            }
-                                        }
-                                    ))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.gray.opacity(0.15))
-                                    .cornerRadius(8)
-                                    .submitLabel(.done)
-                                    .onSubmit {
-                                        editingSubtaskId = nil
-                                        WKInterfaceDevice.current().play(hapticEngine)
-                                    }
-                                } else {
+                    // Date & Time
+                    FormRow(
+                        icon: "calendar",
+                        label: "Date & Time",
+                        value: formatDateTime(startTime),
+                        action: { showDatePicker = true }
+                    )
+                    
+                    // Duration
+                    FormRow(
+                        icon: "clock",
+                        label: "Duration",
+                        value: hasDuration ? formatDuration(duration) : "No duration",
+                        action: { showDurationPicker = true }
+                    )
+                    
+                    // Category
+                    FormRow(
+                        icon: "folder",
+                        label: "Category",
+                        value: category?.name ?? "None",
+                        color: category != nil ? Color(hex: category!.color) : nil,
+                        action: { showCategoryPicker = true }
+                    )
+                    
+                    // Priority
+                    FormRow(
+                        icon: "flag",
+                        label: "Priority",
+                        value: priority.rawValue.capitalized,
+                        color: Color(hex: priority.color),
+                        action: { showPriorityPicker = true }
+                    )
+                    
+                    // Recurrence
+                    FormRow(
+                        icon: "repeat",
+                        label: "Recurrence",
+                        value: isRecurring ? recurrenceText : "None",
+                        action: { showRecurrencePicker = true }
+                    )
+                    
+                    // Pomodoro
+                    FormRow(
+                        icon: "timer",
+                        label: "Pomodoro",
+                        value: pomodoroSettings != nil ? pomodoroText : "None",
+                        action: { showPomodoroPicker = true }
+                    )
+                    
+                    // Subtasks
+                    if !subtasks.isEmpty || !newSubtaskName.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Subtasks")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                            
+                            // Add Subtask Field
+                            TextField("Add subtask", text: $newSubtaskName)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.gray.opacity(0.2))
+                                )
+                                .onSubmit { addSubtask() }
+                            
+                            // Existing Subtasks
+                            ForEach(subtasks) { subtask in
+                                HStack {
                                     Text(subtask.name)
-                                        .font(.subheadline)
+                                        .font(.system(size: 12))
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            editingSubtaskId = subtask.id
-                                            WKInterfaceDevice.current().play(hapticEngine)
-                                        }
                                     
-                                    Button(action: {
-                                        deleteSubtask(subtask)
-                                        WKInterfaceDevice.current().play(hapticEngine)
-                                    }) {
+                                    Button(action: { deleteSubtask(subtask) }) {
                                         Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 14))
                                             .foregroundColor(.red)
-                                            .font(.system(size: 16))
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.gray.opacity(0.1))
+                                )
                             }
-                            .padding(.vertical, 4)
                         }
+                    } else {
+                        // Add Subtask Button
+                        Button(action: { newSubtaskName = " " }) {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 14))
+                                Text("Add Subtasks")
+                                    .font(.system(size: 12))
+                            }
+                            .foregroundColor(.blue)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
-                
-                Spacer(minLength: 16)
-
-                // Save button
-                Button(action: {
-                    let _ = viewModel.saveTask()
-                    isPresented = false
-                }) {
-                    Text("Save")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.top, 16)
-                .disabled(viewModel.name.isEmpty)
+                .padding()
             }
-            .padding(.horizontal)
+            .navigationTitle(task == nil ? "New Task" : "Edit Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { isPresented = false }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveTask()
+                        isPresented = false
+                    }
+                    .disabled(name.isEmpty)
+                }
+            }
         }
-        .navigationTitle(viewModel.editingTask == nil ? "New Task" : "Edit Task")
+        .onAppear {
+            setupInitialValues()
+        }
         .sheet(isPresented: $showCategoryPicker) {
-            WatchCategoryPicker(selectedCategory: $viewModel.category)
+            WatchCategoryPickerView(selectedCategory: $category)
         }
         .sheet(isPresented: $showPriorityPicker) {
-            WatchPriorityPicker(selectedPriority: $viewModel.priority)
+            WatchPriorityPickerView(selectedPriority: $priority)
         }
         .sheet(isPresented: $showRecurrencePicker) {
-            WatchRecurrencePicker(
-                isRecurring: $viewModel.isRecurring,
-                recurrenceType: $viewModel.recurrenceType,
-                selectedDaysOfWeek: $viewModel.selectedDaysOfWeek,
-                selectedDaysOfMonth: $viewModel.selectedDaysOfMonth
-            )
+            WatchRecurrencePickerView(isRecurring: $isRecurring, recurrenceType: $recurrenceType)
         }
         .sheet(isPresented: $showDatePicker) {
-            VStack {
-                Text("Select Date & Time")
-                    .font(.headline)
-                    .padding(.top)
-
-                DatePicker("", selection: $viewModel.startTime, displayedComponents: [.date, .hourAndMinute])
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .padding(.horizontal)
-                    .frame(maxHeight: 160)
-
-                Button("Done") {
-                    showDatePicker = false
-                }
-                .padding(.top)
-                .padding(.bottom)
-            }
-            .padding()
-            .presentationDetents([.height(230), .medium])
+            WatchDateTimePickerView(selectedDate: $startTime)
         }
         .sheet(isPresented: $showDurationPicker) {
-            WatchDurationPicker(
-                hasDuration: $viewModel.hasDuration,
-                duration: $viewModel.duration
-            )
+            WatchDurationPickerView(hasDuration: $hasDuration, duration: $duration)
         }
         .sheet(isPresented: $showPomodoroPicker) {
-            WatchPomodoroSettingsPicker(viewModel: viewModel)
+            WatchPomodoroPickerView(pomodoroSettings: $pomodoroSettings)
+        }
+    }
+    
+    private func setupInitialValues() {
+        if let task = task {
+            name = task.name
+            description = task.description ?? ""
+            startTime = task.startTime
+            duration = task.duration
+            hasDuration = task.hasDuration
+            category = task.category
+            priority = task.priority
+            subtasks = task.subtasks
+            pomodoroSettings = task.pomodoroSettings
+            
+            if let recurrence = task.recurrence {
+                isRecurring = true
+                switch recurrence.type {
+                case .daily:
+                    recurrenceType = "daily"
+                case .weekly:
+                    recurrenceType = "weekly"
+                case .monthly:
+                    recurrenceType = "monthly"
+                }
+            }
+        } else {
+            startTime = initialDate
+        }
+    }
+    
+    private func saveTask() {
+        let taskManager = TaskManager.shared
+        
+        if let existingTask = task {
+            // Update existing task
+            var updatedTask = existingTask
+            updatedTask.name = name
+            updatedTask.description = description.isEmpty ? nil : description
+            updatedTask.startTime = startTime
+            updatedTask.duration = duration
+            updatedTask.hasDuration = hasDuration
+            updatedTask.category = category
+            updatedTask.priority = priority
+            updatedTask.subtasks = subtasks
+            updatedTask.pomodoroSettings = pomodoroSettings
+            
+            if isRecurring {
+                let recurrenceTypeEnum: Recurrence.RecurrenceType
+                switch recurrenceType {
+                case "daily":
+                    recurrenceTypeEnum = .daily
+                case "weekly":
+                    recurrenceTypeEnum = .weekly(days: [Calendar.current.component(.weekday, from: startTime)])
+                case "monthly":
+                    recurrenceTypeEnum = .monthly(days: [Calendar.current.component(.day, from: startTime)])
+                default:
+                    recurrenceTypeEnum = .daily
+                }
+                updatedTask.recurrence = Recurrence(type: recurrenceTypeEnum, startDate: startTime, endDate: nil)
+            } else {
+                updatedTask.recurrence = nil
+            }
+            
+            taskManager.updateTask(updatedTask)
+        } else {
+            // Create new task
+            var newTask = TodoTask(
+                name: name,
+                startTime: startTime,
+                category: category,
+                priority: priority
+            )
+            
+            newTask.description = description.isEmpty ? nil : description
+            newTask.duration = duration
+            newTask.hasDuration = hasDuration
+            newTask.subtasks = subtasks
+            newTask.pomodoroSettings = pomodoroSettings
+            
+            if isRecurring {
+                let recurrenceTypeEnum: Recurrence.RecurrenceType
+                switch recurrenceType {
+                case "daily":
+                    recurrenceTypeEnum = .daily
+                case "weekly":
+                    recurrenceTypeEnum = .weekly(days: [Calendar.current.component(.weekday, from: startTime)])
+                case "monthly":
+                    recurrenceTypeEnum = .monthly(days: [Calendar.current.component(.day, from: startTime)])
+                default:
+                    recurrenceTypeEnum = .daily
+                }
+                newTask.recurrence = Recurrence(type: recurrenceTypeEnum, startDate: startTime, endDate: nil)
+            }
+            
+            taskManager.addTask(newTask)
         }
     }
     
     private func addSubtask() {
-        if !newSubtaskName.isEmpty {
-            viewModel.addSubtask(newSubtaskName)
+        if !newSubtaskName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let subtask = Subtask(name: newSubtaskName.trimmingCharacters(in: .whitespacesAndNewlines))
+            subtasks.append(subtask)
             newSubtaskName = ""
-            WKInterfaceDevice.current().play(hapticEngine)
         }
     }
     
     private func deleteSubtask(_ subtask: Subtask) {
-        if let index = viewModel.subtasks.firstIndex(where: { $0.id == subtask.id }) {
-            viewModel.subtasks.remove(at: index)
+        subtasks.removeAll { $0.id == subtask.id }
+    }
+    
+    private func formatDateTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration / 60)
+        return "\(minutes) min"
+    }
+    
+    private var recurrenceText: String {
+        switch recurrenceType {
+        case "daily": return "Daily"
+        case "weekly": return "Weekly"
+        case "monthly": return "Monthly"
+        default: return "Custom"
         }
     }
     
-    @ViewBuilder
-    private func formRowButton(icon: String, label: String, value: String, color: Color? = nil, action: @escaping () -> Void) -> some View {
+    private var pomodoroText: String {
+        if let settings = pomodoroSettings {
+            return "\(Int(settings.workDuration / 60))m work"
+        }
+        return "None"
+    }
+}
+
+struct FormRow: View {
+    let icon: String
+    let label: String
+    let value: String
+    let color: Color?
+    let action: () -> Void
+    
+    init(icon: String, label: String, value: String, color: Color? = nil, action: @escaping () -> Void) {
+        self.icon = icon
+        self.label = label
+        self.value = value
+        self.color = color
+        self.action = action
+    }
+    
+    var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.body)
-                    .frame(width: 24, alignment: .center)
+                    .font(.system(size: 14))
                     .foregroundColor(color ?? .secondary)
+                    .frame(width: 20)
                 
                 Text(label)
-                    .font(.body)
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
-                if let categoryColor = color, label == "Category" {
-                     Circle()
-                        .fill(categoryColor)
-                        .frame(width: 10, height: 10)
-                        .padding(.trailing, 4)
+                if let color = color, label == "Category" {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 8, height: 8)
                 }
-
+                
                 Text(value)
-                    .font(.body)
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
-            .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.gray.opacity(0.15))
-            .cornerRadius(8)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.1))
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: viewModel.startTime)
-    }
-    
-    private var recurrenceTypeText: String {
-        if !viewModel.isRecurring { return "Not set" }
-        switch viewModel.recurrenceType {
-        case "daily": return "Daily"
-        case "weekly":
-            return viewModel.selectedDaysOfWeek.isEmpty ? "Weekly" : "Weekly (\(viewModel.selectedDaysOfWeek.count) day\(viewModel.selectedDaysOfWeek.count == 1 ? "" : "s"))"
-        case "monthly":
-            return viewModel.selectedDaysOfMonth.isEmpty ? "Monthly" : "Monthly (\(viewModel.selectedDaysOfMonth.count) day\(viewModel.selectedDaysOfMonth.count == 1 ? "" : "s"))"
-        default: return "Custom"
-        }
-    }
 }
 
-struct WatchCategoryPicker: View {
+// MARK: - Picker Views
+
+struct WatchCategoryPickerView: View {
     @Binding var selectedCategory: Category?
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel = SettingsViewModel()
+    @StateObject private var categoryManager = CategoryManager.shared
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 8) {
-                Text("Select Category")
-                    .font(.headline)
-                    .padding(.vertical, 8)
+        NavigationStack {
+            List {
+                Button(action: { selectCategory(nil) }) {
+                    HStack {
+                        Text("None")
+                        Spacer()
+                        if selectedCategory == nil {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
                 
-                ForEach(viewModel.categories) { category in
-                    Button(action: {
-                        selectedCategory = category
-                        dismiss()
-                    }) {
+                ForEach(categoryManager.categories) { category in
+                    Button(action: { selectCategory(category) }) {
                         HStack {
                             Circle()
                                 .fill(Color(hex: category.color))
-                                .frame(width: 16, height: 16)
+                                .frame(width: 12, height: 12)
                             
                             Text(category.name)
-                                .foregroundColor(.primary)
                             
                             Spacer()
                             
@@ -281,70 +417,39 @@ struct WatchCategoryPicker: View {
                                     .foregroundColor(.blue)
                             }
                         }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.1))
-                        )
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
-                
-                Button(action: {
-                    selectedCategory = nil
-                    dismiss()
-                }) {
-                    HStack {
-                        Text("None")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        if selectedCategory == nil {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.1))
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
             }
-            .padding()
+            .navigationTitle("Category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
-        .onAppear {
-            viewModel.loadCategories() // Force load categories when view appears
-        }
+    }
+    
+    private func selectCategory(_ category: Category?) {
+        selectedCategory = category
+        dismiss()
     }
 }
 
-struct WatchPriorityPicker: View {
+struct WatchPriorityPickerView: View {
     @Binding var selectedPriority: Priority
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 8) {
-                Text("Select Priority")
-                    .font(.headline)
-                    .padding(.vertical, 8)
-                
+        NavigationStack {
+            List {
                 ForEach(Priority.allCases, id: \.self) { priority in
-                    Button(action: {
-                        selectedPriority = priority
-                        dismiss()
-                    }) {
+                    Button(action: { selectPriority(priority) }) {
                         HStack {
                             Image(systemName: priority.icon)
                                 .foregroundColor(Color(hex: priority.color))
                             
                             Text(priority.rawValue.capitalized)
-                                .foregroundColor(.primary)
                             
                             Spacer()
                             
@@ -353,194 +458,51 @@ struct WatchPriorityPicker: View {
                                     .foregroundColor(.blue)
                             }
                         }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.1))
-                        )
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding()
+            .navigationTitle("Priority")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
+    }
+    
+    private func selectPriority(_ priority: Priority) {
+        selectedPriority = priority
+        dismiss()
     }
 }
 
-struct WatchRecurrencePicker: View {
+struct WatchRecurrencePickerView: View {
     @Binding var isRecurring: Bool
     @Binding var recurrenceType: String
-    @Binding var selectedDaysOfWeek: Set<Int>
-    @Binding var selectedDaysOfMonth: Set<Int>
     @Environment(\.dismiss) private var dismiss
-    @State private var selectionStep = 0
     
     var body: some View {
-        VStack {
-            if selectionStep == 0 {
-                // Recurring toggle
-                Toggle("Recurring", isOn: $isRecurring)
-                    .padding()
+        NavigationStack {
+            VStack(spacing: 16) {
+                Toggle("Recurring Task", isOn: $isRecurring)
+                    .padding(.horizontal)
                 
-                // Recurrence type picker
                 if isRecurring {
-                    Picker("Recurrence", selection: $recurrenceType) {
+                    Picker("Type", selection: $recurrenceType) {
                         Text("Daily").tag("daily")
                         Text("Weekly").tag("weekly")
                         Text("Monthly").tag("monthly")
                     }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(height: 100)
-                    
-                    Button("Next") {
-                        if recurrenceType == "weekly" || recurrenceType == "monthly" {
-                            selectionStep = 1
-                        } else {
-                            dismiss()
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .padding()
-                } else {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .buttonStyle(.bordered)
-                    .padding()
-                }
-            } else if selectionStep == 1 {
-                if recurrenceType == "weekly" {
-                    weekdayPicker
-                } else if recurrenceType == "monthly" {
-                    monthDayPicker
+                    .pickerStyle(.wheel)
                 }
                 
-                Button("Done") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .padding()
+                Spacer()
             }
-        }
-    }
-    
-    private var weekdayPicker: some View {
-        VStack(spacing: 12) {
-            Text("Select Days of Week")
-                .font(.headline)
-            
-            ForEach(1...7, id: \.self) { day in
-                Button(action: {
-                    if selectedDaysOfWeek.contains(day) {
-                        selectedDaysOfWeek.remove(day)
-                    } else {
-                        selectedDaysOfWeek.insert(day)
-                    }
-                }) {
-                    HStack {
-                        Text(weekdayName(day))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        if selectedDaysOfWeek.contains(day) {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.1))
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .padding()
-    }
-    
-    private var monthDayPicker: some View {
-        VStack(spacing: 12) {
-            Text("Select Days of Month")
-                .font(.headline)
-            
-            ScrollView {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-                    ForEach(1...31, id: \.self) { day in
-                        Button(action: {
-                            if selectedDaysOfMonth.contains(day) {
-                                selectedDaysOfMonth.remove(day)
-                            } else {
-                                selectedDaysOfMonth.insert(day)
-                            }
-                        }) {
-                            Text("\(day)")
-                                .frame(width: 24, height: 24)
-                                .foregroundColor(selectedDaysOfMonth.contains(day) ? .white : .primary)
-                                .background(
-                                    Circle()
-                                        .fill(selectedDaysOfMonth.contains(day) ? Color.blue : Color.clear)
-                                )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-            }
-        }
-        .padding()
-    }
-    
-    private func weekdayName(_ day: Int) -> String {
-        let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-        return days[day - 1]
-    }
-}
-
-struct WatchDurationPicker: View {
-    @Binding var hasDuration: Bool
-    @Binding var duration: TimeInterval
-    @Environment(\.dismiss) private var dismiss
-    
-    // Durations in minutes, spaced out for better picking
-    private let durations = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 75, 90, 105, 120, 150, 180]
-    
-    var body: some View {
-        NavigationView { // Use NavigationView for a title and cleaner Done button placement
-            VStack(spacing: 15) {
-                Toggle("Enable Duration", isOn: $hasDuration)
-                    .padding(.horizontal)
-                
-                if hasDuration {
-                    Picker("Select Duration", selection: Binding(
-                        get: { Int(duration / 60.0) },
-                        set: { duration = TimeInterval($0) * 60.0 }
-                    )) {
-                        ForEach(durations, id: \.self) { mins in
-                            Text("\(mins) min").tag(mins)
-                        }
-                    }
-                    .labelsHidden() // Hide the "Select Duration" label from picker, title is enough
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(maxWidth: .infinity) // Allow picker to use available width
-                    .padding(.horizontal)
-                    
-                    Text("Selected: \(Int(duration / 60.0)) minutes")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    Spacer()
-                    Text("Duration is disabled.")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-            }
-            .padding(.vertical)
-            .navigationTitle("Task Duration")
+            .navigationTitle("Recurrence")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { // Standard placement for Done
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
             }
@@ -548,106 +510,140 @@ struct WatchDurationPicker: View {
     }
 }
 
-struct WatchPomodoroSettingsPicker: View {
-    @ObservedObject var viewModel: TaskFormViewModel
+struct WatchDateTimePickerView: View {
+    @Binding var selectedDate: Date
     @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack {
+                DatePicker("Date & Time", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+            }
+            .navigationTitle("Date & Time")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct WatchDurationPickerView: View {
+    @Binding var hasDuration: Bool
+    @Binding var duration: TimeInterval
+    @Environment(\.dismiss) private var dismiss
+    
+    private let durations = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120]
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                Toggle("Has Duration", isOn: $hasDuration)
+                    .padding(.horizontal)
+                
+                if hasDuration {
+                    Picker("Duration", selection: Binding(
+                        get: { Int(duration / 60) },
+                        set: { duration = TimeInterval($0 * 60) }
+                    )) {
+                        ForEach(durations, id: \.self) { minutes in
+                            Text("\(minutes) min").tag(minutes)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                }
+                
+                Spacer()
+            }
+            .navigationTitle("Duration")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct WatchPomodoroPickerView: View {
+    @Binding var pomodoroSettings: PomodoroSettings?
+    @Environment(\.dismiss) private var dismiss
+    
     @State private var hasPomodoro = false
     @State private var workDuration = 25
     @State private var breakDuration = 5
-    @State private var longBreakDuration = 15
-    @State private var sessionsUntilLongBreak = 4
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
+        NavigationStack {
+            VStack(spacing: 16) {
                 Toggle("Use Pomodoro", isOn: $hasPomodoro)
+                    .padding(.horizontal)
                     .onChange(of: hasPomodoro) { _, newValue in
                         if newValue {
                             updateSettings()
                         } else {
-                            viewModel.removePomodoroSettings()
+                            pomodoroSettings = nil
                         }
                     }
                 
                 if hasPomodoro {
-                    Group {
-                        HStack {
-                            Text("Work Duration")
-                            Spacer()
-                            Text("\(workDuration) min")
+                    VStack(spacing: 12) {
+                        Text("Work: \(workDuration) min")
+                            .font(.system(size: 12))
+                        
+                        Picker("Work Duration", selection: $workDuration) {
+                            ForEach([15, 20, 25, 30, 35, 40, 45, 50, 60], id: \.self) { minutes in
+                                Text("\(minutes) min").tag(minutes)
+                            }
                         }
+                        .pickerStyle(.wheel)
+                        .frame(height: 80)
+                        .onChange(of: workDuration) { _, _ in updateSettings() }
                         
-                        Slider(value: Binding(
-                            get: { Double(workDuration) },
-                            set: { workDuration = Int($0) }
-                        ), in: 5...60, step: 5)
+                        Text("Break: \(breakDuration) min")
+                            .font(.system(size: 12))
                         
-                        HStack {
-                            Text("Break Duration")
-                            Spacer()
-                            Text("\(breakDuration) min")
+                        Picker("Break Duration", selection: $breakDuration) {
+                            ForEach([3, 5, 7, 10, 15], id: \.self) { minutes in
+                                Text("\(minutes) min").tag(minutes)
+                            }
                         }
-                        
-                        Slider(value: Binding(
-                            get: { Double(breakDuration) },
-                            set: { breakDuration = Int($0) }
-                        ), in: 1...30, step: 1)
-                        
-                        HStack {
-                            Text("Long Break")
-                            Spacer()
-                            Text("\(longBreakDuration) min")
-                        }
-                        
-                        Slider(value: Binding(
-                            get: { Double(longBreakDuration) },
-                            set: { longBreakDuration = Int($0) }
-                        ), in: 5...45, step: 5)
-                        
-                        HStack {
-                            Text("Sessions")
-                            Spacer()
-                            Text("\(sessionsUntilLongBreak)")
-                        }
-                        
-                        Slider(value: Binding(
-                            get: { Double(sessionsUntilLongBreak) },
-                            set: { sessionsUntilLongBreak = Int($0) }
-                        ), in: 2...6, step: 1)
+                        .pickerStyle(.wheel)
+                        .frame(height: 80)
+                        .onChange(of: breakDuration) { _, _ in updateSettings() }
                     }
-                    .onChange(of: workDuration) { _, _ in updateSettings() }
-                    .onChange(of: breakDuration) { _, _ in updateSettings() }
-                    .onChange(of: longBreakDuration) { _, _ in updateSettings() }
-                    .onChange(of: sessionsUntilLongBreak) { _, _ in updateSettings() }
                 }
                 
-                Button("Done") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .padding(.top, 8)
+                Spacer()
             }
-            .padding()
+            .navigationTitle("Pomodoro")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
         .onAppear {
-            if let settings = viewModel.pomodoroSettings {
+            if let settings = pomodoroSettings {
                 hasPomodoro = true
-                workDuration = Int(settings.workDuration / 60.0)
-                breakDuration = Int(settings.breakDuration / 60.0)
-                longBreakDuration = Int(settings.longBreakDuration / 60.0)
-                sessionsUntilLongBreak = settings.sessionsUntilLongBreak
-            } else {
-                hasPomodoro = false
+                workDuration = Int(settings.workDuration / 60)
+                breakDuration = Int(settings.breakDuration / 60)
             }
         }
     }
     
     private func updateSettings() {
-        viewModel.configurePomodoroSettings(
-            workDuration: workDuration,
-            breakDuration: breakDuration,
-            longBreakDuration: longBreakDuration,
-            sessionsUntilLongBreak: sessionsUntilLongBreak
+        pomodoroSettings = PomodoroSettings(
+            workDuration: TimeInterval(workDuration * 60),
+            breakDuration: TimeInterval(breakDuration * 60),
+            longBreakDuration: TimeInterval(breakDuration * 3 * 60),
+            sessionsUntilLongBreak: 4
         )
     }
-} 
+}

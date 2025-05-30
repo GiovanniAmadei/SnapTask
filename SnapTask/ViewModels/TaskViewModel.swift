@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class TaskViewModel: ObservableObject {
     @Published private(set) var currentStreak: Int = 0
     private let taskManager = TaskManager.shared

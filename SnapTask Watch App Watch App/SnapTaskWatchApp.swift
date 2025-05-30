@@ -17,9 +17,7 @@ struct SnapTaskWatchApp: App {
     
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                ContentView()
-            }
+            ContentView()
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()

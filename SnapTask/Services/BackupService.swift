@@ -17,6 +17,7 @@ struct AppBackup: Codable {
 }
 
 /// Service per gestire backup e restore
+@MainActor
 class BackupService {
     static let shared = BackupService()
     
@@ -96,7 +97,7 @@ class BackupService {
         do {
             let backupURL = try await createAndShareBackup()
             
-            DispatchQueue.main.async {
+            await MainActor.run {
                 let activityViewController = UIActivityViewController(
                     activityItems: [backupURL],
                     applicationActivities: nil

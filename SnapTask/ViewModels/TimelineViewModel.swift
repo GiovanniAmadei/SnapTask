@@ -31,6 +31,7 @@ enum TimeSortOrder: String, CaseIterable {
     }
 }
 
+@MainActor
 class TimelineViewModel: ObservableObject {
     @Published private(set) var tasks: [TodoTask] = []
     @Published var selectedDate: Date = Date()

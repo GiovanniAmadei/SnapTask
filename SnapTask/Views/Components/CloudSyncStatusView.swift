@@ -121,6 +121,9 @@ struct CloudSyncStatusView: View {
                     ProgressView()
                         .scaleEffect(0.8)
                         .foregroundColor(.blue)
+                case .disabled:
+                    Image(systemName: "icloud.slash")
+                        .foregroundColor(.gray)
                 }
             }
         }
@@ -145,6 +148,8 @@ struct CloudSyncStatusView: View {
             return "Tap to sync"
         case .syncing:
             return "Syncing..."
+        case .disabled:
+            return "Sync disabled"
         }
     }
     

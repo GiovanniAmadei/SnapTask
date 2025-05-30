@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class SettingsViewModel: ObservableObject {
     static let shared = SettingsViewModel()
     private let categoryManager = CategoryManager.shared

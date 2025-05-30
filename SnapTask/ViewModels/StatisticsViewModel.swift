@@ -3,6 +3,7 @@ import Combine
 import os.log
 import Foundation
 
+@MainActor
 class StatisticsViewModel: ObservableObject {
     struct CategoryStat: Identifiable, Equatable {
         let id = UUID()

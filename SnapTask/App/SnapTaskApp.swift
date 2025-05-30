@@ -9,15 +9,16 @@ struct SnapTaskApp: App {
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var taskManager = TaskManager.shared
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
-    // @StateObject private var cloudKitService = CloudKitService.shared
+    @StateObject private var cloudKitService = CloudKitService.shared
     @StateObject private var firebaseService = FirebaseService.shared
+    @StateObject private var settingsManager = CloudKitSettingsManager.shared
     @Environment(\.scenePhase) var scenePhase
     @AppStorage("isDarkMode") private var isDarkMode = false
     
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     
     init() {
-        // Inizializza Firebase il prima possibile
+        // Initialize Firebase as early as possible
         if FirebaseApp.app() == nil {
             FirebaseApp.configure()
             print("🔥 Firebase configured in app init")
@@ -34,19 +35,39 @@ struct SnapTaskApp: App {
                     }
                     
                     registerForRemoteNotifications()
-                    // cloudKitService.syncInBackground()
-                    // taskManager.startRegularSync()
-                    connectivityManager.updateWatchContext()
+                    
+                    initializeAppData()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         Task {
                             await quoteManager.checkAndUpdateQuote()
                         }
-                        // cloudKitService.syncInBackground()
+                        cloudKitService.syncNow()
                         connectivityManager.updateWatchContext()
+                        
+                        // Sync settings when app becomes active
+                        if cloudKitService.isCloudKitEnabled {
+                            settingsManager.syncSettings()
+                        }
                     }
                 }
+        }
+    }
+    
+    private func initializeAppData() {
+        // Ensure categories exist before starting sync
+        let categoryManager = CategoryManager.shared
+        print("📱 App initialized with \(categoryManager.categories.count) categories")
+        
+        // Start CloudKit sync
+        cloudKitService.syncNow()
+        taskManager.startRegularSync()
+        connectivityManager.updateWatchContext()
+        
+        // Initialize settings sync
+        if cloudKitService.isCloudKitEnabled {
+            settingsManager.syncSettings()
         }
     }
     
@@ -61,9 +82,7 @@ struct SnapTaskApp: App {
     }
     
     func initializeCloudKit() throws {
-        // COMMENTIAMO TEMPORANEAMENTE CLOUDKIT
-        // CloudKitSyncProxy.shared.setupCloudKit()
-        // CloudKitSyncProxy.shared.syncTasks()
+        CloudKitService.shared.syncNow()
     }
 }
 
@@ -79,15 +98,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        if let cloudKitDict = userInfo as? [String: NSObject],
-           let cloudKitNotification = CKNotification(fromRemoteNotificationDictionary: cloudKitDict) {
-            if cloudKitNotification.subscriptionID == "SnapTaskZone" {
-                // COMMENTIAMO TEMPORANEAMENTE CLOUDKIT
-                // CloudKitSyncProxy.shared.syncTasks()
+        // Handle CloudKit notifications
+        CloudKitService.shared.processRemoteNotification(userInfo)
+        
+        if let notification = CKNotification(fromRemoteNotificationDictionary: userInfo) {
+            if notification.subscriptionID == "SnapTaskZone-changes" {
+                print("📱 Received CloudKit sync notification")
                 completionHandler(.newData)
                 return
             }
         }
+        
         completionHandler(.noData)
+    }
+    
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        print("📱 Successfully registered for remote notifications")
+    }
+    
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ Failed to register for remote notifications: \(error)")
     }
 }

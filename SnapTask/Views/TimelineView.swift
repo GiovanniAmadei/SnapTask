@@ -64,6 +64,29 @@ struct TimelineView: View {
 
 struct FilterBarView: View {
     @ObservedObject var viewModel: TimelineViewModel
+    @StateObject private var cloudKitService = CloudKitService.shared
+    
+    private var syncStatusIcon: String {
+        switch cloudKitService.syncStatus {
+        case .success:
+            return "checkmark.circle.fill"
+        case .error:
+            return "exclamationmark.circle.fill"
+        default:
+            return "circle"
+        }
+    }
+    
+    private var syncStatusColor: Color {
+        switch cloudKitService.syncStatus {
+        case .success:
+            return .green
+        case .error:
+            return .red
+        default:
+            return .secondary
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -86,6 +109,26 @@ struct FilterBarView: View {
             )
             
             Spacer()
+            
+            // Sync status indicator
+            if cloudKitService.isCloudKitEnabled {
+                HStack(spacing: 4) {
+                    if cloudKitService.isSyncing {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    } else {
+                        Image(systemName: syncStatusIcon)
+                            .font(.system(size: 12))
+                            .foregroundColor(syncStatusColor)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(syncStatusColor.opacity(0.1))
+                )
+            }
             
             // Filter button
             Button(action: {

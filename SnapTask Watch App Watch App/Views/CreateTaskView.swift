@@ -2,10 +2,10 @@ import SwiftUI
 
 struct CreateTaskView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel = TaskFormViewModel()
+    @State private var isPresented = true
     
     var body: some View {
-        WatchTaskFormView(viewModel: viewModel, isPresented: .constant(true))
+        WatchTaskFormView(task: nil, initialDate: Date(), isPresented: $isPresented)
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -14,9 +14,14 @@ struct CreateTaskView: View {
                     }
                 }
             }
+            .onChange(of: isPresented) { _, newValue in
+                if !newValue {
+                    dismiss()
+                }
+            }
     }
 }
 
 #Preview {
     CreateTaskView()
-} 
+}

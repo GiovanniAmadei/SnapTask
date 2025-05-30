@@ -1,29 +1,29 @@
 import Foundation
 import Combine
 
+@MainActor
 class RewardManager: ObservableObject {
     static let shared = RewardManager()
     
     @Published private(set) var rewards: [Reward] = []
     @Published private(set) var dailyPointsHistory: [Date: Int] = [:]
-    @Published private(set) var weeklyPointsHistory: [Date: Int] = [:]
-    @Published private(set) var monthlyPointsHistory: [Date: Int] = [:]
-    @Published private(set) var yearlyPointsHistory: [Date: Int] = [:]
-    @Published private(set) var oneTimePointsHistory: [Date: Int] = [:]
     private let rewardsKey = "savedRewards"
     private let dailyPointsHistoryKey = "savedDailyPointsHistory"
-    private let weeklyPointsHistoryKey = "savedWeeklyPointsHistory"
-    private let monthlyPointsHistoryKey = "savedMonthlyPointsHistory"
-    private let yearlyPointsHistoryKey = "savedYearlyPointsHistory"
-    private let oneTimePointsHistoryKey = "savedOneTimePointsHistory"
+    private var cancellables: Set<AnyCancellable> = []
     
     init() {
         loadRewards()
         loadDailyPointsHistory()
-        loadWeeklyPointsHistory()
-        loadMonthlyPointsHistory()
-        loadYearlyPointsHistory()
-        loadOneTimePointsHistory()
+        
+        // Listen for CloudKit data changes
+        NotificationCenter.default.publisher(for: .cloudKitDataChanged)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                // CloudKit data changed, but we'll let the sync process handle it
+                // to avoid infinite loops
+                print("📥 CloudKit rewards data changed")
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Rewards Management
@@ -32,7 +32,7 @@ class RewardManager: ObservableObject {
         rewards.append(reward)
         saveRewards()
         
-        // CloudKitService.shared.saveReward(reward)
+        CloudKitService.shared.saveReward(reward)
     }
     
     func updateReward(_ updatedReward: Reward) {
@@ -41,7 +41,8 @@ class RewardManager: ObservableObject {
             saveRewards()
             objectWillChange.send()
             
-            // CloudKitService.shared.saveReward(updatedReward)
+            // Sync with CloudKit
+            CloudKitService.shared.saveReward(updatedReward)
         }
     }
     
@@ -49,7 +50,7 @@ class RewardManager: ObservableObject {
         rewards.removeAll { $0.id == reward.id }
         saveRewards()
         
-        // CloudKitService.shared.deleteReward(reward)
+        CloudKitService.shared.deleteReward(reward)
     }
     
     func importRewards(_ newRewards: [Reward]) {
@@ -72,9 +73,9 @@ class RewardManager: ObservableObject {
     
     func redeemReward(_ reward: Reward, on date: Date = Date()) {
         if reward.canRedeem(availablePoints: availablePoints(for: reward.frequency, on: date)) {
-            // Deduct points
+            // Deduct points from daily history
             let points = -reward.pointsCost
-            addPoints(points, for: reward.frequency, on: date)
+            addPoints(points, on: date)
             
             // Mark as redeemed
             var updatedReward = reward
@@ -87,97 +88,118 @@ class RewardManager: ObservableObject {
     
     // MARK: - Points Management
     
-    func addPoints(_ points: Int, for frequency: RewardFrequency? = nil, on date: Date = Date()) {
+    func addPoints(_ points: Int, on date: Date = Date()) {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         
-        // Se non è specificata una frequenza, aggiungi i punti a tutte le frequenze
-        if frequency == nil || frequency == .daily {
-            let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
-            dailyPointsHistory[startOfDay] = currentDailyPoints + points
-            saveDailyPointsHistory()
-        }
+        let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
+        dailyPointsHistory[startOfDay] = currentDailyPoints + points
+        saveDailyPointsHistory()
         
-        if frequency == nil || frequency == .weekly {
-            let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date))!
-            let currentWeeklyPoints = weeklyPointsHistory[weekStart] ?? 0
-            weeklyPointsHistory[weekStart] = currentWeeklyPoints + points
-            saveWeeklyPointsHistory()
-        }
-        
-        if frequency == nil || frequency == .monthly {
-            let components = calendar.dateComponents([.year, .month], from: date)
-            let monthStart = calendar.date(from: components)!
-            let currentMonthlyPoints = monthlyPointsHistory[monthStart] ?? 0
-            monthlyPointsHistory[monthStart] = currentMonthlyPoints + points
-            saveMonthlyPointsHistory()
-        }
-        
-        if frequency == nil || frequency == .yearly {
-            let components = calendar.dateComponents([.year], from: date)
-            let yearStart = calendar.date(from: components)!
-            let currentYearlyPoints = yearlyPointsHistory[yearStart] ?? 0
-            yearlyPointsHistory[yearStart] = currentYearlyPoints + points
-            saveYearlyPointsHistory()
-        }
-        
-        if frequency == nil || frequency == .oneTime {
-            let currentOneTimePoints = oneTimePointsHistory[startOfDay] ?? 0
-            oneTimePointsHistory[startOfDay] = currentOneTimePoints + points
-            saveOneTimePointsHistory()
-        }
+        // Sync with CloudKit
+        let pointsEntry = PointsHistory(date: startOfDay, points: points, frequency: .daily)
+        CloudKitService.shared.savePointsEntry(pointsEntry)
         
         objectWillChange.send()
     }
     
     func importPointsHistory(_ pointsHistory: [PointsHistory]) {
-        // Clear existing data
-        dailyPointsHistory.removeAll()
-        weeklyPointsHistory.removeAll()
-        monthlyPointsHistory.removeAll()
-        yearlyPointsHistory.removeAll()
-        oneTimePointsHistory.removeAll()
-        
-        // Import new data
+        // This method is used for CloudKit sync - merge rather than replace
         for points in pointsHistory {
+            let startOfDay = Calendar.current.startOfDay(for: points.date)
+            
             switch points.frequency {
-            case .daily:
-                dailyPointsHistory[points.date] = points.points
+            case .daily, .oneTime:
+                // Only add if we don't already have data for this date
+                if dailyPointsHistory[startOfDay] == nil {
+                    dailyPointsHistory[startOfDay] = points.points
+                }
             case .weekly:
-                weeklyPointsHistory[points.date] = points.points
+                // Distribute weekly points across the week
+                let calendar = Calendar.current
+                let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: points.date))!
+                let dailyPoints = points.points / 7
+                
+                for i in 0..<7 {
+                    if let dayInWeek = calendar.date(byAdding: .day, value: i, to: weekStart) {
+                        let dayStartOfDay = calendar.startOfDay(for: dayInWeek)
+                        if dailyPointsHistory[dayStartOfDay] == nil {
+                            dailyPointsHistory[dayStartOfDay] = dailyPoints
+                        }
+                    }
+                }
             case .monthly:
-                monthlyPointsHistory[points.date] = points.points
+                // Distribute monthly points across the month
+                let calendar = Calendar.current
+                let components = calendar.dateComponents([.year, .month], from: points.date)
+                let monthStart = calendar.date(from: components)!
+                let daysInMonth = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+                let dailyPoints = points.points / daysInMonth
+                
+                for i in 0..<daysInMonth {
+                    if let dayInMonth = calendar.date(byAdding: .day, value: i, to: monthStart) {
+                        let dayStartOfDay = calendar.startOfDay(for: dayInMonth)
+                        if dailyPointsHistory[dayStartOfDay] == nil {
+                            dailyPointsHistory[dayStartOfDay] = dailyPoints
+                        }
+                    }
+                }
             case .yearly:
-                yearlyPointsHistory[points.date] = points.points
-            case .oneTime:
-                oneTimePointsHistory[points.date] = points.points
+                // Distribute yearly points across the year
+                let calendar = Calendar.current
+                let components = calendar.dateComponents([.year], from: points.date)
+                let yearStart = calendar.date(from: components)!
+                let daysInYear = calendar.range(of: .day, in: .year, for: yearStart)?.count ?? 365
+                let dailyPoints = points.points / daysInYear
+                
+                for i in 0..<daysInYear {
+                    if let dayInYear = calendar.date(byAdding: .day, value: i, to: yearStart) {
+                        let dayStartOfDay = calendar.startOfDay(for: dayInYear)
+                        if dailyPointsHistory[dayStartOfDay] == nil {
+                            dailyPointsHistory[dayStartOfDay] = dailyPoints
+                        }
+                    }
+                }
             }
         }
         
-        // Save all changes
-        saveDailyPointsHistory()
-        saveWeeklyPointsHistory()
-        saveMonthlyPointsHistory()
-        saveYearlyPointsHistory()
-        saveOneTimePointsHistory()
+        // Save changes locally (without triggering CloudKit sync to avoid loops)
+        do {
+            let data = try JSONEncoder().encode(dailyPointsHistory)
+            UserDefaults.standard.set(data, forKey: dailyPointsHistoryKey)
+            UserDefaults.standard.synchronize()
+        } catch {
+            print("Error saving daily points history: \(error)")
+        }
         
         objectWillChange.send()
     }
     
     func resetAllPoints() {
         dailyPointsHistory.removeAll()
-        weeklyPointsHistory.removeAll()
-        monthlyPointsHistory.removeAll()
-        yearlyPointsHistory.removeAll()
-        oneTimePointsHistory.removeAll()
-        
         saveDailyPointsHistory()
-        saveWeeklyPointsHistory()
-        saveMonthlyPointsHistory()
-        saveYearlyPointsHistory()
-        saveOneTimePointsHistory()
+        
+        // Note: CloudKit data will be handled by the sync process
+        // We don't delete individual records here to avoid conflicts
         
         objectWillChange.send()
+    }
+    
+    func debugPointsStatus() {
+        print("=== REWARD MANAGER DEBUG ===")
+        print("Total daily points entries: \(dailyPointsHistory.count)")
+        print("Total points: \(totalPoints())")
+        print("Today's points: \(availablePoints(for: .daily))")
+        print("This week's points: \(availablePoints(for: .weekly))")
+        print("This month's points: \(availablePoints(for: .monthly))")
+        
+        // Show recent entries
+        let sortedEntries = dailyPointsHistory.sorted { $0.key > $1.key }
+        print("Recent entries:")
+        for (date, points) in sortedEntries.prefix(5) {
+            print("  \(date): \(points) points")
+        }
+        print("===========================")
     }
     
     func removePointsFromTask(_ task: TodoTask) {
@@ -200,31 +222,58 @@ class RewardManager: ObservableObject {
             return dailyPointsHistory[startOfDay] ?? 0
             
         case .weekly:
+            // Per le reward settimanali, calcola la somma dei punti giornalieri della settimana corrente
             let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date))!
-            return weeklyPointsHistory[weekStart] ?? 0
+            var weeklyTotal = 0
+            
+            for i in 0..<7 {
+                if let dayInWeek = calendar.date(byAdding: .day, value: i, to: weekStart) {
+                    let startOfDay = calendar.startOfDay(for: dayInWeek)
+                    weeklyTotal += dailyPointsHistory[startOfDay] ?? 0
+                }
+            }
+            return weeklyTotal
             
         case .monthly:
+            // Per le reward mensili, calcola la somma dei punti giornalieri del mese corrente
             let components = calendar.dateComponents([.year, .month], from: date)
             let monthStart = calendar.date(from: components)!
-            return monthlyPointsHistory[monthStart] ?? 0
+            let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart)!
+            
+            var monthlyTotal = 0
+            var currentDate = monthStart
+            
+            while currentDate <= monthEnd {
+                let startOfDay = calendar.startOfDay(for: currentDate)
+                monthlyTotal += dailyPointsHistory[startOfDay] ?? 0
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+            }
+            return monthlyTotal
             
         case .yearly:
+            // Per le reward annuali, calcola la somma dei punti giornalieri dell'anno corrente
             let components = calendar.dateComponents([.year], from: date)
             let yearStart = calendar.date(from: components)!
-            return yearlyPointsHistory[yearStart] ?? 0
+            let yearEnd = calendar.date(byAdding: DateComponents(year: 1, day: -1), to: yearStart)!
+            
+            var yearlyTotal = 0
+            var currentDate = yearStart
+            
+            while currentDate <= yearEnd {
+                let startOfDay = calendar.startOfDay(for: currentDate)
+                yearlyTotal += dailyPointsHistory[startOfDay] ?? 0
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+            }
+            return yearlyTotal
             
         case .oneTime:
-            return oneTimePointsHistory.values.reduce(0, +)
+            // Per le reward one-time, usa tutti i punti giornalieri accumulati
+            return dailyPointsHistory.values.reduce(0, +)
         }
     }
     
     func totalPoints() -> Int {
-        let dailyTotal = dailyPointsHistory.values.reduce(0, +)
-        let weeklyTotal = weeklyPointsHistory.values.reduce(0, +)
-        let monthlyTotal = monthlyPointsHistory.values.reduce(0, +)
-        let yearlyTotal = yearlyPointsHistory.values.reduce(0, +)
-        let oneTimeTotal = oneTimePointsHistory.values.reduce(0, +)
-        return dailyTotal + weeklyTotal + monthlyTotal + yearlyTotal + oneTimeTotal
+        return dailyPointsHistory.values.reduce(0, +)
     }
     
     func rewardsFor(frequency: RewardFrequency) -> [Reward] {
@@ -258,6 +307,9 @@ class RewardManager: ObservableObject {
             let data = try JSONEncoder().encode(dailyPointsHistory)
             UserDefaults.standard.set(data, forKey: dailyPointsHistoryKey)
             UserDefaults.standard.synchronize()
+            
+            // Sync with CloudKit if enabled
+            CloudKitService.shared.syncPointsHistory(dailyPointsHistory)
         } catch {
             print("Error saving daily points history: \(error)")
         }
@@ -267,88 +319,20 @@ class RewardManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: dailyPointsHistoryKey) {
             do {
                 dailyPointsHistory = try JSONDecoder().decode([Date: Int].self, from: data)
+                
+                // Remove any entries with extremely negative values that indicate corruption
+                dailyPointsHistory = dailyPointsHistory.compactMapValues { points in
+                    // Allow reasonable negative values (up to -1000) but remove extreme corruption
+                    return points > -1000 ? points : 0
+                }
+                
+                // Save the cleaned data
+                saveDailyPointsHistory()
             } catch {
                 print("Error loading daily points history: \(error)")
-            }
-        }
-    }
-    
-    private func saveWeeklyPointsHistory() {
-        do {
-            let data = try JSONEncoder().encode(weeklyPointsHistory)
-            UserDefaults.standard.set(data, forKey: weeklyPointsHistoryKey)
-            UserDefaults.standard.synchronize()
-        } catch {
-            print("Error saving weekly points history: \(error)")
-        }
-    }
-    
-    private func loadWeeklyPointsHistory() {
-        if let data = UserDefaults.standard.data(forKey: weeklyPointsHistoryKey) {
-            do {
-                weeklyPointsHistory = try JSONDecoder().decode([Date: Int].self, from: data)
-            } catch {
-                print("Error loading weekly points history: \(error)")
-            }
-        }
-    }
-    
-    private func saveMonthlyPointsHistory() {
-        do {
-            let data = try JSONEncoder().encode(monthlyPointsHistory)
-            UserDefaults.standard.set(data, forKey: monthlyPointsHistoryKey)
-            UserDefaults.standard.synchronize()
-        } catch {
-            print("Error saving monthly points history: \(error)")
-        }
-    }
-    
-    private func loadMonthlyPointsHistory() {
-        if let data = UserDefaults.standard.data(forKey: monthlyPointsHistoryKey) {
-            do {
-                monthlyPointsHistory = try JSONDecoder().decode([Date: Int].self, from: data)
-            } catch {
-                print("Error loading monthly points history: \(error)")
-            }
-        }
-    }
-    
-    private func saveYearlyPointsHistory() {
-        do {
-            let data = try JSONEncoder().encode(yearlyPointsHistory)
-            UserDefaults.standard.set(data, forKey: yearlyPointsHistoryKey)
-            UserDefaults.standard.synchronize()
-        } catch {
-            print("Error saving yearly points history: \(error)")
-        }
-    }
-    
-    private func loadYearlyPointsHistory() {
-        if let data = UserDefaults.standard.data(forKey: yearlyPointsHistoryKey) {
-            do {
-                yearlyPointsHistory = try JSONDecoder().decode([Date: Int].self, from: data)
-            } catch {
-                print("Error loading yearly points history: \(error)")
-            }
-        }
-    }
-    
-    private func saveOneTimePointsHistory() {
-        do {
-            let data = try JSONEncoder().encode(oneTimePointsHistory)
-            UserDefaults.standard.set(data, forKey: oneTimePointsHistoryKey)
-            UserDefaults.standard.synchronize()
-        } catch {
-            print("Error saving one-time points history: \(error)")
-        }
-    }
-    
-    private func loadOneTimePointsHistory() {
-        if let data = UserDefaults.standard.data(forKey: oneTimePointsHistoryKey) {
-            do {
-                oneTimePointsHistory = try JSONDecoder().decode([Date: Int].self, from: data)
-            } catch {
-                print("Error loading one-time points history: \(error)")
+                // Reset to empty if corrupted
+                dailyPointsHistory = [:]
+                saveDailyPointsHistory()
             }
         }
     }

@@ -70,6 +70,53 @@ struct SettingsView: View {
                     }
                 }
                 
+                // Sync Section
+                Section("Synchronization") {
+                    NavigationLink(destination: CloudKitSyncSettingsView()) {
+                        HStack {
+                            Image(systemName: "icloud.fill")
+                                .foregroundColor(.blue)
+                                .frame(width: 24)
+                            
+                            Text("iCloud Sync")
+                            
+                            Spacer()
+                            
+                            // Show sync status indicator
+                            SyncStatusIndicator()
+                        }
+                    }
+                }
+                
+                // CloudKit Debug Section (only in debug builds)
+#if DEBUG
+                Section("CloudKit Debug") {
+                    Button("Debug Category Status") {
+                        CategoryManager.shared.debugCategoryStatus()
+                    }
+                    .foregroundColor(.blue)
+                    
+                    Button("Reset Categories Completely") {
+                        Task {
+                            await CategoryManager.shared.performCompleteReset()
+                        }
+                    }
+                    .foregroundColor(.orange)
+                    
+                    Button("Reset CloudKit Sync State") {
+                        Task {
+                            await CloudKitService.shared.resetSyncState()
+                        }
+                    }
+                    .foregroundColor(.red)
+                    
+                    Button("Clear CloudKit Deletion Markers") {
+                        CloudKitService.shared.clearDeletionMarkers()
+                    }
+                    .foregroundColor(.purple)
+                }
+#endif
+                
                 // Community Section
                 Section("Community") {
                     NavigationLink(destination: FeedbackView()) {
@@ -131,6 +178,42 @@ struct SettingsView: View {
             .sheet(isPresented: $showingDonationSheet) {
                 DonationView()
             }
+        }
+    }
+}
+
+struct SyncStatusIndicator: View {
+    @StateObject private var cloudKitService = CloudKitService.shared
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            if cloudKitService.isCloudKitEnabled {
+                switch cloudKitService.syncStatus {
+                case .syncing:
+                    ProgressView()
+                        .scaleEffect(0.7)
+                case .success:
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.caption)
+                case .error:
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundColor(.red)
+                        .font(.caption)
+                default:
+                    Image(systemName: "circle")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                }
+            } else {
+                Image(systemName: "icloud.slash")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.secondary)
+                .font(.caption)
         }
     }
 }
@@ -396,6 +479,8 @@ struct SyncCompactCard: View {
             return .red
         case .idle:
             return .gray
+        case .disabled:
+            return .secondary
         }
     }
 }
