@@ -10,7 +10,8 @@ class TaskManager: ObservableObject {
     private let tasksKey = "savedTasks"
     private var isUpdatingFromSync = false
     private var cancellables: Set<AnyCancellable> = []
-    
+    private var saveTaskDebounceTimers: [UUID: Timer] = [:]
+
     init() {
         loadTasks()
         setupCloudKitObservers()
@@ -44,7 +45,7 @@ class TaskManager: ObservableObject {
         objectWillChange.send()
         
         // Sync with CloudKit
-        CloudKitService.shared.saveTask(updatedTask)
+        debouncedSaveTask(updatedTask)
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
@@ -84,7 +85,7 @@ class TaskManager: ObservableObject {
             notifyTasksUpdated()
             
             // Sync with CloudKit
-            CloudKitService.shared.saveTask(task)
+            debouncedSaveTask(task)
             
             // Sincronizza con Apple Watch
             synchronizeWithWatch()
@@ -94,38 +95,8 @@ class TaskManager: ObservableObject {
     func updateAllTasks(_ newTasks: [TodoTask]) {
         isUpdatingFromSync = true
         
-        // Merge tasks more intelligently
-        var mergedTasks: [TodoTask] = []
-        let existingTasksMap = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        tasks = newTasks
         
-        for newTask in newTasks {
-            if let existingTask = existingTasksMap[newTask.id] {
-                // Merge completion data from both tasks
-                var mergedTask = newTask
-                
-                // Preserve local completions if they're more recent
-                for (date, existingCompletion) in existingTask.completions {
-                    if mergedTask.completions[date] == nil {
-                        mergedTask.completions[date] = existingCompletion
-                    }
-                }
-                
-                // Merge completion dates
-                let allCompletionDates = Set(mergedTask.completionDates + existingTask.completionDates)
-                mergedTask.completionDates = Array(allCompletionDates).sorted()
-                
-                // Sync subtask completion states
-                syncSubtaskStates(&mergedTask)
-                
-                mergedTasks.append(mergedTask)
-            } else {
-                var newTaskCopy = newTask
-                syncSubtaskStates(&newTaskCopy)
-                mergedTasks.append(newTaskCopy)
-            }
-        }
-        
-        tasks = mergedTasks
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
@@ -133,23 +104,8 @@ class TaskManager: ObservableObject {
         
         // Sync with Apple Watch
         synchronizeWithWatch()
-    }
-    
-    private func syncSubtaskStates(_ task: inout TodoTask) {
-        let today = Calendar.current.startOfDay(for: Date())
         
-        if let todayCompletion = task.completions[today] {
-            // Update subtask completion states based on today's completion data
-            for i in 0..<task.subtasks.count {
-                let subtaskId = task.subtasks[i].id
-                task.subtasks[i].isCompleted = todayCompletion.completedSubtasks.contains(subtaskId)
-            }
-        } else {
-            // No completion data for today, mark all subtasks as incomplete
-            for i in 0..<task.subtasks.count {
-                task.subtasks[i].isCompleted = false
-            }
-        }
+        print("✅ Updated \(newTasks.count) tasks from sync")
     }
     
     func removeTask(_ task: TodoTask) {
@@ -183,6 +139,10 @@ class TaskManager: ObservableObject {
         if let index = tasks.firstIndex(where: { $0.id == taskId }) {
             var task = tasks[index]
             let startOfDay = Calendar.current.startOfDay(for: date)
+            
+            // DEBUG: Log current state
+            print("🔄 Toggling task completion for \(task.name) on \(startOfDay)")
+            print("🔄 Current completion: \(task.completions[startOfDay]?.isCompleted ?? false)")
             
             // Get current completion status
             let currentCompletion = task.completions[startOfDay]
@@ -233,18 +193,22 @@ class TaskManager: ObservableObject {
             task.lastModifiedDate = Date()
             tasks[index] = task
             
-            // Save and sync
-            DispatchQueue.main.async { [weak self] in
-                self?.saveTasks()
-                self?.notifyTasksUpdated()
-                self?.objectWillChange.send()
-                
-                // Sync with CloudKit
-                CloudKitService.shared.saveTask(task)
-                
-                // Sync with Apple Watch
-                self?.synchronizeWithWatch()
-            }
+            // DEBUG: Log new state
+            print("🔄 New completion: \(completion.isCompleted)")
+            print("🔄 Completions count: \(task.completions.count)")
+            
+            // Save and sync immediately
+            saveTasks()
+            notifyTasksUpdated()
+            objectWillChange.send()
+            
+            // Debounced CloudKit sync
+            debouncedSaveTask(task)
+            
+            // Sync with Apple Watch
+            synchronizeWithWatch()
+            
+            print("✅ Task completion toggled: \(task.name)")
         }
     }
     
@@ -255,10 +219,15 @@ class TaskManager: ObservableObject {
         var task = tasks[taskIndex]
         let startOfDay = Calendar.current.startOfDay(for: date)
         
+        // DEBUG: Log current state
+        print("🔄 Toggling subtask for \(task.name) on \(startOfDay)")
+        
         var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
         
         // Determine if we're completing or uncompleting the subtask
         let wasCompleted = completion.completedSubtasks.contains(subtaskId)
+        
+        print("🔄 Subtask was completed: \(wasCompleted)")
         
         if wasCompleted {
             completion.completedSubtasks.remove(subtaskId)
@@ -295,17 +264,31 @@ class TaskManager: ObservableObject {
         task.lastModifiedDate = Date()
         tasks[taskIndex] = task
         
-        // Save and sync
-        DispatchQueue.main.async { [weak self] in
-            self?.saveTasks()
-            self?.notifyTasksUpdated()
-            self?.objectWillChange.send()
-            
-            // Sync with CloudKit
+        print("🔄 Subtask now completed: \(!wasCompleted)")
+        print("🔄 Completed subtasks: \(completion.completedSubtasks.count)")
+        
+        // Save and sync immediately
+        saveTasks()
+        notifyTasksUpdated()
+        objectWillChange.send()
+        
+        // Debounced CloudKit sync
+        debouncedSaveTask(task)
+        
+        // Sync with Apple Watch
+        synchronizeWithWatch()
+        
+        print("✅ Subtask toggled: \(task.name)")
+    }
+    
+    private func debouncedSaveTask(_ task: TodoTask) {
+        // Cancel existing timer for this task
+        saveTaskDebounceTimers[task.id]?.invalidate()
+        
+        // Start new timer
+        saveTaskDebounceTimers[task.id] = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
             CloudKitService.shared.saveTask(task)
-            
-            // Sync with Apple Watch
-            self?.synchronizeWithWatch()
+            self?.saveTaskDebounceTimers.removeValue(forKey: task.id)
         }
     }
     
@@ -344,6 +327,20 @@ class TaskManager: ObservableObject {
         connectivityManager.updateWatchContext()
     }
     
+    func startRegularSync() {
+        guard CloudKitService.shared.isCloudKitEnabled else { return }
+        
+        // Initial sync
+        CloudKitService.shared.syncNow()
+        
+        // Setup periodic sync every 30 seconds
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            if CloudKitService.shared.isCloudKitEnabled {
+                CloudKitService.shared.syncNow()
+            }
+        }
+    }
+    
     // For debugging purposes only
     func resetUserDefaults() {
         UserDefaults.standard.removeObject(forKey: tasksKey)
@@ -356,21 +353,6 @@ class TaskManager: ObservableObject {
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
-    }
-    
-    // Start regular sync if CloudKit is enabled
-    func startRegularSync() {
-        guard CloudKitService.shared.isCloudKitEnabled else { return }
-        
-        // Initial sync
-        CloudKitService.shared.syncNow()
-        
-        // Setup periodic sync every 60 seconds
-        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            if CloudKitService.shared.isCloudKitEnabled {
-                CloudKitService.shared.syncNow()
-            }
-        }
     }
 }
 

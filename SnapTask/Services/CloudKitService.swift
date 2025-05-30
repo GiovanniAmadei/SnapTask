@@ -179,8 +179,21 @@ class CloudKitService: ObservableObject {
     
     // MARK: - Public API
     func syncNow() {
-        guard isCloudKitEnabled else { return }
-        guard canPerformSync() else { return }
+        guard isCloudKitEnabled else { 
+            print("🔄 CloudKit sync is disabled")
+            return 
+        }
+        
+        if isSyncing {
+            print("🔄 Sync already in progress, skipping")
+            return
+        }
+        
+        let now = Date()
+        if now.timeIntervalSince(lastSyncTime) < minSyncInterval {
+            print("🔄 Sync throttled - too frequent")
+            return
+        }
         
         activeSyncTask?.cancel()
         activeSyncTask = Task {
@@ -199,15 +212,46 @@ class CloudKitService: ObservableObject {
     }
     
     // MARK: - Task Operations
-    func saveTask(_ task: TodoTask) {
+    func saveTask(_ task: TodoTask, retryCount: Int = 0) {
         guard isCloudKitEnabled else { return }
         
         Task {
             do {
                 let record = createTaskRecord(from: task)
-                _ = try await privateDatabase.save(record)
-                print("✅ Task saved: \(task.name)")
+                
+                let operation = CKModifyRecordsOperation(recordsToSave: [record])
+                operation.savePolicy = .changedKeys // Only update changed fields
+                operation.isAtomic = false // Allow partial success
+                
+                let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CKRecord], Error>) in
+                    operation.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume(returning: savedRecords ?? [])
+                        }
+                    }
+                    privateDatabase.add(operation)
+                }
+                
+                print("✅ Task saved to CloudKit: \(task.name)")
+                
+                DispatchQueue.main.async {
+                    self.syncStatus = .success
+                    self.lastSyncDate = Date()
+                }
             } catch let error as CKError {
+                if error.code == .serverRecordChanged && retryCount < 3 {
+                    print("⚠️ Concurrent write detected for \(task.name), retrying...")
+                    
+                    // Wait with exponential backoff
+                    try? await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(retryCount)) * 500_000_000))
+                    
+                    // Fetch and merge
+                    await resolveConflictAndRetry(task: task, retryCount: retryCount + 1)
+                    return
+                }
+                
                 print("❌ CloudKit error saving task: \(error.localizedDescription)")
                 await handleCloudKitError(error)
             } catch {
@@ -387,24 +431,31 @@ class CloudKitService: ObservableObject {
     
     // MARK: - Sync Implementation
     private func performFullSync() async {
-        guard !isSyncing else { return }
-        guard isCloudKitEnabled else { return }
+        print("🔄 Starting full sync")
         
-        isSyncing = true
-        syncStatus = .syncing
+        DispatchQueue.main.async {
+            self.isSyncing = true
+            self.syncStatus = .syncing
+        }
+        
         lastSyncTime = Date()
         
         defer {
-            isSyncing = false
+            DispatchQueue.main.async {
+                self.isSyncing = false
+            }
         }
         
         do {
             let changes = try await fetchChanges()
             await processChanges(changes)
             
-            syncStatus = .success
-            lastSyncDate = Date()
-            syncRetryCount = 0 // Reset retry count on success
+            DispatchQueue.main.async {
+                self.syncStatus = .success
+                self.lastSyncDate = Date()
+                self.syncRetryCount = 0
+            }
+            
             print("✅ Full sync completed successfully")
             
         } catch {
@@ -550,17 +601,45 @@ class CloudKitService: ObservableObject {
             }
             
             if let localTask = localMap[remoteTask.id] {
-                // Conflict resolution: prefer most recent modification
+                var mergedTask: TodoTask
+                
                 if remoteTask.lastModifiedDate > localTask.lastModifiedDate {
-                    if let index = mergedTasks.firstIndex(where: { $0.id == remoteTask.id }) {
-                        mergedTasks[index] = remoteTask
-                        hasChanges = true
-                        print("🔄 Updated task from remote: \(remoteTask.name)")
+                    // Remote is newer, use remote as base but preserve any local completions that are newer
+                    mergedTask = remoteTask
+                    print("🔄 Remote task is newer for \(remoteTask.name)")
+                } else if localTask.lastModifiedDate > remoteTask.lastModifiedDate {
+                    // Local is newer, keep local
+                    mergedTask = localTask
+                    print("🔄 Local task is newer for \(localTask.name)")
+                } else {
+                    // Same timestamp, merge completions intelligently
+                    mergedTask = remoteTask
+                    var mergedCompletions = remoteTask.completions
+                    
+                    for (date, localCompletion) in localTask.completions {
+                        if mergedCompletions[date] == nil {
+                            mergedCompletions[date] = localCompletion
+                        }
                     }
+                    
+                    mergedTask.completions = mergedCompletions
+                    let allCompletionDates = Set(localTask.completionDates + remoteTask.completionDates)
+                    mergedTask.completionDates = Array(allCompletionDates).sorted()
+                    print("🔄 Same timestamp, merged completions for \(remoteTask.name)")
+                }
+                
+                // Sync subtask states
+                syncSubtaskCompletionStates(&mergedTask)
+                
+                if let index = mergedTasks.firstIndex(where: { $0.id == remoteTask.id }) {
+                    mergedTasks[index] = mergedTask
+                    hasChanges = true
                 }
             } else {
                 // New remote task
-                mergedTasks.append(remoteTask)
+                var newTask = remoteTask
+                syncSubtaskCompletionStates(&newTask)
+                mergedTasks.append(newTask)
                 hasChanges = true
                 print("📥 Added task from remote: \(remoteTask.name)")
             }
@@ -705,6 +784,8 @@ class CloudKitService: ObservableObject {
         
         // Safely encode complex objects
         do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
             encodeToRecord(record, key: "category", value: task.category)
             encodeToRecord(record, key: "location", value: task.location)
             encodeToRecord(record, key: "recurrence", value: task.recurrence)
@@ -773,14 +854,16 @@ class CloudKitService: ObservableObject {
     }
     
     private func syncSubtaskCompletionStates(_ task: inout TodoTask) {
-        let today = Calendar.current.startOfDay(for: Date())
-        
-        if let todayCompletion = task.completions[today] {
-            // Update subtask completion states based on today's completion data
-            for i in 0..<task.subtasks.count {
-                let subtaskId = task.subtasks[i].id
-                task.subtasks[i].isCompleted = todayCompletion.completedSubtasks.contains(subtaskId)
+        for i in 0..<task.subtasks.count {
+            let subtaskId = task.subtasks[i].id
+            var isCompleted = false
+            for completion in task.completions.values {
+                if completion.completedSubtasks.contains(subtaskId) {
+                    isCompleted = true
+                    break
+                }
             }
+            task.subtasks[i].isCompleted = isCompleted
         }
     }
     
@@ -955,7 +1038,9 @@ class CloudKitService: ObservableObject {
         guard let value = value else { return }
         
         do {
-            let data = try JSONEncoder().encode(value)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(value)
             record[key] = data
         } catch {
             print("⚠️ Failed to encode \(key): \(error)")
@@ -964,7 +1049,15 @@ class CloudKitService: ObservableObject {
     
     private func decodeFromRecord<T: Codable>(_ record: CKRecord, key: String, type: T.Type = T.self) -> T? {
         guard let data = record[key] as? Data else { return nil }
-        return try? JSONDecoder().decode(T.self, from: data)
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            print("⚠️ Failed to decode \(key): \(error)")
+            return nil
+        }
     }
     
     private func canPerformSync() -> Bool {
@@ -1126,6 +1219,111 @@ class CloudKitService: ObservableObject {
         default:
             syncStatus = .error("CloudKit error: \(error.localizedDescription)")
         }
+    }
+    
+    private func resolveConflictAndRetry(task: TodoTask, retryCount: Int) async {
+        do {
+            // Fetch the current version from CloudKit
+            let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
+            let currentRecord = try await privateDatabase.record(for: recordID)
+            
+            // Create current task from record
+            guard let currentTask = createTask(from: currentRecord) else {
+                print("❌ Could not parse current task from CloudKit")
+                return
+            }
+            
+            // Merge our changes into the current version
+            let mergedTask = mergeTaskConflict(local: task, remote: currentTask)
+            
+            // Update the existing record instead of creating new one
+            let updatedRecord = updateTaskRecord(currentRecord, with: mergedTask)
+            
+            // Save the updated record
+            let operation = CKModifyRecordsOperation(recordsToSave: [updatedRecord])
+            operation.savePolicy = .changedKeys
+            operation.isAtomic = false
+            
+            _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CKRecord], Error>) in
+                operation.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(returning: savedRecords ?? [])
+                    }
+                }
+                privateDatabase.add(operation)
+            }
+            
+            print("✅ Conflict resolved and task updated: \(mergedTask.name)")
+            
+        } catch {
+            print("❌ Failed to resolve conflict for \(task.name): \(error)")
+            if retryCount < 3 {
+                // Try one more time with simple save
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                saveTask(task, retryCount: retryCount + 1)
+            }
+        }
+    }
+    
+    private func updateTaskRecord(_ existingRecord: CKRecord, with task: TodoTask) -> CKRecord {
+        // Update fields in existing record
+        existingRecord["name"] = task.name.isEmpty ? "Untitled Task" : task.name
+        existingRecord["taskDescription"] = task.description
+        existingRecord["startTime"] = task.startTime
+        existingRecord["duration"] = max(0, task.duration)
+        existingRecord["hasDuration"] = task.hasDuration
+        existingRecord["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
+        existingRecord["priority"] = task.priority.rawValue
+        existingRecord["hasRewardPoints"] = task.hasRewardPoints
+        existingRecord["rewardPoints"] = max(0, task.rewardPoints)
+        existingRecord["taskCreationDate"] = task.creationDate
+        existingRecord["taskLastModifiedDate"] = task.lastModifiedDate
+        
+        // Update complex objects
+        encodeToRecord(existingRecord, key: "category", value: task.category)
+        encodeToRecord(existingRecord, key: "location", value: task.location)
+        encodeToRecord(existingRecord, key: "recurrence", value: task.recurrence)
+        encodeToRecord(existingRecord, key: "pomodoroSettings", value: task.pomodoroSettings)
+        encodeToRecord(existingRecord, key: "subtasks", value: task.subtasks)
+        encodeToRecord(existingRecord, key: "completions", value: task.completions)
+        encodeToRecord(existingRecord, key: "completionDates", value: task.completionDates)
+        
+        return existingRecord
+    }
+    
+    private func mergeTaskConflict(local: TodoTask, remote: TodoTask) -> TodoTask {
+        var merged = remote // Start with remote as base
+        
+        var mergedCompletions = remote.completions
+        for (date, localCompletion) in local.completions {
+            if let remoteCompletion = mergedCompletions[date] {
+                // Compare modification times - use the most recent task's completion state
+                if local.lastModifiedDate > remote.lastModifiedDate {
+                    // Local is more recent, use local completion
+                    mergedCompletions[date] = localCompletion
+                }
+                // If remote is more recent or equal, keep remote (already in mergedCompletions)
+            } else {
+                // Local completion doesn't exist remotely, add it
+                mergedCompletions[date] = localCompletion
+            }
+        }
+        merged.completions = mergedCompletions
+        
+        // Merge completion dates
+        let allCompletionDates = Set(local.completionDates + remote.completionDates)
+        merged.completionDates = Array(allCompletionDates).sorted()
+        
+        // Use latest modification date
+        merged.lastModifiedDate = max(local.lastModifiedDate, remote.lastModifiedDate)
+        
+        // Sync subtask states
+        syncSubtaskCompletionStates(&merged)
+        
+        print("🔄 Merged conflict for task: \(merged.name) (using \(local.lastModifiedDate > remote.lastModifiedDate ? "local" : "remote") completion state)")
+        return merged
     }
     
     // MARK: - Remote Notifications

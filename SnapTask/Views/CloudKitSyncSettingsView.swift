@@ -34,7 +34,11 @@ struct CloudKitSyncSettingsView: View {
                     
                     if cloudKitService.isCloudKitEnabled {
                         Button(action: {
-                            cloudKitService.syncNow()
+                            Task {
+                                await MainActor.run {
+                                    cloudKitService.syncNow()
+                                }
+                            }
                         }) {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
@@ -49,6 +53,7 @@ struct CloudKitSyncSettingsView: View {
                             }
                         }
                         .disabled(cloudKitService.isSyncing)
+                        .foregroundColor(cloudKitService.isSyncing ? .secondary : .primary)
                         
                         if let lastSyncDate = cloudKitService.lastSyncDate {
                             HStack {
