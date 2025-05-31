@@ -492,6 +492,10 @@ struct TaskDetailView: View {
             return days.count == 7 ? "Daily" : "\(days.count) days/week"
         case .monthly(let days):
             return "\(days.count) days/month"
+        case .monthlyOrdinal(let patterns):
+            return patterns.isEmpty ? "Monthly Patterns" : patterns.map { $0.displayText }.joined(separator: ", ")
+        case .yearly:
+            return "Yearly"
         }
     }
     

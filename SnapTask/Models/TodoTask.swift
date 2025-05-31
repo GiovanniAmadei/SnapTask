@@ -61,7 +61,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     }
     
     var completionProgress: Double {
-        guard !subtasks.isEmpty else { 
+        guard !subtasks.isEmpty else {
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: Date())
             if let completion = completions[today] {
@@ -122,6 +122,10 @@ struct TodoTask: Identifiable, Codable, Equatable {
         case .monthly(let days):
             let day = calendar.component(.day, from: date)
             return days.contains(day)
+        case .monthlyOrdinal(let patterns):
+            return recurrence.shouldOccurOn(date: date)
+        case .yearly:
+            return recurrence.shouldOccurOn(date: date)
         }
     }
     

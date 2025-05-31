@@ -44,7 +44,15 @@ struct TaskFormView: View {
                     vm.selectedDays = days
                 case .monthly(let days):
                     vm.recurrenceType = .monthly
+                    vm.monthlySelectionType = .days
                     vm.selectedMonthlyDays = days
+                case .monthlyOrdinal(let patterns):
+                    vm.recurrenceType = .monthly
+                    vm.monthlySelectionType = .ordinal
+                    vm.selectedOrdinalPatterns = patterns
+                case .yearly:
+                    vm.recurrenceType = .yearly
+                    vm.yearlyDate = recurrence.startDate
                 }
                 vm.recurrenceEndDate = recurrence.endDate ?? Date().addingTimeInterval(86400 * 30)
                 vm.trackInStatistics = recurrence.trackInStatistics

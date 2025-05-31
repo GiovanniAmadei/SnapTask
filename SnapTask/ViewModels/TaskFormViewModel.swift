@@ -6,6 +6,12 @@ enum RecurrenceType: String, CaseIterable {
     case daily = "Daily"
     case weekly = "Weekly"
     case monthly = "Monthly"
+    case yearly = "Yearly"
+}
+
+enum MonthlySelectionType: String, CaseIterable {
+    case days = "Days"
+    case ordinal = "Patterns"
 }
 
 @MainActor
@@ -25,7 +31,10 @@ class TaskFormViewModel: ObservableObject {
     @Published var recurrenceType: RecurrenceType = .daily
     @Published var selectedDays: Set<Int> = []
     @Published var selectedMonthlyDays: Set<Int> = []
-    @Published var weeklyTimes: [Int: Date] = [:] 
+    @Published var monthlySelectionType: MonthlySelectionType = .days
+    @Published var selectedOrdinalPatterns: Set<Recurrence.OrdinalPattern> = []
+    @Published var yearlyDate: Date = Date()
+    @Published var weeklyTimes: [Int: Date] = [:]
     @Published var hasRecurrenceEndDate: Bool = false
     @Published var recurrenceEndDate: Date = Date().addingTimeInterval(86400 * 30)
     @Published var trackInStatistics: Bool = true
@@ -54,6 +63,7 @@ class TaskFormViewModel: ObservableObject {
         let calendar = Calendar.current
         let startDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: initialDate) ?? initialDate
         self.startDate = startDate
+        self.yearlyDate = startDate
         categories = settingsViewModel.categories
         
         setupObservers()
@@ -95,7 +105,14 @@ class TaskFormViewModel: ObservableObject {
         case .weekly:
             return selectedDays.isEmpty ? "Weekly" : "\(selectedDays.count) days"
         case .monthly:
-            return selectedMonthlyDays.isEmpty ? "Monthly" : "\(selectedMonthlyDays.count) days"
+            switch monthlySelectionType {
+            case .days:
+                return selectedMonthlyDays.isEmpty ? "Monthly" : "\(selectedMonthlyDays.count) days"
+            case .ordinal:
+                return selectedOrdinalPatterns.isEmpty ? "Monthly Patterns" : "\(selectedOrdinalPatterns.count) patterns"
+            }
+        case .yearly:
+            return "Yearly"
         }
     }
     
@@ -127,7 +144,14 @@ class TaskFormViewModel: ObservableObject {
             case .weekly:
                 return Recurrence(type: .weekly(days: selectedDays), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
             case .monthly:
-                return Recurrence(type: .monthly(days: selectedMonthlyDays), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
+                switch monthlySelectionType {
+                case .days:
+                    return Recurrence(type: .monthly(days: selectedMonthlyDays), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
+                case .ordinal:
+                    return Recurrence(type: .monthlyOrdinal(patterns: selectedOrdinalPatterns), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
+                }
+            case .yearly:
+                return Recurrence(type: .yearly, startDate: calendar.startOfDay(for: yearlyDate), endDate: endDate, trackInStatistics: trackInStatistics)
             }
         }() : nil
         
@@ -176,6 +200,12 @@ class TaskFormViewModel: ObservableObject {
         recurrenceType = .daily
         selectedDays = []
         selectedMonthlyDays = []
+        monthlySelectionType = .days
+        selectedOrdinalPatterns = []
+        selectedMonthlyDays = []
+        monthlySelectionType = .days
+        selectedOrdinalPatterns = []
+        yearlyDate = Date()
         weeklyTimes = [:]
         hasRecurrenceEndDate = false
         recurrenceEndDate = Date().addingTimeInterval(86400 * 30)

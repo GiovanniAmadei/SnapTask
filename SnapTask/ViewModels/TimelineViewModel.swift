@@ -125,6 +125,7 @@ class TimelineViewModel: ObservableObject {
                     return false
                 }
                 
+                // Check recurrence pattern
                 switch recurrence.type {
                 case .daily:
                     return true
@@ -134,6 +135,10 @@ class TimelineViewModel: ObservableObject {
                 case .monthly(let days):
                     let day = calendar.component(.day, from: selectedDate)
                     return days.contains(day)
+                case .monthlyOrdinal(let patterns):
+                    return recurrence.shouldOccurOn(date: selectedDate)
+                case .yearly:
+                    return recurrence.shouldOccurOn(date: selectedDate)
                 }
             }
             
@@ -212,6 +217,10 @@ class TimelineViewModel: ObservableObject {
             case .monthly(let days):
                 let day = calendar.component(.day, from: selectedDate)
                 return days.contains(day)
+            case .monthlyOrdinal(let patterns):
+                return recurrence.shouldOccurOn(date: selectedDate)
+            case .yearly:
+                return recurrence.shouldOccurOn(date: selectedDate)
             }
         }
         
@@ -375,6 +384,10 @@ class TimelineViewModel: ObservableObject {
             case .monthly(let days):
                 let day = calendar.component(.day, from: date)
                 return days.contains(day)
+            case .monthlyOrdinal(let patterns):
+                return recurrence.shouldOccurOn(date: date)
+            case .yearly:
+                return recurrence.shouldOccurOn(date: date)
             }
         }
         .sorted { $0.startTime < $1.startTime }
@@ -422,6 +435,10 @@ class TimelineViewModel: ObservableObject {
                 case .monthly(let days):
                     let day = calendar.component(.day, from: now)
                     return days.contains(day)
+                case .monthlyOrdinal(let patterns):
+                    return recurrence.shouldOccurOn(date: now)
+                case .yearly:
+                    return recurrence.shouldOccurOn(date: now)
                 }
             }
             

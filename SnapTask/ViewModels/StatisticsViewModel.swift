@@ -369,6 +369,10 @@ class StatisticsViewModel: ObservableObject {
                 case .monthly(let days):
                     let day = calendar.component(.day, from: date)
                     return days.contains(day)
+                case .monthlyOrdinal(let patterns):
+                    return recurrence.shouldOccurOn(date: date)
+                case .yearly:
+                    return recurrence.shouldOccurOn(date: date)
                 }
             }
             
@@ -442,6 +446,10 @@ class StatisticsViewModel: ObservableObject {
                     case .monthly(let days):
                         let day = calendar.component(.day, from: date)
                         return days.contains(day)
+                    case .monthlyOrdinal(let patterns):
+                        return recurrence.shouldOccurOn(date: date)
+                    case .yearly:
+                        return recurrence.shouldOccurOn(date: date)
                     }
                 }
                 return false
@@ -556,6 +564,10 @@ class StatisticsViewModel: ObservableObject {
         case .monthly(let days):
             let day = calendar.component(.day, from: date)
             return days.contains(day)
+        case .monthlyOrdinal(let patterns):
+            return recurrence.shouldOccurOn(date: date)
+        case .yearly:
+            return recurrence.shouldOccurOn(date: date)
         }
     }
 }

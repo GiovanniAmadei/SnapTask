@@ -688,7 +688,8 @@ private struct TimelineTaskCard: View {
     @State private var showingPomodoro = false
     @State private var showingEditSheet = false
     @State private var showingDetailView = false
-    @State private var offset: CGFloat = 0
+    @State private var dragOffset: CGFloat = 0
+    @State private var isAutoCompleting = false
     @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
@@ -713,13 +714,6 @@ private struct TimelineTaskCard: View {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
         return task.completions[startOfDay]?.completedSubtasks ?? []
-    }
-    
-    private var subtaskCountText: String {
-        if task.subtasks.isEmpty { return "" }
-        let completedCount = completedSubtasks.count
-        let totalCount = task.subtasks.count
-        return "\(completedCount)/\(totalCount)"
     }
     
     private var currentStreak: Int {
@@ -754,71 +748,103 @@ private struct TimelineTaskCard: View {
         return streak
     }
     
+    // Soglie corrette per comportamento iOS-like
+    private let showCompleteThreshold: CGFloat = 80     // Mostra il bottone
+    private let autoCompleteThreshold: CGFloat = 160    // Auto-complete
+    private let showActionsThreshold: CGFloat = -80     // Mostra edit/delete
+    private let maxSwipeDistance: CGFloat = -160        // Massimo swipe a sinistra
+    
     var body: some View {
-        ZStack(alignment: .leading) {
-            HStack(spacing: 4) {
-                Spacer()
-                
-                Button(action: {
-                    showingEditSheet = true
-                    withAnimation(.spring()) {
-                        offset = 0
-                    }
-                }) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
+        ZStack {
+            // Background layer per le azioni
+            HStack {
+                // Left - Complete action (solo quando dragOffset > showCompleteThreshold)
+                if dragOffset > showCompleteThreshold {
+                    HStack {
+                        RoundedRectangle(cornerRadius: 14)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.blue, Color.blue.opacity(0.8)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    colors: dragOffset > autoCompleteThreshold 
+                                        ? [Color.green, Color.green.opacity(0.8)]
+                                        : [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
                                 )
                             )
-                            .frame(width: 60, height: 50)
-                            .shadow(color: Color.blue.opacity(0.2), radius: 2, x: 0, y: 1)
-                        
-                        VStack(spacing: 2) {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("edit".localized)
-                                .font(.system(.caption2, design: .rounded).bold())
-                        }
-                        .foregroundColor(.white)
+                            .frame(width: min(dragOffset, UIScreen.main.bounds.width), height: 60)
+                            .overlay(
+                                Button(action: {
+                                    // Completa solo se cliccato esplicitamente
+                                    performComplete()
+                                }) {
+                                    HStack {
+                                        Spacer()
+                                        Image(systemName: dragOffset > autoCompleteThreshold ? "checkmark" : "checkmark")
+                                            .font(.system(size: 22, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .scaleEffect(dragOffset > autoCompleteThreshold ? 1.2 : 1.0)
+                                        Spacer()
+                                    }
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            )
+                        Spacer()
                     }
                 }
                 
-                Button(action: {
-                    withAnimation(.spring()) {
-                        TaskManager.shared.removeTask(task)
-                        offset = 0
-                    }
-                }) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.red, Color.red.opacity(0.8)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .frame(width: 60, height: 50)
-                            .shadow(color: Color.red.opacity(0.2), radius: 2, x: 0, y: 1)
+                // Right - Edit/Delete actions (solo quando dragOffset < showActionsThreshold)
+                if dragOffset < showActionsThreshold {
+                    HStack {
+                        Spacer()
                         
-                        VStack(spacing: 2) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("delete".localized)
-                                .font(.system(.caption2, design: .rounded).bold())
+                        // Edit button - rimane visibile
+                        Button(action: {
+                            showingEditSheet = true
+                            resetSwipe()
+                        }) {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.orange, Color.orange.opacity(0.8)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .frame(width: 70, height: 60)
+                                .overlay(
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                )
                         }
-                        .foregroundColor(.white)
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Delete button - rimane visibile
+                        Button(action: {
+                            deleteTask()
+                        }) {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.red, Color.red.opacity(0.8)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .frame(width: 70, height: 60)
+                                .overlay(
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
+                    .padding(.trailing, 16)
                 }
             }
-            .padding(.trailing, 8)
-            .frame(maxWidth: .infinity, minHeight: 60)
-            .opacity(offset < -20 ? 1 : 0)
             
+            // Main card content
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 8) {
                     Rectangle()
@@ -992,49 +1018,65 @@ private struct TimelineTaskCard: View {
                     .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
                     .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
             )
-            .offset(x: offset)
+            .offset(x: dragOffset)
+            .scaleEffect(isAutoCompleting ? 0.95 : 1.0)
+            .opacity(isAutoCompleting ? 0.8 : 1.0)
         }
         .contentShape(Rectangle())
         .gesture(
-            DragGesture(minimumDistance: 5)
-                .onChanged { gesture in
-                    if abs(gesture.translation.width) > abs(gesture.translation.height) * 1.5 {
-                        withAnimation(.interactiveSpring(response: 0.4, dampingFraction: 0.8)) {
-                            if gesture.translation.width <= 0 {
-                                offset = max(-140, gesture.translation.width)
-                            } else if offset < 0 {
-                                offset = min(0, offset + gesture.translation.width)
-                            }
-                        }
+            DragGesture(minimumDistance: 30)
+                .onChanged { value in
+                    let translation = value.translation.width
+                    let verticalTranslation = value.translation.height
+                    
+                    // Only handle horizontal swipes with sufficient movement
+                    guard abs(translation) > abs(verticalTranslation) * 2 else { return }
+                    
+                    if translation > 0 {
+                        // Right swipe (complete action) - più resistenza
+                        dragOffset = min(translation * 0.7, 200)
+                    } else {
+                        // Left swipe (edit/delete actions) - va più a sinistra
+                        dragOffset = max(translation * 0.9, maxSwipeDistance)
                     }
                 }
-                .onEnded { gesture in
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                        if offset < -40 {
-                            offset = -140
-                        } else {
-                            offset = 0
+                .onEnded { value in
+                    let translation = value.translation.width
+                    let velocity = value.velocity.width
+                    
+                    // Auto-complete solo con swipe molto lungo
+                    if translation > autoCompleteThreshold && velocity > 300 {
+                        performAutoComplete()
+                    } else if translation > showCompleteThreshold {
+                        // Mantieni la posizione per mostrare il bottone
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            dragOffset = showCompleteThreshold + 20
                         }
+                    } else if translation < showActionsThreshold {
+                        // Mantieni la posizione per mostrare edit/delete
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            dragOffset = showActionsThreshold - 20
+                        }
+                    } else {
+                        // Reset al centro
+                        resetSwipe()
                     }
                 }
         )
         .onTapGesture {
-            if offset < 0 {
-                withAnimation(.spring()) {
-                    offset = 0
-                }
+            if dragOffset != 0 {
+                resetSwipe()
             } else if !task.subtasks.isEmpty {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isExpanded.toggle()
                 }
             }
         }
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.6, maximumDistance: 10)
-                .onEnded { _ in
-                    showingDetailView = true
-                }
-        )
+        .onLongPressGesture(minimumDuration: 0.6) {
+            if dragOffset == 0 {
+                showingDetailView = true
+            }
+        }
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in
                 TaskManager.shared.updateTask(updatedTask)
@@ -1047,6 +1089,45 @@ private struct TimelineTaskCard: View {
             NavigationStack {
                 TaskDetailView(task: task)
             }
+        }
+    }
+    
+    private func performComplete() {
+        // Funzione separata per il completamento manuale
+        resetSwipe()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            onToggleComplete()
+        }
+    }
+    
+    private func performAutoComplete() {
+        // Auto-complete solo con swipe molto lungo
+        isAutoCompleting = true
+        
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            dragOffset = 0
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            onToggleComplete()
+            
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                isAutoCompleting = false
+            }
+            
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+    }
+    
+    private func resetSwipe() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            dragOffset = 0
+        }
+    }
+    
+    private func deleteTask() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            TaskManager.shared.removeTask(task)
         }
     }
     
