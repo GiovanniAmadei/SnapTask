@@ -764,7 +764,7 @@ private struct TimelineTaskCard: View {
                         RoundedRectangle(cornerRadius: 14)
                             .fill(
                                 LinearGradient(
-                                    colors: dragOffset > autoCompleteThreshold 
+                                    colors: dragOffset > autoCompleteThreshold
                                         ? [Color.green, Color.green.opacity(0.8)]
                                         : [Color.blue, Color.blue.opacity(0.8)],
                                     startPoint: .leading,
@@ -888,19 +888,28 @@ private struct TimelineTaskCard: View {
                             Spacer()
                             
                             if !task.subtasks.isEmpty {
-                                VStack {
-                                    if task.description != nil {
-                                        Spacer()
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        isExpanded.toggle()
                                     }
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
-                                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                                        .animation(.easeInOut(duration: 0.2), value: isExpanded)
-                                    if task.description != nil {
-                                        Spacer()
+                                }) {
+                                    VStack {
+                                        if task.description != nil {
+                                            Spacer()
+                                        }
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                                            .animation(.easeInOut(duration: 0.2), value: isExpanded)
+                                        if task.description != nil {
+                                            Spacer()
+                                        }
                                     }
+                                    .frame(width: 24, height: 24)
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(BorderlessButtonStyle())
                             }
                         }
                         
@@ -1066,14 +1075,7 @@ private struct TimelineTaskCard: View {
         .onTapGesture {
             if dragOffset != 0 {
                 resetSwipe()
-            } else if !task.subtasks.isEmpty {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
-                }
-            }
-        }
-        .onLongPressGesture(minimumDuration: 0.6) {
-            if dragOffset == 0 {
+            } else {
                 showingDetailView = true
             }
         }
@@ -1085,7 +1087,7 @@ private struct TimelineTaskCard: View {
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
         }
-        .fullScreenCover(isPresented: $showingDetailView) {
+        .sheet(isPresented: $showingDetailView) {
             NavigationStack {
                 TaskDetailView(task: task)
             }
@@ -1237,12 +1239,6 @@ struct TimelineHourRow: View {
                 }
             }
             .frame(width: 50)
-            
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(isCurrentHour ? Color.pink.opacity(0.3) : Color.gray.opacity(0.2))
-                    .frame(width: 2, height: tasks.isEmpty ? 60 : CGFloat(max(60, tasks.count * 80)))
-            }
             
             VStack(alignment: .leading, spacing: 8) {
                 if tasks.isEmpty {

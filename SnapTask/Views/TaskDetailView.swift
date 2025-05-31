@@ -191,6 +191,7 @@ struct TaskDetailView: View {
             Text(description)
                 .font(.body)
                 .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
     
@@ -552,6 +553,7 @@ struct DetailCard<Content: View>: View {
             content
         }
         .padding(20)
+        .frame(maxWidth: .infinity)
         .background(cardBackground)
     }
     
