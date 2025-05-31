@@ -23,11 +23,45 @@ class StatisticsViewModel: ObservableObject {
         let day: String
         let completedTasks: Int
         let totalTasks: Int
+        let completionRate: Double
         
         static func == (lhs: WeeklyStat, rhs: WeeklyStat) -> Bool {
             return lhs.day == rhs.day &&
                    lhs.completedTasks == rhs.completedTasks &&
                    lhs.totalTasks == rhs.totalTasks
+        }
+    }
+    
+    struct TaskStreak: Identifiable, Equatable {
+        let id = UUID()
+        let taskId: UUID
+        let taskName: String
+        let categoryName: String?
+        let categoryColor: String?
+        let currentStreak: Int
+        let bestStreak: Int
+        let totalOccurrences: Int
+        let completedOccurrences: Int
+        let completionRate: Double
+        let streakHistory: [StreakPoint]
+        
+        static func == (lhs: TaskStreak, rhs: TaskStreak) -> Bool {
+            return lhs.taskId == rhs.taskId &&
+                   lhs.currentStreak == rhs.currentStreak &&
+                   lhs.bestStreak == rhs.bestStreak
+        }
+    }
+    
+    struct StreakPoint: Identifiable, Equatable {
+        let id = UUID()
+        let date: Date
+        let streakValue: Int
+        let wasCompleted: Bool
+        
+        static func == (lhs: StreakPoint, rhs: StreakPoint) -> Bool {
+            return lhs.date == rhs.date &&
+                   lhs.streakValue == rhs.streakValue &&
+                   lhs.wasCompleted == rhs.wasCompleted
         }
     }
     
@@ -60,10 +94,10 @@ class StatisticsViewModel: ObservableObject {
     @Published private(set) var weeklyStats: [WeeklyStat] = []
     @Published private(set) var currentStreak: Int = 0
     @Published private(set) var bestStreak: Int = 0
+    @Published private(set) var taskStreaks: [TaskStreak] = []
     @Published var selectedTimeRange: TimeRange = .today
     @Published private(set) var recurringTasks: [TodoTask] = []
     
-    // Tasks that should be included in consistency tracking
     var trackedRecurringTasks: [TodoTask] {
         recurringTasks.filter { task in
             if let recurrence = task.recurrence {
@@ -73,9 +107,7 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
-    // Make sure we use all recurring tasks in consistency view
     var consistency: [TodoTask] {
-        // Use all recurring tasks for consistency view regardless of tracking setting
         recurringTasks
     }
     
@@ -95,10 +127,8 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
-    // Method to be called after CloudKit synchronization
     func refreshAfterSync() {
         DispatchQueue.main.async { [weak self] in
-            // Force a refresh after a short delay to ensure all data is loaded
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self?.updateStats()
             }
@@ -106,7 +136,6 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func setupObservers() {
-        // Listen for task updates
         NotificationCenter.default.publisher(for: .tasksDidUpdate)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -115,7 +144,6 @@ class StatisticsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
             
-        // Listen for category updates
         NotificationCenter.default.publisher(for: .categoriesDidUpdate)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -124,7 +152,6 @@ class StatisticsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Listen for time tracking updates
         NotificationCenter.default.publisher(for: .timeTrackingUpdated)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -133,7 +160,6 @@ class StatisticsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Listen for category manager updates
         categoryManager.$categories
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -142,7 +168,6 @@ class StatisticsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Listen for task manager updates
         taskManager.$tasks
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -155,20 +180,17 @@ class StatisticsViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 print("📊 CloudKit data changed, refreshing statistics")
-                // Add a small delay to ensure all data is fully loaded
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     self?.updateStats()
                 }
             }
             .store(in: &cancellables)
         
-        // Listen for CloudKit sync completion
         cloudKitService.$syncStatus
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
                 if status == .success {
                     print("📊 CloudKit sync completed, refreshing statistics")
-                    // Refresh statistics after successful sync
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         self?.refreshAfterSync()
                     }
@@ -180,14 +202,12 @@ class StatisticsViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 print("📊 App became active, refreshing statistics")
-                // Refresh when app becomes active (e.g., switching from iPad)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     self?.updateStats()
                 }
             }
             .store(in: &cancellables)
         
-        // Add time range observer
         $selectedTimeRange
             .dropFirst()
             .receive(on: DispatchQueue.main)
@@ -202,6 +222,7 @@ class StatisticsViewModel: ObservableObject {
         updateCategoryStats()
         updateWeeklyStats()
         updateStreakStats()
+        updateTaskStreaks()
         updateRecurringTasks()
         objectWillChange.send()
     }
@@ -214,20 +235,16 @@ class StatisticsViewModel: ObservableObject {
         print("📊 Date range: \(startDate) to \(endDate)")
         print("📊 Available categories: \(categories.map { "\($0.name) (ID: \($0.id.uuidString.prefix(8)))" })")
         
-        // Get time tracking data from UserDefaults (local only)
         let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
         let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
         
         var categoryStatsList: [CategoryStat] = []
         
-        // Process regular categories
         for category in categories {
             let categoryTasks = allTasks.filter { task in
-                // First try ID match (exact)
                 if task.category?.id == category.id {
                     return true
                 }
-                // Fallback to name match for cross-device compatibility
                 if let taskCategoryName = task.category?.name,
                    taskCategoryName.lowercased() == category.name.lowercased() {
                     print("📊 Found task '\(task.name)' with category name match: '\(taskCategoryName)' -> '\(category.name)'")
@@ -238,17 +255,14 @@ class StatisticsViewModel: ObservableObject {
             
             print("📊 Category '\(category.name)': found \(categoryTasks.count) tasks")
             
-            // Calculate hours from completed tasks with duration
             let taskHours = categoryTasks.reduce(0.0) { total, task in
                 let completionHours = task.completions
                     .compactMap { (date, completion) -> Double? in
-                        // Fix date range check - include entire end date
                         let startOfStartDate = Calendar.current.startOfDay(for: startDate)
                         let endOfEndDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: endDate))!
                         
                         print("📊 Checking task '\(task.name)': date=\(date), startRange=\(startOfStartDate), endRange=\(endOfEndDate), isCompleted=\(completion.isCompleted)")
                         
-                        // Check if completion is in our date range and is completed
                         guard date >= startOfStartDate &&
                               date < endOfEndDate &&
                               completion.isCompleted else {
@@ -256,13 +270,12 @@ class StatisticsViewModel: ObservableObject {
                             return nil
                         }
                         
-                        // ONLY count if task has REAL duration set
                         if task.hasDuration && task.duration > 0 {
                             print("📊   -> Included: Task '\(task.name)' completed on \(date) with duration: \(task.duration/3600.0)h")
-                            return task.duration / 3600.0 // Convert seconds to hours
+                            return task.duration / 3600.0
                         } else {
                             print("📊   -> Excluded: Task '\(task.name)' completed on \(date) but has NO duration set")
-                            return nil // Don't count tasks without real duration
+                            return nil
                         }
                     }
                     .reduce(0.0, +)
@@ -270,36 +283,34 @@ class StatisticsViewModel: ObservableObject {
                 return total + completionHours
             }
             
-            // Add tracked time from Pomodoro sessions (local data)
-            let calendar = Calendar.current
-            var trackedHours = 0.0
+        let calendar = Calendar.current
+        var trackedHours = 0.0
             
-            var currentDate = startDate
-            while currentDate <= endDate {
-                let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
-                if let dayData = timeTrackingData[dateKey],
-                   let categoryHours = dayData[category.id.uuidString] {
-                    trackedHours += categoryHours
-                    print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from Pomodoro tracking")
-                }
-                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+        var currentDate = startDate
+        while currentDate <= endDate {
+            let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
+            if let dayData = timeTrackingData[dateKey],
+               let categoryHours = dayData[category.id.uuidString] {
+                trackedHours += categoryHours
+                print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from Pomodoro tracking")
             }
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+        }
             
-            let totalHours = taskHours + trackedHours
+        let totalHours = taskHours + trackedHours
             
-            if totalHours > 0 {
-                categoryStatsList.append(CategoryStat(
-                    name: category.name,
-                    color: category.color,
-                    hours: totalHours
-                ))
-                print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from Pomodoro = \(String(format: "%.2f", totalHours))h total")
-            } else {
-                print("📊 Category \(category.name): 0 hours (no tasks with duration or Pomodoro sessions)")
-            }
+        if totalHours > 0 {
+            categoryStatsList.append(CategoryStat(
+                name: category.name,
+                color: category.color,
+                hours: totalHours
+            ))
+            print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from Pomodoro = \(String(format: "%.2f", totalHours))h total")
+        } else {
+            print("📊 Category \(category.name): 0 hours (no tasks with duration or Pomodoro sessions)")
+        }
         }
         
-        // Process individual task tracking (local Pomodoro data only)
         let calendar = Calendar.current
         var currentDate = startDate
         var taskTracking: [String: Double] = [:]
@@ -316,7 +327,6 @@ class StatisticsViewModel: ObservableObject {
             currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
         }
         
-        // Add individual tasks to statistics (from local Pomodoro tracking only)
         for (taskKey, hours) in taskTracking {
             if hours > 0, let metadata = taskMetadata[taskKey] {
                 categoryStatsList.append(CategoryStat(
@@ -344,22 +354,17 @@ class StatisticsViewModel: ObservableObject {
             let startOfDay = calendar.startOfDay(for: date)
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
             
-            // 1. Filtra le task SINGLE (non ricorrenti) create specificamente per questo giorno
             let singleDayTasks = taskManager.tasks.filter { task in
                 task.recurrence == nil && calendar.isDate(task.startTime, inSameDayAs: date)
             }
             
-            // 2. Filtra le task RICORRENTI che dovrebbero essere attive in questo giorno
             let recurringDayTasks = taskManager.tasks.filter { task in
                 guard let recurrence = task.recurrence else { return false }
                 
-                // Verifica che la task sia stata creata in o prima di questo giorno
                 if task.startTime > endOfDay { return false }
                 
-                // Verifica la data di fine se esiste
                 if let endDate = recurrence.endDate, endDate < startOfDay { return false }
                 
-                // Controlla il pattern di ricorrenza per questo giorno specifico
                 switch recurrence.type {
                 case .daily:
                     return true
@@ -376,10 +381,8 @@ class StatisticsViewModel: ObservableObject {
                 }
             }
             
-            // Combina tutte le task attive per questo giorno
             let allDayTasks = singleDayTasks + recurringDayTasks
             
-            // Conta quante task sono state completate per questo giorno
             let completedCount = allDayTasks.filter { task in
                 if let completion = task.completions[startOfDay], completion.isCompleted {
                     return true
@@ -387,16 +390,19 @@ class StatisticsViewModel: ObservableObject {
                 return false
             }.count
             
+            let totalCount = allDayTasks.count
+            let completionRate = totalCount > 0 ? Double(completedCount) / Double(totalCount) : 0.0
+            
             return WeeklyStat(
                 day: date.formatted(.dateTime.weekday(.abbreviated)),
                 completedTasks: completedCount,
-                totalTasks: allDayTasks.count
+                totalTasks: totalCount,
+                completionRate: completionRate
             )
         }
     }
     
     private func updateStreakStats() {
-        // Improve date calculations using Calendar
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let yearAgo = calendar.date(byAdding: .year, value: -1, to: today) else {
@@ -404,7 +410,6 @@ class StatisticsViewModel: ObservableObject {
             return
         }
         
-        // Genera array di date dal passato a oggi
         var currentDate = yearAgo
         var dates: [Date] = []
         
@@ -418,23 +423,17 @@ class StatisticsViewModel: ObservableObject {
         var bestStreak = 0
         var tempStreak = 0
         
-        // Itera dal giorno più recente al più vecchio
         for date in dates.reversed() {
             let startOfDay = calendar.startOfDay(for: date)
             
-            // Ottiene le task per il giorno, includendo quelle ricorrenti
             let dayTasks = taskManager.tasks.filter { task in
-                // Verifica che la task sia stata creata in o prima di questo giorno
                 guard task.startTime <= startOfDay else { return false }
                 
-                // Includi task specifiche per questo giorno
                 if calendar.isDate(task.startTime, inSameDayAs: date) {
                     return true
                 }
                 
-                // Includi task ricorrenti per questo giorno
                 if let recurrence = task.recurrence {
-                    // Verifica la data di fine se esiste
                     if let endDate = recurrence.endDate, endDate < startOfDay { return false }
                     
                     switch recurrence.type {
@@ -455,7 +454,6 @@ class StatisticsViewModel: ObservableObject {
                 return false
             }
             
-            // Controlla se ci sono task per il giorno e se sono tutte completate
             let allCompletedForDay = !dayTasks.isEmpty && dayTasks.allSatisfy { task in
                 if let completion = task.completions[startOfDay] {
                     return completion.isCompleted
@@ -465,17 +463,13 @@ class StatisticsViewModel: ObservableObject {
             
             if allCompletedForDay {
                 tempStreak += 1
-                // Aggiorna la striscia migliore
                 bestStreak = max(bestStreak, tempStreak)
                 
-                // Se siamo a oggi, questa è la striscia corrente
                 if calendar.isDateInToday(date) {
                     currentStreak = tempStreak
                 }
             } else {
-                // Se c'è un'interruzione nella striscia
                 if tempStreak > 0 && calendar.isDateInToday(date) {
-                    // Se l'interruzione è proprio oggi, consideriamo la striscia corrente come 0
                     currentStreak = 0
                 }
                 tempStreak = 0
@@ -486,8 +480,82 @@ class StatisticsViewModel: ObservableObject {
         self.bestStreak = bestStreak
     }
     
+    private func updateTaskStreaks() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: today)!
+        
+        var taskStreaksList: [TaskStreak] = []
+        
+        for task in recurringTasks {
+            guard let recurrence = task.recurrence else { continue }
+            
+            var streakHistory: [StreakPoint] = []
+            var currentStreak = 0
+            var bestStreak = 0
+            var tempStreak = 0
+            var totalOccurrences = 0
+            var completedOccurrences = 0
+            
+            var dates: [Date] = []
+            var currentDate = thirtyDaysAgo
+            while currentDate <= today {
+                dates.append(currentDate)
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+            }
+            
+            for date in dates {
+                let startOfDay = calendar.startOfDay(for: date)
+                
+                if shouldTaskOccurOnDate(task: task, date: startOfDay) {
+                    totalOccurrences += 1
+                    let isCompleted = task.completions[startOfDay]?.isCompleted == true
+                    
+                    if isCompleted {
+                        tempStreak += 1
+                        completedOccurrences += 1
+                        bestStreak = max(bestStreak, tempStreak)
+                        
+                        if calendar.isDate(date, inSameDayAs: today) {
+                            currentStreak = tempStreak
+                        }
+                    } else {
+                        if tempStreak > 0 && calendar.isDate(date, inSameDayAs: today) {
+                            currentStreak = 0
+                        }
+                        tempStreak = 0
+                    }
+                    
+                    streakHistory.append(StreakPoint(
+                        date: startOfDay,
+                        streakValue: tempStreak,
+                        wasCompleted: isCompleted
+                    ))
+                }
+            }
+            
+            let completionRate = totalOccurrences > 0 ? Double(completedOccurrences) / Double(totalOccurrences) : 0.0
+            
+            let taskStreak = TaskStreak(
+                taskId: task.id,
+                taskName: task.name,
+                categoryName: task.category?.name,
+                categoryColor: task.category?.color,
+                currentStreak: currentStreak,
+                bestStreak: bestStreak,
+                totalOccurrences: totalOccurrences,
+                completedOccurrences: completedOccurrences,
+                completionRate: completionRate,
+                streakHistory: streakHistory
+            )
+            
+            taskStreaksList.append(taskStreak)
+        }
+        
+        taskStreaks = taskStreaksList.sorted { $0.currentStreak > $1.currentStreak }
+    }
+    
     private func updateRecurringTasks() {
-        // Include all recurring tasks regardless of trackInStatistics setting
         recurringTasks = taskManager.tasks.filter { task in
             task.recurrence != nil
         }
@@ -500,7 +568,6 @@ class StatisticsViewModel: ObservableObject {
         let today = Date()
         var points: [(x: CGFloat, y: CGFloat)] = []
         
-        // Determine the number of days to analyze based on time range
         let daysToAnalyze: Int
         switch timeRange {
         case .week:
@@ -511,25 +578,20 @@ class StatisticsViewModel: ObservableObject {
             daysToAnalyze = 365
         }
         
-        // Calculate cumulative progress points
         var cumulativeProgress: Double = 0
         
         for dayOffset in (1-daysToAnalyze)...0 {
             let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!.startOfDay
             
-            // Check if task should occur on this date
             if shouldTaskOccurOnDate(task: task, date: date) {
                 let isCompleted = task.completions[date]?.isCompleted == true
                 
-                // Update cumulative progress
                 if isCompleted {
                     cumulativeProgress += 1
                 } else {
-                    // Optional: penalize missed tasks
                     cumulativeProgress = max(0, cumulativeProgress - 0.5)
                 }
                 
-                // Calculate position (0 to 1 range)
                 let xPosition = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
                 points.append((x: xPosition, y: CGFloat(cumulativeProgress)))
             }
@@ -538,23 +600,19 @@ class StatisticsViewModel: ObservableObject {
         return points
     }
     
-    // Helper function to check if a task should occur on a specific date
     private func shouldTaskOccurOnDate(task: TodoTask, date: Date) -> Bool {
         guard let recurrence = task.recurrence else { return false }
         
         let calendar = Calendar.current
         
-        // Check if task has started
         if date < calendar.startOfDay(for: task.startTime) {
             return false
         }
         
-        // Check end date if it exists
         if let endDate = recurrence.endDate, date > endDate {
             return false
         }
         
-        // Check recurrence pattern
         switch recurrence.type {
         case .daily:
             return true
@@ -572,7 +630,6 @@ class StatisticsViewModel: ObservableObject {
     }
 }
 
-// Extension to add Statistics-specific logging
 extension Logger {
     static func stats(_ message: String, level: LogLevel = .info, file: String = #file, function: String = #function, line: Int = #line) {
         Logger.shared.log(message, level: level, subsystem: "statistics", file: file, function: function, line: line)
