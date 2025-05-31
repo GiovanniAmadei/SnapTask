@@ -15,12 +15,26 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
+    @Published var showCategoryGradients: Bool {
+        didSet {
+            UserDefaults.standard.set(showCategoryGradients, forKey: "showCategoryGradients")
+            UserDefaults.standard.synchronize()
+        }
+    }
+    
     init() {
         self.autoCompleteTaskWithSubtasks = UserDefaults.standard.bool(forKey: "autoCompleteTaskWithSubtasks")
         // Default to true if first time
         if !UserDefaults.standard.objectExists(forKey: "autoCompleteTaskWithSubtasks") {
             self.autoCompleteTaskWithSubtasks = true
             UserDefaults.standard.set(true, forKey: "autoCompleteTaskWithSubtasks")
+        }
+        
+        self.showCategoryGradients = UserDefaults.standard.bool(forKey: "showCategoryGradients")
+        // Default to true if first time
+        if !UserDefaults.standard.objectExists(forKey: "showCategoryGradients") {
+            self.showCategoryGradients = true
+            UserDefaults.standard.set(true, forKey: "showCategoryGradients")
         }
         
         loadPriorities()

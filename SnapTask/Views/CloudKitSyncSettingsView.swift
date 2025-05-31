@@ -84,10 +84,6 @@ struct CloudKitSyncSettingsView: View {
                                 Image(systemName: "externaldrive")
                                     .foregroundColor(.blue)
                                 Text("What Gets Synced")
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
                             }
                         }
                         

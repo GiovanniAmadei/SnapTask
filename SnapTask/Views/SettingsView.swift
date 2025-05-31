@@ -133,14 +133,11 @@ struct SettingsView: View {
                 
                 // Customization Section
                 Section("Customization") {
-                    NavigationLink(destination: CustomizationView(viewModel: viewModel)) {
-                        HStack {
-                            Image(systemName: "paintbrush.fill")
-                                .foregroundColor(.purple)
-                                .frame(width: 24)
-                            
-                            Text("Categories, Priorities & Colors")
-                        }
+                    NavigationLink {
+                        CustomizationView(viewModel: viewModel)
+                    } label: {
+                        Label("Customization", systemImage: "paintbrush")
+                            .foregroundColor(.purple)
                     }
                 }
                 

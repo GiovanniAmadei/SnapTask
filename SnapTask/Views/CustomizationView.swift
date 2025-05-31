@@ -5,12 +5,17 @@ struct CustomizationView: View {
     
     var body: some View {
         List {
-            Section("Categories") {
+            Section(footer: Text("Category gradients add a subtle color effect to task cards based on their category color. Changes will be applied when you return to the timeline.")) {
                 NavigationLink {
                     CategoriesView(viewModel: viewModel)
                 } label: {
                     Label("Manage Categories", systemImage: "folder.fill")
                         .foregroundColor(.blue)
+                }
+                
+                Toggle(isOn: $viewModel.showCategoryGradients) {
+                    Label("Category Gradients", systemImage: "paintpalette.fill")
+                        .foregroundColor(.cyan)
                 }
             }
             

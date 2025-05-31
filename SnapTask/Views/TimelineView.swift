@@ -191,6 +191,44 @@ struct TimelineContentView: View {
         return viewModel.tasksForSelectedDate().filter { !$0.hasSpecificTime }
     }
     
+    private var currentHour: Int {
+        Calendar.current.component(.hour, from: Date())
+    }
+    
+    private var currentMinute: Int {
+        Calendar.current.component(.minute, from: Date())
+    }
+    
+    private var timelineRange: ClosedRange<Int> {
+        let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
+        
+        if tasks.isEmpty {
+            // If no tasks, show around current time or reasonable default
+            if viewModel.isToday {
+                return max(0, currentHour - 2)...min(23, currentHour + 8)
+            } else {
+                return 8...20 // Default business hours
+            }
+        }
+        
+        let taskHours = tasks.map { Calendar.current.component(.hour, from: $0.startTime) }
+        let minHour = taskHours.min() ?? 8
+        let maxHour = taskHours.max() ?? 20
+        
+        // Expand range slightly for context
+        let startHour = max(0, minHour - 1)
+        let endHour = min(23, maxHour + 2)
+        
+        // If viewing today, include current hour in range
+        if viewModel.isToday {
+            let expandedStart = min(startHour, max(0, currentHour - 1))
+            let expandedEnd = max(endHour, min(23, currentHour + 2))
+            return expandedStart...expandedEnd
+        }
+        
+        return startHour...endHour
+    }
+    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -216,12 +254,15 @@ struct TimelineContentView: View {
                             .padding(.horizontal)
                     }
                     
-                    // Existing hourly timeline
-                    ForEach(viewModel.effectiveStartHour...viewModel.effectiveEndHour, id: \.self) { hour in
-                        TimelineHourRow(
+                    ForEach(Array(timelineRange), id: \.self) { hour in
+                        EnhancedTimelineHourRow(
                             hour: hour,
                             tasks: tasksForHour(hour),
-                            viewModel: viewModel
+                            viewModel: viewModel,
+                            isCurrentHour: viewModel.isToday && currentHour == hour,
+                            currentMinute: viewModel.isToday && currentHour == hour ? currentMinute : nil,
+                            nextTaskHour: nextTaskHour(after: hour),
+                            isLastHour: hour == timelineRange.upperBound
                         )
                         .id(hour)
                     }
@@ -234,10 +275,32 @@ struct TimelineContentView: View {
             }
             .onAppear {
                 scrollProxy = proxy
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    scrollToRelevantTime()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation {
+                        proxy.scrollTo(currentHour, anchor: .center)
+                    }
                 }
             }
+        }
+    }
+    
+    private func nextTaskHour(after hour: Int) -> Int? {
+        let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
+        let futureTaskHours = tasks
+            .map { Calendar.current.component(.hour, from: $0.startTime) }
+            .filter { $0 > hour }
+            .sorted()
+        
+        return futureTaskHours.first
+    }
+    
+    private func tasksForHour(_ hour: Int) -> [TodoTask] {
+        let calendar = Calendar.current
+        return viewModel.tasksForSelectedDate().filter { task in
+            // Only include tasks with specific time for timeline view
+            guard task.hasSpecificTime else { return false }
+            let taskHour = calendar.component(.hour, from: task.startTime)
+            return taskHour == hour
         }
     }
     
@@ -264,34 +327,392 @@ struct TimelineContentView: View {
         }
     }
     
-    private func tasksForHour(_ hour: Int) -> [TodoTask] {
-        let calendar = Calendar.current
-        return viewModel.tasksForSelectedDate().filter { task in
-            // Only include tasks with specific time for timeline view
-            guard task.hasSpecificTime else { return false }
-            let taskHour = calendar.component(.hour, from: task.startTime)
-            return taskHour == hour
-        }
-    }
-    
-    private func scrollToRelevantTime() {
+    private func scrollToCurrentTime() {
         guard let proxy = scrollProxy else { return }
         
         let calendar = Calendar.current
         let currentHour = calendar.component(.hour, from: Date())
         
         if viewModel.isToday {
-            withAnimation(.easeInOut(duration: 0.5)) {
-                proxy.scrollTo(currentHour, anchor: .top)
+            withAnimation(.easeInOut(duration: 0.8)) {
+                proxy.scrollTo(currentHour, anchor: .center)
             }
         } else {
             let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
             if let firstTask = tasks.first {
                 let firstTaskHour = calendar.component(.hour, from: firstTask.startTime)
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    proxy.scrollTo(firstTaskHour, anchor: .top)
+                withAnimation(.easeInOut(duration: 0.8)) {
+                    proxy.scrollTo(firstTaskHour, anchor: .center)
+                }
+            } else {
+                withAnimation(.easeInOut(duration: 0.8)) {
+                    proxy.scrollTo(12, anchor: .center)
                 }
             }
+        }
+    }
+}
+
+struct EnhancedTimelineHourRow: View {
+    let hour: Int
+    let tasks: [TodoTask]
+    @ObservedObject var viewModel: TimelineViewModel
+    @Environment(\.colorScheme) private var colorScheme
+    
+    let isCurrentHour: Bool
+    let currentMinute: Int?
+    let nextTaskHour: Int?
+    let isLastHour: Bool
+    
+    private var hasCurrentTask: Bool {
+        !tasks.isEmpty
+    }
+    
+    private var timeToNextTask: String? {
+        guard let nextHour = nextTaskHour, !hasCurrentTask else { return nil }
+        let hoursDiff = nextHour - hour
+        
+        if hoursDiff == 1 {
+            return "Next task in 1 hour"
+        } else if hoursDiff > 1 {
+            return "Next task in \(hoursDiff) hours"
+        }
+        return nil
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                // Time column with enhanced current time indicator
+                VStack(spacing: 4) {
+                    Text(hourString)
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(isCurrentHour ? .bold : .medium)
+                        .foregroundColor(isCurrentHour ? .pink : .secondary)
+                    
+                    if isCurrentHour {
+                        VStack(spacing: 2) {
+                            Circle()
+                                .fill(Color.pink)
+                                .frame(width: 10, height: 10)
+                                .shadow(color: .pink.opacity(0.4), radius: 3)
+                            
+                            if let minute = currentMinute {
+                                Text(String(format: "%02d", minute))
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundColor(.pink)
+                                    .fontWeight(.bold)
+                            }
+                            
+                            Text("NOW")
+                                .font(.system(.caption2, design: .rounded))
+                                .fontWeight(.bold)
+                                .foregroundColor(.pink)
+                        }
+                        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isCurrentHour)
+                    }
+                }
+                .frame(width: 60)
+                
+                // Task content area with smart layout
+                VStack(alignment: .leading, spacing: 8) {
+                    if hasCurrentTask {
+                        // Show tasks for this hour
+                        ForEach(tasks, id: \.id) { task in
+                            EnhancedTimelineTaskView(task: task, viewModel: viewModel)
+                        }
+                    } else {
+                        // Show empty state with next task info
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(isCurrentHour ? Color.pink.opacity(0.08) : Color.gray.opacity(0.03))
+                            .frame(height: 50)
+                            .overlay(
+                                VStack(spacing: 4) {
+                                    if isCurrentHour && currentMinute != nil {
+                                        // Current time indicator line
+                                        HStack {
+                                            Circle()
+                                                .fill(Color.pink)
+                                                .frame(width: 6, height: 6)
+                                            Rectangle()
+                                                .fill(Color.pink.opacity(0.6))
+                                                .frame(height: 2)
+                                            Spacer()
+                                        }
+                                    } else if let nextTaskInfo = timeToNextTask {
+                                        Text(nextTaskInfo)
+                                            .font(.system(.caption, design: .rounded))
+                                            .foregroundColor(.secondary)
+                                            .fontWeight(.medium)
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                            )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    // Enhanced background for current hour
+                    isCurrentHour ?
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.pink.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1.5)
+                        )
+                        .shadow(color: .pink.opacity(0.1), radius: 4)
+                    : nil
+                )
+            }
+            .padding(.vertical, 6)
+            
+            // Connection line to next hour
+            if !isLastHour {
+                HStack {
+                    Spacer()
+                        .frame(width: 30)
+                    
+                    VStack(spacing: 0) {
+                        if hasCurrentTask || nextTaskHour != nil {
+                            // Animated connection line
+                            Rectangle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            isCurrentHour ? Color.pink.opacity(0.6) : Color.gray.opacity(0.3),
+                                            Color.gray.opacity(0.1)
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .frame(width: 2, height: 20)
+                        } else {
+                            // Dotted line for empty periods
+                            VStack(spacing: 2) {
+                                ForEach(0..<4, id: \.self) { _ in
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(width: 2, height: 2)
+                                }
+                            }
+                        }
+                        
+                        Divider()
+                            .background(
+                                isCurrentHour ? 
+                                Color.pink.opacity(0.4) : 
+                                Color.gray.opacity(0.2)
+                            )
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+    }
+    
+    private var hourString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        let date = Calendar.current.date(
+            bySettingHour: hour,
+            minute: 0,
+            second: 0,
+            of: Date()
+        ) ?? Date()
+        return formatter.string(from: date)
+    }
+}
+
+struct EnhancedTimelineTaskView: View {
+    let task: TodoTask
+    @ObservedObject var viewModel: TimelineViewModel
+    @State private var showingPomodoro = false
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
+
+    private var isCompleted: Bool {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
+        if let completion = task.completions[startOfDay] {
+            return completion.isCompleted
+        }
+        return false
+    }
+
+    private var taskTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: task.startTime)
+    }
+
+    private var timeUntilTask: String? {
+        guard viewModel.isToday else { return nil }
+        
+        let now = Date()
+        let timeInterval = task.startTime.timeIntervalSince(now)
+        
+        if timeInterval > 0 {
+            let minutes = Int(timeInterval / 60)
+            if minutes < 60 {
+                return "in \(minutes)m"
+            } else {
+                let hours = minutes / 60
+                return "in \(hours)h"
+            }
+        } else if timeInterval > -3600 { // Within last hour
+            return "now"
+        }
+        
+        return nil
+    }
+
+    private var categoryGradient: LinearGradient {
+        if gradientEnabled, let category = task.category {
+            let baseColor = Color(hex: category.color)
+            return LinearGradient(
+                colors: [
+                    baseColor.opacity(0.15),
+                    baseColor.opacity(0.05),
+                    Color.clear
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        } else {
+            return LinearGradient(
+                colors: [Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Completion button
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    viewModel.toggleTaskCompletion(task.id)
+                }
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? Color.green.opacity(0.2) : Color.gray.opacity(0.1))
+                        .frame(width: 28, height: 28)
+                    
+                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isCompleted ? .green : .gray)
+                        .font(.system(size: 20, weight: .medium))
+                }
+            }
+            .buttonStyle(BorderlessButtonStyle())
+
+            // Task content
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .center, spacing: 8) {
+                    // Category indicator
+                    if let category = task.category {
+                        Circle()
+                            .fill(Color(hex: category.color))
+                            .frame(width: 8, height: 8)
+                    }
+                    
+                    Text(task.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(isCompleted ? .secondary : .primary)
+                    
+                    Spacer()
+                    
+                    // Time info
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(taskTime)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(4)
+                        
+                        if let timeInfo = timeUntilTask {
+                            Text(timeInfo)
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundColor(timeInfo == "now" ? .orange : .secondary)
+                                .fontWeight(.medium)
+                        }
+                    }
+                }
+                
+                // Description
+                if let description = task.description, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+
+                // Priority and Pomodoro indicators
+                HStack(spacing: 8) {
+                    Image(systemName: task.priority.icon)
+                        .foregroundColor(Color(hex: task.priority.color))
+                        .font(.system(size: 12))
+                    
+                    if task.pomodoroSettings != nil {
+                        Button(action: {
+                            PomodoroViewModel.shared.setActiveTask(task)
+                            showingPomodoro = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "timer")
+                                    .font(.system(size: 10))
+                                Text("Focus")
+                                    .font(.system(.caption2, design: .rounded))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.pink)
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
+                
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(categoryGradient)
+                
+                if gradientEnabled, let category = task.category {
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: category.color).opacity(0.3),
+                                    Color(hex: category.color).opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                }
+            }
+            .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+        )
+        .opacity(isCompleted ? 0.7 : 1.0)
+        .sheet(isPresented: $showingPomodoro) {
+            PomodoroView(task: task)
         }
     }
 }
@@ -691,7 +1112,8 @@ private struct TimelineTaskCard: View {
     @State private var dragOffset: CGFloat = 0
     @State private var isAutoCompleting = false
     @Environment(\.colorScheme) private var colorScheme
-    
+    @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
+
     private var isCompleted: Bool {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
@@ -700,7 +1122,7 @@ private struct TimelineTaskCard: View {
         }
         return false
     }
-    
+
     private var completionProgress: Double {
         guard !task.subtasks.isEmpty else { return isCompleted ? 1.0 : 0.0 }
         let calendar = Calendar.current
@@ -709,13 +1131,13 @@ private struct TimelineTaskCard: View {
         let completedCount = completion?.completedSubtasks.count ?? 0
         return Double(completedCount) / Double(task.subtasks.count)
     }
-    
+
     private var completedSubtasks: Set<UUID> {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
         return task.completions[startOfDay]?.completedSubtasks ?? []
     }
-    
+
     private var currentStreak: Int {
         guard let recurrence = task.recurrence else { return 0 }
         
@@ -747,18 +1169,37 @@ private struct TimelineTaskCard: View {
         
         return streak
     }
-    
-    // Soglie corrette per comportamento iOS-like
+
+    private var categoryGradient: LinearGradient {
+        if gradientEnabled, let category = task.category {
+            let baseColor = Color(hex: category.color)
+            return LinearGradient(
+                colors: [
+                    baseColor.opacity(0.12),
+                    baseColor.opacity(0.06),
+                    baseColor.opacity(0.02),
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        } else {
+            return LinearGradient(
+                colors: [Color.clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
     private let showCompleteThreshold: CGFloat = 80     // Mostra il bottone
     private let autoCompleteThreshold: CGFloat = 160    // Auto-complete
     private let showActionsThreshold: CGFloat = -80     // Mostra edit/delete
     private let maxSwipeDistance: CGFloat = -160        // Massimo swipe a sinistra
-    
+
     var body: some View {
         ZStack {
-            // Background layer per le azioni
             HStack {
-                // Left - Complete action (solo quando dragOffset > showCompleteThreshold)
                 if dragOffset > showCompleteThreshold {
                     HStack {
                         RoundedRectangle(cornerRadius: 14)
@@ -774,7 +1215,6 @@ private struct TimelineTaskCard: View {
                             .frame(width: min(dragOffset, UIScreen.main.bounds.width), height: 60)
                             .overlay(
                                 Button(action: {
-                                    // Completa solo se cliccato esplicitamente
                                     performComplete()
                                 }) {
                                     HStack {
@@ -792,12 +1232,10 @@ private struct TimelineTaskCard: View {
                     }
                 }
                 
-                // Right - Edit/Delete actions (solo quando dragOffset < showActionsThreshold)
                 if dragOffset < showActionsThreshold {
                     HStack {
                         Spacer()
                         
-                        // Edit button - rimane visibile
                         Button(action: {
                             showingEditSheet = true
                             resetSwipe()
@@ -819,7 +1257,6 @@ private struct TimelineTaskCard: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Delete button - rimane visibile
                         Button(action: {
                             deleteTask()
                         }) {
@@ -844,7 +1281,6 @@ private struct TimelineTaskCard: View {
                 }
             }
             
-            // Main card content
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 8) {
                     Rectangle()
@@ -908,6 +1344,7 @@ private struct TimelineTaskCard: View {
                                     }
                                     .frame(width: 24, height: 24)
                                     .contentShape(Rectangle())
+                                    .frame(width: 24, height: 24)
                                 }
                                 .buttonStyle(BorderlessButtonStyle())
                             }
@@ -951,7 +1388,6 @@ private struct TimelineTaskCard: View {
                             .cornerRadius(4)
                     }
                     
-                    // Priority indicator
                     Image(systemName: task.priority.icon)
                         .foregroundColor(Color(hex: task.priority.color))
                         .font(.system(size: 12))
@@ -1023,9 +1459,29 @@ private struct TimelineTaskCard: View {
             }
             .frame(maxWidth: .infinity, minHeight: 60)
             .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
-                    .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                    
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(categoryGradient)
+                    
+                    if gradientEnabled, let category = task.category {
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: category.color).opacity(0.25),
+                                        Color(hex: category.color).opacity(0.08)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    }
+                }
+                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
             )
             .offset(x: dragOffset)
             .scaleEffect(isAutoCompleting ? 0.95 : 1.0)
@@ -1038,14 +1494,11 @@ private struct TimelineTaskCard: View {
                     let translation = value.translation.width
                     let verticalTranslation = value.translation.height
                     
-                    // Only handle horizontal swipes with sufficient movement
                     guard abs(translation) > abs(verticalTranslation) * 2 else { return }
                     
                     if translation > 0 {
-                        // Right swipe (complete action) - più resistenza
                         dragOffset = min(translation * 0.7, 200)
                     } else {
-                        // Left swipe (edit/delete actions) - va più a sinistra
                         dragOffset = max(translation * 0.9, maxSwipeDistance)
                     }
                 }
@@ -1053,21 +1506,17 @@ private struct TimelineTaskCard: View {
                     let translation = value.translation.width
                     let velocity = value.velocity.width
                     
-                    // Auto-complete solo con swipe molto lungo
                     if translation > autoCompleteThreshold && velocity > 300 {
                         performAutoComplete()
                     } else if translation > showCompleteThreshold {
-                        // Mantieni la posizione per mostrare il bottone
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             dragOffset = showCompleteThreshold + 20
                         }
                     } else if translation < showActionsThreshold {
-                        // Mantieni la posizione per mostrare edit/delete
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             dragOffset = showActionsThreshold - 20
                         }
                     } else {
-                        // Reset al centro
                         resetSwipe()
                     }
                 }
@@ -1093,17 +1542,15 @@ private struct TimelineTaskCard: View {
             }
         }
     }
-    
+
     private func performComplete() {
-        // Funzione separata per il completamento manuale
         resetSwipe()
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             onToggleComplete()
         }
     }
-    
+
     private func performAutoComplete() {
-        // Auto-complete solo con swipe molto lungo
         isAutoCompleting = true
         
         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
@@ -1120,19 +1567,19 @@ private struct TimelineTaskCard: View {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
     }
-    
+
     private func resetSwipe() {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             dragOffset = 0
         }
     }
-    
+
     private func deleteTask() {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
             TaskManager.shared.removeTask(task)
         }
     }
-    
+
     let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
@@ -1214,61 +1661,10 @@ private struct TimelineSubtaskRow: View {
     }
 }
 
-struct TimelineHourRow: View {
-    let hour: Int
-    let tasks: [TodoTask]
-    @ObservedObject var viewModel: TimelineViewModel
-    @Environment(\.colorScheme) private var colorScheme
-    
-    private var isCurrentHour: Bool {
-        viewModel.isToday && Calendar.current.component(.hour, from: Date()) == hour
-    }
-    
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(spacing: 4) {
-                Text(hourString)
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.medium)
-                    .foregroundColor(isCurrentHour ? .pink : .secondary)
-                
-                if isCurrentHour {
-                    Circle()
-                        .fill(Color.pink)
-                        .frame(width: 6, height: 6)
-                }
-            }
-            .frame(width: 50)
-            
-            VStack(alignment: .leading, spacing: 8) {
-                if tasks.isEmpty {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.clear)
-                        .frame(height: 60)
-                } else {
-                    ForEach(tasks, id: \.id) { task in
-                        CompactTimelineTaskView(task: task, viewModel: viewModel)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.vertical, 4)
-    }
-    
-    private var hourString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let date = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
-        return formatter.string(from: date)
-    }
-}
-
 struct CompactTimelineTaskView: View {
     let task: TodoTask
     @ObservedObject var viewModel: TimelineViewModel
     @State private var showingPomodoro = false
-    @State private var showingEditSheet = false
     @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
@@ -1314,7 +1710,6 @@ struct CompactTimelineTaskView: View {
                     
                     Spacer()
                     
-                    // Priority indicator
                     Image(systemName: task.priority.icon)
                         .foregroundColor(Color(hex: task.priority.color))
                         .font(.system(size: 12))
