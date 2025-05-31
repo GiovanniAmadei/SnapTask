@@ -119,7 +119,7 @@ struct ViewControlBarView: View {
                     .fill(Color.pink.opacity(0.08))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color.pink.opacity(0.25), lineWidth: 1)
+                            .strokeBorder(Color.pink.opacity(viewModel.viewMode == .list ? 0.6 : 0.25), lineWidth: 1)
                     )
             )
             

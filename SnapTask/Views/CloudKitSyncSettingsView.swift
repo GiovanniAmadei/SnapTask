@@ -168,18 +168,18 @@ struct CloudKitSyncSettingsView: View {
                 }
             }
             .navigationTitle("iCloud Sync")
-            .navigationBarTitleDisplayMode(.large)
-        }
-        .sheet(isPresented: $showingSyncDetails) {
-            SyncDetailsView()
-        }
-        .alert("Reset Sync Data", isPresented: $showingResetAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Reset", role: .destructive) {
-                resetSyncData()
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingSyncDetails) {
+                SyncDetailsView()
             }
-        } message: {
-            Text("This will clear all local sync data and force a fresh sync. Your data in iCloud will not be deleted. Continue?")
+            .alert("Reset Sync Data", isPresented: $showingResetAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Reset", role: .destructive) {
+                    resetSyncData()
+                }
+            } message: {
+                Text("This will clear all local sync data and force a fresh sync. Your data in iCloud will not be deleted. Continue?")
+            }
         }
     }
     
@@ -308,51 +308,49 @@ struct SyncDetailsView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    StatusRow(label: "Sync Status", value: cloudKitService.syncStatus.description)
-                    
-                    if let lastSyncDate = cloudKitService.lastSyncDate {
-                        StatusRow(label: "Last Sync", value: formatDate(lastSyncDate))
-                    }
-                    
-                    StatusRow(label: "Auto Sync", value: CloudKitSettingsManager.shared.autoSyncEnabled ? "Enabled" : "Disabled")
-                } header: {
-                    Text("Current Status")
+        List {
+            Section {
+                StatusRow(label: "Sync Status", value: cloudKitService.syncStatus.description)
+                
+                if let lastSyncDate = cloudKitService.lastSyncDate {
+                    StatusRow(label: "Last Sync", value: formatDate(lastSyncDate))
                 }
                 
+                StatusRow(label: "Auto Sync", value: CloudKitSettingsManager.shared.autoSyncEnabled ? "Enabled" : "Disabled")
+            } header: {
+                Text("Current Status")
+            }
+            
+            Section {
+                StatusRow(label: "Service", value: "iCloud")
+                StatusRow(label: "Encryption", value: "End-to-End")
+                StatusRow(label: "Zone", value: "SnapTaskZone")
+            } header: {
+                Text("Account Information")
+            }
+            
+            if cloudKitService.syncStatus == .error("") {
                 Section {
-                    StatusRow(label: "Service", value: "iCloud")
-                    StatusRow(label: "Encryption", value: "End-to-End")
-                    StatusRow(label: "Zone", value: "SnapTaskZone")
-                } header: {
-                    Text("Account Information")
-                }
-                
-                if cloudKitService.syncStatus == .error("") {
-                    Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Common Solutions:")
-                                .font(.headline)
-                            
-                            Text("• Check your internet connection")
-                            Text("• Verify iCloud is enabled in Settings")
-                            Text("• Ensure you have enough iCloud storage")
-                            Text("• Try signing out and back into iCloud")
-                        }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Common Solutions:")
+                            .font(.headline)
+                        
+                        Text("• Check your internet connection")
+                        Text("• Verify iCloud is enabled in Settings")
+                        Text("• Ensure you have enough iCloud storage")
+                        Text("• Try signing out and back into iCloud")
                     }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 }
             }
-            .navigationTitle("Sync Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+        }
+        .navigationTitle("Sync Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    dismiss()
                 }
             }
         }

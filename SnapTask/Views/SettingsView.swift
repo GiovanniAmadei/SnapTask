@@ -160,11 +160,6 @@ struct SettingsView: View {
                             Text(viewModel.autoCompleteTaskWithSubtasks ? "Auto-complete On" : "Manual")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
-                                .frame(width: 12, height: 12)
                         }
                     }
                 }
@@ -496,10 +491,6 @@ struct SyncStatusIndicator: View {
                     .font(.caption)
             }
             
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-                .font(.caption)
-                .frame(width: 12, height: 12)
         }
     }
 }
