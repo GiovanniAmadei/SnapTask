@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 import MapKit
 
-struct TaskLocation: Codable, Equatable, Hashable {
+struct TaskLocation: Codable, Equatable, Hashable, Identifiable {
     let id: UUID
     var name: String
     var address: String?
@@ -63,7 +63,6 @@ struct TaskPlacemark: Codable, Equatable, Hashable {
     }
 }
 
-// Extension to make CLLocationCoordinate2D Codable
 extension CLLocationCoordinate2D: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)

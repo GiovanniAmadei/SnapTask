@@ -197,27 +197,29 @@ struct TaskDetailView: View {
     
     private func locationCard(_ location: TaskLocation) -> some View {
         DetailCard(icon: "location", title: "Location", color: .green) {
-            Button(action: {
-                openInMaps(location: location)
-            }) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(location.name)
-                            .font(.body)
-                            .foregroundColor(.primary)
-                        if let address = location.address {
-                            Text(address)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+            VStack(alignment: .leading, spacing: 16) {
+                // Map view (already shows name and address below)
+                LocationMapView(location: location, height: 120)
+                
+                Button(action: {
+                    openInMaps(location: location)
+                }) {
+                    HStack {
+                        Image(systemName: "map")
+                            .font(.system(size: 16))
+                            .foregroundColor(.blue)
+                        Text("Open in Maps")
+                            .font(.body.weight(.medium))
+                            .foregroundColor(.blue)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 12))
+                            .foregroundColor(.blue)
                     }
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 12))
-                        .foregroundColor(.blue)
+                    .padding(.vertical, 8)
                 }
+                .buttonStyle(BorderlessButtonStyle())
             }
-            .buttonStyle(BorderlessButtonStyle())
         }
     }
     
@@ -399,7 +401,6 @@ struct TaskDetailView: View {
     
     private var actionButtons: some View {
         VStack(spacing: 0) {
-            // Gradiente per sfumare il contenuto sopra
             LinearGradient(
                 colors: [
                     Color(.systemGroupedBackground).opacity(0),
@@ -411,7 +412,6 @@ struct TaskDetailView: View {
             )
             .frame(height: 30)
             
-            // Pulsanti con sfondo solido
             HStack(spacing: 12) {
                 editButton
                 

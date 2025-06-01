@@ -22,7 +22,13 @@ class TaskFormViewModel: ObservableObject {
     @Published var startDate: Date = Date()
     @Published var hasSpecificTime: Bool = true
     @Published var hasDuration: Bool = false
-    @Published var duration: TimeInterval = 3600
+    @Published var duration: TimeInterval = 3600 {
+        didSet {
+            if duration.isNaN || duration <= 0 {
+                duration = 3600
+            }
+        }
+    }
     @Published var icon: String = "circle.fill"
     @Published var selectedCategory: Category?
     @Published var selectedPriority: Priority = .medium
@@ -49,7 +55,13 @@ class TaskFormViewModel: ObservableObject {
     )
     
     @Published var hasRewardPoints = false
-    @Published var rewardPoints = 5
+    @Published var rewardPoints = 5 {
+        didSet {
+            if rewardPoints < 0 {
+                rewardPoints = 5
+            }
+        }
+    }
     
     @Published private(set) var categories: [Category] = []
     var taskId: UUID?

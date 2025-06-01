@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		FC6909862DD49BE00006E601 /* SnapTask Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FC690B782DD4A0DA0006E601 /* QuoteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC690B772DD4A0DA0006E601 /* QuoteService.swift */; };
+		FCA65A5E2DEC897F002B31B0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = FCA65A5D2DEC897F002B31B0 /* FirebaseCore */; };
 		FCDA68132DE77241008D5566 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = FCDA68122DE77241008D5566 /* FirebaseAuth */; };
 		FCDA68152DE77241008D5566 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = FCDA68142DE77241008D5566 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
@@ -127,6 +128,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FCDA68132DE77241008D5566 /* FirebaseAuth in Frameworks */,
+				FCA65A5E2DEC897F002B31B0 /* FirebaseCore in Frameworks */,
 				FCDA68152DE77241008D5566 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -228,6 +230,7 @@
 			packageProductDependencies = (
 				FCDA68122DE77241008D5566 /* FirebaseAuth */,
 				FCDA68142DE77241008D5566 /* FirebaseFirestore */,
+				FCA65A5D2DEC897F002B31B0 /* FirebaseCore */,
 			);
 			productName = SnapTask;
 			productReference = ACCAD3E62D37D10500A26002 /* SnapTask.app */;
@@ -1021,6 +1024,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		FCA65A5D2DEC897F002B31B0 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FCDA68112DE77241008D5566 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
 		FCDA68122DE77241008D5566 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = FCDA68112DE77241008D5566 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

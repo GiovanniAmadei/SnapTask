@@ -393,23 +393,45 @@ struct TaskFormView: View {
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    Picker("Points", selection: $viewModel.rewardPoints) {
-                                        ForEach(1...40, id: \.self) { index in
-                                            let points = index * 5
-                                            Text("\(points) points")
-                                                .tag(points)
+                                    
+                                    Menu {
+                                        ForEach([5, 10, 15, 20, 25, 30, 40, 50, 75, 100], id: \.self) { points in
+                                            Button(action: {
+                                                viewModel.rewardPoints = points
+                                            }) {
+                                                HStack {
+                                                    Text("\(points) points")
+                                                    if viewModel.rewardPoints == points {
+                                                        Spacer()
+                                                        Image(systemName: "checkmark")
+                                                            .foregroundColor(.pink)
+                                                    }
+                                                }
+                                            }
                                         }
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Text("\(viewModel.rewardPoints) points")
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                            Image(systemName: "chevron.down")
+                                                .font(.system(size: 10))
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(Color.gray.opacity(0.1))
+                                        )
                                     }
-                                    .pickerStyle(.wheel)
-                                    .frame(width: 120, height: 100)
-                                    .clipped()
                                 }
-                                
-                                Text("Completing this task will earn you points that can be redeemed for rewards.")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .padding(.top, 8)
                             }
+                            
+                            Text("Completing this task will earn you points that can be redeemed for rewards.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.top, 8)
                         }
                     }
                     
@@ -562,6 +584,8 @@ struct ModernTextField: View {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.gray.opacity(0.1))
                 )
+                .autocorrectionDisabled(true)
+                .textInputAutocapitalization(.sentences)
         }
     }
 }

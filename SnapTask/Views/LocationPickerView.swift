@@ -7,62 +7,10 @@ struct LocationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = LocationPickerViewModel()
     @State private var searchText = ""
-    @State private var showingMapPicker = false
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Quick Actions
-                VStack(spacing: 12) {
-                    // Current Location Button
-                    Button(action: {
-                        viewModel.useCurrentLocation()
-                    }) {
-                        HStack {
-                            Image(systemName: "location")
-                                .foregroundColor(.blue)
-                            Text("Use Current Location")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            if viewModel.isLoadingCurrentLocation {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            }
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.blue.opacity(0.1))
-                        )
-                    }
-                    .disabled(viewModel.isLoadingCurrentLocation)
-                    
-                    // Map Picker Button
-                    Button(action: {
-                        showingMapPicker = true
-                    }) {
-                        HStack {
-                            Image(systemName: "map")
-                                .foregroundColor(.green)
-                            Text("Pick from Map")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.green.opacity(0.1))
-                        )
-                    }
-                }
-                .padding()
-                
-                Divider()
-                
                 // Search Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Search Location")
@@ -114,6 +62,18 @@ struct LocationPickerView: View {
                                         dismiss()
                                     }
                                 }
+                                
+                                if let selectedLoc = selectedLocation {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        Text("Selected Location")
+                                            .font(.headline)
+                                            .padding(.horizontal)
+                                        
+                                        LocationMapView(location: selectedLoc, height: 120, allowsInteraction: false)
+                                            .padding(.horizontal)
+                                    }
+                                    .padding(.top, 16)
+                                }
                             }
                             .padding(.horizontal)
                         }
@@ -158,18 +118,11 @@ struct LocationPickerView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingMapPicker) {
-                MapPickerView(selectedLocation: $selectedLocation)
-            }
             .onChange(of: searchText) { _, newValue in
                 if !newValue.isEmpty {
                     viewModel.searchLocations(query: newValue)
-                }
-            }
-            .onReceive(viewModel.$currentLocation) { location in
-                if let location = location {
-                    selectedLocation = location
-                    dismiss()
+                } else {
+                    viewModel.clearSearchResults()
                 }
             }
         }
@@ -217,42 +170,12 @@ struct LocationResultRow: View {
 class LocationPickerViewModel: NSObject, ObservableObject {
     @Published var searchResults: [TaskLocation] = []
     @Published var isSearching = false
-    @Published var currentLocation: TaskLocation?
-    @Published var isLoadingCurrentLocation = false
     
-    private var locationManager = CLLocationManager()
-    private var searchCompleter = MKLocalSearchCompleter()
+    private var searchTimer: Timer?
+    private var currentSearchTask: URLSessionDataTask?
     
     override init() {
         super.init()
-        setupLocationManager()
-        setupSearchCompleter()
-    }
-    
-    private func setupLocationManager() {
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-    }
-    
-    private func setupSearchCompleter() {
-        searchCompleter.delegate = self
-        searchCompleter.resultTypes = [.address, .pointOfInterest]
-    }
-    
-    func useCurrentLocation() {
-        isLoadingCurrentLocation = true
-        
-        switch locationManager.authorizationStatus {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
-            locationManager.requestLocation()
-        case .denied, .restricted:
-            // Handle denied permission
-            isLoadingCurrentLocation = false
-        @unknown default:
-            isLoadingCurrentLocation = false
-        }
     }
     
     func searchLocations(query: String) {
@@ -261,74 +184,79 @@ class LocationPickerViewModel: NSObject, ObservableObject {
             return
         }
         
+        searchTimer?.invalidate()
+        currentSearchTask?.cancel()
         isSearching = true
-        searchCompleter.queryFragment = query
+        
+        searchTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
+            self?.performDirectSearch(query: query)
+        }
     }
     
-    func clearSearchResults() {
-        searchResults = []
-        searchCompleter.queryFragment = ""
-    }
-}
-
-extension LocationPickerViewModel: CLLocationManagerDelegate {
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.first else {
-            isLoadingCurrentLocation = false
-            return
-        }
+    private func performDirectSearch(query: String) {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.resultTypes = [.address, .pointOfInterest]
+        request.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 45.4642, longitude: 9.1900), // Milano as center
+            span: MKCoordinateSpan(latitudeDelta: 10, longitudeDelta: 10)
+        )
         
-        let geocoder = CLGeocoder()
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
+        let search = MKLocalSearch(request: request)
+        search.start { [weak self] response, error in
             DispatchQueue.main.async {
-                self?.isLoadingCurrentLocation = false
+                guard let self = self else { return }
+                self.isSearching = false
                 
-                if let placemark = placemarks?.first {
-                    let taskLocation = TaskLocation(
-                        name: placemark.name ?? "Current Location",
-                        address: TaskPlacemark(from: placemark).formattedAddress,
-                        coordinate: location.coordinate,
-                        placemark: TaskPlacemark(from: placemark)
-                    )
-                    self?.currentLocation = taskLocation
+                if let error = error {
+                    print("Search error: \(error.localizedDescription)")
+                    self.searchResults = []
+                    return
+                }
+                
+                if let mapItems = response?.mapItems {
+                    let locations = mapItems.prefix(15).compactMap { mapItem -> TaskLocation? in
+                        guard let name = mapItem.name else { return nil }
+                        return TaskLocation(
+                            name: name,
+                            address: self.formatAddress(from: mapItem.placemark),
+                            coordinate: mapItem.placemark.coordinate,
+                            placemark: TaskPlacemark(from: mapItem.placemark)
+                        )
+                    }
+                    self.searchResults = Array(locations)
+                    print("Found \(locations.count) locations for query: \(query)")
+                } else {
+                    print("No mapItems found for query: \(query)")
+                    self.searchResults = []
                 }
             }
         }
     }
     
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        isLoadingCurrentLocation = false
-    }
-    
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
-            if isLoadingCurrentLocation {
-                manager.requestLocation()
-            }
-        } else if manager.authorizationStatus == .denied {
-            isLoadingCurrentLocation = false
+    private func formatAddress(from placemark: MKPlacemark) -> String? {
+        var components: [String] = []
+        
+        if let thoroughfare = placemark.thoroughfare {
+            components.append(thoroughfare)
         }
-    }
-}
-
-extension LocationPickerViewModel: MKLocalSearchCompleterDelegate {
-    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        let results = completer.results.map { completion in
-            TaskLocation(
-                name: completion.title,
-                address: completion.subtitle.isEmpty ? nil : completion.subtitle
-            )
+        if let locality = placemark.locality {
+            components.append(locality)
+        }
+        if let administrativeArea = placemark.administrativeArea {
+            components.append(administrativeArea)
+        }
+        if let country = placemark.country {
+            components.append(country)
         }
         
-        DispatchQueue.main.async {
-            self.searchResults = results
-            self.isSearching = false
-        }
+        return components.isEmpty ? nil : components.joined(separator: ", ")
     }
     
-    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
-        DispatchQueue.main.async {
-            self.isSearching = false
-        }
+    func clearSearchResults() {
+        searchTimer?.invalidate()
+        currentSearchTask?.cancel()
+        searchResults = []
+        isSearching = false
     }
 }

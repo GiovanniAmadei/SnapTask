@@ -395,7 +395,6 @@ struct EnhancedTimelineHourRow: View {
                             Circle()
                                 .fill(Color.pink)
                                 .frame(width: 10, height: 10)
-                                .shadow(color: .pink.opacity(0.4), radius: 3)
                             
                             if let minute = currentMinute {
                                 Text(String(format: "%02d", minute))
@@ -500,8 +499,8 @@ struct EnhancedTimelineHourRow: View {
                         
                         Divider()
                             .background(
-                                isCurrentHour ? 
-                                Color.pink.opacity(0.4) : 
+                                isCurrentHour ?
+                                Color.pink.opacity(0.4) :
                                 Color.gray.opacity(0.2)
                             )
                     }
@@ -1194,52 +1193,22 @@ private struct TimelineTaskCard: View {
 
     private let showCompleteThreshold: CGFloat = 80     // Mostra il bottone
     private let autoCompleteThreshold: CGFloat = 160    // Auto-complete
-    private let showActionsThreshold: CGFloat = -80     // Mostra edit/delete
+    private let showActionsThreshold: CGFloat = -40     // Mostra edit/delete
     private let maxSwipeDistance: CGFloat = -160        // Massimo swipe a sinistra
 
     var body: some View {
         ZStack {
-            HStack {
-                if dragOffset > showCompleteThreshold {
-                    HStack {
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(
-                                LinearGradient(
-                                    colors: dragOffset > autoCompleteThreshold
-                                        ? [Color.green, Color.green.opacity(0.8)]
-                                        : [Color.blue, Color.blue.opacity(0.8)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: min(dragOffset, UIScreen.main.bounds.width), height: 60)
-                            .overlay(
-                                Button(action: {
-                                    performComplete()
-                                }) {
-                                    HStack {
-                                        Spacer()
-                                        Image(systemName: dragOffset > autoCompleteThreshold ? "checkmark" : "checkmark")
-                                            .font(.system(size: 22, weight: .bold))
-                                            .foregroundColor(.white)
-                                            .scaleEffect(dragOffset > autoCompleteThreshold ? 1.2 : 1.0)
-                                        Spacer()
-                                    }
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            )
-                        Spacer()
-                    }
-                }
+            // Background actions layer - sempre dietro la card
+            HStack(spacing: 0) {
+                Spacer()
                 
-                if dragOffset < showActionsThreshold {
-                    HStack {
-                        Spacer()
-                        
-                        Button(action: {
-                            showingEditSheet = true
-                            resetSwipe()
-                        }) {
+                // Edit/Delete buttons background (left swipe) - CHANGE: rimuovo spacing e padding per allineamento perfetto
+                HStack {
+                    Button(action: {
+                        showingEditSheet = true
+                        resetSwipe()
+                    }) {
+                        VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(
                                     LinearGradient(
@@ -1248,18 +1217,25 @@ private struct TimelineTaskCard: View {
                                         endPoint: .bottom
                                     )
                                 )
-                                .frame(width: 70, height: 60)
+                                .frame(width: 50, height: 50)
                                 .overlay(
                                     Image(systemName: "pencil")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.white)
                                 )
+                                .shadow(color: Color.orange.opacity(0.3), radius: 4, x: 0, y: 2)
+                            
+                            Text("Edit")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.orange)
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        Button(action: {
-                            deleteTask()
-                        }) {
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    Button(action: {
+                        deleteTask()
+                    }) {
+                        VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(
                                     LinearGradient(
@@ -1268,19 +1244,26 @@ private struct TimelineTaskCard: View {
                                         endPoint: .bottom
                                     )
                                 )
-                                .frame(width: 70, height: 60)
+                                .frame(width: 50, height: 50)
                                 .overlay(
                                     Image(systemName: "trash")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.white)
                                 )
+                                .shadow(color: Color.red.opacity(0.3), radius: 4, x: 0, y: 2)
+                            
+                            Text("Delete")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.red)
                         }
-                        .buttonStyle(PlainButtonStyle())
                     }
-                    .padding(.trailing, 16)
+                    .buttonStyle(PlainButtonStyle())
                 }
+                .opacity(min(abs(dragOffset) / 60.0, 1.0))
+                .scaleEffect(min(abs(dragOffset) / 80.0 * 0.2 + 0.8, 1.0))
             }
             
+            // Main task card content - overlay sopra i pulsanti
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 8) {
                     Rectangle()
@@ -1412,6 +1395,7 @@ private struct TimelineTaskCard: View {
                             )
                             .shadow(color: Color.accentColor.opacity(0.2), radius: 2, x: 0, y: 1)
                         }
+                        .buttonStyle(BorderlessButtonStyle())
                     }
                     
                     Button(action: {
@@ -1484,8 +1468,6 @@ private struct TimelineTaskCard: View {
                 .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
             )
             .offset(x: dragOffset)
-            .scaleEffect(isAutoCompleting ? 0.95 : 1.0)
-            .opacity(isAutoCompleting ? 0.8 : 1.0)
         }
         .contentShape(Rectangle())
         .gesture(
@@ -1496,9 +1478,7 @@ private struct TimelineTaskCard: View {
                     
                     guard abs(translation) > abs(verticalTranslation) * 2 else { return }
                     
-                    if translation > 0 {
-                        dragOffset = min(translation * 0.7, 200)
-                    } else {
+                    if translation < 0 {
                         dragOffset = max(translation * 0.9, maxSwipeDistance)
                     }
                 }
@@ -1506,28 +1486,46 @@ private struct TimelineTaskCard: View {
                     let translation = value.translation.width
                     let velocity = value.velocity.width
                     
-                    if translation > autoCompleteThreshold && velocity > 300 {
-                        performAutoComplete()
-                    } else if translation > showCompleteThreshold {
+                    if translation < showActionsThreshold {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            dragOffset = showCompleteThreshold + 20
-                        }
-                    } else if translation < showActionsThreshold {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            dragOffset = showActionsThreshold - 20
+                            dragOffset = showActionsThreshold - 85
                         }
                     } else {
                         resetSwipe()
                     }
                 }
         )
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.6)
+                .onEnded { _ in
+                    if dragOffset != 0 {
+                        resetSwipe()
+                    } else if !task.subtasks.isEmpty {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isExpanded.toggle()
+                        }
+                    }
+                }
+        )
         .onTapGesture {
             if dragOffset != 0 {
                 resetSwipe()
+            } else if !task.subtasks.isEmpty {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
             } else {
                 showingDetailView = true
             }
         }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.8)
+                .onEnded { _ in
+                    if dragOffset == 0 {
+                        showingDetailView = true
+                    }
+                }
+        )
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in
                 TaskManager.shared.updateTask(updatedTask)
@@ -1578,6 +1576,7 @@ private struct TimelineTaskCard: View {
         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
             TaskManager.shared.removeTask(task)
         }
+        resetSwipe()
     }
 
     let dateFormatter: DateFormatter = {
