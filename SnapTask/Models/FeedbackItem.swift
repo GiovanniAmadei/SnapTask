@@ -12,6 +12,12 @@ struct FeedbackItem: Identifiable, Codable {
     var votes: Int
     var hasVoted: Bool
     
+    var isAuthoredByCurrentUser: Bool {
+        guard let authorId = authorId else { return false }
+        let currentUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
+        return authorId == currentUserId
+    }
+    
     init(
         id: UUID = UUID(),
         title: String,

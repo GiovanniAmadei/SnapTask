@@ -18,7 +18,8 @@ struct SettingsView: View {
     @State private var selectedNotificationTime = Date()
     @State private var notificationPermissionStatus = UNAuthorizationStatus.notDetermined
     @State private var showingPermissionAlert = false
-    
+    @State private var showingCalendarIntegrationView = false
+
     var body: some View {
         NavigationStack {
             List {
@@ -177,6 +178,26 @@ struct SettingsView: View {
                             SyncStatusIndicator()
                         }
                     }
+                    
+                    Button {
+                        showingCalendarIntegrationView = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "calendar")
+                                .foregroundColor(.orange)
+                                .frame(width: 24)
+                            
+                            Text("Calendar Integration")
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                                .frame(width: 12, height: 12)
+                        }
+                    }
+                    .foregroundColor(.primary)
                 }
                 
                 // Community Section
@@ -251,6 +272,9 @@ struct SettingsView: View {
                     saveNotificationTime()
                     scheduleDailyQuoteNotification()
                 }
+            }
+            .sheet(isPresented: $showingCalendarIntegrationView) {
+                CalendarIntegrationView()
             }
             .alert("Enable Notifications", isPresented: $showingPermissionAlert) {
                 Button("Settings") {

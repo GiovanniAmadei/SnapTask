@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NewFeedbackView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var feedbackManager = FeedbackManager.shared
     
     @State private var title = ""
@@ -15,26 +16,37 @@ struct NewFeedbackView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header
+                    // Compact Header
                     VStack(spacing: 8) {
-                        Text("Share Your Feedback")
-                            .font(.title2)
-                            .fontWeight(.bold)
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.blue, .purple],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                         
-                        Text("Help us improve SnapTask by sharing your ideas and reporting issues")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
+                        Text("Share Your Feedback")
+                            .font(.title3)
+                            .fontWeight(.bold)
                     }
-                    .padding(.top, 20)
+                    .padding(.top, 12)
                     
-                    // Form
-                    VStack(spacing: 20) {
-                        // Category Selection
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Category")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                    // Form with modern cards
+                    VStack(spacing: 24) {
+                        // Category Selection Card
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Image(systemName: "tag.fill")
+                                    .foregroundColor(.blue)
+                                    .font(.title3)
+                                
+                                Text("Category")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
                             
                             LazyVGrid(columns: [
                                 GridItem(.flexible()),
@@ -49,69 +61,150 @@ struct NewFeedbackView: View {
                                 }
                             }
                         }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Material.thin)
+                                .shadow(
+                                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                                    radius: 8,
+                                    x: 0,
+                                    y: 4
+                                )
+                        )
                         
-                        // Title
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Title")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                        // Title Card
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "text.cursor")
+                                    .foregroundColor(.green)
+                                    .font(.title3)
+                                
+                                Text("Title")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
                             
                             TextField("Brief summary of your feedback", text: $title)
                                 .textFieldStyle(ModernTextFieldStyle())
                         }
-                        
-                        // Description
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Description")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            
-                            TextEditor(text: $description)
-                                .frame(minHeight: 120)
-                                .padding(12)
-                                .background(Material.ultraThinMaterial)
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(.quaternary, lineWidth: 1)
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Material.thin)
+                                .shadow(
+                                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                                    radius: 8,
+                                    x: 0,
+                                    y: 4
                                 )
-                        }
+                        )
                         
-                        // Author Info
+                        // Description Card
                         VStack(alignment: .leading, spacing: 12) {
-                            Toggle("Submit anonymously", isOn: $isAnonymous)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                            HStack {
+                                Image(systemName: "doc.text.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.title3)
+                                
+                                Text("Description")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
                             
-                            if !isAnonymous {
-                                TextField("Your name (optional)", text: $authorName)
-                                    .textFieldStyle(ModernTextFieldStyle())
+                            ZStack(alignment: .topLeading) {
+                                if description.isEmpty {
+                                    Text("Describe your feedback in detail...")
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 12)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                
+                                TextEditor(text: $description)
+                                    .frame(minHeight: 120)
+                                    .padding(8)
+                                    .background(Color.clear)
+                                    .scrollContentBackground(.hidden)
+                            }
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemGray6))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Material.thin)
+                                .shadow(
+                                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                                    radius: 8,
+                                    x: 0,
+                                    y: 4
+                                )
+                        )
+                        
+                        // Author Info Card
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.purple)
+                                    .font(.title3)
+                                
+                                Text("Author Info")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Toggle("Submit anonymously", isOn: $isAnonymous)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                if !isAnonymous {
+                                    TextField("Your name (optional)", text: $authorName)
+                                        .textFieldStyle(ModernTextFieldStyle())
+                                }
                             }
                         }
-                        .padding(.vertical, 8)
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Material.thin)
+                                .shadow(
+                                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                                    radius: 8,
+                                    x: 0,
+                                    y: 4
+                                )
+                        )
                     }
                     .padding(.horizontal, 20)
                     
-                    Spacer(minLength: 20)
-                    
-                    // Submit Button
+                    // Enhanced Submit Button
                     Button {
                         submitFeedback()
                     } label: {
-                        HStack {
+                        HStack(spacing: 12) {
                             if isSubmitting {
                                 ProgressView()
                                     .scaleEffect(0.9)
                                     .tint(.white)
                             } else {
                                 Image(systemName: "paperplane.fill")
+                                    .font(.title3)
                             }
                             
                             Text(isSubmitting ? "Submitting..." : "Submit Feedback")
+                                .font(.headline)
                                 .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 18)
                         .background(
                             LinearGradient(
                                 colors: [.blue, .purple],
@@ -121,10 +214,17 @@ struct NewFeedbackView: View {
                         )
                         .foregroundColor(.white)
                         .cornerRadius(16)
+                        .shadow(
+                            color: .blue.opacity(0.3),
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
                     }
                     .disabled(title.isEmpty || description.isEmpty || isSubmitting)
                     .opacity(title.isEmpty || description.isEmpty ? 0.6 : 1.0)
                     .padding(.horizontal, 20)
+                    .padding(.bottom, 32)
                 }
             }
             .navigationTitle("New Feedback")
@@ -144,10 +244,13 @@ struct NewFeedbackView: View {
         
         isSubmitting = true
         
+        let currentUserId = getCurrentUserId()
+        
         let feedbackItem = FeedbackItem(
             title: title,
             description: description,
             category: selectedCategory,
+            authorId: currentUserId,
             authorName: isAnonymous ? nil : (authorName.isEmpty ? nil : authorName)
         )
         
@@ -159,60 +262,74 @@ struct NewFeedbackView: View {
             }
         }
     }
+    
+    private func getCurrentUserId() -> String {
+        let userIdKey = "firebase_user_id"
+        if let existingId = UserDefaults.standard.string(forKey: userIdKey) {
+            return existingId
+        } else {
+            let newId = UUID().uuidString
+            UserDefaults.standard.set(newId, forKey: userIdKey)
+            return newId
+        }
+    }
 }
 
 struct CategorySelectionCard: View {
     let category: FeedbackCategory
     let isSelected: Bool
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 Image(systemName: category.icon)
                     .font(.title2)
                     .foregroundColor(Color(hex: category.color))
                 
                 Text(category.displayName)
                     .font(.caption)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.primary)
+                    .foregroundColor(isSelected ? Color(hex: category.color) : .primary)
+                    .lineLimit(2)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .frame(height: 80)
             .background(
-                Group {
-                    if isSelected {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        isSelected 
+                            ? Color(hex: category.color).opacity(colorScheme == .dark ? 0.3 : 0.15)
+                            : Color(.systemGray6)
+                    )
+                    .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(hex: category.color).opacity(0.2))
-                    } else {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Material.ultraThinMaterial)
-                    }
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(
-                            isSelected ? Color(hex: category.color) : Color.clear,
-                            lineWidth: 2
-                        )
-                )
+                            .stroke(
+                                isSelected ? Color(hex: category.color) : Color.clear,
+                                lineWidth: 2
+                            )
+                    )
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .scaleEffect(isSelected ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 
 struct ModernTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
-            .padding(12)
-            .background(Material.ultraThinMaterial)
-            .cornerRadius(12)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(.quaternary, lineWidth: 1)
+                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
             )
     }
 }

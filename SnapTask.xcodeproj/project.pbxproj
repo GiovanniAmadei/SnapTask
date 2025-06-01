@@ -84,11 +84,21 @@
 			);
 			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
 		};
+		FC9FE5612DECD329002425C4 /* Exceptions for "SnapTask" folder in "SnapTask" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = ACCAD3E52D37D10500A26002 /* SnapTask */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ACCAD3E82D37D10500A26002 /* SnapTask */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FC9FE5612DECD329002425C4 /* Exceptions for "SnapTask" folder in "SnapTask" target */,
+			);
 			path = SnapTask;
 			sourceTree = "<group>";
 		};
@@ -667,8 +677,10 @@
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapTask/Info.plist;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
 				INFOPLIST_KEY_CFBundleLocalizations = "en it";
+				INFOPLIST_KEY_NSRemindersUsageDescription = "SnapTask needs write access to your calendar to create and update calendar events for your tasks";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -699,8 +711,10 @@
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapTask/Info.plist;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
 				INFOPLIST_KEY_CFBundleLocalizations = "en it";
+				INFOPLIST_KEY_NSRemindersUsageDescription = "SnapTask needs write access to your calendar to create and update calendar events for your tasks";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

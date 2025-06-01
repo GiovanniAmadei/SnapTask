@@ -64,16 +64,33 @@ class FeedbackManager: ObservableObject {
     }
     
     func submitFeedback(_ feedback: FeedbackItem) async {
+        var feedbackWithAuthor = feedback
+        if feedbackWithAuthor.authorId == nil {
+            let userId = getCurrentUserId()
+            feedbackWithAuthor = FeedbackItem(
+                id: feedback.id,
+                title: feedback.title,
+                description: feedback.description,
+                category: feedback.category,
+                status: feedback.status,
+                creationDate: feedback.creationDate,
+                authorId: userId,
+                authorName: feedback.authorName,
+                votes: feedback.votes,
+                hasVoted: feedback.hasVoted
+            )
+        }
+        
         // Submit to Firebase - real-time listener will update UI automatically
         Task {
             do {
-                try await firebaseService.submitFeedback(feedback)
+                try await firebaseService.submitFeedback(feedbackWithAuthor)
                 print("✅ Feedback submitted to Firebase successfully")
             } catch {
                 print("❌ Failed to submit feedback to Firebase: \(error)")
                 // Fallback: add to local array
                 await MainActor.run {
-                    self.feedbackItems.append(feedback)
+                    self.feedbackItems.append(feedbackWithAuthor)
                     self.feedbackItems.sort { $0.votes > $1.votes }
                     self.saveLocalFeedback()
                 }
@@ -111,6 +128,35 @@ class FeedbackManager: ObservableObject {
         }
     }
     
+    func deleteFeedback(_ feedback: FeedbackItem) {
+        Task {
+            do {
+                try await firebaseService.deleteFeedback(feedback)
+                print("✅ Feedback deleted from Firebase successfully")
+                // Real-time listener will update UI automatically
+                
+            } catch {
+                print("❌ Failed to delete feedback from Firebase: \(error)")
+                // Fallback: remove from local array
+                await MainActor.run {
+                    self.feedbackItems.removeAll { $0.id == feedback.id }
+                    self.saveLocalFeedback()
+                }
+            }
+        }
+    }
+    
+    private func getCurrentUserId() -> String {
+        let userIdKey = "firebase_user_id"
+        if let existingId = UserDefaults.standard.string(forKey: userIdKey) {
+            return existingId
+        } else {
+            let newId = UUID().uuidString
+            UserDefaults.standard.set(newId, forKey: userIdKey)
+            return newId
+        }
+    }
+    
     // MARK: - Local Persistence (for caching)
     private func loadLocalFeedback() {
         if let data = UserDefaults.standard.data(forKey: feedbackKey),
@@ -130,6 +176,8 @@ class FeedbackManager: ObservableObject {
     
     // MARK: - Initial Mock Data
     private func loadInitialMockData() {
+        let currentUserId = getCurrentUserId()
+        
         let mockFeedback = [
             FeedbackItem(
                 title: "Add Dark Mode Auto-Switch",
@@ -231,6 +279,14 @@ class FeedbackManager: ObservableObject {
                 category: .generalFeedback,
                 authorName: "Location Lover",
                 votes: 18
+            ),
+            FeedbackItem(
+                title: "My Test Feedback",
+                description: "This is a test feedback item that I created. I should be able to delete this one since I'm the author.",
+                category: .generalFeedback,
+                authorId: currentUserId,
+                authorName: "Me (Test User)",
+                votes: 1
             ),
             FeedbackItem(
                 title: "Team Collaboration Features",
@@ -253,6 +309,8 @@ class FeedbackManager: ObservableObject {
     
     // Public function to manually populate Firebase with mock data
     func populateFirebaseWithMockData() async {
+        let currentUserId = getCurrentUserId()
+        
         let mockFeedback = [
             FeedbackItem(
                 title: "Add Dark Mode Auto-Switch",
@@ -354,6 +412,14 @@ class FeedbackManager: ObservableObject {
                 category: .generalFeedback,
                 authorName: "Location Lover",
                 votes: 18
+            ),
+            FeedbackItem(
+                title: "My Test Feedback",
+                description: "This is a test feedback item that I created. I should be able to delete this one since I'm the author.",
+                category: .generalFeedback,
+                authorId: currentUserId,
+                authorName: "Me (Test User)",
+                votes: 1
             ),
             FeedbackItem(
                 title: "Team Collaboration Features",

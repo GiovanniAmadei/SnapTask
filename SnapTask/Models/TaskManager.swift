@@ -1,12 +1,14 @@
 import Foundation
 import Combine
 import WatchConnectivity
+import EventKit
 
 @MainActor
 class TaskManager: ObservableObject {
     static let shared = TaskManager()
     
     @Published private(set) var tasks: [TodoTask] = []
+    @Published var calendarIntegrationManager = CalendarIntegrationManager.shared
     private let tasksKey = "savedTasks"
     private var isUpdatingFromSync = false
     private var cancellables: Set<AnyCancellable> = []
@@ -49,6 +51,10 @@ class TaskManager: ObservableObject {
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
+        
+        handleTaskCalendarSync(updatedTask, isNew: true)
+        
+        print("✅ Task added: \(updatedTask.name)")
     }
     
     func updateTask(_ updatedTask: TodoTask) {
@@ -89,6 +95,10 @@ class TaskManager: ObservableObject {
             
             // Sincronizza con Apple Watch
             synchronizeWithWatch()
+            
+            handleTaskCalendarSync(task, isNew: false)
+            
+            print("✅ Task updated: \(task.name)")
         }
     }
     
@@ -131,6 +141,12 @@ class TaskManager: ObservableObject {
         
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
+        
+        Task {
+            await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
+        }
+        
+        print("✅ Task removed: \(task.name)")
     }
     
     func toggleTaskCompletion(_ taskId: UUID, on date: Date = Date()) {
@@ -209,6 +225,12 @@ class TaskManager: ObservableObject {
             
             // Sync with Apple Watch
             synchronizeWithWatch()
+            
+            if calendarIntegrationManager.settings.autoSyncOnTaskComplete {
+                Task {
+                    await calendarIntegrationManager.updateTaskInCalendar(task)
+                }
+            }
             
             print("✅ Task completion toggled: \(task.name)")
         }
@@ -303,6 +325,12 @@ class TaskManager: ObservableObject {
         // Sync with Apple Watch
         synchronizeWithWatch()
         
+        if calendarIntegrationManager.settings.autoSyncOnTaskComplete {
+            Task {
+                await calendarIntegrationManager.updateTaskInCalendar(task)
+            }
+        }
+        
         print("✅ Subtask toggled: \(task.name)")
     }
     
@@ -362,6 +390,27 @@ class TaskManager: ObservableObject {
         Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
             if CloudKitService.shared.isCloudKitEnabled {
                 CloudKitService.shared.syncNow()
+            }
+        }
+    }
+    
+    // MARK: - Calendar Integration
+    func syncTaskToCalendar(_ task: TodoTask) {
+        guard calendarIntegrationManager.settings.isEnabled else { return }
+        
+        Task {
+            await calendarIntegrationManager.syncTaskToCalendar(task)
+        }
+    }
+    
+    private func handleTaskCalendarSync(_ task: TodoTask, isNew: Bool) {
+        let settings = calendarIntegrationManager.settings
+        
+        if isNew && settings.autoSyncOnTaskCreate {
+            syncTaskToCalendar(task)
+        } else if !isNew && settings.autoSyncOnTaskUpdate {
+            Task {
+                await calendarIntegrationManager.updateTaskInCalendar(task)
             }
         }
     }

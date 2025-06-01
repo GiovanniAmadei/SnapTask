@@ -85,6 +85,32 @@ class FirebaseService: ObservableObject {
         print("✅ Feedback submitted to Firebase: \(feedback.title)")
     }
     
+    func deleteFeedback(_ feedback: FeedbackItem) async throws {
+        let userId = getCurrentUserId()
+        
+        guard feedback.authorId == userId else {
+            throw FirebaseError.unauthorizedDeletion
+        }
+        
+        let feedbackRef = db.collection(feedbackCollection).document(feedback.id.uuidString)
+        
+        let votesSnapshot = try await db.collection(votesCollection)
+            .whereField("feedbackId", isEqualTo: feedback.id.uuidString)
+            .getDocuments()
+        
+        let batch = db.batch()
+        
+        for voteDoc in votesSnapshot.documents {
+            batch.deleteDocument(voteDoc.reference)
+        }
+        
+        batch.deleteDocument(feedbackRef)
+        
+        try await batch.commit()
+        
+        print("✅ Feedback deleted from Firebase: \(feedback.title)")
+    }
+    
     func fetchFeedback() async throws -> [FeedbackItem] {
         let snapshot = try await db.collection(feedbackCollection)
             .order(by: "votes", descending: true)
@@ -205,6 +231,23 @@ class FirebaseService: ObservableObject {
             let newId = UUID().uuidString
             UserDefaults.standard.set(newId, forKey: userIdKey)
             return newId
+        }
+    }
+}
+
+enum FirebaseError: LocalizedError {
+    case unauthorizedDeletion
+    case feedbackNotFound
+    case networkError
+    
+    var errorDescription: String? {
+        switch self {
+        case .unauthorizedDeletion:
+            return "You can only delete your own feedback"
+        case .feedbackNotFound:
+            return "Feedback not found"
+        case .networkError:
+            return "Network error occurred"
         }
     }
 }
