@@ -211,6 +211,25 @@ struct SettingsView: View {
                             Text("Feedback & Suggestions")
                         }
                     }
+                    
+                    NavigationLink(destination: WhatsNewView()) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(.purple)
+                                .frame(width: 24)
+                            
+                            Text("What's New")
+                            
+                            Spacer()
+                            
+                            // Show badge if there are highlighted updates
+                            if UpdateNewsService.shared.getHighlighted().count > 0 {
+                                Circle()
+                                    .fill(.red)
+                                    .frame(width: 8, height: 8)
+                            }
+                        }
+                    }
                 }
                 
                 // Support Section

@@ -10,6 +10,7 @@ class FirebaseService: ObservableObject {
     private let db = Firestore.firestore()
     private let feedbackCollection = "feedback"
     private let votesCollection = "votes"
+    private let updateNewsCollection = "app_updates"
     
     @Published var isInitialized = false
     
@@ -231,6 +232,107 @@ class FirebaseService: ObservableObject {
             let newId = UUID().uuidString
             UserDefaults.standard.set(newId, forKey: userIdKey)
             return newId
+        }
+    }
+    
+    func initializeUpdateNews() async {
+        do {
+            // Check if we already have data
+            let snapshot = try await db.collection(updateNewsCollection).limit(to: 1).getDocuments()
+            
+            // If we already have data, don't add samples
+            if !snapshot.documents.isEmpty {
+                print("✅ Update news already exists in Firebase")
+                return
+            }
+            
+            let sampleUpdates: [[String: Any]] = [
+                // Recent Updates
+                [
+                    "title": "Widget Support Added!",
+                    "description": "You can now add SnapTask widgets to your home screen to see your daily tasks at a glance. Available in multiple sizes with beautiful design.",
+                    "version": "1.2.0",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()),
+                    "type": "recent",
+                    "isHighlighted": true
+                ],
+                [
+                    "title": "Enhanced Statistics View",
+                    "description": "New charts and insights to track your productivity patterns. See your task completion rates over time with beautiful animated charts.",
+                    "version": "1.1.5",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: -10, to: Date()) ?? Date()),
+                    "type": "recent",
+                    "isHighlighted": false
+                ],
+                [
+                    "title": "Improved Dark Mode",
+                    "description": "Better contrast and readability in dark mode. All UI elements now properly support both light and dark themes.",
+                    "version": "1.1.0",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: -20, to: Date()) ?? Date()),
+                    "type": "recent",
+                    "isHighlighted": false
+                ],
+                
+                // Coming Soon
+                [
+                    "title": "Apple Watch Improvements",
+                    "description": "Enhanced Apple Watch app with better navigation, faster sync, and new complications for your watch face.",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()),
+                    "type": "coming_soon",
+                    "isHighlighted": true
+                ],
+                [
+                    "title": "Smart Notifications",
+                    "description": "AI-powered notification timing based on your usage patterns. Get reminded at the perfect moment to complete your tasks.",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()),
+                    "type": "coming_soon",
+                    "isHighlighted": false
+                ],
+                [
+                    "title": "Collaboration Features",
+                    "description": "Share tasks and lists with family members or colleagues. Real-time sync and notifications for shared tasks.",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: 21, to: Date()) ?? Date()),
+                    "type": "coming_soon",
+                    "isHighlighted": false
+                ],
+                
+                // Roadmap
+                [
+                    "title": "Mac App",
+                    "description": "Native macOS app with full feature parity. Seamlessly sync between your iPhone, iPad, Apple Watch, and Mac.",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .month, value: 2, to: Date()) ?? Date()),
+                    "type": "roadmap",
+                    "isHighlighted": true
+                ],
+                [
+                    "title": "AI Task Suggestions",
+                    "description": "Smart task recommendations based on your habits, calendar, and productivity patterns. Let AI help optimize your day.",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()),
+                    "type": "roadmap",
+                    "isHighlighted": false
+                ],
+                [
+                    "title": "Advanced Automation",
+                    "description": "Create custom rules and automations. Auto-create recurring tasks, smart categorization, and location-based reminders.",
+                    "date": Timestamp(date: Calendar.current.date(byAdding: .month, value: 4, to: Date()) ?? Date()),
+                    "type": "roadmap",
+                    "isHighlighted": false
+                ]
+            ]
+            
+            // Add all sample updates to Firebase
+            let batch = db.batch()
+            
+            for updateData in sampleUpdates {
+                let docRef = db.collection(updateNewsCollection).document()
+                batch.setData(updateData, forDocument: docRef)
+            }
+            
+            try await batch.commit()
+            print("✅ Sample update news initialized in Firebase")
+            
+        } catch {
+            print("❌ Failed to initialize update news: \(error)")
         }
     }
 }

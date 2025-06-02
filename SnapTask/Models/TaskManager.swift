@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import WatchConnectivity
 import EventKit
+import WidgetKit
 
 @MainActor
 class TaskManager: ObservableObject {
@@ -13,6 +14,8 @@ class TaskManager: ObservableObject {
     private var isUpdatingFromSync = false
     private var cancellables: Set<AnyCancellable> = []
     private var saveTaskDebounceTimers: [UUID: Timer] = [:]
+
+    private let appGroupUserDefaults = UserDefaults(suiteName: "group.com.snapTask.shared")
 
     init() {
         loadTasks()
@@ -354,6 +357,17 @@ class TaskManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(tasks)
             UserDefaults.standard.set(data, forKey: tasksKey)
+            
+            // Force immediate save to shared UserDefaults
+            appGroupUserDefaults?.set(data, forKey: tasksKey)
+            appGroupUserDefaults?.synchronize() // Force sync
+            
+            // UPDATE: Force widget refresh
+            WidgetCenter.shared.reloadAllTimelines()
+            
+            print("📱 App: Saved \(tasks.count) tasks to both UserDefaults")
+            NSLog("📱 APP DEBUG: Saved \(tasks.count) tasks to shared UserDefaults")
+            
         } catch {
             print("Error saving tasks: \(error)")
         }
