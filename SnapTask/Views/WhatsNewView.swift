@@ -41,13 +41,17 @@ struct WhatsNewView: View {
                                 NewsItemSkeleton()
                             }
                         } else {
-                            let newsItems = getNewsForSelectedTab()
-                            
-                            if newsItems.isEmpty {
-                                EmptyNewsState(tabIndex: selectedTab)
+                            if selectedTab == 0 {
+                                RecentUpdatesWithVersionsView(newsItems: updateNewsService.newsItems)
                             } else {
-                                ForEach(newsItems) { news in
-                                    NewsItemCard(news: news)
+                                let newsItems = getNewsForSelectedTab()
+                                
+                                if newsItems.isEmpty {
+                                    EmptyNewsState(tabIndex: selectedTab)
+                                } else {
+                                    ForEach(newsItems) { news in
+                                        NewsItemCard(news: news)
+                                    }
                                 }
                             }
                         }
@@ -59,7 +63,7 @@ struct WhatsNewView: View {
                     await updateNewsService.fetchNews()
                 }
             }
-            .navigationTitle("What's New")
+            .navigationTitle("What's Cooking")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -73,16 +77,21 @@ struct WhatsNewView: View {
                             }
                         } label: {
                             Image(systemName: "arrow.clockwise")
+                                .foregroundColor(.blue)
                         }
                     }
                 }
             }
-            .onAppear {
-                if updateNewsService.newsItems.isEmpty || shouldRefresh() {
-                    Task {
-                        await updateNewsService.fetchNews()
-                    }
-                }
+        }
+        .onAppear {
+            Task {
+                await updateNewsService.fetchNews()
+            }
+            updateNewsService.markAsViewed()
+        }
+        .task {
+            if updateNewsService.newsItems.isEmpty {
+                await updateNewsService.fetchNews()
             }
         }
     }
@@ -99,10 +108,48 @@ struct WhatsNewView: View {
             return []
         }
     }
+}
+
+struct RecentUpdatesWithVersionsView: View {
+    let newsItems: [UpdateNews]
     
-    private func shouldRefresh() -> Bool {
-        guard let lastUpdated = updateNewsService.lastUpdated else { return true }
-        return Date().timeIntervalSince(lastUpdated) > 3600 // 1 hour
+    private var groupedByVersion: [(String, [UpdateNews])] {
+        let recentUpdates = newsItems.filter { $0.type == .recentUpdate }
+        let versionGroups = Dictionary(grouping: recentUpdates.filter { $0.version != nil }) { news in
+            news.version ?? "Unknown"
+        }
+        
+        return versionGroups.sorted { first, second in
+            return compareVersions(first.key, second.key) == .orderedDescending
+        }
+    }
+    
+    var body: some View {
+        LazyVStack(spacing: 24) {
+            ForEach(groupedByVersion, id: \.0) { version, updates in
+                VersionSection(version: version, updates: updates)
+            }
+        }
+    }
+    
+    private func compareVersions(_ version1: String, _ version2: String) -> ComparisonResult {
+        let v1Components = version1.split(separator: ".").compactMap { Int($0) }
+        let v2Components = version2.split(separator: ".").compactMap { Int($0) }
+        
+        let maxCount = max(v1Components.count, v2Components.count)
+        
+        for i in 0..<maxCount {
+            let v1Part = i < v1Components.count ? v1Components[i] : 0
+            let v2Part = i < v2Components.count ? v2Components[i] : 0
+            
+            if v1Part > v2Part {
+                return .orderedDescending
+            } else if v1Part < v2Part {
+                return .orderedAscending
+            }
+        }
+        
+        return .orderedSame
     }
 }
 
@@ -113,56 +160,23 @@ struct NewsItemCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                // Type indicator
                 Image(systemName: news.type.icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(Color(hex: news.type.color))
-                    .frame(width: 24, height: 24)
+                    .frame(width: 36, height: 36)
                     .background(
                         Circle()
                             .fill(Color(hex: news.type.color).opacity(0.15))
-                            .frame(width: 32, height: 32)
                     )
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    // Header
+                VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(news.title)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.primary)
-                                .lineLimit(2)
-                            
-                            HStack(spacing: 8) {
-                                Text(news.type.displayName)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(Color(hex: news.type.color))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color(hex: news.type.color).opacity(0.15))
-                                    )
-                                
-                                if let version = news.version {
-                                    Text("v\(version)")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            Capsule()
-                                                .fill(.secondary.opacity(0.15))
-                                        )
-                                }
-                                
-                                Spacer()
-                                
-                                Text(RelativeDateTimeFormatter().localizedString(for: news.date, relativeTo: Date()))
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                        Text(news.title)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                        
+                        Spacer()
                         
                         if news.isHighlighted {
                             Image(systemName: "star.fill")
@@ -171,14 +185,45 @@ struct NewsItemCard: View {
                         }
                     }
                     
-                    // Description
-                    Text(news.description)
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Text(news.type.displayName)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color(hex: news.type.color))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color(hex: news.type.color).opacity(0.15))
+                            )
+                        
+                        if let version = news.version {
+                            Text("v\(version)")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.gray.opacity(0.15))
+                                )
+                        }
+                        
+                        Spacer()
+                        
+                        if let date = news.date {
+                            Text(RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date()))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
             }
+            
+            Text(news.description)
+                .font(.system(size: 15))
+                .foregroundColor(.secondary)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
         .background(
@@ -194,8 +239,8 @@ struct NewsItemCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
-                    news.isHighlighted ? Color.yellow.opacity(0.3) : Color.clear,
-                    lineWidth: 1
+                    news.isHighlighted ? Color.yellow.opacity(0.4) : Color.clear,
+                    lineWidth: 2
                 )
         )
     }
@@ -208,39 +253,42 @@ struct NewsItemSkeleton: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 Circle()
-                    .fill(.secondary.opacity(0.3))
-                    .frame(width: 32, height: 32)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 36, height: 36)
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.secondary.opacity(0.3))
-                        .frame(height: 20)
-                        .frame(maxWidth: .infinity)
+                VStack(alignment: .leading, spacing: 6) {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
                     HStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.secondary.opacity(0.3))
-                            .frame(width: 80, height: 24)
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 80, height: 12)
                         
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.secondary.opacity(0.3))
-                            .frame(width: 60, height: 24)
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 60, height: 12)
                         
                         Spacer()
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.secondary.opacity(0.3))
-                            .frame(height: 16)
                         
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.secondary.opacity(0.3))
-                            .frame(height: 16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .scaleEffect(x: 0.7, anchor: .leading)
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 70, height: 12)
                     }
                 }
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 14)
+                
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 14)
+                    .frame(maxWidth: .infinity * 0.8, alignment: .leading)
             }
         }
         .padding(16)
@@ -291,6 +339,148 @@ struct EmptyNewsState: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
+    }
+}
+
+struct VersionSection: View {
+    let version: String
+    let updates: [UpdateNews]
+    @State private var isExpanded = true
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Version \(version)")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        if let latestUpdate = updates.first, let date = latestUpdate.date {
+                            Text(RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date()))
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Text("\(updates.count)")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.blue)
+                        
+                        Text(updates.count == 1 ? "update" : "updates")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.regularMaterial)
+                    .shadow(
+                        color: colorScheme == .dark ? .white.opacity(0.03) : .black.opacity(0.04),
+                        radius: 4,
+                        x: 0,
+                        y: 1
+                    )
+            )
+            
+            if isExpanded {
+                VStack(spacing: 12) {
+                    ForEach(updates.sorted { first, second in
+                        // First priority: highlighted items (starred)
+                        if first.isHighlighted && !second.isHighlighted {
+                            return true
+                        } else if !first.isHighlighted && second.isHighlighted {
+                            return false
+                        }
+                        
+                        // Second priority: date (if both have dates)
+                        if let firstDate = first.date, let secondDate = second.date {
+                            return firstDate > secondDate
+                        } else if first.date != nil && second.date == nil {
+                            return true
+                        } else if first.date == nil && second.date != nil {
+                            return false
+                        }
+                        
+                        // Third priority: title alphabetically
+                        return first.title < second.title
+                    }) { update in
+                        CompactNewsCard(news: update)
+                    }
+                }
+                .padding(.leading, 8)
+            }
+        }
+    }
+}
+
+struct CompactNewsCard: View {
+    let news: UpdateNews
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: news.type.icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color(hex: news.type.color))
+                .frame(width: 20, height: 20)
+                .background(
+                    Circle()
+                        .fill(Color(hex: news.type.color).opacity(0.15))
+                        .frame(width: 28, height: 28)
+                )
+            
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(news.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                    
+                    Spacer()
+                    
+                    if news.isHighlighted {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.yellow)
+                    }
+                }
+                
+                Text(news.description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray6).opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(
+                    news.isHighlighted ? Color.yellow.opacity(0.3) : Color.clear,
+                    lineWidth: 1
+                )
+        )
     }
 }
 

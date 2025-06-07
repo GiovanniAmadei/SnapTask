@@ -22,9 +22,19 @@ struct TimelineView: View {
                     .background(Color(.systemBackground))
                     .zIndex(1)
                     
+                    // Subtle divider between header and controls
+                    Divider()
+                        .padding(.horizontal)
+                        .background(Color.gray.opacity(0.2))
+                    
                     ViewControlBarView(viewModel: viewModel)
                         .background(Color(.systemBackground))
                         .zIndex(1)
+                    
+                    // Subtle divider between controls and content
+                    Divider()
+                        .padding(.horizontal)
+                        .background(Color.gray.opacity(0.2))
                     
                     if viewModel.viewMode == .timeline {
                         TimelineContentView(viewModel: viewModel)
@@ -252,6 +262,7 @@ struct TimelineContentView: View {
                         
                         Divider()
                             .padding(.horizontal)
+                            .background(Color.gray.opacity(0.2))
                     }
                     
                     ForEach(Array(timelineRange), id: \.self) { hour in
@@ -767,7 +778,7 @@ struct DateSelectorView: View {
                                 isSelected: offset == selectedDayOffset,
                                 offset: offset
                             ) { _ in
-                                withAnimation {
+                                withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedDayOffset = offset
                                     viewModel.selectDate(offset)
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -777,7 +788,6 @@ struct DateSelectorView: View {
                             }
                             .id(offset)
                             .scaleEffect(offset == selectedDayOffset ? 1.08 : 1.0)
-                            .animation(.spring(response: 0.3), value: offset == selectedDayOffset)
                         }
                     }
                     .padding(.horizontal)
@@ -786,13 +796,13 @@ struct DateSelectorView: View {
                 .onAppear {
                     scrollProxy = proxy
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation {
+                        withAnimation(.easeInOut(duration: 0.2)) {
                             proxy.scrollTo(selectedDayOffset, anchor: .center)
                         }
                     }
                 }
                 .onChange(of: selectedDayOffset) { _, newValue in
-                    withAnimation {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         proxy.scrollTo(newValue, anchor: .center)
                     }
                 }
@@ -810,7 +820,7 @@ struct DateSelectorView: View {
                                 let direction = velocity > 0 ? -1 : 1
                                 let newOffset = selectedDayOffset + direction
                                 
-                                withAnimation {
+                                withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedDayOffset = newOffset
                                     viewModel.selectDate(newOffset)
                                     proxy.scrollTo(newOffset, anchor: .center)
@@ -822,14 +832,14 @@ struct DateSelectorView: View {
                                 let newOffset = selectedDayOffset - estimatedOffset
                                 
                                 if newOffset != selectedDayOffset {
-                                    withAnimation {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
                                         selectedDayOffset = newOffset
                                         viewModel.selectDate(newOffset)
                                         proxy.scrollTo(newOffset, anchor: .center)
                                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     }
                                 } else {
-                                    withAnimation {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
                                         proxy.scrollTo(selectedDayOffset, anchor: .center)
                                     }
                                 }
@@ -845,57 +855,104 @@ struct TaskListView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var showingNewTask: Bool
     @StateObject private var pomodoroViewModel = PomodoroViewModel.shared
+    @StateObject private var timeTrackerViewModel = TimeTrackerViewModel.shared
     @StateObject private var cloudKitService = CloudKitService.shared
     @State private var showingActivePomodoroSession = false
+    @State private var showingActiveTimeTrackerSession = false
+    @State private var selectedSessionId: UUID?
     @State private var isRefreshing = false
     
     var body: some View {
         ZStack {
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    switch viewModel.organizedTasksForSelectedDate() {
-                    case .single(let tasks):
-                        ForEach(tasks.indices, id: \.self) { index in
-                            TimelineTaskCard(
-                                task: tasks[index],
-                                onToggleComplete: { viewModel.toggleTaskCompletion(tasks[index].id) },
-                                onToggleSubtask: { subtaskId in
-                                    viewModel.toggleSubtask(taskId: tasks[index].id, subtaskId: subtaskId)
-                                },
-                                viewModel: viewModel
-                            )
-                            .padding(.horizontal, 4)
-                            .padding(.top, index == 0 ? 8 : 0)
-                        }
+            if viewModel.tasksForSelectedDate().isEmpty {
+                // Empty state
+                VStack(spacing: 20) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 64))
+                        .foregroundColor(.secondary.opacity(0.6))
                     
-                    case .sections(let sections):
-                        ForEach(sections) { section in
-                            OrganizedTaskSection(
-                                section: section,
-                                viewModel: viewModel
-                            )
-                            .padding(.horizontal, 4)
-                        }
+                    VStack(spacing: 8) {
+                        Text("No Tasks Today")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Tap the + button to add your first task")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
                 }
-                .padding(.horizontal, 4)
-                .padding(.bottom, 100)
-            }
-            .refreshable {
-                await performCloudKitSync()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            } else {
+                // Existing task list
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        switch viewModel.organizedTasksForSelectedDate() {
+                        case .single(let tasks):
+                            ForEach(tasks.indices, id: \.self) { index in
+                                TimelineTaskCard(
+                                    task: tasks[index],
+                                    onToggleComplete: { viewModel.toggleTaskCompletion(tasks[index].id) },
+                                    onToggleSubtask: { subtaskId in
+                                        viewModel.toggleSubtask(taskId: tasks[index].id, subtaskId: subtaskId)
+                                    },
+                                    viewModel: viewModel
+                                )
+                                .padding(.horizontal, 4)
+                                .padding(.top, index == 0 ? 8 : 0)
+                            }
+                        
+                        case .sections(let sections):
+                            ForEach(sections) { section in
+                                OrganizedTaskSection(
+                                    section: section,
+                                    viewModel: viewModel
+                                )
+                                .padding(.horizontal, 4)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 100)
+                }
+                .refreshable {
+                    await performCloudKitSync()
+                }
             }
             
             VStack {
                 Spacer()
                 
                 VStack(spacing: 0) {
-                    if pomodoroViewModel.hasActiveTask {
-                        MiniPomodoroWidget(viewModel: pomodoroViewModel) {
-                            showingActivePomodoroSession = true
+                    HStack {
+                        Spacer()
+                        
+                        HStack(spacing: 8) {
+                            ForEach(timeTrackerViewModel.activeSessions) { session in
+                                MiniTimerWidget(
+                                    sessionId: session.id,
+                                    viewModel: timeTrackerViewModel,
+                                    onTap: {
+                                        selectedSessionId = session.id
+                                        showingActiveTimeTrackerSession = true
+                                    }
+                                )
+                            }
+                            
+                            if pomodoroViewModel.hasActiveTask {
+                                MiniPomodoroWidget(viewModel: pomodoroViewModel) {
+                                    showingActivePomodoroSession = true
+                                }
+                            }
                         }
-                        .padding(.bottom, 10)
-                        .zIndex(1)
+                        
+                        Spacer()
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, timeTrackerViewModel.hasActiveSession || pomodoroViewModel.hasActiveTask ? 10 : 0)
+                    .zIndex(1)
                     
                     AddTaskButton(isShowingTaskForm: $showingNewTask)
                 }
@@ -905,8 +962,23 @@ struct TaskListView: View {
         .sheet(isPresented: $showingActivePomodoroSession) {
             if pomodoroViewModel.activeTask != nil {
                 NavigationStack {
-                    PomodoroView(task: pomodoroViewModel.activeTask!)
+                    PomodoroView(task: pomodoroViewModel.activeTask!, presentationStyle: .sheet)
                 }
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showingActiveTimeTrackerSession) {
+            if let sessionId = selectedSessionId {
+                NavigationStack {
+                    SessionTimeTrackerView(
+                        sessionId: sessionId,
+                        viewModel: timeTrackerViewModel,
+                        presentationStyle: .sheet
+                    )
+                }
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -979,12 +1051,12 @@ struct OrganizedTaskSection: View {
                     )
             )
             
-            ForEach(section.tasks.indices, id: \.self) { index in
+            ForEach(section.tasks) { task in
                 TimelineTaskCard(
-                    task: section.tasks[index],
-                    onToggleComplete: { viewModel.toggleTaskCompletion(section.tasks[index].id) },
+                    task: task,
+                    onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
                     onToggleSubtask: { subtaskId in
-                        viewModel.toggleSubtask(taskId: section.tasks[index].id, subtaskId: subtaskId)
+                        viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
                     },
                     viewModel: viewModel
                 )
@@ -1013,7 +1085,7 @@ struct CalendarPickerView: View {
                     let calendar = Calendar.current
                     let today = Date()
                     if let daysDiff = calendar.dateComponents([.day], from: today, to: selectedDate).day {
-                        withAnimation {
+                        withAnimation(.easeInOut(duration: 0.2)) {
                             selectedDayOffset = daysDiff
                             viewModel.selectDate(daysDiff)
                             scrollProxy?.scrollTo(daysDiff, anchor: .center)
@@ -1061,7 +1133,6 @@ private struct DayCell: View {
                 .foregroundColor(isSelected ? .white : (isToday ? .pink : .primary))
         }
         .frame(width: 45, height: 60)
-        .scaleEffect(isSelected ? 1.1 : 1.0)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(isSelected ?
@@ -1110,6 +1181,10 @@ private struct TimelineTaskCard: View {
     @State private var showingDetailView = false
     @State private var dragOffset: CGFloat = 0
     @State private var isAutoCompleting = false
+    @State private var showingTrackingModeSelection = false
+    @State private var showingTimeTracker = false
+    @State private var selectedTrackingMode: TrackingMode = .simple
+    
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
@@ -1191,10 +1266,7 @@ private struct TimelineTaskCard: View {
         }
     }
 
-    private let showCompleteThreshold: CGFloat = 80     // Mostra il bottone
-    private let autoCompleteThreshold: CGFloat = 160    // Auto-complete
-    private let showActionsThreshold: CGFloat = -40     // Mostra edit/delete
-    private let maxSwipeDistance: CGFloat = -160        // Massimo swipe a sinistra
+    private let maxSwipeDistance: CGFloat = -210
 
     var body: some View {
         ZStack {
@@ -1202,28 +1274,42 @@ private struct TimelineTaskCard: View {
             HStack(spacing: 0) {
                 Spacer()
                 
-                // Edit/Delete buttons background (left swipe) - CHANGE: rimuovo spacing e padding per allineamento perfetto
-                HStack {
+                // Track/Edit/Delete buttons background (left swipe) - Added Track button
+                HStack(spacing: 8) {
+                    Button(action: {
+                        showingTrackingModeSelection = true
+                        resetSwipe()
+                    }) {
+                        VStack(spacing: 4) {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.yellow)
+                                .frame(width: 50, height: 50)
+                                .overlay(
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.white)
+                                )
+                            
+                            Text("Track")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.yellow)
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
                     Button(action: {
                         showingEditSheet = true
                         resetSwipe()
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.orange, Color.orange.opacity(0.8)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
+                                .fill(Color.orange)
                                 .frame(width: 50, height: 50)
                                 .overlay(
                                     Image(systemName: "pencil")
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.white)
                                 )
-                                .shadow(color: Color.orange.opacity(0.3), radius: 4, x: 0, y: 2)
                             
                             Text("Edit")
                                 .font(.system(size: 10, weight: .medium))
@@ -1237,20 +1323,13 @@ private struct TimelineTaskCard: View {
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.red, Color.red.opacity(0.8)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
+                                .fill(Color.red)
                                 .frame(width: 50, height: 50)
                                 .overlay(
                                     Image(systemName: "trash")
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.white)
                                 )
-                                .shadow(color: Color.red.opacity(0.3), radius: 4, x: 0, y: 2)
                             
                             Text("Delete")
                                 .font(.system(size: 10, weight: .medium))
@@ -1259,8 +1338,7 @@ private struct TimelineTaskCard: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
-                .opacity(min(abs(dragOffset) / 60.0, 1.0))
-                .scaleEffect(min(abs(dragOffset) / 80.0 * 0.2 + 0.8, 1.0))
+                .opacity(abs(dragOffset) > 40 ? 1.0 : 0.0)
             }
             
             // Main task card content - overlay sopra i pulsanti
@@ -1320,7 +1398,6 @@ private struct TimelineTaskCard: View {
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
                                             .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                                            .animation(.easeInOut(duration: 0.2), value: isExpanded)
                                         if task.description != nil {
                                             Spacer()
                                         }
@@ -1393,7 +1470,6 @@ private struct TimelineTaskCard: View {
                                 Circle()
                                     .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1)
                             )
-                            .shadow(color: Color.accentColor.opacity(0.2), radius: 2, x: 0, y: 1)
                         }
                         .buttonStyle(BorderlessButtonStyle())
                     }
@@ -1414,7 +1490,6 @@ private struct TimelineTaskCard: View {
                                     .stroke(Color.pink, lineWidth: 3)
                                     .frame(width: 32, height: 32)
                                     .rotationEffect(.degrees(-90))
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: completionProgress)
                             }
                             
                             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
@@ -1445,7 +1520,7 @@ private struct TimelineTaskCard: View {
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                        .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
                     
                     RoundedRectangle(cornerRadius: 14)
                         .fill(categoryGradient)
@@ -1471,24 +1546,21 @@ private struct TimelineTaskCard: View {
         }
         .contentShape(Rectangle())
         .gesture(
-            DragGesture(minimumDistance: 30)
+            DragGesture(minimumDistance: 20)
                 .onChanged { value in
                     let translation = value.translation.width
-                    let verticalTranslation = value.translation.height
                     
-                    guard abs(translation) > abs(verticalTranslation) * 2 else { return }
-                    
+                    // Only allow left swipe
                     if translation < 0 {
-                        dragOffset = max(translation * 0.9, maxSwipeDistance)
+                        dragOffset = max(translation, maxSwipeDistance)
                     }
                 }
                 .onEnded { value in
                     let translation = value.translation.width
-                    let velocity = value.velocity.width
                     
-                    if translation < showActionsThreshold {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            dragOffset = showActionsThreshold - 85
+                    if translation < -80 {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            dragOffset = -180
                         }
                     } else {
                         resetSwipe()
@@ -1530,13 +1602,52 @@ private struct TimelineTaskCard: View {
             TaskFormView(initialTask: task, onSave: { updatedTask in
                 TaskManager.shared.updateTask(updatedTask)
             })
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingPomodoro) {
-            PomodoroView(task: task)
+            NavigationStack {
+                PomodoroView(task: task, presentationStyle: .sheet)
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingDetailView) {
             NavigationStack {
                 TaskDetailView(task: task)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingTrackingModeSelection) {
+            TrackingModeSelectionView(task: task) { mode in
+                selectedTrackingMode = mode
+                if mode == .pomodoro {
+                    // For pomodoro mode, set active task and show pomodoro
+                    PomodoroViewModel.shared.setActiveTask(task)
+                    showingPomodoro = true
+                } else {
+                    showingTimeTracker = true
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingTimeTracker) {
+            NavigationStack {
+                TimeTrackerView(
+                    task: task,
+                    mode: selectedTrackingMode,
+                    taskManager: TaskManager.shared,
+                    presentationStyle: .sheet
+                )
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .startPomodoroFromTracking)) { notification in
+            if let receivedTask = notification.object as? TodoTask, receivedTask.id == task.id {
+                showingPomodoro = true
             }
         }
     }
@@ -1551,14 +1662,14 @@ private struct TimelineTaskCard: View {
     private func performAutoComplete() {
         isAutoCompleting = true
         
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+        withAnimation(.easeOut(duration: 0.2)) {
             dragOffset = 0
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             onToggleComplete()
             
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            withAnimation(.easeOut(duration: 0.2)) {
                 isAutoCompleting = false
             }
             
@@ -1567,13 +1678,13 @@ private struct TimelineTaskCard: View {
     }
 
     private func resetSwipe() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withAnimation(.easeOut(duration: 0.2)) {
             dragOffset = 0
         }
     }
 
     private func deleteTask() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+        withAnimation(.easeOut(duration: 0.2)) {
             TaskManager.shared.removeTask(task)
         }
         resetSwipe()
@@ -1758,7 +1869,7 @@ struct CompactTimelineTaskView: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
+                .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
                 .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
         )
         .opacity(isCompleted ? 0.6 : 1.0)

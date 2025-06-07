@@ -10,7 +10,11 @@ class TaskManager: ObservableObject {
     
     @Published private(set) var tasks: [TodoTask] = []
     @Published var calendarIntegrationManager = CalendarIntegrationManager.shared
+    @Published private(set) var trackingSessions: [TrackingSession] = []
+    
     private let tasksKey = "savedTasks"
+    private let trackingSessionsKey = "trackingSessions"
+    
     private var isUpdatingFromSync = false
     private var cancellables: Set<AnyCancellable> = []
     private var saveTaskDebounceTimers: [UUID: Timer] = [:]
@@ -19,6 +23,7 @@ class TaskManager: ObservableObject {
 
     init() {
         loadTasks()
+        loadTrackingSessions()
         setupCloudKitObservers()
     }
     
@@ -82,9 +87,15 @@ class TaskManager: ObservableObject {
                     // Rimuovi i vecchi punti
                     if oldTask.hasRewardPoints {
                         RewardManager.shared.addPoints(-oldTask.rewardPoints, on: completionDate)
+                        if let categoryId = oldTask.category?.id {
+                            RewardManager.shared.addPointsToCategory(-oldTask.rewardPoints, categoryId: categoryId, categoryName: oldTask.category?.name, on: completionDate)
+                        }
                     }
                     // Aggiungi i nuovi punti
                     RewardManager.shared.addPoints(task.rewardPoints, on: completionDate)
+                    if let categoryId = task.category?.id {
+                        RewardManager.shared.addPointsToCategory(task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: completionDate)
+                    }
                 }
             }
             
@@ -152,6 +163,70 @@ class TaskManager: ObservableObject {
         print("✅ Task removed: \(task.name)")
     }
     
+    func saveTrackingSession(_ session: TrackingSession) {
+        guard !isUpdatingFromSync else { return }
+        
+        var updatedSession = session
+        updatedSession.complete()
+        
+        trackingSessions.append(updatedSession)
+        saveTrackingSessions()
+        
+        print("✅ Tracking session saved: \(formatDuration(session.effectiveWorkTime))")
+    }
+    
+    func addTrackedTime(_ duration: TimeInterval, to taskId: UUID) {
+        guard !isUpdatingFromSync else { return }
+        
+        if let index = tasks.firstIndex(where: { $0.id == taskId }) {
+            tasks[index].totalTrackedTime += duration
+            tasks[index].lastTrackedDate = Date()
+            tasks[index].lastModifiedDate = Date()
+            
+            saveTasks()
+            notifyTasksUpdated()
+            
+            // Sync with CloudKit
+            debouncedSaveTask(tasks[index])
+            
+            print("✅ Added \(formatDuration(duration)) to task: \(tasks[index].name)")
+        }
+    }
+    
+    func getTrackingSessions(for taskId: UUID? = nil) -> [TrackingSession] {
+        if let taskId = taskId {
+            return trackingSessions.filter { $0.taskId == taskId }
+        } else {
+            return trackingSessions
+        }
+    }
+    
+    func getTotalTrackedTime(for taskId: UUID) -> TimeInterval {
+        return getTrackingSessions(for: taskId).reduce(0) { $0 + $1.effectiveWorkTime }
+    }
+    
+    func getTodaysTrackedTime() -> TimeInterval {
+        let today = Calendar.current.startOfDay(for: Date())
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        
+        return trackingSessions
+            .filter { session in
+                session.startTime >= today && session.startTime < tomorrow
+            }
+            .reduce(0) { $0 + $1.effectiveWorkTime }
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = Int(duration) % 3600 / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
     func toggleTaskCompletion(_ taskId: UUID, on date: Date = Date()) {
         guard !isUpdatingFromSync else { return }
         
@@ -203,9 +278,15 @@ class TaskManager: ObservableObject {
             if task.hasRewardPoints && task.subtasks.isEmpty {
                 if isCompleting {
                     RewardManager.shared.addPoints(task.rewardPoints, on: date)
+                    if let categoryId = task.category?.id {
+                        RewardManager.shared.addPointsToCategory(task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
+                    }
                     print("🎯 Added \(task.rewardPoints) points for completing task without subtasks")
                 } else if wasCompleted {
                     RewardManager.shared.addPoints(-task.rewardPoints, on: date)
+                    if let categoryId = task.category?.id {
+                        RewardManager.shared.addPointsToCategory(-task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
+                    }
                     print("🎯 Removed \(task.rewardPoints) points for uncompleting task without subtasks")
                 }
             }
@@ -284,9 +365,15 @@ class TaskManager: ObservableObject {
             if task.hasRewardPoints {
                 if allSubtasksCompleted && !wasAllCompleted {
                     RewardManager.shared.addPoints(task.rewardPoints, on: date)
+                    if let categoryId = task.category?.id {
+                        RewardManager.shared.addPointsToCategory(task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
+                    }
                     print("🎯 Added \(task.rewardPoints) points - all subtasks completed")
                 } else if !allSubtasksCompleted && wasAllCompleted {
                     RewardManager.shared.addPoints(-task.rewardPoints, on: date)
+                    if let categoryId = task.category?.id {
+                        RewardManager.shared.addPointsToCategory(-task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
+                    }
                     print("🎯 Removed \(task.rewardPoints) points - not all subtasks completed")
                 }
             }
@@ -373,6 +460,34 @@ class TaskManager: ObservableObject {
         }
     }
     
+    private func saveTrackingSessions() {
+        do {
+            let data = try JSONEncoder().encode(trackingSessions)
+            UserDefaults.standard.set(data, forKey: trackingSessionsKey)
+            
+            // Also save to shared UserDefaults
+            appGroupUserDefaults?.set(data, forKey: trackingSessionsKey)
+            appGroupUserDefaults?.synchronize()
+            
+            print("📱 App: Saved \(trackingSessions.count) tracking sessions")
+            
+        } catch {
+            print("Error saving tracking sessions: \(error)")
+        }
+    }
+    
+    private func loadTrackingSessions() {
+        if let data = UserDefaults.standard.data(forKey: trackingSessionsKey) {
+            do {
+                trackingSessions = try JSONDecoder().decode([TrackingSession].self, from: data)
+                print("✅ Loaded \(trackingSessions.count) tracking sessions")
+            } catch {
+                print("Error loading tracking sessions: \(error)")
+                trackingSessions = []
+            }
+        }
+    }
+    
     private func loadTasks() {
         if let data = UserDefaults.standard.data(forKey: tasksKey) {
             do {
@@ -432,7 +547,10 @@ class TaskManager: ObservableObject {
     // For debugging purposes only
     func resetUserDefaults() {
         UserDefaults.standard.removeObject(forKey: tasksKey)
+        UserDefaults.standard.removeObject(forKey: trackingSessionsKey)
+        
         loadTasks()
+        loadTrackingSessions()
         notifyTasksUpdated()
         objectWillChange.send()
         

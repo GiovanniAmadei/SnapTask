@@ -57,11 +57,15 @@ class TaskFormViewModel: ObservableObject {
     @Published var hasRewardPoints = false
     @Published var rewardPoints = 5 {
         didSet {
-            if rewardPoints < 0 {
-                rewardPoints = 5
+            if rewardPoints < 1 {
+                rewardPoints = 1
+            } else if rewardPoints > 999 {
+                rewardPoints = 999
             }
         }
     }
+    @Published var useCustomPoints = false
+    @Published var customPointsText = "5"
     
     @Published private(set) var categories: [Category] = []
     var taskId: UUID?
@@ -233,6 +237,8 @@ class TaskFormViewModel: ObservableObject {
         )
         hasRewardPoints = false
         rewardPoints = 5
+        useCustomPoints = false
+        customPointsText = "5"
         taskId = nil
     }
     

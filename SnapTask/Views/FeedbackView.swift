@@ -13,164 +13,14 @@ struct FeedbackView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Compact Header
-                VStack(spacing: 16) {
-                    // Compact Welcome section
-                    VStack(spacing: 6) {
-                        Image(systemName: "quote.bubble.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        Text("Community Feedback")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                    }
-                    .padding(.top, 12)
-                    
-                    // Enhanced Search and Filter
-                    VStack(spacing: 12) {
-                        // Search Bar
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
-                                .font(.title3)
-                            
-                            TextField("Search feedback...", text: $searchText)
-                                .textFieldStyle(PlainTextFieldStyle())
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.systemGray6))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                        )
-                        
-                        // Category Filter
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                CategoryFilterChip(
-                                    category: nil,
-                                    isSelected: selectedCategory == nil,
-                                    action: { selectedCategory = nil }
-                                )
-                                
-                                ForEach(FeedbackCategory.allCases, id: \.self) { category in
-                                    CategoryFilterChip(
-                                        category: category,
-                                        isSelected: selectedCategory == category,
-                                        action: { selectedCategory = category }
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Material.thin)
-                        .shadow(
-                            color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
-                            radius: 8,
-                            x: 0,
-                            y: 4
-                        )
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+                headerSection
                 
-                // Feedback List
-                ScrollView {
-                    LazyVStack(spacing: 20) {
-                        ForEach(filteredFeedback) { item in
-                            FeedbackCardView(
-                                item: item,
-                                isExpanded: expandedItems.contains(item.id),
-                                onToggleExpansion: {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        if expandedItems.contains(item.id) {
-                                            expandedItems.remove(item.id)
-                                        } else {
-                                            expandedItems.insert(item.id)
-                                        }
-                                    }
-                                },
-                                onVote: {
-                                    feedbackManager.toggleVote(for: item)
-                                },
-                                onDelete: {
-                                    feedbackToDelete = item
-                                    showingDeleteAlert = true
-                                }
-                            )
-                        }
-                        
-                        if filteredFeedback.isEmpty {
-                            VStack(spacing: 16) {
-                                Image(systemName: "tray")
-                                    .font(.system(size: 48))
-                                    .foregroundColor(.secondary)
-                                
-                                Text("No feedback found")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                
-                                Text("Be the first to share your ideas!")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary.opacity(0.7))
-                            }
-                            .padding(.top, 40)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 40)
-                }
+                feedbackListSection
             }
             .navigationTitle("Community")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Spacer()
-                        .frame(width: 8)
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingNewFeedback = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(width: 32, height: 32)
-                            .background(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .clipShape(Circle())
-                            .shadow(
-                                color: .blue.opacity(0.3),
-                                radius: 4,
-                                x: 0,
-                                y: 2
-                            )
-                    }
-                }
+                toolbarContent
             }
             .sheet(isPresented: $showingNewFeedback) {
                 NewFeedbackView()
@@ -191,8 +41,187 @@ struct FeedbackView: View {
             .onAppear {
                 feedbackManager.loadFeedback()
             }
+            .onChange(of: feedbackManager.feedbackItems) { _, newValue in
+                autoExpandDeveloperReplies(newValue)
+            }
         }
     }
+    
+    // MARK: - View Components
+    
+    @ViewBuilder
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            // Compact Welcome section
+            VStack(spacing: 6) {
+                Image(systemName: "quote.bubble.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Text("Community Feedback")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            .padding(.top, 12)
+            
+            searchAndFilterSection
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Material.thin)
+                .shadow(
+                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+    
+    @ViewBuilder
+    private var searchAndFilterSection: some View {
+        VStack(spacing: 12) {
+            // Search Bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .font(.title3)
+                
+                TextField("Search feedback...", text: $searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+            )
+            
+            // Category Filter
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    CategoryFilterChip(
+                        category: nil,
+                        isSelected: selectedCategory == nil,
+                        action: { selectedCategory = nil }
+                    )
+                    
+                    ForEach(FeedbackCategory.allCases, id: \.self) { category in
+                        CategoryFilterChip(
+                            category: category,
+                            isSelected: selectedCategory == category,
+                            action: { selectedCategory = category }
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var feedbackListSection: some View {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                ForEach(filteredFeedback) { item in
+                    FeedbackCardView(
+                        item: item,
+                        isExpanded: expandedItems.contains(item.id),
+                        onToggleExpansion: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                if expandedItems.contains(item.id) {
+                                    expandedItems.remove(item.id)
+                                } else {
+                                    expandedItems.insert(item.id)
+                                }
+                            }
+                        },
+                        onVote: {
+                            feedbackManager.toggleVote(for: item)
+                        },
+                        onDelete: {
+                            feedbackToDelete = item
+                            showingDeleteAlert = true
+                        }
+                    )
+                }
+                
+                if filteredFeedback.isEmpty {
+                    emptyStateView
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 40)
+        }
+    }
+    
+    @ViewBuilder
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "tray")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            
+            Text("No feedback found")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Text("Be the first to share your ideas!")
+                .font(.subheadline)
+                .foregroundColor(.secondary.opacity(0.7))
+        }
+        .padding(.top, 40)
+    }
+    
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Spacer()
+                .frame(width: 8)
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                showingNewFeedback = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(Circle())
+                    .shadow(
+                        color: .blue.opacity(0.3),
+                        radius: 4,
+                        x: 0,
+                        y: 2
+                    )
+            }
+        }
+    }
+    
+    // MARK: - Helper Functions
     
     private var filteredFeedback: [FeedbackItem] {
         let categoryFiltered = selectedCategory == nil ? 
@@ -206,6 +235,14 @@ struct FeedbackView: View {
                 item.title.localizedCaseInsensitiveContains(searchText) ||
                 item.description.localizedCaseInsensitiveContains(searchText)
             }.sorted { $0.votes > $1.votes }
+        }
+    }
+    
+    private func autoExpandDeveloperReplies(_ items: [FeedbackItem]) {
+        for item in items {
+            if item.replies.contains(where: { $0.isFromDeveloper }) {
+                expandedItems.insert(item.id)
+            }
         }
     }
 }
@@ -362,6 +399,20 @@ struct FeedbackCardView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
+            if isExpanded && !item.replies.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Replies")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    ForEach(item.replies) { reply in
+                        ReplyCardView(reply: reply)
+                    }
+                }
+                .padding(.top, 8)
+            }
+            
             // Enhanced Footer
             HStack {
                 // Author and Date
@@ -405,6 +456,25 @@ struct FeedbackCardView: View {
                 
                 Spacer()
                 
+                // Show reply count if there are replies
+                if !item.replies.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bubble.left")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        
+                        Text("\(item.replies.count)")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.blue.opacity(0.1))
+                    )
+                }
+                
                 // Enhanced Vote Button
                 Button(action: onVote) {
                     HStack(spacing: 8) {
@@ -445,6 +515,68 @@ struct FeedbackCardView: View {
                     radius: 12,
                     x: 0,
                     y: 6
+                )
+        )
+    }
+}
+
+struct ReplyCardView: View {
+    let reply: FeedbackReply
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Developer indicator or user icon
+            if reply.isFromDeveloper {
+                Image(systemName: "person.badge.shield.checkmark.fill")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                    .frame(width: 20, height: 20)
+            } else {
+                Image(systemName: "person.circle.fill")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(width: 20, height: 20)
+            }
+            
+            VStack(alignment: .leading, spacing: 6) {
+                // Author and date
+                HStack {
+                    Text(reply.authorName ?? "Anonymous")
+                        .font(.caption)
+                        .fontWeight(reply.isFromDeveloper ? .bold : .semibold)
+                        .foregroundColor(reply.isFromDeveloper ? .blue : .primary)
+                    
+                    if reply.isFromDeveloper {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption2)
+                            .foregroundColor(.blue)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(reply.creationDate, style: .relative)
+                        .font(.caption2)
+                        .foregroundColor(.secondary.opacity(0.7))
+                }
+                
+                // Reply content
+                Text(reply.content)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(reply.isFromDeveloper ? Color.blue.opacity(0.05) : Color(.systemGray6).opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    reply.isFromDeveloper ? Color.blue.opacity(0.2) : Color.clear,
+                    lineWidth: 1
                 )
         )
     }

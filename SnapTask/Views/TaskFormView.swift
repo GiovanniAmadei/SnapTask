@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct TaskFormView: View {
     @StateObject private var viewModel: TaskFormViewModel
@@ -8,6 +9,7 @@ struct TaskFormView: View {
     @State private var showingPomodoroSettings = false
     @State private var showDurationPicker = false
     @State private var showDayPicker = false
+    @State private var hasAppeared = false
     var onSave: (TodoTask) -> Void
     
     init(initialDate: Date, onSave: @escaping (TodoTask) -> Void) {
@@ -128,7 +130,6 @@ struct TaskFormView: View {
                     // Time Card
                     ModernCard(title: "Time", icon: "clock") {
                         VStack(spacing: 16) {
-                            // Two separate toggles, aligned vertically
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Specific Time")
@@ -151,6 +152,10 @@ struct TaskFormView: View {
                                     DatePicker("", selection: $viewModel.startDate)
                                         .labelsHidden()
                                 }
+                                .transition(.asymmetric(
+                                    insertion: .opacity,
+                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                ))
                             }
                             
                             HStack {
@@ -188,9 +193,17 @@ struct TaskFormView: View {
                                             )
                                     }
                                 }
+                                .transition(.asymmetric(
+                                    insertion: .opacity,
+                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                ))
                             }
                         }
+                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasSpecificTime)
+                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasDuration)
                     }
+                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasSpecificTime)
+                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasDuration)
                     
                     // Category & Priority Card
                     ModernCard(title: "Category & Priority", icon: "folder") {
@@ -265,33 +278,41 @@ struct TaskFormView: View {
                             }
                             
                             if viewModel.isRecurring {
-                                NavigationLink {
-                                    EnhancedRecurrenceSettingsView(viewModel: viewModel)
-                                } label: {
+                                VStack(spacing: 16) {
+                                    NavigationLink {
+                                        EnhancedRecurrenceSettingsView(viewModel: viewModel)
+                                    } label: {
+                                        HStack {
+                                            Text("Frequency")
+                                                .font(.subheadline.weight(.medium))
+                                                .foregroundColor(.primary)
+                                            Spacer()
+                                            Text(viewModel.recurrenceDisplayText)
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    
                                     HStack {
-                                        Text("Frequency")
+                                        Text("track_in_consistency".localized)
                                             .font(.subheadline.weight(.medium))
                                             .foregroundColor(.primary)
                                         Spacer()
-                                        Text(viewModel.recurrenceDisplayText)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
+                                        ModernToggle(isOn: $viewModel.trackInStatistics)
                                     }
                                 }
-                                
-                                HStack {
-                                    Text("track_in_consistency".localized)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    ModernToggle(isOn: $viewModel.trackInStatistics)
-                                }
+                                .transition(.asymmetric(
+                                    insertion: .opacity,
+                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                ))
                             }
                         }
+                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isRecurring)
                     }
+                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isRecurring)
                     
                     // Subtasks Card
                     ModernCard(title: "Subtasks", icon: "checklist") {
@@ -343,9 +364,15 @@ struct TaskFormView: View {
                                         viewModel.removeSubtask(at: indexSet)
                                     }
                                 }
+                                .transition(.asymmetric(
+                                    insertion: .opacity,
+                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                ))
                             }
                         }
+                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.subtasks.count)
                     }
+                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.subtasks.count)
                     
                     // Pomodoro Card
                     ModernCard(title: "Pomodoro Mode", icon: "timer") {
@@ -372,9 +399,15 @@ struct TaskFormView: View {
                                             .foregroundColor(.secondary)
                                     }
                                 }
+                                .transition(.asymmetric(
+                                    insertion: .opacity,
+                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                ))
                             }
                         }
+                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isPomodoroEnabled)
                     }
+                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isPomodoroEnabled)
                     
                     // Rewards Card
                     ModernCard(title: "Reward Points", icon: "star") {
@@ -388,52 +421,100 @@ struct TaskFormView: View {
                             }
                             
                             if viewModel.hasRewardPoints {
-                                HStack {
-                                    Text("Points")
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
-                                    Spacer()
+                                VStack(spacing: 16) {
+                                    HStack {
+                                        Text("Custom Points")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        ModernToggle(isOn: $viewModel.useCustomPoints)
+                                    }
                                     
-                                    Menu {
-                                        ForEach([5, 10, 15, 20, 25, 30, 40, 50, 75, 100], id: \.self) { points in
-                                            Button(action: {
-                                                viewModel.rewardPoints = points
-                                            }) {
+                                    HStack(alignment: .center) {
+                                        Text("Points")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        
+                                        Group {
+                                            if viewModel.useCustomPoints {
                                                 HStack {
-                                                    Text("\(points) points")
-                                                    if viewModel.rewardPoints == points {
-                                                        Spacer()
-                                                        Image(systemName: "checkmark")
-                                                            .foregroundColor(.pink)
+                                                    TextField("Points", text: $viewModel.customPointsText)
+                                                        .keyboardType(.numberPad)
+                                                        .textFieldStyle(PlainTextFieldStyle())
+                                                        .multilineTextAlignment(.center)
+                                                        .frame(width: 60)
+                                                        .padding(.horizontal, 12)
+                                                        .padding(.vertical, 8)
+                                                        .background(
+                                                            RoundedRectangle(cornerRadius: 8)
+                                                                .fill(Color.gray.opacity(0.1))
+                                                        )
+                                                        .onChange(of: viewModel.customPointsText) { oldValue, newValue in
+                                                            let filtered = String(newValue.filter { $0.isNumber })
+                                                            if filtered != newValue {
+                                                                viewModel.customPointsText = filtered
+                                                            }
+                                                            if let points = Int(filtered), points >= 1, points <= 999 {
+                                                                viewModel.rewardPoints = points
+                                                            }
+                                                        }
+                                                    
+                                                    Text("(1-999)")
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                            } else {
+                                                Picker("Points", selection: $viewModel.rewardPoints) {
+                                                    ForEach([1, 2, 3, 5, 8, 10], id: \.self) { points in
+                                                        Text("\(points)").tag(points)
                                                     }
+                                                    ForEach([15, 20, 25, 30, 40, 50], id: \.self) { points in
+                                                        Text("\(points)").tag(points)
+                                                    }
+                                                    ForEach([75, 100, 150, 200], id: \.self) { points in
+                                                        Text("\(points)").tag(points)
+                                                    }
+                                                }
+                                                .pickerStyle(WheelPickerStyle())
+                                                .frame(width: 80, height: 100)
+                                                .clipped()
+                                                .onChange(of: viewModel.rewardPoints) { oldValue, newValue in
+                                                    viewModel.customPointsText = "\(newValue)"
                                                 }
                                             }
                                         }
-                                    } label: {
-                                        HStack(spacing: 8) {
-                                            Text("\(viewModel.rewardPoints) points")
-                                                .font(.subheadline)
-                                                .foregroundColor(.secondary)
-                                            Image(systemName: "chevron.down")
-                                                .font(.system(size: 10))
-                                                .foregroundColor(.secondary)
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.gray.opacity(0.1))
-                                        )
+                                        .frame(height: 100)
                                     }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Point Guidelines:")
+                                            .font(.caption.weight(.medium))
+                                            .foregroundColor(.secondary)
+                                        Text("• 1-10: Quick tasks (5-15 min)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text("• 15-50: Regular tasks (30-90 min)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text("• 75-200: Complex tasks (2-4 hours)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 4)
                                 }
+                                .transition(.asymmetric(
+                                    insertion: .opacity,
+                                    removal: .opacity.combined(with: .scale(scale: 0.01, anchor: .top))
+                                ))
                             }
-                            
-                            Text("Completing this task will earn you points that can be redeemed for rewards.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.top, 8)
                         }
+                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasRewardPoints)
+                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.useCustomPoints)
                     }
+                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasRewardPoints)
+                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.useCustomPoints)
                     
                     // Save Button
                     Button(action: {
@@ -466,7 +547,6 @@ struct TaskFormView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .id("TaskFormView")
             .background(Color(.systemGroupedBackground))
             .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
@@ -493,15 +573,11 @@ struct TaskFormView: View {
                 DurationPickerView(duration: $viewModel.duration)
             }
         }
-    }
-    
-    private func formatDuration(_ minutes: Int) -> String {
-        let hours = minutes / 60
-        let mins = minutes % 60
-        if hours > 0 {
-            return "\(hours)h \(mins)m"
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                hasAppeared = true
+            }
         }
-        return "\(mins)m"
     }
 }
 
@@ -597,6 +673,7 @@ struct ModernToggle: View {
         Toggle("", isOn: $isOn)
             .toggleStyle(SwitchToggleStyle(tint: .pink))
             .scaleEffect(0.9)
+            .animation(.easeInOut(duration: 0.3), value: isOn)
     }
 }
 

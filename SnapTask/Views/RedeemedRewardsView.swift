@@ -3,32 +3,79 @@ import SwiftUI
 struct RedeemedRewardsView: View {
     @StateObject private var rewardManager = RewardManager.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedTimeFilter: TimeFilter = .all
     
-    private var redeemedRewards: [(Reward, [Date])] {
+    enum TimeFilter: String, CaseIterable {
+        case all = "All Time"
+        case day = "Today"
+        case week = "This Week"
+        case month = "This Month"
+        case year = "This Year"
+        
+        var color: Color {
+            switch self {
+            case .all: return Color(hex: "5E5CE6")
+            case .day: return Color(hex: "FF6B6B")
+            case .week: return Color(hex: "4ECDC4")
+            case .month: return Color(hex: "45B7D1")
+            case .year: return Color(hex: "FFD700")
+            }
+        }
+    }
+    
+    private var filteredRedeemedRewards: [(Reward, [Date])] {
         rewardManager.rewards.compactMap { reward in
-            let redemptions = reward.redemptions
-            return redemptions.isEmpty ? nil : (reward, redemptions)
+            let filteredRedemptions = reward.redemptions.filter { date in
+                dateMatchesFilter(date, filter: selectedTimeFilter)
+            }
+            return filteredRedemptions.isEmpty ? nil : (reward, filteredRedemptions)
         }
         .sorted { $0.1.max() ?? Date.distantPast > $1.1.max() ?? Date.distantPast }
     }
     
+    private func dateMatchesFilter(_ date: Date, filter: TimeFilter) -> Bool {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        switch filter {
+        case .all:
+            return true
+        case .day:
+            return calendar.isDate(date, inSameDayAs: now)
+        case .week:
+            return calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear)
+        case .month:
+            return calendar.isDate(date, equalTo: now, toGranularity: .month)
+        case .year:
+            return calendar.isDate(date, equalTo: now, toGranularity: .year)
+        }
+    }
+    
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    if redeemedRewards.isEmpty {
-                        emptyStateView
-                    } else {
-                        ForEach(redeemedRewards, id: \.0.id) { reward, dates in
-                            RedeemedRewardCard(reward: reward, redemptionDates: dates)
+            VStack(spacing: 0) {
+                // Time Filter Section
+                timeFilterSection
+                
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        if filteredRedeemedRewards.isEmpty {
+                            emptyStateView
+                        } else {
+                            ForEach(filteredRedeemedRewards, id: \.0.id) { reward, dates in
+                                RedeemedRewardCard(reward: reward, redemptionDates: dates)
+                                    .padding(.horizontal, 16)
+                            }
                         }
                     }
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
                 }
-                .padding(16)
             }
             .background(Color(UIColor.systemGroupedBackground))
-            .navigationTitle("Redeemed Rewards")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
@@ -39,20 +86,69 @@ struct RedeemedRewardsView: View {
         }
     }
     
+    private var timeFilterSection: some View {
+        VStack(spacing: 16) {
+            // Header with title and count
+            HStack {
+                Text("Redeemed Rewards")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text("\(filteredRedeemedRewards.count) \(filteredRedeemedRewards.count == 1 ? "reward" : "rewards")")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(UIColor.tertiarySystemGroupedBackground))
+                    )
+            }
+            
+            // Single row of filter buttons
+            HStack(spacing: 6) {
+                RedeemedTimeFilterChip(filter: .all, isSelected: selectedTimeFilter == .all) {
+                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .all }
+                }
+                RedeemedTimeFilterChip(filter: .day, isSelected: selectedTimeFilter == .day) {
+                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .day }
+                }
+                RedeemedTimeFilterChip(filter: .week, isSelected: selectedTimeFilter == .week) {
+                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .week }
+                }
+                RedeemedTimeFilterChip(filter: .month, isSelected: selectedTimeFilter == .month) {
+                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .month }
+                }
+                RedeemedTimeFilterChip(filter: .year, isSelected: selectedTimeFilter == .year) {
+                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .year }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+    
     private var emptyStateView: some View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(Color(hex: "5E5CE6").opacity(0.1))
+                    .fill(selectedTimeFilter.color.opacity(0.1))
                     .frame(width: 100, height: 100)
                 
                 Image(systemName: "gift.circle")
                     .font(.system(size: 40))
-                    .foregroundColor(Color(hex: "5E5CE6"))
+                    .foregroundColor(selectedTimeFilter.color)
             }
             
             VStack(spacing: 8) {
-                Text("No Rewards Redeemed Yet")
+                Text("No Rewards Redeemed for \(selectedTimeFilter.rawValue)")
                     .font(.system(size: 18, weight: .semibold))
                 
                 Text("Start earning points and redeem your first reward!")
@@ -173,6 +269,48 @@ struct RedeemedRewardCard: View {
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+struct RedeemedTimeFilterChip: View {
+    let filter: RedeemedRewardsView.TimeFilter
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            Text(compactTitle)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isSelected ? filter.color : Color(UIColor.tertiarySystemGroupedBackground))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(
+                                    isSelected ? Color.clear : filter.color.opacity(0.3),
+                                    lineWidth: 1
+                                )
+                        )
+                )
+                .shadow(color: isSelected ? filter.color.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
+                .scaleEffect(isSelected ? 1.02 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+    
+    private var compactTitle: String {
+        switch filter {
+        case .all: return "All"
+        case .day: return "Today"
+        case .week: return "Week"
+        case .month: return "Month"
+        case .year: return "Year"
+        }
     }
 }
 

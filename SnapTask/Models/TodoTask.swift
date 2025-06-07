@@ -23,6 +23,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
     // Reward points related properties
     var hasRewardPoints: Bool = false
     var rewardPoints: Int = 0
+    // Time tracking properties
+    var totalTrackedTime: TimeInterval = 0
+    var lastTrackedDate: Date?
     
     init(
         id: UUID = UUID(),
@@ -58,6 +61,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.subtasks = subtasks
         self.hasRewardPoints = hasRewardPoints
         self.rewardPoints = rewardPoints
+        self.totalTrackedTime = 0
+        self.lastTrackedDate = nil
     }
     
     var completionProgress: Double {
@@ -70,6 +75,24 @@ struct TodoTask: Identifiable, Codable, Equatable {
             return 0.0
         }
         return Double(subtasks.filter(\.isCompleted).count) / Double(subtasks.count)
+    }
+    
+    // Computed property for formatted tracked time
+    var formattedTrackedTime: String {
+        let hours = Int(totalTrackedTime) / 3600
+        let minutes = Int(totalTrackedTime) % 3600 / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
+    // Check if task has been tracked recently
+    var hasRecentTracking: Bool {
+        guard let lastTracked = lastTrackedDate else { return false }
+        return Calendar.current.isDate(lastTracked, inSameDayAs: Date())
     }
     
     func streakForDate(_ date: Date) -> Int {
@@ -151,6 +174,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.subtasks == rhs.subtasks &&
         lhs.completionDates == rhs.completionDates &&
         lhs.hasRewardPoints == rhs.hasRewardPoints &&
-        lhs.rewardPoints == rhs.rewardPoints
+        lhs.rewardPoints == rhs.rewardPoints &&
+        lhs.totalTrackedTime == rhs.totalTrackedTime &&
+        lhs.lastTrackedDate == rhs.lastTrackedDate
     }
 }

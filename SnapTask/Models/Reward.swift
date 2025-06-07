@@ -31,13 +31,22 @@ struct Reward: Identifiable, Codable, Equatable {
     var creationDate: Date = Date()
     var lastModifiedDate: Date = Date()
     
+    var categoryId: UUID?
+    var categoryName: String?
+    
+    var isGeneralReward: Bool {
+        return categoryId == nil
+    }
+    
     init(
         id: UUID = UUID(),
         name: String,
         description: String? = nil,
         pointsCost: Int,
         frequency: RewardFrequency = .daily,
-        icon: String = "gift"
+        icon: String = "gift",
+        categoryId: UUID? = nil,
+        categoryName: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -45,6 +54,8 @@ struct Reward: Identifiable, Codable, Equatable {
         self.pointsCost = pointsCost
         self.frequency = frequency
         self.icon = icon
+        self.categoryId = categoryId
+        self.categoryName = categoryName
     }
     
     func canRedeem(availablePoints: Int) -> Bool {
@@ -89,6 +100,8 @@ struct Reward: Identifiable, Codable, Equatable {
         lhs.pointsCost == rhs.pointsCost &&
         lhs.frequency == rhs.frequency &&
         lhs.icon == rhs.icon &&
-        lhs.redemptions == rhs.redemptions
+        lhs.redemptions == rhs.redemptions &&
+        lhs.categoryId == rhs.categoryId &&
+        lhs.categoryName == rhs.categoryName
     }
 }

@@ -19,9 +19,9 @@ class DonationService: ObservableObject {
     @Published var usingMockProducts = false
     
     private let productIDs = [
-        "com.giovanniamadei.SnapTask.donation.small",
-        "com.giovanniamadei.SnapTask.donation.medium", 
-        "com.giovanniamadei.SnapTask.donation.large"
+        "com.giovanniamadei.SnapTaskProAlpha.donation.small",
+        "com.giovanniamadei.SnapTaskProAlpha.donation.medium", 
+        "com.giovanniamadei.SnapTaskProAlpha.donation.large"
     ]
     
     private init() {
@@ -53,9 +53,9 @@ class DonationService: ObservableObject {
     
     private func createMockProducts() {
         donationProducts = [
-            MockProduct(id: "small", price: 2.99, displayName: "Small Coffee"),
-            MockProduct(id: "medium", price: 4.99, displayName: "Big Coffee"),
-            MockProduct(id: "large", price: 9.99, displayName: "Dinner")
+            MockProduct(id: "small", price: 2.99, displayName: "Caffè per Giovanni ☕️"),
+            MockProduct(id: "medium", price: 4.99, displayName: "Pizza per Giovanni 🍕"),
+            MockProduct(id: "large", price: 9.99, displayName: "Cena per Giovanni 🍽️")
         ]
         usingMockProducts = true
     }

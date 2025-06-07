@@ -7,6 +7,9 @@ struct TaskDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingEditSheet = false
     @State private var showingPomodoro = false
+    @State private var showingTrackingModeSelection = false
+    @State private var showingTimeTracker = false
+    @State private var selectedTrackingMode: TrackingMode = .simple
     
     private var isCompleted: Bool {
         let calendar = Calendar.current
@@ -47,7 +50,33 @@ struct TaskDetailView: View {
             })
         }
         .sheet(isPresented: $showingPomodoro) {
-            PomodoroView(task: task)
+            NavigationStack {
+                PomodoroView(task: task)
+            }
+        }
+        .sheet(isPresented: $showingTrackingModeSelection) {
+            TrackingModeSelectionView(task: task) { mode in
+                selectedTrackingMode = mode
+                if mode == .pomodoro {
+                    // For pomodoro mode, set active task and show pomodoro
+                    PomodoroViewModel.shared.setActiveTask(task)
+                    showingPomodoro = true
+                } else {
+                    showingTimeTracker = true
+                }
+            }
+        }
+        .sheet(isPresented: $showingTimeTracker) {
+            NavigationStack {
+                TimeTrackerView(
+                    task: task,
+                    mode: selectedTrackingMode,
+                    taskManager: TaskManager.shared,
+                    presentationStyle: .sheet
+                )
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
     }
     
@@ -413,14 +442,39 @@ struct TaskDetailView: View {
             .frame(height: 30)
             
             HStack(spacing: 12) {
+                trackButton
                 editButton
-                
                 completeButton
             }
             .padding(.horizontal)
             .padding(.bottom)
             .padding(.top, 8)
             .background(Color(.systemGroupedBackground))
+        }
+    }
+    
+    private var trackButton: some View {
+        Button(action: {
+            showingTrackingModeSelection = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 16, weight: .medium))
+                Text("Track")
+                    .font(.headline)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color.yellow, Color.yellow.opacity(0.8)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .cornerRadius(16)
+            .shadow(color: Color.yellow.opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
     
@@ -433,7 +487,7 @@ struct TaskDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16, weight: .medium))
-                Text(isCompleted ? "Incomplete" : "Complete")
+                Text(isCompleted ? "Undo" : "Done")
                     .font(.headline)
             }
             .foregroundColor(.white)

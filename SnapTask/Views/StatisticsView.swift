@@ -746,21 +746,21 @@ private struct TaskStreakCard: View {
             
             // Streak Stats
             HStack(spacing: 24) {
-                StatItem(
+                StatisticsStatItem(
                     title: "Current",
                     value: "\(taskStreak.currentStreak)",
                     color: .orange,
                     icon: "flame.fill"
                 )
                 
-                StatItem(
+                StatisticsStatItem(
                     title: "Best",
                     value: "\(taskStreak.bestStreak)",
                     color: .red,
                     icon: "trophy.fill"
                 )
                 
-                StatItem(
+                StatisticsStatItem(
                     title: "Completed",
                     value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)",
                     color: .green,
@@ -792,7 +792,7 @@ private struct TaskStreakCard: View {
     }
 }
 
-private struct StatItem: View {
+private struct StatisticsStatItem: View {
     let title: String
     let value: String
     let color: Color

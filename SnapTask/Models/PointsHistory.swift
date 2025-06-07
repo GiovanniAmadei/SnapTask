@@ -6,11 +6,20 @@ struct PointsHistory: Codable, Identifiable {
     let points: Int
     let frequency: RewardFrequency
     
-    init(id: UUID = UUID(), date: Date, points: Int, frequency: RewardFrequency) {
+    let categoryId: UUID?
+    let categoryName: String?
+    
+    var isGeneralPoints: Bool {
+        return categoryId == nil
+    }
+    
+    init(id: UUID = UUID(), date: Date, points: Int, frequency: RewardFrequency, categoryId: UUID? = nil, categoryName: String? = nil) {
         self.id = id
         self.date = date
         self.points = points
         self.frequency = frequency
+        self.categoryId = categoryId
+        self.categoryName = categoryName
     }
 }
 

@@ -1,11 +1,14 @@
 import SwiftUI
+import Combine
 
 struct RewardsView: View {
     @StateObject private var viewModel = RewardViewModel()
+    @StateObject private var categoryManager = CategoryManager.shared
     @State private var showingAddReward = false
     @State private var selectedReward: Reward?
     @State private var showingPointsHistory = false
     @State private var showingRedeemedRewards = false
+    @State private var showingCategoryPointsBreakdown = false
     @Environment(\.colorScheme) private var colorScheme
     
     private var allRewards: [Reward] {
@@ -56,6 +59,9 @@ struct RewardsView: View {
             .sheet(isPresented: $showingRedeemedRewards) {
                 RedeemedRewardsView()
             }
+            .sheet(isPresented: $showingCategoryPointsBreakdown) {
+                CategoryPointsBreakdownView()
+            }
             .onAppear {
                 viewModel.updatePoints()
             }
@@ -63,29 +69,115 @@ struct RewardsView: View {
     }
     
     private var compactHeaderView: some View {
-        HStack(spacing: 12) {
-            PointsMiniCard(title: "Today", points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
-            PointsMiniCard(title: "Week", points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
-            PointsMiniCard(title: "Month", points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
-            PointsMiniCard(title: "Year", points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+        Button(action: {
+            showingCategoryPointsBreakdown = true
+        }) {
+            VStack(spacing: 14) {
+                // Main points section
+                HStack {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Available Points")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        let totalPoints = viewModel.dailyPoints + viewModel.weeklyPoints + viewModel.monthlyPoints + RewardManager.shared.availablePoints(for: .yearly)
+                        
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("\(totalPoints)")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(.primary)
+                            
+                            Text("pts")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 4) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(hex: "5E5CE6").opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Color(hex: "5E5CE6"))
+                        }
+                        
+                        Text("Tap for\ndetails")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                    }
+                }
+                
+                // Breakdown chips
+                HStack(spacing: 6) {
+                    CompactPointsChip(title: "Today", points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
+                    CompactPointsChip(title: "Week", points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
+                    CompactPointsChip(title: "Month", points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
+                    CompactPointsChip(title: "Year", points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 18)
+            .background(
+                ZStack {
+                    // Base background
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color(UIColor.secondarySystemGroupedBackground))
+                    
+                    // Gradient overlay
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "5E5CE6").opacity(0.06),
+                                    Color(hex: "9747FF").opacity(0.03),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    
+                    // Border
+                    RoundedRectangle(cornerRadius: 18)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "5E5CE6").opacity(0.2),
+                                    Color(hex: "9747FF").opacity(0.1),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+            )
+            .shadow(color: Color(hex: "5E5CE6").opacity(0.08), radius: 8, x: 0, y: 4)
         }
+        .buttonStyle(PlainButtonStyle())
         .padding(.top, 8)
     }
     
     private var quickActionsView: some View {
-        HStack(spacing: 12) {
-            QuickActionCard(
-                title: "Total Points",
-                subtitle: "View all earnings",
+        HStack(spacing: 8) {
+            CompactActionCard(
+                title: "History",
                 icon: "chart.line.uptrend.xyaxis",
                 color: Color(hex: "00C853")
             ) {
                 showingPointsHistory = true
             }
             
-            QuickActionCard(
+            CompactActionCard(
                 title: "Redeemed",
-                subtitle: "Past rewards",
                 icon: "gift.circle",
                 color: Color(hex: "FF6B6B")
             ) {
@@ -208,6 +300,34 @@ private struct AddRewardButton: View {
     }
 }
 
+struct CompactPointsChip: View {
+    let title: String
+    let points: Int
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            
+            Text("\(points)")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(color.opacity(0.08))
+        )
+    }
+}
+
 struct PointsMiniCard: View {
     let title: String
     let points: Int
@@ -231,42 +351,35 @@ struct PointsMiniCard: View {
     }
 }
 
-struct QuickActionCard: View {
+struct CompactActionCard: View {
     let title: String
-    let subtitle: String
     let icon: String
     let color: Color
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.15))
-                        .frame(width: 36, height: 36)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(color)
-                }
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(color)
                 
-                VStack(spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.primary)
-                    
-                    Text(subtitle)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
-                .lineLimit(1)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(14)
-            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(color.opacity(0.15), lineWidth: 0.5)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -280,8 +393,18 @@ struct RewardCard: View {
     let onEditTapped: () -> Void
     let onDeleteTapped: () -> Void
     
+    @StateObject private var categoryManager = CategoryManager.shared
+    
     private var progress: Double {
         min(Double(currentPoints) / Double(reward.pointsCost), 1.0)
+    }
+    
+    private var categoryColor: Color {
+        if let categoryId = reward.categoryId,
+           let category = categoryManager.categories.first(where: { $0.id == categoryId }) {
+            return Color(hex: category.color)
+        }
+        return Color(hex: "5E5CE6")
     }
     
     var body: some View {
@@ -290,16 +413,15 @@ struct RewardCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(UIColor.secondarySystemGroupedBackground))
             
-            // Multi-layer translucent progress effect
+            // Multi-layer translucent progress effect with category color
             ZStack {
-                // Base progress layer with stronger opacity
+                // Base progress layer with category color
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
                         LinearGradient(
-                            colors: [
-                                Color(hex: "5E5CE6").opacity(0.25),
-                                Color(hex: "9747FF").opacity(0.35)
-                            ],
+                            colors: reward.isGeneralReward ? 
+                            [Color(hex: "5E5CE6").opacity(0.25), Color(hex: "9747FF").opacity(0.35)] :
+                            [categoryColor.opacity(0.25), categoryColor.opacity(0.35)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -367,14 +489,13 @@ struct RewardCard: View {
                         value: progress
                     )
                 
-                // Edge highlight for depth
+                // Edge highlight for depth with category color
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(
                         LinearGradient(
-                            colors: [
-                                Color(hex: "5E5CE6").opacity(0.3),
-                                Color.clear
-                            ],
+                            colors: reward.isGeneralReward ? 
+                            [Color(hex: "5E5CE6").opacity(0.3), Color.clear] :
+                            [categoryColor.opacity(0.3), Color.clear],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -393,7 +514,7 @@ struct RewardCard: View {
             
             // Card content
             HStack(spacing: 14) {
-                // Enhanced icon with better shadow
+                // Enhanced icon with category color
                 ZStack {
                     // Icon shadow
                     Circle()
@@ -404,7 +525,9 @@ struct RewardCard: View {
                     Circle()
                         .fill(LinearGradient(
                             colors: canRedeem ? 
-                            [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
+                            (reward.isGeneralReward ? 
+                             [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
+                             [categoryColor, categoryColor.opacity(0.8)]) :
                             [Color.gray.opacity(0.4), Color.gray.opacity(0.5)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -439,23 +562,7 @@ struct RewardCard: View {
                         
                         Spacer()
                         
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 8))
-                            Text(reward.frequency.displayName)
-                                .font(.system(size: 10, weight: .medium))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(hex: "5E5CE6").opacity(0.12))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .strokeBorder(Color(hex: "5E5CE6").opacity(0.2), lineWidth: 0.5)
-                                )
-                        )
-                        .foregroundColor(Color(hex: "5E5CE6"))
+                        rewardTypeTag
                     }
                     
                     if let description = reward.description, !description.isEmpty {
@@ -465,10 +572,39 @@ struct RewardCard: View {
                             .lineLimit(1)
                     }
                     
+                    if !reward.isGeneralReward, let categoryName = reward.categoryName {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(categoryColor)
+                                .frame(width: 8, height: 8)
+                            
+                            Text(categoryName)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(categoryColor)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(categoryColor.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(categoryColor.opacity(0.2), lineWidth: 0.5)
+                                )
+                        )
+                    }
+                    
                     HStack {
-                        Text("\(currentPoints)/\(reward.pointsCost) points")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(canRedeem ? Color(hex: "00C853") : Color(hex: "5E5CE6"))
+                        if reward.isGeneralReward {
+                            Text("\(currentPoints)/\(reward.pointsCost) points")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(canRedeem ? Color(hex: "00C853") : Color(hex: "5E5CE6"))
+                        } else if let categoryId = reward.categoryId {
+                            let categoryPoints = RewardManager.shared.availablePointsForCategory(categoryId, frequency: reward.frequency)
+                            Text("\(categoryPoints)/\(reward.pointsCost) points")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(canRedeem ? Color(hex: "00C853") : categoryColor)
+                        }
                         
                         Spacer()
                         
@@ -482,11 +618,17 @@ struct RewardCard: View {
                                         RoundedRectangle(cornerRadius: 16)
                                             .fill(
                                                 canRedeem ?
-                                                LinearGradient(
+                                                (reward.isGeneralReward ?
+                                                 LinearGradient(
                                                     colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
                                                     startPoint: .leading,
                                                     endPoint: .trailing
-                                                ) :
+                                                 ) :
+                                                 LinearGradient(
+                                                    colors: [categoryColor, categoryColor.opacity(0.8)],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                 )) :
                                                 LinearGradient(
                                                     colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
                                                     startPoint: .leading,
@@ -510,7 +652,7 @@ struct RewardCard: View {
                                     }
                                 )
                                 .foregroundColor(.white)
-                                .shadow(color: canRedeem ? Color(hex: "5E5CE6").opacity(0.3) : Color.clear, radius: 2, x: 0, y: 1)
+                                .shadow(color: canRedeem ? (reward.isGeneralReward ? Color(hex: "5E5CE6").opacity(0.3) : categoryColor.opacity(0.3)) : Color.clear, radius: 2, x: 0, y: 1)
                         }
                         .disabled(!canRedeem)
                     }
@@ -533,6 +675,27 @@ struct RewardCard: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+    
+    private var rewardTypeTag: some View {
+        HStack(spacing: 3) {
+            Image(systemName: reward.isGeneralReward ? "star.fill" : "folder.fill")
+                .font(.system(size: 8))
+                .foregroundColor(reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor)
+            Text(reward.isGeneralReward ? "General" : reward.frequency.displayName)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill((reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor).opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder((reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor).opacity(0.2), lineWidth: 0.5)
+                )
+        )
     }
 }
 

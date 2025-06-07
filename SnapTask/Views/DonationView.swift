@@ -23,10 +23,10 @@ struct DonationView: View {
                         )
                     
                     VStack(spacing: 8) {
-                        Text("Support SnapTask")
+                        Text("Supporta SnapTask Pro")
                             .font(.title.bold())
                         
-                        Text("Help us keep improving SnapTask with new features and updates")
+                        Text("Aiutami a continuare lo sviluppo di SnapTask Pro con nuove funzionalità e miglioramenti")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -34,8 +34,29 @@ struct DonationView: View {
                 }
                 .padding(.top, 20)
                 
+                if donationService.usingMockProducts {
+                    VStack(spacing: 8) {
+                        HStack {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("Modalità sviluppo - Donazioni simulate")
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(.blue)
+                        }
+                        Text("In TestFlight le donazioni sono simulate. Dopo il rilascio sull'App Store saranno reali.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                }
+                
                 if donationService.isLoading {
-                    ProgressView("Loading donation options...")
+                    ProgressView("Caricamento opzioni donazione...")
                         .frame(maxHeight: .infinity)
                 } else if donationService.donationProducts.isEmpty {
                     VStack(spacing: 16) {
@@ -43,15 +64,15 @@ struct DonationView: View {
                             .font(.system(size: 40))
                             .foregroundColor(.orange)
                         
-                        Text("Unable to load donation options")
+                        Text("Impossibile caricare le opzioni di donazione")
                             .font(.headline)
                         
-                        Text("Please check your internet connection and try again")
+                        Text("Controlla la connessione internet e riprova")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                         
-                        Button("Retry") {
+                        Button("Riprova") {
                             Task {
                                 await donationService.loadProducts()
                             }
@@ -82,19 +103,47 @@ struct DonationView: View {
                     
                     Spacer()
                     
+                    VStack(spacing: 8) {
+                        Text("💝 Le tue donazioni mi aiutano a:")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.primary)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("•")
+                                Text("Sviluppare nuove funzionalità")
+                            }
+                            HStack {
+                                Text("•")
+                                Text("Mantenere i server per la sincronizzazione")
+                            }
+                            HStack {
+                                Text("•")
+                                Text("Continuare gli aggiornamenti gratuiti")
+                            }
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                    
                     // Thank you message for previous donors
                     if donationService.hasEverDonated {
                         VStack(spacing: 8) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
-                                Text("Thank you for your previous support!")
+                                Text("Grazie per il tuo supporto precedente!")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
                             
                             if let lastDonation = donationService.lastDonationDate {
-                                Text("Last donation: \(lastDonation, style: .date)")
+                                Text("Ultima donazione: \(lastDonation, style: .date)")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -106,22 +155,22 @@ struct DonationView: View {
                     }
                 }
             }
-            .navigationTitle("Donate")
+            .navigationTitle("Donazioni")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
+                    Button("Chiudi") {
                         dismiss()
                     }
                 }
             }
         }
-        .alert("Thank You! ❤️", isPresented: $showingThankYou) {
-            Button("Continue") {
+        .alert("Grazie di cuore! ❤️", isPresented: $showingThankYou) {
+            Button("Continua") {
                 dismiss()
             }
         } message: {
-            Text("Your donation helps us continue developing SnapTask. We really appreciate your support!")
+            Text("La tua donazione mi aiuta a continuare lo sviluppo di SnapTask Pro. Apprezzo davvero il tuo supporto!")
         }
         .task {
             if donationService.donationProducts.isEmpty {
@@ -139,13 +188,13 @@ struct DonationCard: View {
     private var donationInfo: (title: String, description: String, icon: String) {
         let productId = product.id
         if productId.contains("small") || productId == "small" {
-            return ("Small Coffee", "Buy us a coffee ☕️", "cup.and.saucer.fill")
+            return ("Caffè per Giovanni", "Un piccolo caffè ☕️", "cup.and.saucer.fill")
         } else if productId.contains("medium") || productId == "medium" {
-            return ("Big Coffee", "Buy us a fancy coffee ☕️✨", "mug.fill")
+            return ("Pizza per Giovanni", "Una pizza per cena 🍕", "mug.fill")
         } else if productId.contains("large") || productId == "large" {
-            return ("Dinner", "Buy us dinner 🍕", "fork.knife")
+            return ("Cena per Giovanni", "Una bella cena 🍽️", "fork.knife")
         } else {
-            return ("Support", "Support development", "heart.fill")
+            return ("Supporto", "Supporta lo sviluppo", "heart.fill")
         }
     }
     

@@ -1,6 +1,6 @@
 import Foundation
 
-struct FeedbackItem: Identifiable, Codable {
+struct FeedbackItem: Identifiable, Codable, Equatable {
     let id: UUID
     let title: String
     let description: String
@@ -11,6 +11,9 @@ struct FeedbackItem: Identifiable, Codable {
     let authorName: String?
     var votes: Int
     var hasVoted: Bool
+    var replies: [FeedbackReply]
+    var likes: Int
+    var hasLiked: Bool
     
     var isAuthoredByCurrentUser: Bool {
         guard let authorId = authorId else { return false }
@@ -28,7 +31,10 @@ struct FeedbackItem: Identifiable, Codable {
         authorId: String? = nil,
         authorName: String? = nil,
         votes: Int = 0,
-        hasVoted: Bool = false
+        hasVoted: Bool = false,
+        replies: [FeedbackReply] = [],
+        likes: Int = 0,
+        hasLiked: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -40,6 +46,49 @@ struct FeedbackItem: Identifiable, Codable {
         self.authorName = authorName
         self.votes = votes
         self.hasVoted = hasVoted
+        self.replies = replies
+        self.likes = likes
+        self.hasLiked = hasLiked
+    }
+}
+
+struct FeedbackReply: Identifiable, Codable, Equatable {
+    let id: UUID
+    let feedbackId: UUID
+    let content: String
+    let authorId: String?
+    let authorName: String?
+    let creationDate: Date
+    let isFromDeveloper: Bool
+    var likes: Int
+    var hasLiked: Bool
+    
+    var isAuthoredByCurrentUser: Bool {
+        guard let authorId = authorId else { return false }
+        let currentUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
+        return authorId == currentUserId
+    }
+    
+    init(
+        id: UUID = UUID(),
+        feedbackId: UUID,
+        content: String,
+        authorId: String? = nil,
+        authorName: String? = nil,
+        creationDate: Date = Date(),
+        isFromDeveloper: Bool = false,
+        likes: Int = 0,
+        hasLiked: Bool = false
+    ) {
+        self.id = id
+        self.feedbackId = feedbackId
+        self.content = content
+        self.authorId = authorId
+        self.authorName = authorName
+        self.creationDate = creationDate
+        self.isFromDeveloper = isFromDeveloper
+        self.likes = likes
+        self.hasLiked = hasLiked
     }
 }
 

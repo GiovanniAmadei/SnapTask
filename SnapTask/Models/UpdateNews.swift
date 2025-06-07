@@ -5,7 +5,7 @@ struct UpdateNews: Codable, Identifiable {
     let title: String
     let description: String
     let version: String?
-    let date: Date
+    let date: Date?  
     let type: NewsType
     let isHighlighted: Bool
     

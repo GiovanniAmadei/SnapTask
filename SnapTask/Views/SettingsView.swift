@@ -2,6 +2,8 @@ import SwiftUI
 import StoreKit
 import UserNotifications
 
+import SwiftUI
+
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var quoteManager = QuoteManager.shared
@@ -19,7 +21,8 @@ struct SettingsView: View {
     @State private var notificationPermissionStatus = UNAuthorizationStatus.notDetermined
     @State private var showingPermissionAlert = false
     @State private var showingCalendarIntegrationView = false
-
+    @State private var showingWelcome = false
+    
     var body: some View {
         NavigationStack {
             List {
@@ -218,12 +221,12 @@ struct SettingsView: View {
                                 .foregroundColor(.purple)
                                 .frame(width: 24)
                             
-                            Text("What's New")
+                            Text("What's Cooking")
                             
                             Spacer()
                             
-                            // Show badge if there are highlighted updates
-                            if UpdateNewsService.shared.getHighlighted().count > 0 {
+                            // Show badge only if there are unread highlighted updates
+                            if UpdateNewsService.shared.hasUnreadHighlightedItems() {
                                 Circle()
                                     .fill(.red)
                                     .frame(width: 8, height: 8)
@@ -258,6 +261,13 @@ struct SettingsView: View {
                         }
                     }
                     .foregroundColor(.primary)
+                    
+                    Button {
+                        showingWelcome = true
+                    } label: {
+                        Label("Rivedi il messaggio di benvenuto", systemImage: "heart")
+                            .foregroundColor(.pink)
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -302,6 +312,9 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("To receive daily quote reminders, please enable notifications in Settings > SnapTask > Notifications.")
+            }
+            .fullScreenCover(isPresented: $showingWelcome) {
+                WelcomeView()
             }
         }
     }

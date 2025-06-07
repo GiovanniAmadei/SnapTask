@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FC6909862DD49BE00006E601 /* SnapTask Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FC690B782DD4A0DA0006E601 /* QuoteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC690B772DD4A0DA0006E601 /* QuoteService.swift */; };
 		FC9FE5692DECFE71002425C4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC9FE5682DECFE71002425C4 /* WidgetKit.framework */; };
 		FC9FE56B2DECFE71002425C4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC9FE56A2DECFE71002425C4 /* SwiftUI.framework */; };
@@ -46,19 +45,19 @@
 			remoteGlobalIDString = FC6909652DD49BDF0006E601;
 			remoteInfo = "SnapTask Watch App Watch App";
 		};
-		FC6909842DD49BE00006E601 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = ACCAD3DE2D37D10500A26002 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = FC6909652DD49BDF0006E601;
-			remoteInfo = "SnapTask Watch App Watch App";
-		};
 		FC9FE57A2DECFE72002425C4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = ACCAD3DE2D37D10500A26002 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = FC9FE5652DECFE71002425C4;
 			remoteInfo = SnapTaskWidgetExtension;
+		};
+		FCACD9FD2DEDF6EE000BF36D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACCAD3DE2D37D10500A26002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FC6909652DD49BDF0006E601;
+			remoteInfo = "SnapTask Watch App Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -69,7 +68,6 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				FC6909862DD49BE00006E601 /* SnapTask Watch App Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -88,7 +86,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		ACCAD3E62D37D10500A26002 /* SnapTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SnapTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACCAD3E62D37D10500A26002 /* SnapTask Pro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SnapTask Pro.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACCAD3F62D37D10600A26002 /* SnapTaskTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnapTaskTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACCAD4002D37D10600A26002 /* SnapTaskUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnapTaskUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SnapTask Watch App Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -250,7 +248,7 @@
 		ACCAD3E72D37D10500A26002 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ACCAD3E62D37D10500A26002 /* SnapTask.app */,
+				ACCAD3E62D37D10500A26002 /* SnapTask Pro.app */,
 				ACCAD3F62D37D10600A26002 /* SnapTaskTests.xctest */,
 				ACCAD4002D37D10600A26002 /* SnapTaskUITests.xctest */,
 				FC6909662DD49BDF0006E601 /* SnapTask Watch App Watch App.app */,
@@ -294,7 +292,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				FC6909852DD49BE00006E601 /* PBXTargetDependency */,
+				FCACD9FE2DEDF6EE000BF36D /* PBXTargetDependency */,
 				FC9FE57B2DECFE72002425C4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
@@ -307,7 +305,7 @@
 				FCA65A5D2DEC897F002B31B0 /* FirebaseCore */,
 			);
 			productName = SnapTask;
-			productReference = ACCAD3E62D37D10500A26002 /* SnapTask.app */;
+			productReference = ACCAD3E62D37D10500A26002 /* SnapTask Pro.app */;
 			productType = "com.apple.product-type.application";
 		};
 		ACCAD3F52D37D10600A26002 /* SnapTaskTests */ = {
@@ -638,15 +636,15 @@
 			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
 			targetProxy = FC69097D2DD49BE00006E601 /* PBXContainerItemProxy */;
 		};
-		FC6909852DD49BE00006E601 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
-			targetProxy = FC6909842DD49BE00006E601 /* PBXContainerItemProxy */;
-		};
 		FC9FE57B2DECFE72002425C4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FC9FE5652DECFE71002425C4 /* SnapTaskWidgetExtension */;
 			targetProxy = FC9FE57A2DECFE72002425C4 /* PBXContainerItemProxy */;
+		};
+		FCACD9FE2DEDF6EE000BF36D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FC6909652DD49BDF0006E601 /* SnapTask Watch App Watch App */;
+			targetProxy = FCACD9FD2DEDF6EE000BF36D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -788,20 +786,22 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SnapTask/Info.plist;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
+				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Pro Alpha";
 				INFOPLIST_KEY_CFBundleLocalizations = "en it";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "SnapTask needs write access to your calendar to create and update calendar events for your tasks";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha;
+				PRODUCT_NAME = "SnapTask Pro";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -822,20 +822,22 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SnapTask/Info.plist;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
+				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Pro Alpha";
 				INFOPLIST_KEY_CFBundleLocalizations = "en it";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "SnapTask needs write access to your calendar to create and update calendar events for your tasks";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha;
+				PRODUCT_NAME = "SnapTask Pro";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -915,22 +917,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = "SnapTask Watch App Watch App/SnapTask Watch App Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "SnapTask-Watch-App-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Watch App";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.giovanniamadei.SnapTask;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.giovanniamadei.SnapTaskProAlpha;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -946,22 +950,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = "SnapTask Watch App Watch App/SnapTask Watch App Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "SnapTask-Watch-App-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Watch App";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.giovanniamadei.SnapTask;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.giovanniamadei.SnapTaskProAlpha;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1087,7 +1093,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.SnapTaskWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1116,7 +1122,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTask.SnapTaskWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

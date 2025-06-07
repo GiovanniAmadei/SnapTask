@@ -8,65 +8,84 @@ class FirebaseService: ObservableObject {
     static let shared = FirebaseService()
     
     private let db = Firestore.firestore()
+    private let userIdKey = "anonymous_user_id"
+    private let updateNewsCollection = "app_updates"
     private let feedbackCollection = "feedback"
     private let votesCollection = "votes"
-    private let updateNewsCollection = "app_updates"
+    private let likesCollection = "likes"
+    private let repliesCollection = "feedback_replies"
+    private let replyLikesCollection = "reply_likes"
     
-    @Published var isInitialized = false
+    @Published var isLoading = false
+    @Published var errorMessage: String?
     
-    private var feedbackListener: ListenerRegistration?
+    private init() {}
     
-    private init() {
-        initializeFirebase()
-    }
-    
-    private func initializeFirebase() {
-        guard FirebaseApp.app() == nil else {
-            isInitialized = true
-            return
+    func saveTaskData(_ data: [String: Any]) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let userId = getOrCreateAnonymousUserId()
+            let taskRef = db.collection("users").document(userId).collection("tasks")
+            
+            try await taskRef.addDocument(data: data)
+            print("✅ Task saved to Firebase")
+        } catch {
+            print("❌ Error saving task: \(error)")
+            errorMessage = error.localizedDescription
         }
-        
-        FirebaseApp.configure()
-        isInitialized = true
-        print("✅ Firebase initialized")
     }
     
-    func startListeningToFeedback(completion: @escaping ([FeedbackItem]) -> Void) {
-        feedbackListener?.remove() // Remove existing listener
+    func saveQuoteData(_ data: [String: Any]) async {
+        isLoading = true
+        defer { isLoading = false }
         
-        feedbackListener = db.collection(feedbackCollection)
-            .order(by: "votes", descending: true)
-            .addSnapshotListener { [weak self] snapshot, error in
-                Task { @MainActor in
-                    if let error = error {
-                        print("❌ Firebase listener error: \(error)")
-                        return
-                    }
-                    
-                    guard let snapshot = snapshot else { return }
-                    
-                    var feedbackItems: [FeedbackItem] = []
-                    let userVotes = await self?.getUserVotes() ?? Set<String>()
-                    
-                    for document in snapshot.documents {
-                        if let feedback = self?.createFeedbackItem(from: document.data()) {
-                            var updatedFeedback = feedback
-                            updatedFeedback.hasVoted = userVotes.contains(feedback.id.uuidString)
-                            feedbackItems.append(updatedFeedback)
-                        }
-                    }
-                    
-                    completion(feedbackItems)
-                }
-            }
+        do {
+            let userId = getOrCreateAnonymousUserId()
+            let quoteRef = db.collection("users").document(userId).collection("quotes")
+            
+            try await quoteRef.addDocument(data: data)
+            print("✅ Quote saved to Firebase")
+        } catch {
+            print("❌ Error saving quote: \(error)")
+            errorMessage = error.localizedDescription
+        }
     }
     
-    func stopListeningToFeedback() {
-        feedbackListener?.remove()
-        feedbackListener = nil
+    func submitFeedback(_ data: [String: Any]) async -> Bool {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let userId = getOrCreateAnonymousUserId()
+            var feedbackData = data
+            feedbackData["userId"] = userId
+            feedbackData["submittedAt"] = Timestamp()
+            
+            try await db.collection("feedback").addDocument(data: feedbackData)
+            print("✅ Feedback submitted to Firebase")
+            return true
+        } catch {
+            print("❌ Error submitting feedback: \(error)")
+            errorMessage = error.localizedDescription
+            return false
+        }
     }
     
     func submitFeedback(_ feedback: FeedbackItem) async throws {
+        let repliesData = feedback.replies.map { reply in
+            return [
+                "id": reply.id.uuidString,
+                "content": reply.content,
+                "authorId": reply.authorId ?? "",
+                "authorName": reply.authorName ?? "",
+                "creationDate": Timestamp(date: reply.creationDate),
+                "isFromDeveloper": reply.isFromDeveloper,
+                "likes": reply.likes
+            ]
+        }
+        
         let data: [String: Any] = [
             "id": feedback.id.uuidString,
             "title": feedback.title,
@@ -76,7 +95,9 @@ class FirebaseService: ObservableObject {
             "creationDate": Timestamp(date: feedback.creationDate),
             "authorId": feedback.authorId ?? "",
             "authorName": feedback.authorName ?? "",
-            "votes": feedback.votes
+            "votes": feedback.votes,
+            "likes": feedback.likes,
+            "replies": repliesData
         ]
         
         try await db.collection(feedbackCollection)
@@ -86,53 +107,104 @@ class FirebaseService: ObservableObject {
         print("✅ Feedback submitted to Firebase: \(feedback.title)")
     }
     
-    func deleteFeedback(_ feedback: FeedbackItem) async throws {
-        let userId = getCurrentUserId()
-        
-        guard feedback.authorId == userId else {
-            throw FirebaseError.unauthorizedDeletion
-        }
-        
-        let feedbackRef = db.collection(feedbackCollection).document(feedback.id.uuidString)
-        
-        let votesSnapshot = try await db.collection(votesCollection)
-            .whereField("feedbackId", isEqualTo: feedback.id.uuidString)
-            .getDocuments()
-        
-        let batch = db.batch()
-        
-        for voteDoc in votesSnapshot.documents {
-            batch.deleteDocument(voteDoc.reference)
-        }
-        
-        batch.deleteDocument(feedbackRef)
-        
-        try await batch.commit()
-        
-        print("✅ Feedback deleted from Firebase: \(feedback.title)")
-    }
-    
     func fetchFeedback() async throws -> [FeedbackItem] {
+        print("🔄 Fetching feedback from Firebase...")
         let snapshot = try await db.collection(feedbackCollection)
             .order(by: "votes", descending: true)
             .getDocuments()
         
+        print("📦 Retrieved \(snapshot.documents.count) feedback documents")
+        
         var feedbackItems: [FeedbackItem] = []
         let userVotes = await getUserVotes()
+        let userLikes = await getUserLikes()
         
         for document in snapshot.documents {
-            if let feedback = createFeedbackItem(from: document.data()) {
+            let data = document.data()
+            print("📄 Processing feedback: \(data["title"] as? String ?? "Unknown")")
+            
+            if let developerReply = data["developerReply"] as? String {
+                print("💬 Found developer reply: \(developerReply)")
+            }
+            
+            if let feedback = createFeedbackItem(from: data) {
                 var updatedFeedback = feedback
                 updatedFeedback.hasVoted = userVotes.contains(feedback.id.uuidString)
+                updatedFeedback.hasLiked = userLikes.contains(feedback.id.uuidString)
+                
                 feedbackItems.append(updatedFeedback)
             }
         }
         
+        print("✅ Successfully parsed \(feedbackItems.count) feedback items")
         return feedbackItems
     }
     
+    func submitReply(_ reply: FeedbackReply) async throws {
+        let feedbackRef = db.collection(feedbackCollection).document(reply.feedbackId.uuidString)
+        
+        let replyData: [String: Any] = [
+            "id": reply.id.uuidString,
+            "content": reply.content,
+            "authorId": reply.authorId ?? "",
+            "authorName": reply.authorName ?? "",
+            "creationDate": Timestamp(date: reply.creationDate),
+            "isFromDeveloper": reply.isFromDeveloper,
+            "likes": reply.likes
+        ]
+        
+        try await feedbackRef.updateData([
+            "replies": FieldValue.arrayUnion([replyData])
+        ])
+        
+        print("✅ Reply added to feedback: \(reply.feedbackId)")
+    }
+    
+    func toggleLike(for feedback: FeedbackItem) async throws -> Bool {
+        let userId = getOrCreateAnonymousUserId()
+        let likeId = "\(userId)_\(feedback.id.uuidString)"
+        let likeRef = db.collection(likesCollection).document(likeId)
+        let feedbackRef = db.collection(feedbackCollection).document(feedback.id.uuidString)
+        
+        let likeDoc = try await likeRef.getDocument()
+        let hasLiked = likeDoc.exists
+        
+        try await db.runTransaction { transaction, errorPointer in
+            let feedbackDoc: DocumentSnapshot
+            do {
+                feedbackDoc = try transaction.getDocument(feedbackRef)
+            } catch let fetchError as NSError {
+                errorPointer?.pointee = fetchError
+                return nil
+            }
+            
+            guard let data = feedbackDoc.data(),
+                  let currentLikes = data["likes"] as? Int else {
+                let error = NSError(domain: "FirebaseService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not get current likes"])
+                errorPointer?.pointee = error
+                return nil
+            }
+            
+            if hasLiked {
+                transaction.deleteDocument(likeRef)
+                transaction.updateData(["likes": max(0, currentLikes - 1)], forDocument: feedbackRef)
+            } else {
+                transaction.setData([
+                    "userId": userId,
+                    "feedbackId": feedback.id.uuidString,
+                    "createdAt": Timestamp(date: Date())
+                ], forDocument: likeRef)
+                transaction.updateData(["likes": currentLikes + 1], forDocument: feedbackRef)
+            }
+            
+            return nil
+        }
+        
+        return !hasLiked
+    }
+    
     func toggleVote(for feedback: FeedbackItem) async throws -> Bool {
-        let userId = getCurrentUserId()
+        let userId = getOrCreateAnonymousUserId()
         let voteId = "\(userId)_\(feedback.id.uuidString)"
         let voteRef = db.collection(votesCollection).document(voteId)
         let feedbackRef = db.collection(feedbackCollection).document(feedback.id.uuidString)
@@ -174,6 +246,40 @@ class FirebaseService: ObservableObject {
         return !hasVoted
     }
     
+    func deleteFeedback(_ feedback: FeedbackItem) async throws {
+        let userId = getOrCreateAnonymousUserId()
+        
+        guard feedback.authorId == userId else {
+            throw FirebaseError.unauthorizedDeletion
+        }
+        
+        let feedbackRef = db.collection(feedbackCollection).document(feedback.id.uuidString)
+        
+        let votesSnapshot = try await db.collection(votesCollection)
+            .whereField("feedbackId", isEqualTo: feedback.id.uuidString)
+            .getDocuments()
+        
+        let likesSnapshot = try await db.collection(likesCollection)
+            .whereField("feedbackId", isEqualTo: feedback.id.uuidString)
+            .getDocuments()
+        
+        let batch = db.batch()
+        
+        for voteDoc in votesSnapshot.documents {
+            batch.deleteDocument(voteDoc.reference)
+        }
+        
+        for likeDoc in likesSnapshot.documents {
+            batch.deleteDocument(likeDoc.reference)
+        }
+        
+        batch.deleteDocument(feedbackRef)
+        
+        try await batch.commit()
+        
+        print("✅ Feedback and all related data deleted from Firebase: \(feedback.title)")
+    }
+    
     private func createFeedbackItem(from data: [String: Any]) -> FeedbackItem? {
         guard let idString = data["id"] as? String,
               let id = UUID(uuidString: idString),
@@ -188,8 +294,42 @@ class FirebaseService: ObservableObject {
         }
         
         let votes = data["votes"] as? Int ?? 0
+        let likes = data["likes"] as? Int ?? 0
         let authorId = data["authorId"] as? String
         let authorName = data["authorName"] as? String
+        
+        var replies: [FeedbackReply] = []
+        
+        if let repliesData = data["replies"] as? [[String: Any]] {
+            for replyData in repliesData {
+                if let reply = createReplyItem(from: replyData, feedbackId: id) {
+                    replies.append(reply)
+                }
+            }
+        }
+        
+        if let developerReply = data["developerReply"] as? String, !developerReply.isEmpty {
+            print("🎯 Found developerReply for '\(title)': '\(developerReply)'")
+            
+            let devReply = FeedbackReply(
+                feedbackId: id,
+                content: developerReply,
+                authorId: "giovanni_amadei_dev_id",
+                authorName: "Giovanni (Developer)",
+                creationDate: Date(),
+                isFromDeveloper: true
+            )
+            replies.append(devReply)
+            
+            print("✅ Added developer reply to feedback. Total replies: \(replies.count)")
+        } else {
+            print("❌ No developerReply found for '\(title)'")
+            if let devReplyRaw = data["developerReply"] {
+                print("   Raw value: \(devReplyRaw) (type: \(type(of: devReplyRaw)))")
+            } else {
+                print("   Field 'developerReply' doesn't exist")
+            }
+        }
         
         return FeedbackItem(
             id: id,
@@ -200,13 +340,43 @@ class FirebaseService: ObservableObject {
             creationDate: timestamp.dateValue(),
             authorId: authorId?.isEmpty == true ? nil : authorId,
             authorName: authorName?.isEmpty == true ? nil : authorName,
-            votes: votes
+            votes: votes,
+            hasVoted: false,
+            replies: replies,
+            likes: likes,
+            hasLiked: false
+        )
+    }
+    
+    private func createReplyItem(from data: [String: Any], feedbackId: UUID) -> FeedbackReply? {
+        guard let idString = data["id"] as? String,
+              let id = UUID(uuidString: idString),
+              let content = data["content"] as? String,
+              let timestamp = data["creationDate"] as? Timestamp else {
+            return nil
+        }
+        
+        let authorId = data["authorId"] as? String
+        let authorName = data["authorName"] as? String
+        let isFromDeveloper = data["isFromDeveloper"] as? Bool ?? false
+        let likes = data["likes"] as? Int ?? 0
+        
+        return FeedbackReply(
+            id: id,
+            feedbackId: feedbackId,
+            content: content,
+            authorId: authorId?.isEmpty == true ? nil : authorId,
+            authorName: authorName?.isEmpty == true ? nil : authorName,
+            creationDate: timestamp.dateValue(),
+            isFromDeveloper: isFromDeveloper,
+            likes: likes,
+            hasLiked: false
         )
     }
     
     private func getUserVotes() async -> Set<String> {
         do {
-            let userId = getCurrentUserId()
+            let userId = getOrCreateAnonymousUserId()
             let snapshot = try await db.collection(votesCollection)
                 .whereField("userId", isEqualTo: userId)
                 .getDocuments()
@@ -224,8 +394,78 @@ class FirebaseService: ObservableObject {
         }
     }
     
-    private func getCurrentUserId() -> String {
-        let userIdKey = "firebase_user_id"
+    private func getUserLikes() async -> Set<String> {
+        do {
+            let userId = getOrCreateAnonymousUserId()
+            let snapshot = try await db.collection(likesCollection)
+                .whereField("userId", isEqualTo: userId)
+                .getDocuments()
+            
+            var likes = Set<String>()
+            for document in snapshot.documents {
+                if let feedbackId = document.data()["feedbackId"] as? String {
+                    likes.insert(feedbackId)
+                }
+            }
+            return likes
+        } catch {
+            print("❌ Failed to fetch user likes: \(error)")
+            return Set<String>()
+        }
+    }
+    
+    func saveRewardData(_ data: [String: Any]) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let userId = getOrCreateAnonymousUserId()
+            let rewardRef = db.collection("users").document(userId).collection("rewards")
+            
+            try await rewardRef.addDocument(data: data)
+            print("✅ Reward saved to Firebase")
+        } catch {
+            print("❌ Error saving reward: \(error)")
+            errorMessage = error.localizedDescription
+        }
+    }
+    
+    func savePomodoroSession(_ data: [String: Any]) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let userId = getOrCreateAnonymousUserId()
+            let pomodoroRef = db.collection("users").document(userId).collection("pomodoro_sessions")
+            
+            try await pomodoroRef.addDocument(data: data)
+            print("✅ Pomodoro session saved to Firebase")
+        } catch {
+            print("❌ Error saving pomodoro session: \(error)")
+            errorMessage = error.localizedDescription
+        }
+    }
+    
+    func saveAnalyticsEvent(_ eventName: String, parameters: [String: Any] = [:]) async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let userId = getOrCreateAnonymousUserId()
+            var eventData = parameters
+            eventData["userId"] = userId
+            eventData["eventName"] = eventName
+            eventData["timestamp"] = Timestamp()
+            
+            try await db.collection("analytics").addDocument(data: eventData)
+            print("✅ Analytics event '\(eventName)' saved to Firebase")
+        } catch {
+            print("❌ Error saving analytics event: \(error)")
+            errorMessage = error.localizedDescription
+        }
+    }
+    
+    private func getOrCreateAnonymousUserId() -> String {
         if let existingId = UserDefaults.standard.string(forKey: userIdKey) {
             return existingId
         } else {
@@ -237,90 +477,112 @@ class FirebaseService: ObservableObject {
     
     func initializeUpdateNews() async {
         do {
-            // Check if we already have data
             let snapshot = try await db.collection(updateNewsCollection).limit(to: 1).getDocuments()
             
-            // If we already have data, don't add samples
             if !snapshot.documents.isEmpty {
                 print("✅ Update news already exists in Firebase")
                 return
             }
             
+            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+            
             let sampleUpdates: [[String: Any]] = [
-                // Recent Updates
                 [
-                    "title": "Widget Support Added!",
-                    "description": "You can now add SnapTask widgets to your home screen to see your daily tasks at a glance. Available in multiple sizes with beautiful design.",
-                    "version": "1.2.0",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()),
+                    "title": "Home Screen Widgets",
+                    "description": "Add SnapTask widgets to your home screen for quick access to your daily tasks. Available in multiple sizes with live updates and beautiful design that matches your app theme.",
+                    "version": "0.1.0",
+                    "date": Timestamp(date: yesterday),
                     "type": "recent",
                     "isHighlighted": true
                 ],
                 [
-                    "title": "Enhanced Statistics View",
-                    "description": "New charts and insights to track your productivity patterns. See your task completion rates over time with beautiful animated charts.",
-                    "version": "1.1.5",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: -10, to: Date()) ?? Date()),
+                    "title": "Enhanced Statistics Dashboard",
+                    "description": "Completely redesigned statistics view with interactive charts, task consistency tracking, and detailed productivity insights. See your progress over time with beautiful animated visualizations.",
+                    "version": "0.1.0",
+                    "date": Timestamp(date: yesterday),
+                    "type": "recent",
+                    "isHighlighted": true
+                ],
+                [
+                    "title": "Advanced Pomodoro Timer",
+                    "description": "Professional-grade focus timer with customizable sessions, break intervals, color themes, and seamless task integration. Track your focus time with detailed statistics.",
+                    "version": "0.1.0",
+                    "date": Timestamp(date: yesterday),
+                    "type": "recent",
+                    "isHighlighted": true
+                ],
+                [
+                    "title": "Location-Based Tasks",
+                    "description": "Add locations to your tasks with GPS coordinates, interactive map picker, and address search. Tap any location to open in Apple Maps for easy navigation.",
+                    "version": "0.1.0",
+                    "date": Timestamp(date: yesterday),
                     "type": "recent",
                     "isHighlighted": false
                 ],
                 [
-                    "title": "Improved Dark Mode",
-                    "description": "Better contrast and readability in dark mode. All UI elements now properly support both light and dark themes.",
-                    "version": "1.1.0",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: -20, to: Date()) ?? Date()),
+                    "title": "Modern App Design",
+                    "description": "Complete UI overhaul with glassmorphism effects, smooth animations, improved dark mode, and enhanced accessibility. Every screen has been carefully redesigned for the best user experience.",
+                    "version": "0.1.0",
+                    "date": Timestamp(date: yesterday),
+                    "type": "recent",
+                    "isHighlighted": false
+                ],
+                [
+                    "title": "Advanced Task Recurrence",
+                    "description": "Create sophisticated recurring tasks with custom patterns, specific weekday times, monthly schedules, and optional end dates. Perfect for complex routines and habits.",
+                    "version": "0.1.0",
+                    "date": Timestamp(date: yesterday),
+                    "type": "recent",
+                    "isHighlighted": false
+                ],
+                [
+                    "title": "Bug Fixes & Performance",
+                    "description": "Resolved gesture conflicts, improved CloudKit synchronization, fixed task form stability issues, and enhanced overall app performance for a smoother experience.",
+                    "version": "0.1.0",
+                    "date": Timestamp(date: yesterday),
                     "type": "recent",
                     "isHighlighted": false
                 ],
                 
-                // Coming Soon
                 [
-                    "title": "Apple Watch Improvements",
-                    "description": "Enhanced Apple Watch app with better navigation, faster sync, and new complications for your watch face.",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()),
+                    "title": "Apple Watch Enhancements",
+                    "description": "Enhanced Apple Watch app with improved navigation, faster synchronization, new complications, and better integration with iPhone features.",
                     "type": "coming_soon",
                     "isHighlighted": true
                 ],
                 [
                     "title": "Smart Notifications",
-                    "description": "AI-powered notification timing based on your usage patterns. Get reminded at the perfect moment to complete your tasks.",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()),
+                    "description": "Intelligent notification timing based on your usage patterns and optimal productivity hours. Get reminded exactly when you're most likely to complete tasks.",
                     "type": "coming_soon",
                     "isHighlighted": false
                 ],
                 [
-                    "title": "Collaboration Features",
-                    "description": "Share tasks and lists with family members or colleagues. Real-time sync and notifications for shared tasks.",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .day, value: 21, to: Date()) ?? Date()),
+                    "title": "Task Templates",
+                    "description": "Create reusable task templates with predefined subtasks, categories, and settings. Perfect for recurring projects and standardized workflows.",
                     "type": "coming_soon",
                     "isHighlighted": false
                 ],
                 
-                // Roadmap
                 [
-                    "title": "Mac App",
-                    "description": "Native macOS app with full feature parity. Seamlessly sync between your iPhone, iPad, Apple Watch, and Mac.",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .month, value: 2, to: Date()) ?? Date()),
+                    "title": "macOS App",
+                    "description": "Native Mac application with full feature parity, keyboard shortcuts, menu bar integration, and seamless synchronization across all your devices.",
                     "type": "roadmap",
                     "isHighlighted": true
                 ],
                 [
-                    "title": "AI Task Suggestions",
-                    "description": "Smart task recommendations based on your habits, calendar, and productivity patterns. Let AI help optimize your day.",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()),
+                    "title": "Team Collaboration",
+                    "description": "Share tasks and projects with team members, assign responsibilities, track progress together, and synchronize in real-time across all devices.",
                     "type": "roadmap",
                     "isHighlighted": false
                 ],
                 [
-                    "title": "Advanced Automation",
-                    "description": "Create custom rules and automations. Auto-create recurring tasks, smart categorization, and location-based reminders.",
-                    "date": Timestamp(date: Calendar.current.date(byAdding: .month, value: 4, to: Date()) ?? Date()),
+                    "title": "AI-Powered Insights",
+                    "description": "Machine learning-powered productivity insights, automatic task prioritization, smart scheduling suggestions, and personalized productivity recommendations.",
                     "type": "roadmap",
                     "isHighlighted": false
                 ]
             ]
             
-            // Add all sample updates to Firebase
             let batch = db.batch()
             
             for updateData in sampleUpdates {
