@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import UIKit
+import UserNotifications
 
 @MainActor
 class TimeTrackerViewModel: ObservableObject {
@@ -13,8 +15,160 @@ class TimeTrackerViewModel: ObservableObject {
     private var timers: [UUID: Timer] = [:]
     private let taskManager: TaskManager
     
+    private var backgroundTimestamps: [UUID: Date] = [:]
+    
     init(taskManager: TaskManager) {
         self.taskManager = taskManager
+        setupBackgroundHandling()
+        restoreSessionStates()
+    }
+    
+    private func setupBackgroundHandling() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func appDidEnterBackground() {
+        // Salva timestamp per ogni sessione attiva
+        for session in activeSessions {
+            if session.isRunning && !session.isPaused {
+                backgroundTimestamps[session.id] = Date()
+                saveSessionState(session)
+            }
+        }
+    }
+    
+    @objc private func appWillEnterForeground() {
+        // Calcola tempo trascorso per ogni sessione
+        for i in activeSessions.indices {
+            let session = activeSessions[i]
+            if session.isRunning && !session.isPaused,
+               let backgroundStart = backgroundTimestamps[session.id] {
+                
+                let backgroundDuration = Date().timeIntervalSince(backgroundStart)
+                activeSessions[i].elapsedTime += backgroundDuration
+                
+                // Riavvia timer per questa sessione
+                restartTimer(for: session.id)
+            }
+        }
+        
+        // Pulisci timestamps
+        backgroundTimestamps.removeAll()
+        Task {
+            await cleanupSessionStates()
+        }
+    }
+    
+    private func saveSessionState(_ session: TrackingSession) {
+        let key = "timer_session_\(session.id.uuidString)"
+        let sessionData: [String: Any] = [
+            "id": session.id.uuidString,
+            "taskId": session.taskId?.uuidString ?? "",
+            "taskName": session.taskName ?? "",
+            "elapsedTime": session.elapsedTime,
+            "isRunning": session.isRunning,
+            "isPaused": session.isPaused,
+            "startTime": session.startTime.timeIntervalSince1970,
+            "mode": session.mode.rawValue,
+            "categoryId": session.categoryId?.uuidString ?? "",
+            "categoryName": session.categoryName ?? "",
+            "backgroundTimestamp": Date().timeIntervalSince1970
+        ]
+        UserDefaults.standard.set(sessionData, forKey: key)
+    }
+    
+    private func restoreSessionStates() {
+        let userDefaults = UserDefaults.standard
+        let keys = userDefaults.dictionaryRepresentation().keys.filter { $0.hasPrefix("timer_session_") }
+        
+        for key in keys {
+            if let sessionData = userDefaults.dictionary(forKey: key),
+               let sessionIdString = sessionData["id"] as? String,
+               let sessionId = UUID(uuidString: sessionIdString),
+               let isRunning = sessionData["isRunning"] as? Bool,
+               let isPaused = sessionData["isPaused"] as? Bool,
+               let elapsedTime = sessionData["elapsedTime"] as? TimeInterval,
+               let startTimeInterval = sessionData["startTime"] as? TimeInterval,
+               let modeRaw = sessionData["mode"] as? String,
+               let mode = TrackingMode(rawValue: modeRaw),
+               let backgroundTimestamp = sessionData["backgroundTimestamp"] as? TimeInterval {
+                
+                // Calcola tempo trascorso in background
+                let now = Date().timeIntervalSince1970
+                let backgroundDuration = now - backgroundTimestamp
+                let updatedElapsedTime = isRunning && !isPaused ? elapsedTime + backgroundDuration : elapsedTime
+                
+                let taskId = sessionData["taskId"] as? String != "" ? UUID(uuidString: sessionData["taskId"] as? String ?? "") : nil
+                let categoryId = sessionData["categoryId"] as? String != "" ? UUID(uuidString: sessionData["categoryId"] as? String ?? "") : nil
+                
+                var session = TrackingSession(
+                    id: sessionId,
+                    taskId: taskId,
+                    taskName: sessionData["taskName"] as? String,
+                    mode: mode,
+                    categoryId: categoryId,
+                    categoryName: sessionData["categoryName"] as? String,
+                    startTime: Date(timeIntervalSince1970: startTimeInterval),
+                    elapsedTime: updatedElapsedTime,
+                    isRunning: isRunning,
+                    isPaused: isPaused
+                )
+                
+                activeSessions.append(session)
+                
+                // Riavvia timer se necessario
+                if isRunning && !isPaused {
+                    startTimer(for: sessionId)
+                }
+            }
+        }
+        
+        // Imposta currentSessionId se non è settato
+        if currentSessionId == nil {
+            currentSessionId = activeSessions.first?.id
+        }
+    }
+    
+    private func cleanupSessionStates() async {
+        let userDefaults = UserDefaults.standard
+        let keys = userDefaults.dictionaryRepresentation().keys.filter { $0.hasPrefix("timer_session_") }
+        
+        for key in keys {
+            userDefaults.removeObject(forKey: key)
+        }
+    }
+    
+    private func restartTimer(for sessionId: UUID) {
+        // Ferma timer esistente se presente
+        timers[sessionId]?.invalidate()
+        
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            Task { @MainActor in
+                if let sessionIndex = self.activeSessions.firstIndex(where: { $0.id == sessionId }),
+                   self.activeSessions[sessionIndex].isRunning && !self.activeSessions[sessionIndex].isPaused {
+                    self.activeSessions[sessionIndex].elapsedTime += 1
+                    
+                    // Aggiorna stato salvato ogni 10 secondi
+                    if Int(self.activeSessions[sessionIndex].elapsedTime) % 10 == 0 {
+                        self.saveSessionState(self.activeSessions[sessionIndex])
+                    }
+                }
+            }
+        }
+        
+        timers[sessionId] = timer
     }
     
     var hasActiveSession: Bool {
@@ -76,6 +230,9 @@ class TimeTrackerViewModel: ObservableObject {
         
         activeSessions.append(session)
         currentSessionId = session.id
+        
+        saveSessionState(session)
+        
         return session.id
     }
     
@@ -92,6 +249,9 @@ class TimeTrackerViewModel: ObservableObject {
         
         activeSessions.append(session)
         currentSessionId = session.id
+        
+        saveSessionState(session)
+        
         return session.id
     }
     
@@ -108,16 +268,10 @@ class TimeTrackerViewModel: ObservableObject {
         activeSessions[index].isRunning = true
         activeSessions[index].isPaused = false
         
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            Task { @MainActor in
-                if let sessionIndex = self.activeSessions.firstIndex(where: { $0.id == sessionId }),
-                   self.activeSessions[sessionIndex].isRunning && !self.activeSessions[sessionIndex].isPaused {
-                    self.activeSessions[sessionIndex].elapsedTime += 1
-                }
-            }
-        }
+        restartTimer(for: sessionId)
         
-        timers[sessionId] = timer
+        // Salva stato aggiornato
+        saveSessionState(activeSessions[index])
     }
     
     // Pause current session (convenience method)
@@ -154,12 +308,19 @@ class TimeTrackerViewModel: ObservableObject {
     func pauseSession(id: UUID) {
         guard let index = activeSessions.firstIndex(where: { $0.id == id }) else { return }
         activeSessions[index].isPaused = true
+        
+        // Pause timer
+        timers[id]?.invalidate()
+        timers.removeValue(forKey: id)
+        
+        saveSessionState(activeSessions[index])
     }
     
-    // Resume specific session
+    // Resume specific session  
     func resumeSession(id: UUID) {
         guard let index = activeSessions.firstIndex(where: { $0.id == id }) else { return }
         activeSessions[index].isPaused = false
+        startTimer(for: id)
     }
     
     // Stop and complete specific session
@@ -172,6 +333,9 @@ class TimeTrackerViewModel: ObservableObject {
         // Stop timer
         timers[id]?.invalidate()
         timers.removeValue(forKey: id)
+        
+        let key = "timer_session_\(id.uuidString)"
+        UserDefaults.standard.removeObject(forKey: key)
         
         // Remove from active sessions
         activeSessions.remove(at: index)
@@ -215,6 +379,9 @@ class TimeTrackerViewModel: ObservableObject {
         timers.removeValue(forKey: id)
         activeSessions.removeAll { $0.id == id }
         
+        let key = "timer_session_\(id.uuidString)"
+        UserDefaults.standard.removeObject(forKey: key)
+        
         // Clear current session if it was this one
         if currentSessionId == id {
             currentSessionId = activeSessions.first?.id
@@ -245,5 +412,9 @@ class TimeTrackerViewModel: ObservableObject {
     
     deinit {
         timers.values.forEach { $0.invalidate() }
+        NotificationCenter.default.removeObserver(self)
+        Task {
+            await cleanupSessionStates()
+        }
     }
 }

@@ -8,37 +8,37 @@ struct WelcomeView: View {
     private let steps = [
         WelcomeStep(
             icon: "heart.fill",
-            title: "Benvenuto in SnapTask Pro Alpha!",
-            subtitle: "Un messaggio personale da Giovanni Amadei",
-            description: "Ciao! Sono Giovanni, uno sviluppatore indipendente. Ho creato SnapTask perché avevo bisogno di un'app per la produttività che funzionasse davvero, senza compromessi. Grazie di cuore per aver accettato di testare la versione alpha - il tuo feedback sarà preziosissimo per rendere SnapTask ancora migliore.",
+            title: "welcome_title_1".localized,
+            subtitle: "welcome_subtitle_1".localized,
+            description: "welcome_description_1".localized,
             color: .pink
         ),
         WelcomeStep(
             icon: "sparkles",
-            title: "Cosa troverai",
-            subtitle: "Funzionalità all'avanguardia",
-            description: "Timer Pomodoro avanzato, statistiche dettagliate, sincronizzazione CloudKit, widgets per la home screen, e molto altro. Ogni dettaglio è stato curato per offrirti la migliore esperienza di produttività possibile.",
+            title: "welcome_title_2".localized,
+            subtitle: "welcome_subtitle_2".localized,
+            description: "welcome_description_2".localized,
             color: .blue
         ),
         WelcomeStep(
             icon: "bubble.left.and.bubble.right",
-            title: "Il tuo parere conta davvero",
-            subtitle: "Un progetto guidato dagli utenti",
-            description: "Questa è una versione alpha, quindi potresti incontrare alcuni bug. Ti prego di segnalarmeli tramite la sezione Feedback nelle Impostazioni. SnapTask è un progetto a lungo termine che evolve in base al feedback degli utenti - ogni tuo suggerimento mi aiuterà a creare l'app per la produttività perfetta.",
+            title: "welcome_title_3".localized,
+            subtitle: "welcome_subtitle_3".localized,
+            description: "welcome_description_3".localized,
             color: .orange
         ),
         WelcomeStep(
             icon: "gift.fill",
-            title: "Completamente gratuita",
-            subtitle: "Il tuo supporto fa la differenza",
-            description: "SnapTask è e rimarrà sempre gratuita. Se ti piace quello che sto costruendo e vuoi aiutarmi a portare avanti questo progetto, considera di supportarlo. Il tuo contributo mi permetterà di dedicare più tempo a migliorare l'app e aggiungere nuove funzionalità.",
+            title: "welcome_title_4".localized,
+            subtitle: "welcome_subtitle_4".localized,
+            description: "welcome_description_4".localized,
             color: .purple
         ),
         WelcomeStep(
             icon: "rocket.fill",
-            title: "Iniziamo insieme!",
-            subtitle: "Pronto per essere più produttivo?",
-            description: "Grazie ancora per essere parte di questo viaggio. Come sviluppatore solo, il tuo supporto significa tutto per me. Spero che SnapTask Pro diventi il tuo compagno ideale per organizzare la giornata e raggiungere i tuoi obiettivi.",
+            title: "welcome_title_5".localized,
+            subtitle: "welcome_subtitle_5".localized,
+            description: "welcome_description_5".localized,
             color: .green
         )
     ]
@@ -117,7 +117,7 @@ struct WelcomeView: View {
                             }
                         } label: {
                             HStack {
-                                Text("Continua")
+                                Text("continue".localized)
                                     .font(.headline)
                                     .foregroundColor(.white)
                                 
@@ -142,7 +142,7 @@ struct WelcomeView: View {
                             dismiss()
                         } label: {
                             HStack {
-                                Text("Inizia a usare SnapTask")
+                                Text("start_using_app".localized)
                                     .font(.headline)
                                     .foregroundColor(.white)
                                 
@@ -170,7 +170,7 @@ struct WelcomeView: View {
                                     currentStep -= 1
                                 }
                             } label: {
-                                Text("Indietro")
+                                Text("back".localized)
                                     .font(.body.weight(.medium))
                                     .foregroundColor(.secondary)
                             }
@@ -188,7 +188,7 @@ struct WelcomeView: View {
                             UserDefaults.standard.set(true, forKey: "hasShownWelcome")
                             dismiss()
                         } label: {
-                            Text("Salta introduzione")
+                            Text("skip_intro".localized)
                                 .font(.footnote)
                                 .foregroundColor(.secondary)
                         }

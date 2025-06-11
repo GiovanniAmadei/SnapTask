@@ -27,18 +27,18 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 // Quote Section - iOS style
-                Section("Quote of the Day") {
+                Section("quote_of_the_day".localized) {
                     IOSQuoteCard()
                 }
                 
                 // Daily Quote Notifications Section
-                Section("Daily Notifications") {
+                Section("daily_notifications".localized) {
                     HStack {
                         Image(systemName: "bell.fill")
                             .foregroundColor(.orange)
                             .frame(width: 24)
                         
-                        Text("Daily Quote Reminder")
+                        Text("daily_quote_reminder".localized)
                         
                         Spacer()
                         
@@ -57,7 +57,7 @@ struct SettingsView: View {
                                     .foregroundColor(.blue)
                                     .frame(width: 24)
                                 
-                                Text("Notification Time")
+                                Text("notification_time".localized)
                                 
                                 Spacer()
                                 
@@ -82,7 +82,7 @@ struct SettingsView: View {
                                         .foregroundColor(.orange)
                                         .frame(width: 24)
                                     
-                                    Text("Enable in Settings")
+                                    Text("enable_in_settings".localized)
                                         .font(.caption)
                                         .foregroundColor(.orange)
                                     
@@ -98,13 +98,13 @@ struct SettingsView: View {
                 }
                 
                 // Appearance Section
-                Section("Appearance") {
+                Section("appearance".localized) {
                     HStack {
                         Image(systemName: "moon.fill")
                             .foregroundColor(.indigo)
                             .frame(width: 24)
                         
-                        Text("Dark Mode")
+                        Text("dark_mode".localized)
                         
                         Spacer()
                         
@@ -119,7 +119,7 @@ struct SettingsView: View {
                                 .foregroundColor(.blue)
                                 .frame(width: 24)
                             
-                            Text("Language")
+                            Text("language".localized)
                             
                             Spacer()
                             
@@ -136,29 +136,29 @@ struct SettingsView: View {
                 }
                 
                 // Customization Section
-                Section("Customization") {
+                Section("customization".localized) {
                     NavigationLink {
                         CustomizationView(viewModel: viewModel)
                     } label: {
-                        Label("Customization", systemImage: "paintbrush")
+                        Label("customization".localized, systemImage: "paintbrush")
                             .foregroundColor(.purple)
                     }
                 }
                 
                 // Behavior Section
-                Section("Behavior") {
+                Section("behavior".localized) {
                     NavigationLink(destination: BehaviorSettingsView(viewModel: viewModel)) {
                         HStack {
                             Image(systemName: "gearshape.2")
                                 .foregroundColor(.green)
                                 .frame(width: 24)
                             
-                            Text("App Behavior")
+                            Text("app_behavior".localized)
                             
                             Spacer()
                             
                             // Show current auto-complete status as preview
-                            Text(viewModel.autoCompleteTaskWithSubtasks ? "Auto-complete On" : "Manual")
+                            Text(viewModel.autoCompleteTaskWithSubtasks ? "auto_complete_on".localized : "manual".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -166,14 +166,14 @@ struct SettingsView: View {
                 }
                 
                 // Sync Section
-                Section("Synchronization") {
+                Section("sync".localized) {
                     NavigationLink(destination: CloudKitSyncSettingsView()) {
                         HStack {
                             Image(systemName: "icloud.fill")
                                 .foregroundColor(.blue)
                                 .frame(width: 24)
                             
-                            Text("iCloud Sync")
+                            Text("icloud_sync".localized)
                             
                             Spacer()
                             
@@ -190,7 +190,7 @@ struct SettingsView: View {
                                 .foregroundColor(.orange)
                                 .frame(width: 24)
                             
-                            Text("Calendar Integration")
+                            Text("calendar_integration".localized)
                             
                             Spacer()
                             
@@ -204,14 +204,14 @@ struct SettingsView: View {
                 }
                 
                 // Community Section
-                Section("Community") {
+                Section("community".localized) {
                     NavigationLink(destination: FeedbackView()) {
                         HStack {
                             Image(systemName: "bubble.left.and.bubble.right.fill")
                                 .foregroundColor(.green)
                                 .frame(width: 24)
                             
-                            Text("Feedback & Suggestions")
+                            Text("feedback_suggestions".localized)
                         }
                     }
                     
@@ -221,7 +221,7 @@ struct SettingsView: View {
                                 .foregroundColor(.purple)
                                 .frame(width: 24)
                             
-                            Text("What's Cooking")
+                            Text("whats_cooking".localized)
                             
                             Spacer()
                             
@@ -236,7 +236,7 @@ struct SettingsView: View {
                 }
                 
                 // Support Section
-                Section("Support") {
+                Section("support".localized) {
                     Button {
                         showingDonationSheet = true
                     } label: {
@@ -245,7 +245,7 @@ struct SettingsView: View {
                                 .foregroundColor(.pink)
                                 .frame(width: 24)
                             
-                            Text("Support SnapTask")
+                            Text("support_snaptask".localized)
                             
                             Spacer()
                             
@@ -265,12 +265,12 @@ struct SettingsView: View {
                     Button {
                         showingWelcome = true
                     } label: {
-                        Label("Rivedi il messaggio di benvenuto", systemImage: "heart")
+                        Label("review_welcome_message".localized, systemImage: "heart")
                             .foregroundColor(.pink)
                     }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("settings".localized)
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
@@ -281,13 +281,13 @@ struct SettingsView: View {
             }
             .actionSheet(isPresented: $showingLanguagePicker) {
                 ActionSheet(
-                    title: Text("Language"),
-                    message: Text("Choose a language"),
+                    title: Text("language".localized),
+                    message: Text("choose_language".localized),
                     buttons: languageManager.availableLanguages.map { language in
                         .default(Text(language.name)) {
                             languageManager.setLanguage(language.code)
                         }
-                    } + [.cancel()]
+                    } + [.cancel(Text("cancel".localized))]
                 )
             }
             .sheet(isPresented: $showingDonationSheet) {
@@ -305,13 +305,13 @@ struct SettingsView: View {
             .sheet(isPresented: $showingCalendarIntegrationView) {
                 CalendarIntegrationView()
             }
-            .alert("Enable Notifications", isPresented: $showingPermissionAlert) {
-                Button("Settings") {
+            .alert("enable_notifications".localized, isPresented: $showingPermissionAlert) {
+                Button("settings".localized) {
                     openAppSettings()
                 }
-                Button("Cancel", role: .cancel) { }
+                Button("cancel".localized, role: .cancel) { }
             } message: {
-                Text("To receive daily quote reminders, please enable notifications in Settings > SnapTask > Notifications.")
+                Text("notification_permission_message".localized)
             }
             .fullScreenCover(isPresented: $showingWelcome) {
                 WelcomeView()
@@ -379,7 +379,7 @@ struct SettingsView: View {
         guard dailyQuoteNotificationsEnabled else { return }
         
         let content = UNMutableNotificationContent()
-        content.title = "Your Daily Motivation"
+        content.title = "your_daily_motivation".localized
         content.body = quoteManager.getCurrentQuoteText()
         content.sound = .default
         content.badge = 1
@@ -433,7 +433,7 @@ struct IOSQuoteCard: View {
                 HStack {
                     ProgressView()
                         .scaleEffect(0.8)
-                    Text("Loading inspiration...")
+                    Text("loading_inspiration".localized)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -483,7 +483,7 @@ struct TimePickerView: View {
         NavigationView {
             VStack {
                 DatePicker(
-                    "Notification Time",
+                    "notification_time".localized,
                     selection: $selectedTime,
                     displayedComponents: [.hourAndMinute]
                 )
@@ -493,17 +493,17 @@ struct TimePickerView: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("Notification Time")
+            .navigationTitle("notification_time".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         isPresented = false
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("save".localized) {
                         onSave()
                         isPresented = false
                     }
@@ -628,13 +628,13 @@ struct AppearanceCompactCard: View {
                     .foregroundColor(.indigo)
             }
             
-            Text("Appearance")
+            Text("appearance".localized)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
             
             VStack(spacing: 8) {
-                Toggle("Dark Mode", isOn: $isDarkMode)
+                Toggle("dark_mode".localized, isOn: $isDarkMode)
                     .toggleStyle(SwitchToggleStyle(tint: .indigo))
                     .scaleEffect(0.8)
                 
@@ -665,13 +665,13 @@ struct AppearanceCompactCard: View {
         )
         .actionSheet(isPresented: $showingLanguagePicker) {
             ActionSheet(
-                title: Text("Language"),
-                message: Text("Choose a language"),
+                title: Text("language".localized),
+                message: Text("choose_language".localized),
                 buttons: languageManager.availableLanguages.map { language in
                     .default(Text(language.name)) {
                         languageManager.setLanguage(language.code)
                     }
-                } + [.cancel()]
+                } + [.cancel(Text("cancel".localized))]
             )
         }
     }
@@ -702,7 +702,7 @@ struct SyncCompactCard: View {
                     .foregroundColor(.blue)
             }
             
-            Text("iCloud Sync")
+            Text("icloud_sync".localized)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
@@ -760,14 +760,14 @@ struct SupportCard: View {
                     .font(.title3)
                     .foregroundColor(.pink)
                 
-                Text("Support SnapTask")
+                Text("support_snaptask".localized)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 
                 Spacer()
             }
             
-            Text("Help us continue improving SnapTask")
+            Text("help_continue_improving".localized)
                 .font(.caption)
                 .foregroundColor(.secondary)
             
@@ -775,7 +775,7 @@ struct SupportCard: View {
                 showingDonationSheet = true
             } label: {
                 HStack {
-                    Text("Support Development")
+                    Text("support_development".localized)
                         .font(.subheadline)
                         .fontWeight(.medium)
                     

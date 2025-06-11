@@ -32,19 +32,40 @@ struct RewardFormView: View {
                     // Reward Details Card
                     ModernCard(title: "Reward Details", icon: "gift") {
                         VStack(spacing: 16) {
-                            ModernTextField(
-                                title: "Reward Name",
-                                text: $rewardName,
-                                placeholder: "Enter reward name..."
-                            )
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Reward Name")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.primary)
+                                
+                                TextField("Enter reward name...", text: $rewardName)
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.gray.opacity(0.1))
+                                    )
+                                    .autocorrectionDisabled(true)
+                                    .textInputAutocapitalization(.sentences)
+                            }
                             
-                            ModernTextField(
-                                title: "Description",
-                                text: $rewardDescription,
-                                placeholder: "Add description...",
-                                axis: .vertical,
-                                lineLimit: 3...6
-                            )
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Description")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.primary)
+                                
+                                TextField("Add description...", text: $rewardDescription, axis: .vertical)
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .lineLimit(3...6)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.gray.opacity(0.1))
+                                    )
+                                    .autocorrectionDisabled(true)
+                                    .textInputAutocapitalization(.sentences)
+                            }
                             
                             NavigationLink {
                                 IconPickerView(selectedIcon: $icon)

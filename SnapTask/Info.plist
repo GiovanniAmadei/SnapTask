@@ -6,5 +6,16 @@
 	<string>Snaptask needs write access to sync your tasks and create calendar events automatically.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>SnapTask needs write access to your calendar to create and update calendar events for your tasks.</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-app-refresh</string>
+		<string>background-processing</string>
+	</array>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>SnapTask needs notification access to send alerts when your focus sessions complete and provide live timer updates.</string>
 </dict>
 </plist>

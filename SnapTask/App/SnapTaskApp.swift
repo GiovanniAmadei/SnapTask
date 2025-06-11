@@ -3,6 +3,7 @@ import WatchConnectivity
 import CloudKit
 import UserNotifications
 import Firebase
+import BackgroundTasks
 
 @main
 struct SnapTaskApp: App {
@@ -51,13 +52,52 @@ struct SnapTaskApp: App {
                         if cloudKitService.isCloudKitEnabled {
                             settingsManager.syncSettings()
                         }
+                        
+                        requestBackgroundAppRefresh()
+                    }
+                    else if newPhase == .background {
+                        scheduleBackgroundAppRefresh()
                     }
                 }
         }
     }
     
+    private func requestBackgroundAppRefresh() {
+        Task {
+            let status = await UIApplication.shared.backgroundRefreshStatus
+            if status == .denied {
+                print("⚠️ Background App Refresh is disabled. Timer accuracy may be affected.")
+            } else if status == .available {
+                print("✅ Background App Refresh is available")
+            }
+        }
+    }
+    
+    private func scheduleBackgroundAppRefresh() {
+        // This will help maintain timer accuracy when the app is backgrounded
+        let identifier = "com.snaptask.timer-update"
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 30) // 30 seconds from now
+        
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            print("⏰ Background refresh scheduled for timer continuity")
+        } catch {
+            print("❌ Could not schedule background refresh: \(error)")
+        }
+    }
+    
     private func setupNotifications() {
         UNUserNotificationCenter.current().delegate = appDelegate
+        
+        // Request notification permissions for timer notifications
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if granted {
+                print("✅ Notification permissions granted")
+            } else {
+                print("❌ Notification permissions denied: \(error?.localizedDescription ?? "Unknown error")")
+            }
+        }
     }
     
     private func initializeAppData() {
@@ -97,6 +137,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Set up notification center delegate
         UNUserNotificationCenter.current().delegate = self
         
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.snaptask.timer-update", using: nil) { task in
+            self.handleBackgroundTimerUpdate(task: task as! BGAppRefreshTask)
+        }
+        
         // Backup Firebase configuration
         if FirebaseApp.app() == nil {
             FirebaseApp.configure()
@@ -105,19 +149,43 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
     
+    private func handleBackgroundTimerUpdate(task: BGAppRefreshTask) {
+        // Schedule next background refresh
+        let identifier = "com.snaptask.timer-update"
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 30)
+        
+        try? BGTaskScheduler.shared.submit(request)
+        
+        // Mark task as completed
+        task.setTaskCompleted(success: true)
+    }
+    
     // Handle notification when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.alert, .badge, .sound])
+        // Show pomodoro notifications even when app is in foreground
+        if notification.request.identifier.hasPrefix("pomodoro-") {
+            completionHandler([.banner, .sound])
+        } else {
+            completionHandler([.alert, .badge, .sound])
+        }
     }
     
     // Handle notification tap
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        if response.notification.request.identifier == "dailyQuote" {
+        let identifier = response.notification.request.identifier
+        
+        if identifier == "dailyQuote" {
             // User tapped daily quote notification
             Task {
                 await QuoteManager.shared.forceUpdateQuote()
             }
+        } else if identifier.hasPrefix("pomodoro-") {
+            // User tapped Pomodoro notification - open the app to the Focus tab
+            print("📱 Pomodoro notification tapped: \(identifier)")
+            // You could implement navigation to Focus tab here
         }
+        
         completionHandler()
     }
     

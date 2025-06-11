@@ -45,7 +45,7 @@ struct RewardsView: View {
                         .padding(.bottom, 16)
                 }
             }
-            .navigationTitle("Rewards")
+            .navigationTitle("rewards".localized)
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingAddReward) {
                 RewardFormView()
@@ -76,7 +76,7 @@ struct RewardsView: View {
                 // Main points section
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Available Points")
+                        Text("available_points".localized)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.secondary)
                         
@@ -116,10 +116,10 @@ struct RewardsView: View {
                 
                 // Breakdown chips
                 HStack(spacing: 6) {
-                    CompactPointsChip(title: "Today", points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
-                    CompactPointsChip(title: "Week", points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
-                    CompactPointsChip(title: "Month", points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
-                    CompactPointsChip(title: "Year", points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+                    CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
+                    CompactPointsChip(title: "week".localized, points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
+                    CompactPointsChip(title: "month".localized, points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
+                    CompactPointsChip(title: "year".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
                 }
             }
             .padding(.horizontal, 18)
@@ -169,7 +169,7 @@ struct RewardsView: View {
     private var quickActionsView: some View {
         HStack(spacing: 8) {
             CompactActionCard(
-                title: "History",
+                title: "points_history".localized,
                 icon: "chart.line.uptrend.xyaxis",
                 color: Color(hex: "00C853")
             ) {
@@ -177,7 +177,7 @@ struct RewardsView: View {
             }
             
             CompactActionCard(
-                title: "Redeemed",
+                title: "redeemed_rewards".localized,
                 icon: "gift.circle",
                 color: Color(hex: "FF6B6B")
             ) {
@@ -189,12 +189,12 @@ struct RewardsView: View {
     private var rewardsListView: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Available Rewards")
+                Text("available_rewards".localized)
                     .font(.system(size: 20, weight: .semibold))
                 
                 Spacer()
                 
-                Text("\(allRewards.count) rewards")
+                Text("\(allRewards.count) " + "rewards".localized)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }
@@ -237,10 +237,10 @@ struct RewardsView: View {
             }
             
             VStack(spacing: 8) {
-                Text("No Rewards Yet")
+                Text("no_rewards_yet".localized)
                     .font(.system(size: 18, weight: .semibold))
                 
-                Text("Create your first reward to start motivating yourself!")
+                Text("create_first_reward_motivation".localized)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -609,7 +609,7 @@ struct RewardCard: View {
                         Spacer()
                         
                         Button(action: onRedeemTapped) {
-                            Text("Redeem")
+                            Text("redeem".localized)
                                 .font(.system(size: 12, weight: .semibold))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 6)
@@ -666,13 +666,13 @@ struct RewardCard: View {
             Button {
                 onEditTapped()
             } label: {
-                Label("Edit", systemImage: "pencil")
+                Label("edit".localized, systemImage: "pencil")
             }
             
             Button(role: .destructive) {
                 onDeleteTapped()
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("delete".localized, systemImage: "trash")
             }
         }
     }
@@ -682,7 +682,7 @@ struct RewardCard: View {
             Image(systemName: reward.isGeneralReward ? "star.fill" : "folder.fill")
                 .font(.system(size: 8))
                 .foregroundColor(reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor)
-            Text(reward.isGeneralReward ? "General" : reward.frequency.displayName)
+            Text(reward.isGeneralReward ? "general".localized : reward.frequency.displayName)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor)
         }

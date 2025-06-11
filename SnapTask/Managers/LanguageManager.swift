@@ -4,64 +4,146 @@ import SwiftUI
 class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
     
-    @AppStorage("selectedLanguage") private var selectedLanguageCode: String = Locale.current.language.languageCode?.identifier ?? "en"
+    @AppStorage("useSystemLanguage") private var useSystemLanguage: Bool = true
+    @AppStorage("selectedLanguage") private var selectedLanguageCode: String = ""
+    
     @Published var availableLanguages: [Language] = [
+        Language(code: "system", name: "System"),
         Language(code: "en", name: "English"),
         Language(code: "it", name: "Italiano")
     ]
     
+    private var lastSystemLanguage: String = ""
+    
     var currentLanguage: Language {
-        availableLanguages.first { $0.code == selectedLanguageCode } ?? availableLanguages[0]
+        if useSystemLanguage {
+            return availableLanguages.first { $0.code == "system" } ?? availableLanguages[0]
+        } else {
+            return availableLanguages.first { $0.code == selectedLanguageCode } ?? availableLanguages[0]
+        }
+    }
+    
+    var actualLanguageCode: String {
+        if useSystemLanguage {
+            // Use the first preferred language from device settings
+            let preferredLanguage = Locale.preferredLanguages.first ?? "en"
+            let languageCode = String(preferredLanguage.prefix(2)) // Get just "en" from "en-US"
+            
+            // Only log if the language actually changed
+            if languageCode != lastSystemLanguage {
+                print("🌍 System language changed from '\(lastSystemLanguage)' to '\(languageCode)'")
+                lastSystemLanguage = languageCode
+            }
+            
+            return languageCode
+        } else {
+            let manualLanguage = selectedLanguageCode.isEmpty ? "en" : selectedLanguageCode
+            return manualLanguage
+        }
     }
     
     init() {
+        // Initialize last system language
+        let preferredLanguage = Locale.preferredLanguages.first ?? "en"
+        lastSystemLanguage = String(preferredLanguage.prefix(2))
+        
+        print("🌍 LanguageManager initialized. useSystemLanguage: \(useSystemLanguage), current system language: \(lastSystemLanguage)")
+        
+        // Listen for system language changes - this is the key notification for iOS system language changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(systemLanguageDidChange),
+            name: NSLocale.currentLocaleDidChangeNotification,
+            object: nil
+        )
+        
+        // Listen for app-specific language changes
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(languageDidChange),
             name: NSNotification.Name("AppleLanguagesDidChange"),
             object: nil
         )
+        
+        // Always reset to system language if useSystemLanguage is true
+        if useSystemLanguage {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+        }
     }
     
     @objc private func languageDidChange() {
-        objectWillChange.send()
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    @objc private func systemLanguageDidChange() {
+        guard useSystemLanguage else { return }
+        
+        let preferredLanguage = Locale.preferredLanguages.first ?? "en"
+        let newLanguageCode = String(preferredLanguage.prefix(2))
+        
+        // Only trigger update if language actually changed
+        if newLanguageCode != lastSystemLanguage {
+            print("🌍 System language notification received. Changed from '\(lastSystemLanguage)' to '\(newLanguageCode)'")
+            lastSystemLanguage = newLanguageCode
+            
+            DispatchQueue.main.async {
+                self.objectWillChange.send()
+                // Notify all views to refresh their localized strings
+                NotificationCenter.default.post(name: NSNotification.Name("LanguageChanged"), object: nil)
+            }
+        }
     }
     
     func setLanguage(_ languageCode: String) {
-        guard availableLanguages.contains(where: { $0.code == languageCode }) else { return }
+        print("🌍 Setting language to: \(languageCode)")
         
-        selectedLanguageCode = languageCode
-        UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
+        if languageCode == "system" {
+            useSystemLanguage = true
+            selectedLanguageCode = ""
+            // Reset to system default - remove any manual override
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+            
+            // Update our tracking
+            let preferredLanguage = Locale.preferredLanguages.first ?? "en"
+            lastSystemLanguage = String(preferredLanguage.prefix(2))
+            print("🌍 Switched to system language: \(lastSystemLanguage)")
+        } else {
+            guard availableLanguages.contains(where: { $0.code == languageCode }) else { 
+                print("🌍 Language code \(languageCode) not found in available languages")
+                return 
+            }
+            useSystemLanguage = false
+            selectedLanguageCode = languageCode
+            
+            // Apply the language change immediately for the app only
+            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+            print("🌍 Set manual language override to: \(languageCode)")
+        }
         
-        // Notifica il cambiamento
-        NotificationCenter.default.post(name: NSNotification.Name("AppleLanguagesDidChange"), object: nil)
+        // Trigger UI update
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+            // Notify all views to refresh their localized strings
+            NotificationCenter.default.post(name: NSNotification.Name("LanguageChanged"), object: nil)
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
 
 struct Language: Identifiable, Equatable {
     let id = UUID()
-    let code: String // e.g., "en", "it"
-    let name: String // e.g., "English", "Italiano"
+    let code: String // e.g., "en", "it", "system"
+    let name: String // e.g., "English", "Italiano", "System"
     
     static func == (lhs: Language, rhs: Language) -> Bool {
         lhs.code == rhs.code
     }
 }
-
-// Extension for String localization that reacts to language changes dynamically
-extension String {
-    var localized: String {
-        let bundle = Bundle.main
-        let languageCode = LanguageManager.shared.currentLanguage.code
-        
-        // First try to get the string from a specific resource bundle
-        if let path = bundle.path(forResource: languageCode, ofType: "lproj"),
-           let langBundle = Bundle(path: path) {
-            return NSLocalizedString(self, bundle: langBundle, comment: "")
-        }
-        
-        // Fallback to default localization
-        return NSLocalizedString(self, comment: "")
-    }
-} 

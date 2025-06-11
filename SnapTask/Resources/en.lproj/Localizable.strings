@@ -6,11 +6,39 @@
 "delete" = "Delete";
 "done" = "Done";
 "add" = "Add";
+"continue" = "Continue";
+"back" = "Back";
+"skip" = "Skip";
+"skip_intro" = "Skip intro";
+"start_using_app" = "Start using SnapTask";
 
 // Main tabs
 "timeline" = "Timeline";
+"focus" = "Focus";
+"rewards" = "Rewards";
 "statistics" = "Statistics";
 "settings" = "Settings";
+
+// Welcome screen
+"welcome_title_1" = "Welcome to SnapTask Pro Alpha!";
+"welcome_subtitle_1" = "A personal message from Giovanni Amadei";
+"welcome_description_1" = "Hi! I'm Giovanni, an independent developer. I created SnapTask because I needed a productivity app that actually works, without compromises. Thank you so much for agreeing to test the alpha version - your feedback will be invaluable to make SnapTask even better.";
+
+"welcome_title_2" = "What you'll find";
+"welcome_subtitle_2" = "Cutting-edge features";
+"welcome_description_2" = "Advanced Pomodoro timer, detailed statistics, CloudKit sync, home screen widgets, and much more. Every detail has been crafted to give you the best productivity experience possible.";
+
+"welcome_title_3" = "Your opinion really matters";
+"welcome_subtitle_3" = "A user-driven project";
+"welcome_description_3" = "This is an alpha version, so you might encounter some bugs. Please report them through the Feedback section in Settings. SnapTask is a long-term project that evolves based on user feedback - every suggestion helps me create the perfect productivity app.";
+
+"welcome_title_4" = "Completely free";
+"welcome_subtitle_4" = "Your support makes the difference";
+"welcome_description_4" = "SnapTask is and will always remain free. If you like what I'm building and want to help me carry this project forward, consider supporting it. Your contribution will allow me to dedicate more time to improving the app and adding new features.";
+
+"welcome_title_5" = "Let's start together!";
+"welcome_subtitle_5" = "Ready to be more productive?";
+"welcome_description_5" = "Thank you again for being part of this journey. As a solo developer, your support means everything to me. I hope SnapTask Pro becomes your ideal companion for organizing your day and achieving your goals.";
 
 // Task related
 "task" = "Task";
@@ -69,6 +97,7 @@
 "category_color" = "Color";
 
 // Settings
+"review_welcome_message" = "Review welcome message";
 "quote_of_the_day" = "Quote of the Day";
 "new_quote" = "New Quote";
 "customization" = "Customization";
@@ -77,6 +106,7 @@
 "priorities" = "Priorities";
 "add_priority" = "Add Priority";
 "language" = "Language";
+"system" = "System";
 "performance" = "Performance";
 "biohacking" = "Biohacking";
 
@@ -86,4 +116,123 @@
 "work_duration" = "Work Duration";
 "short_break" = "Short Break";
 "long_break" = "Long Break";
-"sessions_before_long_break" = "Sessions Before Long Break"; 
+"sessions_before_long_break" = "Sessions Before Long Break";
+
+// Timeline specific
+"list" = "List";
+"time" = "Time";
+"next_task_in_1_hour" = "Next task in 1 hour";
+"next_task_in_hours" = "Next task in %d hours";
+"all_day" = "All Day";
+"tap_plus_add_first_task" = "Tap the + button to add your first task";
+"track" = "Track";
+
+// Task Form specific
+"task_details" = "Task Details";
+"enter_task_name" = "Enter task name...";
+"add_description" = "Add description...";
+"add_location" = "Add Location";
+"icon" = "Icon";
+"specific_time" = "Specific Time";
+"set_exact_time" = "Set exact time";
+"start_time" = "Start Time";
+"add_duration" = "Add duration";
+"duration_value" = "Duration Value";
+"category_priority" = "Category & Priority";
+"folder" = "Folder";
+"select_category" = "Select Category";
+"repeat_task" = "Repeat Task";
+"frequency" = "Frequency";
+"add_subtask" = "Add subtask...";
+"pomodoro_mode" = "Pomodoro Mode";
+"enable_pomodoro" = "Enable Pomodoro";
+"pomodoro_settings" = "Pomodoro Settings";
+"reward_points" = "Reward Points";
+"earn_reward_points" = "Earn reward points";
+"custom_points" = "Custom Points";
+"point_guidelines" = "Point Guidelines:";
+"quick_tasks_5_15_min" = "• 1-10: Quick tasks (5-15 min)";
+"regular_tasks_30_90_min" = "• 15-50: Regular tasks (30-90 min)";
+"complex_tasks_2_4_hours" = "• 75-200: Complex tasks (2-4 hours)";
+"save_task" = "Save Task";
+"new_task" = "New Task";
+
+// Rewards View
+"available_points" = "Available Points";
+"available_rewards" = "Available Rewards";
+"no_rewards_yet" = "No Rewards Yet";
+"create_first_reward_motivation" = "Create your first reward to start motivating yourself!";
+"redeem" = "Redeem";
+"general" = "General";
+
+// Statistics View
+"overview" = "Overview";
+"streaks" = "Streaks";
+"consistency" = "Consistency";
+"time_distribution" = "Time Distribution";
+"total" = "Total";
+"task_completion_rate" = "Task Completion Rate";
+"overall_streak" = "Overall Streak";
+"current" = "Current";
+"best" = "Best";
+"no_streaks_yet" = "No Streaks Yet";
+"complete_recurring_tasks_streaks" = "Complete recurring tasks to start building streaks and track your consistency";
+"completed" = "Completed";
+"total_available" = "Total Available";
+"no_time_data" = "No Time Data";
+"complete_tasks_time_distribution" = "Complete tasks with duration or use Pomodoro sessions to see time distribution";
+"by_category" = "By Category";
+"no_data" = "No data";
+"complete" = "Complete";
+
+// Settings View
+"quote_of_the_day" = "Quote of the Day";
+"daily_notifications" = "Daily Notifications";
+"daily_quote_reminder" = "Daily Quote Reminder";
+"notification_time" = "Notification Time";
+"enable_in_settings" = "Enable in Settings";
+"app_behavior" = "App Behavior";
+"auto_complete_on" = "Auto-complete On";
+"manual" = "Manual";
+"sync" = "Synchronization";
+"icloud_sync" = "iCloud Sync";
+"calendar_integration" = "Calendar Integration";
+"community" = "Community";
+"feedback_suggestions" = "Feedback & Suggestions";
+"whats_cooking" = "What's Cooking";
+"support_snaptask" = "Support SnapTask";
+"loading_inspiration" = "Loading inspiration...";
+"choose_language" = "Choose a language";
+"enable_notifications" = "Enable Notifications";
+"notification_permission_message" = "To receive daily quote reminders, please enable notifications in Settings > SnapTask > Notifications.";
+"your_daily_motivation" = "Your Daily Motivation";
+"help_continue_improving" = "Help us continue improving SnapTask";
+"support_development" = "Support Development";
+
+// Focus Tab View
+"focus_mode" = "Focus Mode";
+"simple_timer" = "Simple Timer";
+"freeform_focus_session" = "Free-form focus session with manual timing";
+"pomodoro_technique" = "Pomodoro Technique";
+"25min_work_sessions_5min_breaks" = "25min work sessions with 5min breaks";
+"coming_soon" = "Coming Soon";
+"more_focus_methods" = "More focus methods will be added";
+"timers" = "timers";
+"paused" = "Paused";
+"running" = "Running";
+"pomodoro_timer" = "Pomodoro Timer";
+"todays_focus" = "Today's Focus";
+"total_time" = "Total Time";
+"recent_sessions" = "Recent Sessions";
+"no_sessions_yet" = "No sessions yet";
+"pomodoro_session" = "Pomodoro Session";
+"general_focus" = "General Focus";
+
+// Pomodoro View
+"session" = "Session";
+"left" = "left";
+"progress" = "Progress";
+"focus_time" = "Focus Time";
+"break_time" = "Break Time";
+"session_overview" = "Session Overview";
+"finishes_at" = "Finishes at";

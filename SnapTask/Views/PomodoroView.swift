@@ -130,7 +130,7 @@ struct PomodoroView: View {
                 Spacer()
                 
                 HStack(spacing: 4) {
-                    Text("Session")
+                    Text("session".localized)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                     Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
@@ -156,7 +156,7 @@ struct PomodoroView: View {
                         )
                 }
                 
-                Button("Done") {
+                Button("done".localized) {
                     handleDone()
                 }
                 .font(.caption.weight(.medium))
@@ -200,7 +200,7 @@ struct PomodoroView: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(viewModel.state == .working ? focusColor : breakColor)
                         
-                        Text(viewModel.state == .working ? "Focus" : "Break")
+                        Text(viewModel.state == .working ? "focus".localized : "break".localized)
                             .font(.system(.caption2, design: .rounded))
                             .foregroundColor(.secondary)
                     }
@@ -227,10 +227,10 @@ struct PomodoroView: View {
             
             VStack(spacing: 8) {
                 HStack {
-                    Text("Progress")
+                    Text("progress".localized)
                         .font(.subheadline.weight(.medium))
                     Spacer()
-                    Text("\(formatTime(viewModel.timeRemaining)) left")
+                    Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -381,7 +381,7 @@ struct PomodoroView: View {
                         Spacer()
                         
                         HStack(spacing: 4) {
-                            Text("Session")
+                            Text("session".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
@@ -407,7 +407,7 @@ struct PomodoroView: View {
                                 )
                         }
                         
-                        Button("Done") {
+                        Button("done".localized) {
                             handleDone()
                         }
                         .font(.body.weight(.medium))
@@ -460,7 +460,7 @@ struct PomodoroView: View {
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(viewModel.state == .working ? focusColor : breakColor)
                                 
-                                Text(viewModel.state == .working ? "Focus Time" : "Break Time")
+                                Text(viewModel.state == .working ? "focus_time".localized : "break_time".localized)
                                     .font(.system(.subheadline, design: .rounded))
                                     .foregroundColor(.secondary)
                             }
@@ -499,10 +499,10 @@ struct PomodoroView: View {
             
             VStack(spacing: 12) {
                 HStack {
-                    Text("Session Overview")
+                    Text("session_overview".localized)
                         .font(.headline.weight(.semibold))
                     Spacer()
-                    Text("\(formatTime(viewModel.timeRemaining)) left")
+                    Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -559,7 +559,7 @@ struct PomodoroView: View {
                         Image(systemName: "clock")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("Finishes at \(formatTimeOnly(completionTime))")
+                        Text("finishes_at".localized + " \(formatTimeOnly(completionTime))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -718,7 +718,7 @@ struct MiniPomodoroWidget: View {
                         .opacity(viewModel.state == .paused ? 0.5 : 1.0)
                         .symbolEffect(.pulse, options: .repeating, isActive: viewModel.state == .working || viewModel.state == .onBreak)
                     
-                    Text(viewModel.state == .working ? "Focus" : "Break")
+                    Text(viewModel.state == .working ? "focus".localized : "break".localized)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: true, vertical: false)

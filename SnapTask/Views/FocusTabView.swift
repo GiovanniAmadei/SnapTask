@@ -20,9 +20,9 @@ struct FocusTabView: View {
         var displayName: String {
             switch self {
             case .timer(let mode):
-                return mode == .simple ? "Simple Timer" : "Advanced Timer"
+                return mode == .simple ? "simple_timer".localized : "advanced_timer".localized
             case .pomodoro:
-                return "Pomodoro Session"
+                return "pomodoro_session".localized
             }
         }
     }
@@ -33,7 +33,7 @@ struct FocusTabView: View {
                 VStack(spacing: 24) {
                     VStack(spacing: 16) {
                         HStack {
-                            Text("Focus Mode")
+                            Text("focus_mode".localized)
                                 .font(.largeTitle.bold())
                             Spacer()
                         }
@@ -75,8 +75,8 @@ struct FocusTabView: View {
                     
                     VStack(spacing: 16) {
                         FocusModeCard(
-                            title: "Simple Timer",
-                            description: "Free-form focus session with manual timing",
+                            title: "simple_timer".localized,
+                            description: "freeform_focus_session".localized,
                             icon: "stopwatch",
                             color: .yellow,
                             gradient: [.yellow, .orange]
@@ -90,8 +90,8 @@ struct FocusTabView: View {
                         }
                         
                         FocusModeCard(
-                            title: "Pomodoro Technique",
-                            description: "25min work sessions with 5min breaks",
+                            title: "pomodoro_technique".localized,
+                            description: "25min_work_sessions_5min_breaks".localized,
                             icon: "timer",
                             color: .red,
                             gradient: [.red, .pink]
@@ -101,8 +101,8 @@ struct FocusTabView: View {
                         }
                         
                         FocusModeCard(
-                            title: "Coming Soon",
-                            description: "More focus methods will be added",
+                            title: "coming_soon".localized,
+                            description: "more_focus_methods".localized,
                             icon: "sparkles",
                             color: .gray,
                             gradient: [.gray, .secondary],
@@ -232,7 +232,7 @@ struct FocusTabView: View {
     
     private func getCurrentSessionName() -> String {
         if pomodoroViewModel.hasActiveTask {
-            return "Pomodoro Session"
+            return "pomodoro_session".localized
         }
         return ""
     }
@@ -277,12 +277,12 @@ struct FocusTabView: View {
             HStack {
                 Image(systemName: "play.circle.fill")
                     .foregroundColor(.blue)
-                Text("Active Sessions")
+                Text("active_sessions".localized)
                     .font(.headline)
                 Spacer()
                 
                 if timeTrackerViewModel.activeSessions.count > 1 {
-                    Text("\(timeTrackerViewModel.activeSessions.count) timers")
+                    Text("\(timeTrackerViewModel.activeSessions.count) " + "timers".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -297,11 +297,11 @@ struct FocusTabView: View {
                     }) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Simple Timer")
+                                Text("simple_timer".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 
-                                Text(session.taskName ?? "Focus Session")
+                                Text(session.taskName ?? "focus_session".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -313,7 +313,7 @@ struct FocusTabView: View {
                                     .font(.headline.weight(.bold))
                                     .foregroundColor(.yellow)
                                 
-                                Text(session.isPaused ? "Paused" : "Running")
+                                Text(session.isPaused ? "paused".localized : "running".localized)
                                     .font(.caption)
                                     .foregroundColor(session.isPaused ? .orange : .green)
                             }
@@ -338,11 +338,11 @@ struct FocusTabView: View {
                     }) {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Pomodoro Timer")
+                                Text("pomodoro_timer".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 
-                                Text(pomodoroViewModel.activeTask?.name ?? "Focus Session")
+                                Text(pomodoroViewModel.activeTask?.name ?? "focus_session".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -354,7 +354,7 @@ struct FocusTabView: View {
                                     .font(.headline.weight(.bold))
                                     .foregroundColor(.red)
                                 
-                                Text(pomodoroViewModel.state == .working ? "Focus" : "Break")
+                                Text(pomodoroViewModel.state == .working ? "focus".localized : "break".localized)
                                     .font(.caption)
                                     .foregroundColor(pomodoroViewModel.state == .working ? .green : .blue)
                             }
@@ -392,20 +392,20 @@ struct FocusTabView: View {
             HStack {
                 Image(systemName: "chart.bar.fill")
                     .foregroundColor(.green)
-                Text("Today's Focus")
+                Text("todays_focus".localized)
                     .font(.headline)
                 Spacer()
             }
             
             HStack(spacing: 24) {
                 StatItem(
-                    title: "Total Time",
+                    title: "total_time".localized,
                     value: formatDuration(TaskManager.shared.getTodaysTrackedTime()),
                     color: .green
                 )
                 
                 StatItem(
-                    title: "Sessions",
+                    title: "sessions".localized,
                     value: "\(getTodaysSessions().count)",
                     color: .blue
                 )
@@ -424,7 +424,7 @@ struct FocusTabView: View {
             HStack {
                 Image(systemName: "clock.fill")
                     .foregroundColor(.orange)
-                Text("Recent Sessions")
+                Text("recent_sessions".localized)
                     .font(.headline)
                 Spacer()
             }
@@ -432,7 +432,7 @@ struct FocusTabView: View {
             let recentSessions = getRecentSessions()
             
             if recentSessions.isEmpty {
-                Text("No sessions yet")
+                Text("no_sessions_yet".localized)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -504,7 +504,7 @@ struct SessionRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(session.taskName ?? "General Focus")
+                Text(session.taskName ?? "general_focus".localized)
                     .font(.subheadline.weight(.medium))
                 
                 Text(session.startTime.formatted(date: .omitted, time: .shortened))

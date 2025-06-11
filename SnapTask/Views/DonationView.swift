@@ -9,161 +9,321 @@ struct DonationView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 16) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 50))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.pink, .red],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    
-                    VStack(spacing: 8) {
-                        Text("Supporta SnapTask Pro")
-                            .font(.title.bold())
-                        
-                        Text("Aiutami a continuare lo sviluppo di SnapTask Pro con nuove funzionalità e miglioramenti")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(.top, 20)
-                
-                if donationService.usingMockProducts {
-                    VStack(spacing: 8) {
-                        HStack {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundColor(.blue)
-                            Text("Modalità sviluppo - Donazioni simulate")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.blue)
-                        }
-                        Text("In TestFlight le donazioni sono simulate. Dopo il rilascio sull'App Store saranno reali.")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                }
-                
-                if donationService.isLoading {
-                    ProgressView("Caricamento opzioni donazione...")
-                        .frame(maxHeight: .infinity)
-                } else if donationService.donationProducts.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 40))
-                            .foregroundColor(.orange)
-                        
-                        Text("Impossibile caricare le opzioni di donazione")
-                            .font(.headline)
-                        
-                        Text("Controlla la connessione internet e riprova")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                        
-                        Button("Riprova") {
-                            Task {
-                                await donationService.loadProducts()
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .frame(maxHeight: .infinity)
-                } else {
-                    // Donation options
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
                     VStack(spacing: 12) {
-                        ForEach(donationService.donationProducts, id: \.id) { product in
-                            DonationCard(
-                                product: product,
-                                isSelected: selectedProduct?.id == product.id
-                            ) {
-                                selectedProduct = product
-                                Task {
-                                    let success = await donationService.purchase(product)
-                                    if success {
-                                        showingThankYou = true
-                                    }
-                                    selectedProduct = nil
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    Spacer()
-                    
-                    VStack(spacing: 8) {
-                        Text("💝 Le tue donazioni mi aiutano a:")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.primary)
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 35))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.pink, .red],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                         
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("•")
-                                Text("Sviluppare nuove funzionalità")
-                            }
-                            HStack {
-                                Text("•")
-                                Text("Mantenere i server per la sincronizzazione")
-                            }
-                            HStack {
-                                Text("•")
-                                Text("Continuare gli aggiornamenti gratuiti")
-                            }
+                        VStack(spacing: 6) {
+                            Text("Supporta SnapTask Pro")
+                                .font(.title3.bold())
+                            
+                            Text("Aiutami a continuare lo sviluppo con nuove funzionalità")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
                         }
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
+                    .padding(.top, 4)
                     
-                    // Thank you message for previous donors
-                    if donationService.hasEverDonated {
-                        VStack(spacing: 8) {
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("Grazie per il tuo supporto precedente!")
+                    if donationService.usingMockProducts {
+                        VStack(spacing: 16) {
+                            // Beta notice with better formatting
+                            VStack(spacing: 10) {
+                                HStack {
+                                    Image(systemName: "info.circle.fill")
+                                        .foregroundColor(.blue)
+                                    Text("Modalità Beta")
+                                        .font(.headline.weight(.semibold))
+                                        .foregroundColor(.blue)
+                                }
+                                
+                                Text("Siamo ancora in TestFlight, quindi le donazioni in-app sono solo simulate.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                                    .multilineTextAlignment(.center)
+                                
+                                Text("Dopo il rilascio sull'App Store funzioneranno normalmente.")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(14)
                             
-                            if let lastDonation = donationService.lastDonationDate {
-                                Text("Ultima donazione: \(lastDonation, style: .date)")
+                            VStack(spacing: 12) {
+                                Text("💳 Alternativa PayPal")
+                                    .font(.title3.bold())
+                                    .foregroundColor(.primary)
+                                
+                                Text("Puoi supportarmi subito tramite PayPal:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                
+                                Button(action: {
+                                    if let url = URL(string: "https://paypal.me/ampe") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "creditcard.fill")
+                                            .font(.title2)
+                                            .foregroundColor(.white)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Dona con PayPal")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                            
+                                            Text("paypal.me/ampe")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.8))
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                    }
+                                    .padding()
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.blue, Color.indigo],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .cornerRadius(16)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Text("Si aprirà PayPal nel browser")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(12)
                         .padding(.horizontal)
                     }
+                    
+                    if donationService.isLoading {
+                        ProgressView("Caricamento opzioni donazione...")
+                            .padding(.vertical, 40)
+                    } else if donationService.donationProducts.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 40))
+                                .foregroundColor(.orange)
+                            
+                            Text("Impossibile caricare le opzioni di donazione")
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                            
+                            Text("Controlla la connessione internet e riprova")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            
+                            Button("Riprova") {
+                                Task {
+                                    await donationService.loadProducts()
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Divider()
+                                .padding(.vertical, 12)
+                            
+                            VStack(spacing: 12) {
+                                Text("Alternativa PayPal")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                
+                                Text("Se le donazioni in-app non funzionano, puoi supportarmi direttamente:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                
+                                Button(action: {
+                                    if let url = URL(string: "https://paypal.me/ampe") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "creditcard.fill")
+                                            .font(.title2)
+                                            .foregroundColor(.white)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Dona con PayPal")
+                                                .font(.headline)
+                                                .foregroundColor(.white)
+                                            
+                                            Text("paypal.me/ampe")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.8))
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                    }
+                                    .padding()
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.blue, Color.indigo],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .cornerRadius(16)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal)
+                    } else {
+                        // Donation options
+                        VStack(spacing: 12) {
+                            ForEach(donationService.donationProducts, id: \.id) { product in
+                                DonationCard(
+                                    product: product,
+                                    isSelected: selectedProduct?.id == product.id
+                                ) {
+                                    selectedProduct = product
+                                    Task {
+                                        let success = await donationService.purchase(product)
+                                        if success {
+                                            showingThankYou = true
+                                        }
+                                        selectedProduct = nil
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                        
+                        VStack(spacing: 16) {
+                            Divider()
+                                .padding(.horizontal)
+                            
+                            VStack(spacing: 12) {
+                                Text("Preferisci PayPal?")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.primary)
+                                
+                                Button(action: {
+                                    if let url = URL(string: "https://paypal.me/ampe") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                }) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "creditcard")
+                                            .font(.title3)
+                                            .foregroundColor(.blue)
+                                        
+                                        Text("Dona tramite PayPal")
+                                            .font(.body.weight(.medium))
+                                            .foregroundColor(.blue)
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(12)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Text("paypal.me/ampe")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal)
+                        }
+                        
+                        VStack(spacing: 8) {
+                            Text("💝 Le tue donazioni mi aiutano a:")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.primary)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("•")
+                                    Text("Sviluppare nuove funzionalità")
+                                }
+                                HStack {
+                                    Text("•")
+                                    Text("Mantenere i server per la sincronizzazione")
+                                }
+                                HStack {
+                                    Text("•")
+                                    Text("Continuare gli aggiornamenti gratuiti")
+                                }
+                            }
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                        
+                        // Thank you message for previous donors
+                        if donationService.hasEverDonated {
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                    Text("Grazie per il tuo supporto precedente!")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                if let lastDonation = donationService.lastDonationDate {
+                                    Text("Ultima donazione: \(lastDonation, style: .date)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding()
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                        }
+                    }
                 }
-            }
-            .navigationTitle("Donazioni")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Chiudi") {
-                        dismiss()
+                .navigationTitle("Donazioni")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Chiudi") {
+                            dismiss()
+                        }
                     }
                 }
             }
+            .padding(.bottom, 20)
         }
         .alert("Grazie di cuore! ❤️", isPresented: $showingThankYou) {
             Button("Continua") {

@@ -7,9 +7,9 @@ struct StatisticsView: View {
     @State private var selectedTab: StatisticsTab = .overview
     
     enum StatisticsTab: String, CaseIterable {
-        case overview = "Overview"
-        case streaks = "Streaks"
-        case consistency = "Consistency"
+        case overview = "overview"
+        case streaks = "streaks" 
+        case consistency = "consistency"
         
         var icon: String {
             switch self {
@@ -38,7 +38,7 @@ struct StatisticsView: View {
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
-            .navigationTitle("Statistics")
+            .navigationTitle("statistics".localized)
             .navigationBarTitleDisplayMode(.large)
         }
         .onAppear {
@@ -161,11 +161,11 @@ private struct TimeDistributionCard: View {
         VStack(spacing: 20) {
             VStack(spacing: 16) {
                 HStack {
-                    Text("Time Distribution")
+                    Text("time_distribution".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer()
-                    Text("Total: \(String(format: "%.1fh", viewModel.categoryStats.reduce(0) { $0 + $1.hours }))")
+                    Text("total".localized + ": \(String(format: "%.1fh", viewModel.categoryStats.reduce(0) { $0 + $1.hours }))")
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundColor(.secondary)
                         .animation(.smooth(duration: 0.8), value: viewModel.categoryStats.reduce(0) { $0 + $1.hours })
@@ -223,9 +223,9 @@ private struct TaskCompletionCard: View {
     @State private var selectedPeriod: CompletionPeriod = .week
     
     enum CompletionPeriod: String, CaseIterable {
-        case week = "Week"
-        case month = "Month"
-        case year = "Year"
+        case week = "week"
+        case month = "month"
+        case year = "year"
         
         var daysCount: Int {
             switch self {
@@ -248,7 +248,7 @@ private struct TaskCompletionCard: View {
         VStack(spacing: 16) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Task Completion Rate")
+                    Text("task_completion_rate".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer()
@@ -322,7 +322,7 @@ private struct TaskCompletionCard: View {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 8, height: 8)
-                Text("Completed")
+                Text("completed".localized)
                     .font(.system(.caption2, design: .rounded, weight: .medium))
                     .foregroundColor(.secondary)
             }
@@ -331,7 +331,7 @@ private struct TaskCompletionCard: View {
                 Rectangle()
                     .fill(Color.secondary.opacity(0.3))
                     .frame(width: 8, height: 8)
-                Text("Total Available")
+                Text("total_available".localized)
                     .font(.system(.caption2, design: .rounded, weight: .medium))
                     .foregroundColor(.secondary)
             }
@@ -541,14 +541,14 @@ private struct CategoryCompletionBreakdown: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("By Category")
+                Text("by_category".localized)
                     .font(.system(.caption, design: .rounded, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
             }
             
             if categoryCompletionStats.isEmpty {
-                Text("No data")
+                Text("no_data".localized)
                     .font(.system(.caption2, design: .rounded))
                     .foregroundColor(.secondary)
                     .padding(.vertical, 4)
@@ -670,7 +670,7 @@ private struct OverallStreakCard: View {
     var body: some View {
         VStack(spacing: 20) {
             HStack {
-                Text("Overall Streak")
+                Text("overall_streak".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
@@ -681,7 +681,7 @@ private struct OverallStreakCard: View {
                     Text("\(viewModel.currentStreak)")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundColor(.orange)
-                    Text("Current")
+                    Text("current".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -693,7 +693,7 @@ private struct OverallStreakCard: View {
                     Text("\(viewModel.bestStreak)")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundColor(.red)
-                    Text("Best")
+                    Text("best".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -738,7 +738,7 @@ private struct TaskStreakCard: View {
                     Text("\(Int(taskStreak.completionRate * 100))%")
                         .font(.system(.title3, design: .rounded, weight: .bold))
                         .foregroundColor(.primary)
-                    Text("Complete")
+                    Text("complete".localized)
                         .font(.system(.caption2, design: .rounded))
                         .foregroundColor(.secondary)
                 }
@@ -747,21 +747,21 @@ private struct TaskStreakCard: View {
             // Streak Stats
             HStack(spacing: 24) {
                 StatisticsStatItem(
-                    title: "Current",
+                    title: "current".localized,
                     value: "\(taskStreak.currentStreak)",
                     color: .orange,
                     icon: "flame.fill"
                 )
                 
                 StatisticsStatItem(
-                    title: "Best",
+                    title: "best".localized,
                     value: "\(taskStreak.bestStreak)",
                     color: .red,
                     icon: "trophy.fill"
                 )
                 
                 StatisticsStatItem(
-                    title: "Completed",
+                    title: "completed".localized,
                     value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)",
                     color: .green,
                     icon: "checkmark.circle.fill"
@@ -832,11 +832,11 @@ private struct EmptyStreaksView: View {
                 )
             
             VStack(spacing: 10) {
-                Text("No Streaks Yet")
+                Text("no_streaks_yet".localized)
                     .font(.system(.title2, design: .rounded, weight: .semibold))
                     .foregroundColor(.primary)
                 
-                Text("Complete recurring tasks to start building streaks and track your consistency")
+                Text("complete_recurring_tasks_streaks".localized)
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -864,11 +864,11 @@ private struct EmptyTimeDistributionView: View {
                 )
             
             VStack(spacing: 8) {
-                Text("No Time Data")
+                Text("no_time_data".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                     .foregroundColor(.primary)
                 
-                Text("Complete tasks with duration or use Pomodoro sessions to see time distribution")
+                Text("complete_tasks_time_distribution".localized)
                     .font(.system(.caption, design: .rounded))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

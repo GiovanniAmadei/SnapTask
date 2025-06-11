@@ -111,7 +111,7 @@ struct ViewControlBarView: View {
                         HStack(spacing: 3) {
                             Image(systemName: mode.icon)
                                 .font(.system(size: 11, weight: .medium))
-                            Text(mode == .list ? "List" : "Time")
+                            Text(mode == .list ? "list".localized : "time".localized)
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .foregroundColor(viewModel.viewMode == mode ? .white : .pink)
@@ -246,7 +246,7 @@ struct TimelineContentView: View {
                     if !allDayTasks.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("All Day")
+                                Text("all_day".localized)
                                     .font(.headline)
                                     .foregroundColor(.primary)
                                 Spacer()
@@ -384,9 +384,9 @@ struct EnhancedTimelineHourRow: View {
         let hoursDiff = nextHour - hour
         
         if hoursDiff == 1 {
-            return "Next task in 1 hour"
+            return "next_task_in_1_hour".localized
         } else if hoursDiff > 1 {
-            return "Next task in \(hoursDiff) hours"
+            return String(format: "next_task_in_hours".localized, hoursDiff)
         }
         return nil
     }
@@ -872,12 +872,12 @@ struct TaskListView: View {
                         .foregroundColor(.secondary.opacity(0.6))
                     
                     VStack(spacing: 8) {
-                        Text("No Tasks Today")
+                        Text("no_tasks_today".localized)
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                         
-                        Text("Tap the + button to add your first task")
+                        Text("tap_plus_add_first_task".localized)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -1081,7 +1081,7 @@ struct CalendarPickerView: View {
                     .datePickerStyle(.graphical)
                     .padding()
                 
-                Button("Done") {
+                Button("done".localized) {
                     let calendar = Calendar.current
                     let today = Date()
                     if let daysDiff = calendar.dateComponents([.day], from: today, to: selectedDate).day {
@@ -1290,7 +1290,7 @@ private struct TimelineTaskCard: View {
                                         .foregroundColor(.white)
                                 )
                             
-                            Text("Track")
+                            Text("track".localized)
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.yellow)
                         }
@@ -1311,7 +1311,7 @@ private struct TimelineTaskCard: View {
                                         .foregroundColor(.white)
                                 )
                             
-                            Text("Edit")
+                            Text("edit".localized)
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.orange)
                         }
@@ -1331,7 +1331,7 @@ private struct TimelineTaskCard: View {
                                         .foregroundColor(.white)
                                 )
                             
-                            Text("Delete")
+                            Text("delete".localized)
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.red)
                         }
@@ -1439,7 +1439,7 @@ private struct TimelineTaskCard: View {
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(4)
                     } else {
-                        Text("All Day")
+                        Text("all_day".localized)
                             .font(.caption2)
                             .foregroundColor(.blue)
                             .padding(.horizontal, 6)
@@ -1833,7 +1833,7 @@ struct CompactTimelineTaskView: View {
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(4)
                     } else {
-                        Text("All Day")
+                        Text("all_day".localized)
                             .font(.system(.caption, design: .rounded))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 6)

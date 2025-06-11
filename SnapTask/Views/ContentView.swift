@@ -4,39 +4,42 @@ struct ContentView: View {
     @AppStorage("hasShownWelcome") private var hasShownWelcome = false
     @State private var showingWelcome = false
     @State private var selectedTab = 0
+    @StateObject private var languageManager = LanguageManager.shared
+    @State private var refreshID = UUID()
     
     var body: some View {
         TabView(selection: $selectedTab) {
             TimelineView(viewModel: TimelineViewModel())
                 .tabItem {
-                    Label("Timeline", systemImage: "calendar")
+                    Label("timeline".localized, systemImage: "calendar")
                 }
                 .tag(0)
             
             FocusTabView()
                 .tabItem {
-                    Label("Focus", systemImage: "timer")
+                    Label("focus".localized, systemImage: "timer")
                 }
                 .tag(1)
             
             RewardsView()
                 .tabItem {
-                    Label("Rewards", systemImage: "star")
+                    Label("rewards".localized, systemImage: "star")
                 }
                 .tag(2)
             
             StatisticsView()
                 .tabItem {
-                    Label("Statistics", systemImage: "chart.bar")
+                    Label("statistics".localized, systemImage: "chart.bar")
                 }
                 .tag(3)
             
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+                    Label("settings".localized, systemImage: "gearshape")
                 }
                 .tag(4)
         }
+        .id(refreshID) // Force complete refresh on language change
         .onAppear {
             if !hasShownWelcome {
                 showingWelcome = true
@@ -47,6 +50,11 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .expandActivePomodoro)) { _ in
             selectedTab = 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LanguageChanged"))) { _ in
+            // Force UI refresh when language changes
+            print("🌍 ContentView received language change notification")
+            refreshID = UUID()
         }
         .fullScreenCover(isPresented: $showingWelcome) {
             WelcomeView()

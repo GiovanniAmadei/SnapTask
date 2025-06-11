@@ -1,15 +1,18 @@
 import Foundation
 import SwiftUI
 import Combine
+import UIKit
+import UserNotifications
 import os.log
 
+@MainActor
 class PomodoroViewModel: ObservableObject {
-    enum PomodoroState {
-        case notStarted
-        case working
-        case onBreak
-        case paused
-        case completed
+    enum PomodoroState: String {
+        case notStarted = "notStarted"
+        case working = "working"
+        case onBreak = "onBreak"
+        case paused = "paused"
+        case completed = "completed"
     }
     
     // Shared instance for the active Pomodoro session
@@ -25,6 +28,10 @@ class PomodoroViewModel: ObservableObject {
     @Published var state: PomodoroState = .notStarted
     @Published var timeRemaining: TimeInterval
     @Published var currentSession: Int = 1
+    
+    private var sessionStartTime: Date?
+    private var pauseStartTime: Date?
+    private var totalPausedTime: TimeInterval = 0
     
     // Dynamic settings based on context
     var settings: PomodoroSettings {
@@ -42,7 +49,7 @@ class PomodoroViewModel: ObservableObject {
         return settings.totalSessions
     }
     
-    @MainActor private var timer: AnyCancellable? {
+    private var timer: AnyCancellable? {
         didSet { Logger.pomodoro("Timer state updated: \(self.timer != nil)", level: .debug) }
     }
     private var startDate: Date?
@@ -55,6 +62,7 @@ class PomodoroViewModel: ObservableObject {
     
     private init() {
         self.timeRemaining = PomodoroSettings.defaultSettings.workDuration
+        setupBackgroundHandling()
         
         NotificationCenter.default.publisher(for: .pomodoroSettingsUpdated)
             .sink { [weak self] notification in
@@ -64,6 +72,156 @@ class PomodoroViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+    }
+    
+    private func setupBackgroundHandling() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func appDidEnterBackground() {
+        guard state == .working || state == .onBreak else { return }
+        
+        // Salva lo stato attuale per calcolare il tempo al ritorno
+        saveBackgroundState()
+        
+        // Programma notifica per la fine della sessione corrente
+        Task {
+            await scheduleSessionEndNotification()
+        }
+    }
+    
+    @objc private func appWillEnterForeground() {
+        guard state == .working || state == .onBreak else { return }
+        
+        // Calcola il tempo trascorso in background
+        calculateBackgroundProgress()
+        
+        // Riavvia il timer se necessario
+        if state == .working || state == .onBreak {
+            restartTimerAfterBackground()
+        }
+        
+        // Rimuovi notifiche esistenti se la sessione è ancora attiva
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    }
+    
+    private func saveBackgroundState() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "pomodoro_background_timestamp")
+        UserDefaults.standard.set(timeRemaining, forKey: "pomodoro_time_remaining")
+        UserDefaults.standard.set(state.rawValue, forKey: "pomodoro_state")
+        UserDefaults.standard.set(currentSession, forKey: "pomodoro_current_session")
+        UserDefaults.standard.set(totalPausedTime, forKey: "pomodoro_total_paused_time")
+    }
+    
+    private func calculateBackgroundProgress() {
+        let backgroundTimestamp = UserDefaults.standard.double(forKey: "pomodoro_background_timestamp")
+        let savedTimeRemaining = UserDefaults.standard.double(forKey: "pomodoro_time_remaining")
+        let savedStateRaw = UserDefaults.standard.string(forKey: "pomodoro_state") ?? ""
+        
+        guard backgroundTimestamp > 0, savedTimeRemaining > 0 else { return }
+        
+        let now = Date().timeIntervalSince1970
+        let backgroundDuration = now - backgroundTimestamp
+        
+        // Calcola il nuovo tempo rimanente
+        let newTimeRemaining = max(0, savedTimeRemaining - backgroundDuration)
+        timeRemaining = newTimeRemaining
+        
+        // Controlla se la sessione dovrebbe essere completata
+        if newTimeRemaining <= 0 {
+            handleSessionCompletion()
+        }
+        
+        // Pulisci i valori salvati
+        UserDefaults.standard.removeObject(forKey: "pomodoro_background_timestamp")
+        UserDefaults.standard.removeObject(forKey: "pomodoro_time_remaining")
+        UserDefaults.standard.removeObject(forKey: "pomodoro_state")
+        UserDefaults.standard.removeObject(forKey: "pomodoro_current_session")
+    }
+    
+    private func handleSessionCompletion() {
+        if state == .working {
+            completeWorkSession()
+        } else if state == .onBreak {
+            completeBreakSession()
+        }
+    }
+    
+    private func restartTimerAfterBackground() {
+        // Riavvia il timer con il tempo rimanente aggiornato
+        timer?.cancel()
+        startTimer()
+    }
+    
+    private var stateRawValue: String {
+        switch state {
+        case .notStarted: return "notStarted"
+        case .working: return "working"
+        case .onBreak: return "onBreak"
+        case .paused: return "paused"
+        case .completed: return "completed"
+        }
+    }
+    
+    private func scheduleSessionEndNotification() async {
+        // Remove existing notifications
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        
+        guard state == .working || state == .onBreak, timeRemaining > 0 else { return }
+        
+        let sessionType = state == .working ? "Work" : "Break"
+        let taskName = activeTask?.name ?? "Focus Session"
+        
+        // Schedule notification for when current session ends
+        let content = UNMutableNotificationContent()
+        content.title = "\(sessionType) session completed!"
+        content.body = state == .working ? 
+            "Great job! Time for a break." : 
+            "Break time is over. Ready to focus?"
+        content.sound = .default
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeRemaining, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "pomodoro-complete-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        
+        try? await UNUserNotificationCenter.current().add(request)
+        
+        if state == .working && currentSession < settings.totalSessions {
+            let breakDuration = currentSession % settings.sessionsUntilLongBreak == 0 ? 
+                settings.longBreakDuration : settings.breakDuration
+            
+            let nextWorkContent = UNMutableNotificationContent()
+            nextWorkContent.title = "Break time over!"
+            nextWorkContent.body = "Ready to start your next work session?"
+            nextWorkContent.sound = .default
+            
+            let nextWorkTrigger = UNTimeIntervalNotificationTrigger(
+                timeInterval: timeRemaining + breakDuration, 
+                repeats: false
+            )
+            let nextWorkRequest = UNNotificationRequest(
+                identifier: "pomodoro-next-work-\(UUID().uuidString)",
+                content: nextWorkContent,
+                trigger: nextWorkTrigger
+            )
+            
+            try? await UNUserNotificationCenter.current().add(nextWorkRequest)
+        }
     }
     
     var progress: Double {
@@ -94,7 +252,7 @@ class PomodoroViewModel: ObservableObject {
     }
     
     // Set active task and configure settings for task context
-    @MainActor func setActiveTask(_ task: TodoTask) {
+    func setActiveTask(_ task: TodoTask) {
         if activeTask?.id != task.id || state == .notStarted {
             // Stop current timer if running
             timer?.cancel()
@@ -115,10 +273,14 @@ class PomodoroViewModel: ObservableObject {
             self.startDate = nil
             self.pausedTimeRemaining = nil
             self.pausedState = nil
+            
+            self.sessionStartTime = nil
+            self.pauseStartTime = nil
+            self.totalPausedTime = 0
         }
     }
     
-    @MainActor func initializeGeneralSession() {
+    func initializeGeneralSession() {
         stop()
         self.activeTask = nil
         self.context = .general
@@ -132,6 +294,10 @@ class PomodoroViewModel: ObservableObject {
         self.startDate = nil
         self.pausedTimeRemaining = nil
         self.pausedState = nil
+        
+        self.sessionStartTime = nil
+        self.pauseStartTime = nil
+        self.totalPausedTime = 0
     }
     
     // Check if a specific task is the active one
@@ -144,46 +310,67 @@ class PomodoroViewModel: ObservableObject {
         return activeTask != nil && (state == .working || state == .onBreak || state == .paused)
     }
     
-    @MainActor
     func start() {
         guard timer == nil else { return }
         
         if state == .paused {
             state = pausedState ?? .working
+            if let pauseStart = pauseStartTime {
+                totalPausedTime += Date().timeIntervalSince(pauseStart)
+                pauseStartTime = nil
+            }
         } else {
             state = .working
+            sessionStartTime = Date()
+            totalPausedTime = 0
         }
-        startDate = Date()
         
+        startDate = Date()
+        startTimer()
+        
+        Task {
+            await scheduleSessionEndNotification()
+        }
+    }
+    
+    private func startTimer() {
         timer = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                self?.updateTimer()
+                Task { @MainActor in
+                    self?.updateTimer()
+                }
             }
     }
     
-    @MainActor
     func pause() {
         timer?.cancel()
         timer = nil
         pausedTimeRemaining = timeRemaining
         pausedState = state
         state = .paused
+        
+        pauseStartTime = Date()
+        
+        // Remove notifications
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
     
-    @MainActor
     func resume() {
         guard state == .paused else { return }
         start()
     }
     
-    @MainActor
     func skip() {
         if state == .working {
             completedWorkSessions.insert(currentSession - 1)
             state = .onBreak
             timeRemaining = currentSession % settings.sessionsUntilLongBreak == 0 ?
                 settings.longBreakDuration : settings.breakDuration
+            
+            sessionStartTime = Date()
+            totalPausedTime = 0
+            
             start()
         } else {
             completedBreakSessions.insert(currentSession - 1)
@@ -191,7 +378,6 @@ class PomodoroViewModel: ObservableObject {
         }
     }
     
-    @MainActor
     func stop() {
         timer?.cancel()
         timer = nil
@@ -203,9 +389,21 @@ class PomodoroViewModel: ObservableObject {
         pausedState = nil
         pausedTimeRemaining = nil
         startDate = nil
+        
+        sessionStartTime = nil
+        pauseStartTime = nil
+        totalPausedTime = 0
+        
+        // Remove notifications
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        
+        // Clean up UserDefaults
+        UserDefaults.standard.removeObject(forKey: "pomodoro_background_timestamp")
+        UserDefaults.standard.removeObject(forKey: "pomodoro_time_remaining")
+        UserDefaults.standard.removeObject(forKey: "pomodoro_state")
+        UserDefaults.standard.removeObject(forKey: "pomodoro_current_session")
     }
     
-    @MainActor
     private func updateTimer() {
         timeRemaining -= 1
         
@@ -218,7 +416,6 @@ class PomodoroViewModel: ObservableObject {
         }
     }
     
-    @MainActor
     private func completeWorkSession() {
         timer?.cancel()
         timer = nil
@@ -228,17 +425,25 @@ class PomodoroViewModel: ObservableObject {
         // Use settings.totalSessions instead of hardcoded totalSessions
         if currentSession >= settings.totalSessions {
             state = .completed
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
             return
         }
         
         state = .onBreak
         timeRemaining = currentSession % settings.sessionsUntilLongBreak == 0 ?
             settings.longBreakDuration : settings.breakDuration
+        
+        sessionStartTime = Date()
+        totalPausedTime = 0
+        
         startDate = Date()
-        start()
+        startTimer()
+        
+        Task {
+            await scheduleSessionEndNotification()
+        }
     }
     
-    @MainActor
     private func completeBreakSession() {
         timer?.cancel()
         timer = nil
@@ -249,13 +454,22 @@ class PomodoroViewModel: ObservableObject {
         // Use settings.totalSessions instead of hardcoded totalSessions
         if currentSession > settings.totalSessions {
             state = .completed
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
             return
         }
         
         state = .working
         timeRemaining = settings.workDuration
+        
+        sessionStartTime = Date()
+        totalPausedTime = 0
+        
         startDate = Date()
-        start()
+        startTimer()
+        
+        Task {
+            await scheduleSessionEndNotification()
+        }
     }
     
     private func applySettingsToCurrentSession() {
@@ -292,6 +506,8 @@ class PomodoroViewModel: ObservableObject {
     
     deinit {
         timer?.cancel()
+        NotificationCenter.default.removeObserver(self)
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         Logger.pomodoro("PomodoroViewModel deinitialized", level: .info)
     }
 }
