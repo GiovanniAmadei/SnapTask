@@ -274,15 +274,3 @@
 "nice_dinner" = "A nice dinner 🍽️";
 "support" = "Support";
 "support_development" = "Support development";
-
-// Update Banner
-"what_s_new" = "What's New";
-"new_improvements" = "New Improvements";
-"background_timers" = "Background Timers";
-"background_timers_desc" = "Timers now continue running accurately even when the app is in background";
-"full_localization" = "Full Localization";
-"full_localization_desc" = "Complete Italian and English localization throughout the entire app";
-"paypal_support" = "PayPal Support";
-"paypal_support_desc" = "Support the app development with PayPal donations alongside existing options";
-"got_it" = "Got it!";
-"view_all_updates" = "View All Updates";

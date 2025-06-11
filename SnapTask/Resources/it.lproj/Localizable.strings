@@ -621,15 +621,3 @@
 "nice_dinner" = "Una bella cena";
 "support" = "Supporto";
 "support_development" = "Supporta lo sviluppo";
-
-// Update Banner
-"what_s_new" = "Novità";
-"new_improvements" = "Nuovi Miglioramenti";
-"background_timers" = "Timer in Background";
-"background_timers_desc" = "I timer ora continuano a funzionare accuratamente anche quando l'app è in background";
-"full_localization" = "Localizzazione Completa";
-"full_localization_desc" = "Localizzazione completa in italiano e inglese in tutta l'app";
-"paypal_support" = "Supporto PayPal";
-"paypal_support_desc" = "Supporta lo sviluppo dell'app con donazioni PayPal oltre alle opzioni esistenti";
-"got_it" = "Perfetto!";
-"view_all_updates" = "Vedi Tutti gli Aggiornamenti";
