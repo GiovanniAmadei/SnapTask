@@ -585,3 +585,51 @@
 "break_time" = "Tempo di Pausa";
 "session_overview" = "Panoramica Sessione";
 "finishes_at" = "Finisce alle";
+
+// Donation View strings
+"donations" = "Donazioni";
+"support_snaptask_pro" = "Supporta SnapTask Pro";
+"help_continue_development" = "Aiutami a continuare lo sviluppo con nuove funzionalità";
+"beta_mode" = "Modalità Beta";
+"testflight_notice" = "Siamo ancora in TestFlight, quindi le donazioni in-app sono solo simulate.";
+"after_appstore_release" = "Dopo il rilascio sull'App Store funzioneranno normalmente.";
+"paypal_alternative" = "Alternativa PayPal";
+"support_now_paypal" = "Puoi supportarmi subito tramite PayPal:";
+"donate_with_paypal" = "Dona con PayPal";
+"opens_paypal_browser" = "Si aprirà PayPal nel browser";
+"loading_donation_options" = "Caricamento opzioni donazione...";
+"cannot_load_donation_options" = "Impossibile caricare le opzioni di donazione";
+"check_internet_retry" = "Controlla la connessione internet e riprova";
+"retry" = "Riprova";
+"paypal_alternative_title" = "Alternativa PayPal";
+"if_iap_not_working" = "Se le donazioni in-app non funzionano, puoi supportarmi direttamente:";
+"prefer_paypal" = "Preferisci PayPal?";
+"donate_via_paypal" = "Dona tramite PayPal";
+"donations_help_me" = "Le tue donazioni mi aiutano a:";
+"develop_new_features" = "Sviluppare nuove funzionalità";
+"maintain_sync_servers" = "Mantenere i server per la sincronizzazione";
+"continue_free_updates" = "Continuare gli aggiornamenti gratuiti";
+"thanks_previous_support" = "Grazie per il tuo supporto precedente!";
+"last_donation" = "Ultima donazione";
+"thanks_so_much" = "Grazie di cuore!";
+"donation_helps_development" = "La tua donazione mi aiuta a continuare lo sviluppo di SnapTask Pro. Apprezzo davvero il tuo supporto!";
+"coffee_for_giovanni" = "Caffè per Giovanni";
+"small_coffee" = "Un piccolo caffè";
+"pizza_for_giovanni" = "Pizza per Giovanni";
+"pizza_for_dinner" = "Una pizza per cena";
+"dinner_for_giovanni" = "Cena per Giovanni";
+"nice_dinner" = "Una bella cena";
+"support" = "Supporto";
+"support_development" = "Supporta lo sviluppo";
+
+// Update Banner
+"what_s_new" = "Novità";
+"new_improvements" = "Nuovi Miglioramenti";
+"background_timers" = "Timer in Background";
+"background_timers_desc" = "I timer ora continuano a funzionare accuratamente anche quando l'app è in background";
+"full_localization" = "Localizzazione Completa";
+"full_localization_desc" = "Localizzazione completa in italiano e inglese in tutta l'app";
+"paypal_support" = "Supporto PayPal";
+"paypal_support_desc" = "Supporta lo sviluppo dell'app con donazioni PayPal oltre alle opzioni esistenti";
+"got_it" = "Perfetto!";
+"view_all_updates" = "Vedi Tutti gli Aggiornamenti";

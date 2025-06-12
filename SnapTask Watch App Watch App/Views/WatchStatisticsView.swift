@@ -6,40 +6,140 @@ struct WatchStatisticsView: View {
     @State private var selectedTimeRange: TimeRange = .week
     
     var body: some View {
+        // COPIO ESATTAMENTE la struttura del WatchMenuView!
         ScrollView {
-            VStack(spacing: 12) {
-                // Time Range Picker - Keep this compact at the top of scrollable content
-                VStack(spacing: 4) {
-                    Text("Filter by Time Range") // Slightly more descriptive
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    Picker("Time Range", selection: $selectedTimeRange) {
-                        ForEach(TimeRange.allCases, id: \.self) { range in
-                            Text(range.displayName).tag(range)
+            VStack(spacing: 6) {
+                // Time range selector come prima riga
+                Button(action: {}) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.blue)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Time Range")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Text(selectedTimeRange.displayName)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
                         }
+                        
+                        Spacer()
+                        
+                        Picker("", selection: $selectedTimeRange) {
+                            ForEach(TimeRange.allCases, id: \.self) { range in
+                                Text(range.displayName).tag(range)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 60, height: 30)
                     }
-                    .pickerStyle(.wheel)
-                    .frame(height: 50) // Compact height for wheel picker
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.secondary.opacity(0.1))
+                    )
                 }
-                .padding(.horizontal, 8)
-                .padding(.top, 8) // Add padding from global header
+                .buttonStyle(PlainButtonStyle())
                 
-                // Quick Stats
-                WatchQuickStats(
-                    completedTasks: completedTasksCount,
-                    totalTasks: totalTasksCount
+                // Task completion row
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.green)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Task Completion")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        Text("\(completedTasksCount)/\(totalTasksCount) tasks • \(Int(completionRate))%")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    ZStack {
+                        Circle()
+                            .stroke(lineWidth: 3)
+                            .opacity(0.2)
+                            .foregroundColor(.gray)
+                        
+                        Circle()
+                            .trim(from: 0.0, to: min(max(completionRate / 100.0, 0.0), 1.0))
+                            .stroke(style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .foregroundColor(.green)
+                            .rotationEffect(.degrees(-90))
+                    }
+                    .frame(width: 30, height: 30)
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.green.opacity(0.1))
                 )
                 
-                // Completion Rate
-                WatchCompletionRate(
-                    completionRate: completionRate
+                // Points summary row
+                HStack(spacing: 12) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.purple)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Points Summary")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        Text("Today: \(rewardManager.todayPoints) • Total: \(rewardManager.totalPoints)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.purple.opacity(0.1))
                 )
                 
-                // Points Summary
-                WatchPointsSummary(rewardManager: rewardManager)
+                // Weekly overview row
+                HStack(spacing: 12) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.orange)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Weekly Overview")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        Text("Week: \(rewardManager.weekPoints) pts")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.orange.opacity(0.1))
+                )
             }
-            .padding(.vertical, 8) // General vertical padding for scroll content
+            .padding(.horizontal, 8) // IDENTICO al menu
+            .padding(.vertical, 8)   // IDENTICO al menu
         }
     }
     
@@ -96,12 +196,12 @@ struct WatchQuickStats: View {
     let totalTasks: Int
     
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Text("Task Stats") // More direct title
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(.primary)
             
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 StatCard(
                     title: "Completed",
                     value: "\(completedTasks)",
@@ -109,7 +209,7 @@ struct WatchQuickStats: View {
                 )
                 
                 StatCard(
-                    title: "Total Tasks", // Clarified
+                    title: "Total",
                     value: "\(totalTasks)",
                     color: .blue
                 )
@@ -123,32 +223,32 @@ struct WatchCompletionRate: View {
     let completionRate: Double
     
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Text("Completion Rate")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(.primary)
             
             ZStack {
                 // Background Circle
                 Circle()
-                    .stroke(lineWidth: 6)
+                    .stroke(lineWidth: 4)
                     .opacity(0.2)
                     .foregroundColor(.gray)
                 
                 // Progress Circle
                 Circle()
                     .trim(from: 0.0, to: min(max(completionRate / 100.0, 0.0), 1.0)) // Ensure value is between 0 and 1
-                    .stroke(style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
                     .foregroundColor(.green)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut(duration: 1.0), value: completionRate)
                 
                 // Percentage Text
                 Text("\(Int(round(completionRate)))%") // Round for display
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.primary)
             }
-            .frame(height: 60)
+            .frame(height: 50)
         }
         .padding(.horizontal, 8)
     }
@@ -158,12 +258,12 @@ struct WatchPointsSummary: View {
     @ObservedObject var rewardManager: RewardManager
     
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Text("Points Summary") // More direct title
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(.primary)
             
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 StatCard(
                     title: "Today",
                     value: "\(rewardManager.todayPoints)",
@@ -187,13 +287,13 @@ struct StatCard: View {
     let color: Color
     
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 2) {
             Text(value)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundColor(color)
             
             Text(title)
-                .font(.system(size: 9))
+                .font(.system(size: 8))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -212,9 +312,9 @@ enum TimeRange: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .week: return "This Week" // Made more explicit
-        case .month: return "This Month"
-        case .year: return "This Year"
+        case .week: return "Week" // Made more explicit
+        case .month: return "Month"
+        case .year: return "Year"
         }
     }
 }

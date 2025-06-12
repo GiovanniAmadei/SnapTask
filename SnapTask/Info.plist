@@ -10,11 +10,6 @@
 	<array>
 		<string>armv7</string>
 	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>background-app-refresh</string>
-		<string>background-processing</string>
-	</array>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>SnapTask needs notification access to send alerts when your focus sessions complete and provide live timer updates.</string>
 </dict>

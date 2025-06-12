@@ -2,8 +2,6 @@ import SwiftUI
 import StoreKit
 import UserNotifications
 
-import SwiftUI
-
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var quoteManager = QuoteManager.shared
