@@ -7,7 +7,7 @@ struct WatchMenuView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     ForEach(WatchViewType.allCases, id: \.self) { viewType in
                         WatchMenuRow(
                             viewType: viewType,
@@ -20,16 +20,16 @@ struct WatchMenuView: View {
                     }
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.vertical, 8)
             }
-            .navigationTitle("Menu")
+            .navigationTitle("SnapTask")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         showingMenu = false
                     }
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                 }
             }
         }
@@ -43,12 +43,12 @@ struct WatchMenuRow: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 // Icon
                 Image(systemName: viewType.icon)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(isSelected ? .white : .blue)
-                    .frame(width: 20)
+                    .frame(width: 24)
                 
                 // Title
                 Text(viewType.title)
@@ -60,11 +60,11 @@ struct WatchMenuRow: View {
                 // Selection indicator
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: 14))
                         .foregroundColor(.white)
                 }
             }
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
             .padding(.horizontal, 12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
@@ -72,33 +72,5 @@ struct WatchMenuRow: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
-    }
-}
-
-enum WatchViewType: String, CaseIterable {
-    case timeline = "timeline"
-    case focus = "focus"
-    case rewards = "rewards"
-    case statistics = "statistics"
-    case settings = "settings"
-    
-    var title: String {
-        switch self {
-        case .timeline: return "Timeline"
-        case .focus: return "Focus"
-        case .rewards: return "Rewards"
-        case .statistics: return "Stats"
-        case .settings: return "Settings"
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .timeline: return "calendar"
-        case .focus: return "timer"
-        case .rewards: return "star.fill"
-        case .statistics: return "chart.bar.fill"
-        case .settings: return "gear"
-        }
     }
 }
