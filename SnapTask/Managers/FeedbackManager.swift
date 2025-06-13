@@ -203,4 +203,36 @@ class FeedbackManager: ObservableObject {
             UserDefaults.standard.set(data, forKey: feedbackKey)
         }
     }
+    
+    func updateFeedbackStatus(_ feedbackId: UUID, to newStatus: FeedbackStatus) async {
+        guard let index = feedbackItems.firstIndex(where: { $0.id == feedbackId }) else {
+            print("❌ Feedback not found with ID: \(feedbackId)")
+            return
+        }
+        
+        var updatedFeedback = feedbackItems[index]
+        updatedFeedback.status = newStatus
+        
+        do {
+            try await firebaseService.submitFeedback(updatedFeedback)
+            // Reload feedback to get updated status
+            await MainActor.run {
+                Task {
+                    self.loadFeedback()
+                }
+            }
+            print("✅ Feedback status updated to: \(newStatus.displayName)")
+        } catch {
+            print("❌ Failed to update feedback status: \(error)")
+        }
+    }
+    
+    func updateFeedbackStatusByTitle(_ title: String, to newStatus: FeedbackStatus) async {
+        guard let feedback = feedbackItems.first(where: { $0.title.lowercased().contains(title.lowercased()) }) else {
+            print("❌ Feedback not found with title: '\(title)'")
+            return
+        }
+        
+        await updateFeedbackStatus(feedback.id, to: newStatus)
+    }
 }

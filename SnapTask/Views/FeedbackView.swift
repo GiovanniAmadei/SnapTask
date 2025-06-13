@@ -224,8 +224,8 @@ struct FeedbackView: View {
     // MARK: - Helper Functions
     
     private var filteredFeedback: [FeedbackItem] {
-        let categoryFiltered = selectedCategory == nil ? 
-            feedbackManager.feedbackItems : 
+        let categoryFiltered = selectedCategory == nil ?
+            feedbackManager.feedbackItems :
             feedbackManager.feedbackItems.filter { $0.category == selectedCategory }
         
         if searchText.isEmpty {
@@ -275,15 +275,15 @@ struct CategoryFilterChip: View {
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
-                        isSelected 
+                        isSelected
                             ? (category != nil ? Color(hex: category!.color) : Color.blue)
                             : Color(.systemGray6)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isSelected 
-                                    ? Color.clear 
+                                isSelected
+                                    ? Color.clear
                                     : Color.secondary.opacity(0.3),
                                 lineWidth: 1
                             )
@@ -555,9 +555,15 @@ struct ReplyCardView: View {
                     
                     Spacer()
                     
-                    Text(reply.creationDate, style: .relative)
-                        .font(.caption2)
-                        .foregroundColor(.secondary.opacity(0.7))
+                    if !reply.isFromDeveloper {
+                        Text(formatTimeAgo(reply.creationDate))
+                            .font(.caption2)
+                            .foregroundColor(.secondary.opacity(0.7))
+                    } else if reply.isFromDeveloper && hasValidDeveloperDate(reply.creationDate) {
+                        Text(formatTimeAgo(reply.creationDate))
+                            .font(.caption2)
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
                 }
                 
                 // Reply content
@@ -579,6 +585,30 @@ struct ReplyCardView: View {
                     lineWidth: 1
                 )
         )
+    }
+    
+    private func hasValidDeveloperDate(_ date: Date) -> Bool {
+        // Date(timeIntervalSince1970: 0) = January 1, 1970
+        return date.timeIntervalSince1970 > 86400 // More than 1 day since epoch
+    }
+    
+    private func formatTimeAgo(_ date: Date) -> String {
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(date)
+        
+        if timeInterval < 60 {
+            return "\(Int(timeInterval))s ago"
+        } else if timeInterval < 3600 {
+            return "\(Int(timeInterval / 60))m ago"
+        } else if timeInterval < 86400 {
+            return "\(Int(timeInterval / 3600))h ago"
+        } else if timeInterval < 604800 {
+            return "\(Int(timeInterval / 86400))d ago"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            return formatter.string(from: date)
+        }
     }
 }
 

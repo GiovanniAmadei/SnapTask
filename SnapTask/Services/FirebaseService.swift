@@ -311,12 +311,19 @@ class FirebaseService: ObservableObject {
         if let developerReply = data["developerReply"] as? String, !developerReply.isEmpty {
             print("🎯 Found developerReply for '\(title)': '\(developerReply)'")
             
+            let developerReplyDate: Date
+            if let devReplyTimestamp = data["developerReplyDate"] as? Timestamp {
+                developerReplyDate = devReplyTimestamp.dateValue()
+            } else {
+                developerReplyDate = Date(timeIntervalSince1970: 0)
+            }
+            
             let devReply = FeedbackReply(
                 feedbackId: id,
                 content: developerReply,
                 authorId: "giovanni_amadei_dev_id",
                 authorName: "Giovanni (Developer)",
-                creationDate: Date(),
+                creationDate: developerReplyDate,
                 isFromDeveloper: true
             )
             replies.append(devReply)
