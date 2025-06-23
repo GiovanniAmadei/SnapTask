@@ -80,13 +80,16 @@ class RewardManager: ObservableObject {
             availablePointsForCategory(reward.categoryId!, frequency: reward.frequency, on: date)
             
         if reward.canRedeem(availablePoints: availablePoints) {
-            // Deduct points from appropriate history
             let points = -reward.pointsCost
             
             if reward.isGeneralReward {
-                addPoints(points, on: date)
+                if availablePoints >= reward.pointsCost {
+                    addPoints(points, on: date)
+                }
             } else {
-                addPointsToCategory(points, categoryId: reward.categoryId!, categoryName: reward.categoryName, on: date)
+                if availablePoints >= reward.pointsCost {
+                    addPointsToCategory(points, categoryId: reward.categoryId!, categoryName: reward.categoryName, on: date)
+                }
             }
             
             // Mark as redeemed
@@ -107,8 +110,7 @@ class RewardManager: ObservableObject {
         let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
         let newTotal = currentDailyPoints + points
         
-        // Prevent extremely negative values that indicate corruption
-        let finalTotal = max(newTotal, -200) // Allow some negative for legitimate corrections
+        let finalTotal = max(newTotal, 0)
         
         dailyPointsHistory[startOfDay] = finalTotal
         saveDailyPointsHistory()
@@ -134,14 +136,16 @@ class RewardManager: ObservableObject {
         let currentCategoryPoints = categoryPointsHistory[categoryId]![startOfDay] ?? 0
         let newTotal = currentCategoryPoints + points
         
-        // Prevent extremely negative values
-        let finalTotal = max(newTotal, -200)
+        let finalTotal = max(newTotal, 0)
         
         categoryPointsHistory[categoryId]![startOfDay] = finalTotal
         
-        // Also add to general points for total tracking
-        addPoints(points, on: date)
+        // Also add to general points for total tracking with same safety
+        let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
+        let newDailyTotal = currentDailyPoints + points
+        dailyPointsHistory[startOfDay] = max(newDailyTotal, 0)
         
+        saveDailyPointsHistory()
         saveCategoryPointsHistory()
         
         print("🏷️ Category points updated for \(categoryName ?? "Unknown") on \(startOfDay): \(currentCategoryPoints) + \(points) = \(finalTotal)")
@@ -297,7 +301,7 @@ class RewardManager: ObservableObject {
         switch frequency {
         case .daily:
             let startOfDay = calendar.startOfDay(for: date)
-            return dailyPointsHistory[startOfDay] ?? 0
+            return max(dailyPointsHistory[startOfDay] ?? 0, 0)
             
         case .weekly:
             // Per le reward settimanali, calcola la somma dei punti giornalieri della settimana corrente
@@ -307,7 +311,7 @@ class RewardManager: ObservableObject {
             for i in 0..<7 {
                 if let dayInWeek = calendar.date(byAdding: .day, value: i, to: weekStart) {
                     let startOfDay = calendar.startOfDay(for: dayInWeek)
-                    weeklyTotal += dailyPointsHistory[startOfDay] ?? 0
+                    weeklyTotal += max(dailyPointsHistory[startOfDay] ?? 0, 0)
                 }
             }
             return weeklyTotal
@@ -323,7 +327,7 @@ class RewardManager: ObservableObject {
             
             while currentDate <= monthEnd {
                 let startOfDay = calendar.startOfDay(for: currentDate)
-                monthlyTotal += dailyPointsHistory[startOfDay] ?? 0
+                monthlyTotal += max(dailyPointsHistory[startOfDay] ?? 0, 0)
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
             }
             return monthlyTotal
@@ -339,14 +343,16 @@ class RewardManager: ObservableObject {
             
             while currentDate <= yearEnd {
                 let startOfDay = calendar.startOfDay(for: currentDate)
-                yearlyTotal += dailyPointsHistory[startOfDay] ?? 0
+                yearlyTotal += max(dailyPointsHistory[startOfDay] ?? 0, 0)
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
             }
             return yearlyTotal
             
         case .oneTime:
             // Per le reward one-time, usa tutti i punti giornalieri accumulati
-            return dailyPointsHistory.values.reduce(0, +)
+            return dailyPointsHistory.values.reduce(0) { total, points in
+                total + max(points, 0)
+            }
         }
     }
     
@@ -358,7 +364,7 @@ class RewardManager: ObservableObject {
         switch frequency {
         case .daily:
             let startOfDay = calendar.startOfDay(for: date)
-            return categoryHistory[startOfDay] ?? 0
+            return max(categoryHistory[startOfDay] ?? 0, 0)
             
         case .weekly:
             let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date))!
@@ -367,7 +373,7 @@ class RewardManager: ObservableObject {
             for i in 0..<7 {
                 if let dayInWeek = calendar.date(byAdding: .day, value: i, to: weekStart) {
                     let startOfDay = calendar.startOfDay(for: dayInWeek)
-                    weeklyTotal += categoryHistory[startOfDay] ?? 0
+                    weeklyTotal += max(categoryHistory[startOfDay] ?? 0, 0)
                 }
             }
             return weeklyTotal
@@ -382,7 +388,7 @@ class RewardManager: ObservableObject {
             
             while currentDate <= monthEnd {
                 let startOfDay = calendar.startOfDay(for: currentDate)
-                monthlyTotal += categoryHistory[startOfDay] ?? 0
+                monthlyTotal += max(categoryHistory[startOfDay] ?? 0, 0)
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
             }
             return monthlyTotal
@@ -397,23 +403,29 @@ class RewardManager: ObservableObject {
             
             while currentDate <= yearEnd {
                 let startOfDay = calendar.startOfDay(for: currentDate)
-                yearlyTotal += categoryHistory[startOfDay] ?? 0
+                yearlyTotal += max(categoryHistory[startOfDay] ?? 0, 0)
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
             }
             return yearlyTotal
             
         case .oneTime:
-            return categoryHistory.values.reduce(0, +)
+            return categoryHistory.values.reduce(0) { total, points in
+                total + max(points, 0)
+            }
         }
     }
     
     func totalPoints() -> Int {
-        return dailyPointsHistory.values.reduce(0, +)
+        return dailyPointsHistory.values.reduce(0) { total, points in
+            total + max(points, 0)
+        }
     }
     
     func totalPointsForCategory(_ categoryId: UUID) -> Int {
         guard let categoryHistory = categoryPointsHistory[categoryId] else { return 0 }
-        return categoryHistory.values.reduce(0, +)
+        return categoryHistory.values.reduce(0) { total, points in
+            total + max(points, 0)
+        }
     }
     
     func rewardsFor(frequency: RewardFrequency) -> [Reward] {
@@ -472,10 +484,8 @@ class RewardManager: ObservableObject {
             do {
                 dailyPointsHistory = try JSONDecoder().decode([Date: Int].self, from: data)
                 
-                // Remove any entries with extremely negative values that indicate corruption
                 dailyPointsHistory = dailyPointsHistory.compactMapValues { points in
-                    // Allow reasonable negative values (up to -1000) but remove extreme corruption
-                    return points > -1000 ? points : 0
+                    return max(points, 0)
                 }
                 
                 // Save the cleaned data
@@ -504,10 +514,9 @@ class RewardManager: ObservableObject {
             do {
                 categoryPointsHistory = try JSONDecoder().decode([UUID: [Date: Int]].self, from: data)
                 
-                // Clean up corrupted entries
                 for (categoryId, history) in categoryPointsHistory {
                     let cleanedHistory = history.compactMapValues { points in
-                        return points > -1000 ? points : 0
+                        return max(points, 0)
                     }
                     categoryPointsHistory[categoryId] = cleanedHistory
                 }

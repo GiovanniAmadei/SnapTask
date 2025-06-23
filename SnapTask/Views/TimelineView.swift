@@ -886,22 +886,26 @@ struct TaskListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
             } else {
-                // Existing task list
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         switch viewModel.organizedTasksForSelectedDate() {
                         case .single(let tasks):
-                            ForEach(tasks.indices, id: \.self) { index in
+                            ForEach(tasks, id: \.id) { task in
                                 TimelineTaskCard(
-                                    task: tasks[index],
-                                    onToggleComplete: { viewModel.toggleTaskCompletion(tasks[index].id) },
+                                    task: task,
+                                    onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
                                     onToggleSubtask: { subtaskId in
-                                        viewModel.toggleSubtask(taskId: tasks[index].id, subtaskId: subtaskId)
+                                        viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
                                     },
                                     viewModel: viewModel
                                 )
                                 .padding(.horizontal, 4)
-                                .padding(.top, index == 0 ? 8 : 0)
+                                .transition(
+                                    .asymmetric(
+                                        insertion: .opacity.combined(with: .move(edge: .top)),
+                                        removal: .opacity.combined(with: .move(edge: .leading))
+                                    )
+                                )
                             }
                         
                         case .sections(let sections):
@@ -911,14 +915,20 @@ struct TaskListView: View {
                                     viewModel: viewModel
                                 )
                                 .padding(.horizontal, 4)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
                         }
                     }
                     .padding(.horizontal, 4)
                     .padding(.bottom, 100)
+                    .padding(.top, 8)
+                    .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasksForSelectedDate().map { $0.id })
                 }
                 .refreshable {
                     await performCloudKitSync()
+                }
+                .onTapGesture {
+                    viewModel.closeAllSwipeMenus()
                 }
             }
             
@@ -1185,6 +1195,10 @@ private struct TimelineTaskCard: View {
     @State private var showingTimeTracker = false
     @State private var selectedTrackingMode: TrackingMode = .simple
     
+    @State private var isDeleting = false
+    @State private var deleteOpacity: Double = 1.0
+    @State private var deleteScale: CGFloat = 1.0
+    
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
@@ -1274,7 +1288,7 @@ private struct TimelineTaskCard: View {
             HStack(spacing: 0) {
                 Spacer()
                 
-                // Track/Edit/Delete buttons background (left swipe) - Added Track button
+                // Track/Edit/Delete buttons background (left swipe) 
                 HStack(spacing: 8) {
                     Button(action: {
                         showingTrackingModeSelection = true
@@ -1319,7 +1333,7 @@ private struct TimelineTaskCard: View {
                     .buttonStyle(PlainButtonStyle())
                     
                     Button(action: {
-                        deleteTask()
+                        deleteTaskWithAnimation()
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
@@ -1338,7 +1352,7 @@ private struct TimelineTaskCard: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
-                .opacity(abs(dragOffset) > 40 ? 1.0 : 0.0)
+                .opacity(dragOffset.magnitude > 40 ? min(1.0, (dragOffset.magnitude - 40.0) / 60.0) : 0.0)
             }
             
             // Main task card content - overlay sopra i pulsanti
@@ -1386,7 +1400,7 @@ private struct TimelineTaskCard: View {
                             
                             if !task.subtasks.isEmpty {
                                 Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                    withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
                                         isExpanded.toggle()
                                     }
                                 }) {
@@ -1398,6 +1412,7 @@ private struct TimelineTaskCard: View {
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary)
                                             .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                                            .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: isExpanded)
                                         if task.description != nil {
                                             Spacer()
                                         }
@@ -1440,7 +1455,7 @@ private struct TimelineTaskCard: View {
                             .cornerRadius(4)
                     } else {
                         Text("all_day".localized)
-                            .font(.caption2)
+                            .font(.system(.caption2, design: .rounded))
                             .foregroundColor(.blue)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -1461,7 +1476,7 @@ private struct TimelineTaskCard: View {
                                 Circle()
                                     .fill(Color.accentColor.opacity(0.15))
                                     .frame(width: 36, height: 36)
-                                    
+                                
                                 Image(systemName: "timer")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .accentColor)
@@ -1543,10 +1558,13 @@ private struct TimelineTaskCard: View {
                 .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
             )
             .offset(x: dragOffset)
+            .scaleEffect(deleteScale)
+            .opacity(deleteOpacity)
         }
+        .id(task.id)
         .contentShape(Rectangle())
         .gesture(
-            DragGesture(minimumDistance: 20)
+            DragGesture(minimumDistance: 15)
                 .onChanged { value in
                     let translation = value.translation.width
                     
@@ -1557,9 +1575,12 @@ private struct TimelineTaskCard: View {
                 }
                 .onEnded { value in
                     let translation = value.translation.width
+                    let velocity = value.velocity.width
                     
-                    if translation < -80 {
-                        withAnimation(.easeOut(duration: 0.2)) {
+                    // Consider velocity for more responsive swipe detection
+                    if translation < -60 || velocity < -500 {
+                        viewModel.setOpenSwipeTask(task.id)
+                        withAnimation(.interpolatingSpring(stiffness: 400, damping: 30)) {
                             dragOffset = -180
                         }
                     } else {
@@ -1567,15 +1588,21 @@ private struct TimelineTaskCard: View {
                     }
                 }
         )
+        .onChange(of: viewModel.isSwipeMenuOpen(for: task.id)) { _, isOpen in
+            if !isOpen && dragOffset != 0 {
+                resetSwipe()
+            }
+        }
+        .onChange(of: viewModel.isSwipeMenuOpen(for: task.id)) { _, isOpen in
+            if !isOpen && dragOffset != 0 {
+                resetSwipe()
+            }
+        }
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.6)
                 .onEnded { _ in
-                    if dragOffset != 0 {
-                        resetSwipe()
-                    } else if !task.subtasks.isEmpty {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isExpanded.toggle()
-                        }
+                    if dragOffset == 0 {
+                        showingDetailView = true
                     }
                 }
         )
@@ -1583,21 +1610,13 @@ private struct TimelineTaskCard: View {
             if dragOffset != 0 {
                 resetSwipe()
             } else if !task.subtasks.isEmpty {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
                     isExpanded.toggle()
                 }
             } else {
                 showingDetailView = true
             }
         }
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.8)
-                .onEnded { _ in
-                    if dragOffset == 0 {
-                        showingDetailView = true
-                    }
-                }
-        )
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in
                 TaskManager.shared.updateTask(updatedTask)
@@ -1614,7 +1633,7 @@ private struct TimelineTaskCard: View {
         }
         .sheet(isPresented: $showingDetailView) {
             NavigationStack {
-                TaskDetailView(task: task)
+                TaskDetailView(taskId: task.id, targetDate: viewModel.selectedDate)
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -1623,7 +1642,6 @@ private struct TimelineTaskCard: View {
             TrackingModeSelectionView(task: task) { mode in
                 selectedTrackingMode = mode
                 if mode == .pomodoro {
-                    // For pomodoro mode, set active task and show pomodoro
                     PomodoroViewModel.shared.setActiveTask(task)
                     showingPomodoro = true
                 } else {
@@ -1652,57 +1670,52 @@ private struct TimelineTaskCard: View {
         }
     }
 
-    private func performComplete() {
-        resetSwipe()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            onToggleComplete()
-        }
-    }
-
-    private func performAutoComplete() {
-        isAutoCompleting = true
-        
-        withAnimation(.easeOut(duration: 0.2)) {
-            dragOffset = 0
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            onToggleComplete()
-            
-            withAnimation(.easeOut(duration: 0.2)) {
-                isAutoCompleting = false
-            }
-            
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-        }
-    }
-
     private func resetSwipe() {
-        withAnimation(.easeOut(duration: 0.2)) {
+        if viewModel.isSwipeMenuOpen(for: task.id) {
+            viewModel.setOpenSwipeTask(nil)
+        }
+        withAnimation(.interpolatingSpring(stiffness: 400, damping: 35)) {
             dragOffset = 0
         }
     }
 
-    private func deleteTask() {
-        withAnimation(.easeOut(duration: 0.2)) {
+    private func deleteTaskWithAnimation() {
+        guard !isDeleting else { return }
+        
+        isDeleting = true
+        resetSwipe()
+        
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        
+        withAnimation(.interpolatingSpring(stiffness: 300, damping: 25)) {
+            deleteOpacity = 0.0
+            deleteScale = 0.85
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             TaskManager.shared.removeTask(task)
         }
-        resetSwipe()
     }
-
-    let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
 }
 
 private struct AddTaskButton: View {
     @Binding var isShowingTaskForm: Bool
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isPressed = false
     
     var body: some View {
-        Button(action: { isShowingTaskForm = true }) {
+        Button(action: { 
+            withAnimation(.interpolatingSpring(stiffness: 600, damping: 25)) {
+                isPressed = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                withAnimation(.interpolatingSpring(stiffness: 600, damping: 25)) {
+                    isPressed = false
+                }
+                isShowingTaskForm = true
+            }
+        }) {
             Image(systemName: "plus")
                 .font(.system(size: 24, weight: .medium))
                 .foregroundColor(.white)
@@ -1738,6 +1751,8 @@ private struct AddTaskButton: View {
                         y: 4
                     )
                 )
+                .scaleEffect(isPressed ? 0.95 : 1.0)
+                .animation(.interpolatingSpring(stiffness: 600, damping: 25), value: isPressed)
         }
         .padding(.horizontal, 20)
     }
@@ -1834,8 +1849,8 @@ struct CompactTimelineTaskView: View {
                             .cornerRadius(4)
                     } else {
                         Text("all_day".localized)
-                            .font(.system(.caption, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundColor(.blue)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.blue.opacity(0.1))
@@ -1848,20 +1863,6 @@ struct CompactTimelineTaskView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
-                }
-            }
-            
-            if task.pomodoroSettings != nil {
-                Button(action: {
-                    PomodoroViewModel.shared.setActiveTask(task)
-                    showingPomodoro = true
-                }) {
-                    Image(systemName: "timer")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white)
-                        .frame(width: 24, height: 24)
-                        .background(Color.pink)
-                        .clipShape(Circle())
                 }
             }
         }

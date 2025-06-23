@@ -1,0 +1,1628 @@
+import SwiftUI
+import Charts
+
+struct StatisticsView: View {
+    @StateObject private var viewModel = StatisticsViewModel()
+    @State private var selectedTab: StatisticsTab = .overview
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                CustomTabBar(selectedTab: $selectedTab)
+                
+                TabView(selection: $selectedTab) {
+                    OverviewTab(viewModel: viewModel)
+                        .tag(StatisticsTab.overview)
+                    
+                    StreaksTab(viewModel: viewModel)
+                        .tag(StatisticsTab.streaks)
+                    
+                    ConsistencyTab(viewModel: viewModel)
+                        .tag(StatisticsTab.consistency)
+                    
+                    PerformanceTab(viewModel: viewModel)
+                        .tag(StatisticsTab.performance)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.smooth(duration: 0.8), value: selectedTab)
+            }
+            .navigationTitle("Statistics")
+            .navigationBarTitleDisplayMode(.large)
+            .onAppear {
+                viewModel.refreshStats()
+            }
+        }
+    }
+}
+
+private struct CustomTabBar: View {
+    @Binding var selectedTab: StatisticsTab
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(StatisticsTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.smooth(duration: 0.3)) {
+                        selectedTab = tab
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(selectedTab == tab ? .white : .secondary)
+                        
+                        Text(tab.rawValue)
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                            .foregroundColor(selectedTab == tab ? .white : .secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(selectedTab == tab ? Color.blue : Color.clear)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+}
+
+private struct OverviewTab: View {
+    @ObservedObject var viewModel: StatisticsViewModel
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                TimeDistributionCard(viewModel: viewModel)
+                
+                TaskCompletionCard(viewModel: viewModel)
+                
+                OverallStreakCard(viewModel: viewModel)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+private struct StreaksTab: View {
+    @ObservedObject var viewModel: StatisticsViewModel
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                if viewModel.taskStreaks.isEmpty {
+                    EmptyStreaksView()
+                        .padding(.top, 60)
+                } else {
+                    ForEach(viewModel.taskStreaks) { taskStreak in
+                        TaskStreakCard(taskStreak: taskStreak)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+private struct ConsistencyTab: View {
+    @ObservedObject var viewModel: StatisticsViewModel
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                TaskConsistencyView(viewModel: viewModel)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+private struct PerformanceTab: View {
+    @ObservedObject var viewModel: StatisticsViewModel
+    @State private var selectedTask: StatisticsViewModel.TaskPerformanceAnalytics?
+    @State private var selectedTaskInChart: UUID? = nil
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                timeRangeSelector
+                
+                if !viewModel.taskPerformanceAnalytics.isEmpty {
+                    overallMetricsSection
+                    
+                    trendsChartsSection
+                    
+                    performanceBreakdownSection
+                } else {
+                    emptyStateView
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(Color(.systemGroupedBackground))
+        .sheet(item: $selectedTask) { task in
+            SimpleTaskDetailSheet(task: task, viewModel: viewModel)
+        }
+    }
+    
+    private var timeRangeSelector: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Time Range")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            
+            HStack(spacing: 8) {
+                ForEach(StatisticsViewModel.TimeRange.allCases, id: \.self) { range in
+                    TimeRangeButton(
+                        range: range,
+                        isSelected: viewModel.selectedTimeRange == range,
+                        action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                viewModel.selectedTimeRange = range
+                            }
+                        }
+                    )
+                }
+            }
+        }
+        .padding(16)
+        .background(cardBackground)
+    }
+    
+    private var overallMetricsSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Overview")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            
+            let tasksWithRatings = viewModel.taskPerformanceAnalytics
+            let avgQuality = tasksWithRatings.compactMap { $0.averageQuality }.isEmpty ? 0 :
+                tasksWithRatings.compactMap { $0.averageQuality }.reduce(0, +) / Double(tasksWithRatings.compactMap { $0.averageQuality }.count)
+            let avgDifficulty = tasksWithRatings.compactMap { $0.averageDifficulty }.isEmpty ? 0 :
+                tasksWithRatings.compactMap { $0.averageDifficulty }.reduce(0, +) / Double(tasksWithRatings.compactMap { $0.averageDifficulty }.count)
+            
+            HStack(spacing: 12) {
+                PerformanceStatCard(
+                    title: "Tasks Rated",
+                    value: "\(tasksWithRatings.count)",
+                    color: .blue
+                )
+                
+                if avgQuality > 0 {
+                    PerformanceStatCard(
+                        title: "Avg Quality",
+                        value: String(format: "%.1f", avgQuality),
+                        color: .yellow
+                    )
+                }
+                
+                if avgDifficulty > 0 {
+                    PerformanceStatCard(
+                        title: "Avg Difficulty", 
+                        value: String(format: "%.1f", avgDifficulty),
+                        color: .orange
+                    )
+                }
+            }
+        }
+        .padding(16)
+        .background(cardBackground)
+    }
+    
+    private var trendsChartsSection: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("Trends & Analysis")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            
+            if hasQualityData {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "star.fill")
+                            .foregroundColor(.yellow)
+                        Text("Quality by Task")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                    }
+                    
+                    Chart {
+                        ForEach(qualityDataByTask, id: \.taskId) { taskData in
+                            ForEach(Array(taskData.points.enumerated()), id: \.offset) { index, point in
+                                LineMark(
+                                    x: .value("Completion #", index + 1),
+                                    y: .value("Quality", point),
+                                    series: .value("Task", taskData.taskName)
+                                )
+                                .foregroundStyle(Color(hex: taskData.color))
+                                .lineStyle(.init(lineWidth: getLineWidth(for: taskData.taskId)))
+                                .opacity(getLineOpacity(for: taskData.taskId))
+                                
+                                PointMark(
+                                    x: .value("Completion #", index + 1),
+                                    y: .value("Quality", point),
+                                    series: .value("Task", taskData.taskName)
+                                )
+                                .foregroundStyle(Color(hex: taskData.color))
+                                .symbolSize(getSymbolSize(for: taskData.taskId))
+                                .opacity(getLineOpacity(for: taskData.taskId))
+                            }
+                        }
+                    }
+                    .frame(height: 160)
+                    .chartYScale(domain: 0...10)
+                    .chartXAxis {
+                        AxisMarks(position: .bottom) { _ in
+                            AxisValueLabel()
+                                .font(.caption2)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { _ in
+                            AxisValueLabel()
+                                .font(.caption2)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.3), value: selectedTaskInChart)
+                    
+                    qualityLegend
+                }
+            }
+            
+            if hasDifficultyData {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "bolt.fill")
+                            .foregroundColor(.orange)
+                        Text("Difficulty by Task")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                    }
+                    
+                    Chart {
+                        ForEach(difficultyDataByTask, id: \.taskId) { taskData in
+                            ForEach(Array(taskData.points.enumerated()), id: \.offset) { index, point in
+                                LineMark(
+                                    x: .value("Completion #", index + 1),
+                                    y: .value("Difficulty", point),
+                                    series: .value("Task", taskData.taskName)
+                                )
+                                .foregroundStyle(Color(hex: taskData.color))
+                                .lineStyle(.init(lineWidth: getLineWidth(for: taskData.taskId)))
+                                .opacity(getLineOpacity(for: taskData.taskId))
+                                
+                                PointMark(
+                                    x: .value("Completion #", index + 1),
+                                    y: .value("Difficulty", point),
+                                    series: .value("Task", taskData.taskName)
+                                )
+                                .foregroundStyle(Color(hex: taskData.color))
+                                .symbolSize(getSymbolSize(for: taskData.taskId))
+                                .opacity(getLineOpacity(for: taskData.taskId))
+                            }
+                        }
+                    }
+                    .frame(height: 160)
+                    .chartYScale(domain: 0...10)
+                    .chartXAxis {
+                        AxisMarks(position: .bottom) { _ in
+                            AxisValueLabel()
+                                .font(.caption2)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { _ in
+                            AxisValueLabel()
+                                .font(.caption2)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.3), value: selectedTaskInChart)
+                    
+                    difficultyLegend
+                }
+            }
+        }
+        .padding(16)
+        .background(cardBackground)
+    }
+    
+    private func getLineWidth(for taskId: UUID) -> Double {
+        selectedTaskInChart == nil || selectedTaskInChart == taskId ? 3.0 : 2.0
+    }
+    
+    private func getLineOpacity(for taskId: UUID) -> Double {
+        selectedTaskInChart == nil || selectedTaskInChart == taskId ? 1.0 : 0.3
+    }
+    
+    private func getSymbolSize(for taskId: UUID) -> Double {
+        selectedTaskInChart == nil || selectedTaskInChart == taskId ? 60 : 40
+    }
+    
+    private var qualityLegend: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(qualityDataByTask, id: \.taskId) { taskData in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            if selectedTaskInChart == taskData.taskId {
+                                selectedTaskInChart = nil
+                            } else {
+                                selectedTaskInChart = taskData.taskId
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color(hex: taskData.color))
+                                .frame(width: 10, height: 10)
+                            Text(taskData.taskName)
+                                .font(.caption2)
+                                .fontWeight(selectedTaskInChart == taskData.taskId ? .semibold : .regular)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(selectedTaskInChart == taskData.taskId ? Color.blue.opacity(0.1) : Color.clear)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .strokeBorder(selectedTaskInChart == taskData.taskId ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+    
+    private var difficultyLegend: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(difficultyDataByTask, id: \.taskId) { taskData in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            if selectedTaskInChart == taskData.taskId {
+                                selectedTaskInChart = nil
+                            } else {
+                                selectedTaskInChart = taskData.taskId
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color(hex: taskData.color))
+                                .frame(width: 10, height: 10)
+                            Text(taskData.taskName)
+                                .font(.caption2)
+                                .fontWeight(selectedTaskInChart == taskData.taskId ? .semibold : .regular)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(selectedTaskInChart == taskData.taskId ? Color.blue.opacity(0.1) : Color.clear)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .strokeBorder(selectedTaskInChart == taskData.taskId ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+    
+    private var performanceBreakdownSection: some View {
+        VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "trophy.fill")
+                        .foregroundColor(.yellow)
+                    Text("Top Performers")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                
+                if viewModel.topPerformingTasks.isEmpty {
+                    Text("No high-quality completions yet")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                        .padding(.vertical, 8)
+                } else {
+                    LazyVStack(spacing: 8) {
+                        ForEach(viewModel.topPerformingTasks.prefix(3)) { task in
+                            CompactTaskPerformanceCard(task: task) {
+                                selectedTask = task
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .background(cardBackground)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "list.bullet.circle")
+                        .foregroundColor(.blue)
+                    Text("All Tasks Performance")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                
+                LazyVStack(spacing: 8) {
+                    ForEach(viewModel.taskPerformanceAnalytics.prefix(8)) { task in
+                        CompactTaskPerformanceCard(task: task) {
+                            selectedTask = task
+                        }
+                    }
+                }
+                
+                if viewModel.taskPerformanceAnalytics.count > 8 {
+                    Text("+ \(viewModel.taskPerformanceAnalytics.count - 8) more tasks")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                }
+            }
+            .padding(16)
+            .background(cardBackground)
+        }
+    }
+    
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 64))
+                .foregroundColor(.secondary)
+            
+            Text("No Performance Data")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Complete tasks and add quality/difficulty ratings to see performance analytics")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(40)
+        .background(cardBackground)
+    }
+    
+    private var hasQualityData: Bool {
+        qualityDataByTask.count > 0 && qualityDataByTask.first?.points.count ?? 0 >= 2
+    }
+    
+    private var hasDifficultyData: Bool {
+        difficultyDataByTask.count > 0 && difficultyDataByTask.first?.points.count ?? 0 >= 2
+    }
+    
+    private var qualityDataByTask: [(taskId: UUID, taskName: String, color: String, points: [Double])] {
+        viewModel.taskPerformanceAnalytics.compactMap { task in
+            let qualityPoints = task.completions.compactMap { completion in
+                completion.qualityRating.map { Double($0) }
+            }
+            
+            guard qualityPoints.count >= 2 else { return nil }
+            
+            return (
+                taskId: task.taskId,
+                taskName: String(task.taskName.prefix(15)) + (task.taskName.count > 15 ? "..." : ""),
+                color: task.categoryColor ?? "#6366F1",
+                points: qualityPoints
+            )
+        }
+    }
+    
+    private var difficultyDataByTask: [(taskId: UUID, taskName: String, color: String, points: [Double])] {
+        viewModel.taskPerformanceAnalytics.compactMap { task in
+            let difficultyPoints = task.completions.compactMap { completion in
+                completion.difficultyRating.map { Double($0) }
+            }
+            
+            guard difficultyPoints.count >= 2 else { return nil }
+            
+            return (
+                taskId: task.taskId,
+                taskName: String(task.taskName.prefix(15)) + (task.taskName.count > 15 ? "..." : ""),
+                color: task.categoryColor ?? "#6366F1",
+                points: difficultyPoints
+            )
+        }
+    }
+}
+
+private struct TaskCompletionCard: View {
+    @ObservedObject var viewModel: StatisticsViewModel
+    @State private var selectedPeriod: TaskCompletionCard.CompletionPeriod = .week
+    
+    enum CompletionPeriod: String, CaseIterable {
+        case week = "Week"
+        case month = "Month"
+        case year = "Year"
+        
+        var daysCount: Int {
+            switch self {
+            case .week: return 7
+            case .month: return 30
+            case .year: return 365
+            }
+        }
+        
+        var dayOffset: Int {
+            switch self {
+            case .week: return -6
+            case .month: return -29
+            case .year: return -364
+            }
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Task Completion Rate")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                    Spacer()
+                }
+                
+                HStack(spacing: 8) {
+                    ForEach(CompletionPeriod.allCases, id: \.self) { period in
+                        PeriodButton(
+                            period: period,
+                            isSelected: selectedPeriod == period,
+                            action: {
+                                withAnimation(.smooth(duration: 0.4)) {
+                                    selectedPeriod = period
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+            
+            VStack(spacing: 12) {
+                Chart(completionStats) { stat in
+                    BarMark(
+                        x: .value("Day", stat.day),
+                        y: .value("Completed", stat.completedTasks)
+                    )
+                    .foregroundStyle(Color.green)
+                    .cornerRadius(4)
+                    
+                    BarMark(
+                        x: .value("Day", stat.day),
+                        y: .value("Incomplete", max(0, stat.totalTasks - stat.completedTasks)),
+                        stacking: .standard
+                    )
+                    .foregroundStyle(Color.secondary.opacity(0.3))
+                    .cornerRadius(4)
+                }
+                .frame(height: 140)
+                .chartXAxis {
+                    AxisMarks(position: .bottom) { _ in
+                        AxisValueLabel()
+                            .font(.caption2)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisValueLabel()
+                            .font(.caption2)
+                    }
+                }
+                .animation(.smooth(duration: 0.8), value: completionStats)
+                
+                statsLegend
+            }
+            
+            CategoryCompletionBreakdown(selectedPeriod: selectedPeriod)
+        }
+        .padding(16)
+        .background(cardBackground)
+    }
+    
+    private var statsLegend: some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 8, height: 8)
+                Text("Completed")
+                    .font(.system(.caption2, design: .rounded, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            
+            HStack(spacing: 6) {
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(width: 8, height: 8)
+                Text("Total Available")
+                    .font(.system(.caption2, design: .rounded, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            let totalCompleted = completionStats.reduce(0) { $0 + $1.completedTasks }
+            let totalTasks = completionStats.reduce(0) { $0 + $1.totalTasks }
+            let avgRate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
+            
+            Text("\(Int(avgRate * 100))%")
+                .font(.system(.caption, design: .rounded, weight: .bold))
+                .foregroundColor(.primary)
+        }
+    }
+    
+    private var completionStats: [StatisticsViewModel.WeeklyStat] {
+        let calendar = Calendar.current
+        let today = Date()
+        let startDate = calendar.date(byAdding: .day, value: selectedPeriod.dayOffset, to: today)!
+        
+        switch selectedPeriod {
+        case .week:
+            return generateWeeklyStats(from: startDate, to: today)
+        case .month:
+            return generateMonthlyStats(from: startDate, to: today)
+        case .year:
+            return generateYearlyStats(from: startDate, to: today)
+        }
+    }
+    
+    private func generateWeeklyStats(from startDate: Date, to endDate: Date) -> [StatisticsViewModel.WeeklyStat] {
+        let calendar = Calendar.current
+        
+        return (0...6).map { dayOffset in
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: startDate)!
+            let startOfDay = calendar.startOfDay(for: date)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
+            
+            let (completed, total) = getTasksForDate(date: startOfDay, endOfDay: endOfDay)
+            let completionRate = total > 0 ? Double(completed) / Double(total) : 0.0
+            
+            return StatisticsViewModel.WeeklyStat(
+                day: date.formatted(.dateTime.weekday(.abbreviated)),
+                completedTasks: completed,
+                totalTasks: total,
+                completionRate: completionRate
+            )
+        }
+    }
+    
+    private func generateMonthlyStats(from startDate: Date, to endDate: Date) -> [StatisticsViewModel.WeeklyStat] {
+        let calendar = Calendar.current
+        var stats: [StatisticsViewModel.WeeklyStat] = []
+        
+        for weekOffset in 0..<5 {
+            let weekStart = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: startDate)!
+            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+            
+            var weekCompleted = 0
+            var weekTotal = 0
+            
+            for dayOffset in 0...6 {
+                let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStart)!
+                let startOfDay = calendar.startOfDay(for: date)
+                let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
+                
+                if date <= endDate {
+                    let (completed, total) = getTasksForDate(date: startOfDay, endOfDay: endOfDay)
+                    weekCompleted += completed
+                    weekTotal += total
+                }
+            }
+            
+            let completionRate = weekTotal > 0 ? Double(weekCompleted) / Double(weekTotal) : 0.0
+            
+            stats.append(StatisticsViewModel.WeeklyStat(
+                day: "W\(weekOffset + 1)",
+                completedTasks: weekCompleted,
+                totalTasks: weekTotal,
+                completionRate: completionRate
+            ))
+        }
+        
+        return stats
+    }
+    
+    private func generateYearlyStats(from startDate: Date, to endDate: Date) -> [StatisticsViewModel.WeeklyStat] {
+        let calendar = Calendar.current
+        var stats: [StatisticsViewModel.WeeklyStat] = []
+        
+        for monthOffset in 0..<12 {
+            let monthStart = calendar.date(byAdding: .month, value: monthOffset, to: startDate)!
+            let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart)!.addingTimeInterval(-1)
+            
+            var monthCompleted = 0
+            var monthTotal = 0
+            
+            var currentDate = monthStart
+            while currentDate <= monthEnd && currentDate <= endDate {
+                let startOfDay = calendar.startOfDay(for: currentDate)
+                let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
+                
+                let (completed, total) = getTasksForDate(date: startOfDay, endOfDay: endOfDay)
+                monthCompleted += completed
+                monthTotal += total
+                
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+            }
+            
+            let completionRate = monthTotal > 0 ? Double(monthCompleted) / Double(monthTotal) : 0.0
+            
+            stats.append(StatisticsViewModel.WeeklyStat(
+                day: monthStart.formatted(.dateTime.month(.abbreviated)),
+                completedTasks: monthCompleted,
+                totalTasks: monthTotal,
+                completionRate: completionRate
+            ))
+        }
+        
+        return stats
+    }
+    
+    private func getTasksForDate(date: Date, endOfDay: Date) -> (completed: Int, total: Int) {
+        let calendar = Calendar.current
+        let allTasks = TaskManager.shared.tasks
+        
+        let singleDayTasks = allTasks.filter { task in
+            task.recurrence == nil && calendar.isDate(task.startTime, inSameDayAs: date)
+        }
+        
+        let recurringDayTasks = allTasks.filter { task in
+            guard let recurrence = task.recurrence else { return false }
+            if task.startTime > endOfDay { return false }
+            if let endDate = recurrence.endDate, endDate < date { return false }
+            
+            switch recurrence.type {
+            case .daily:
+                return true
+            case .weekly(let days):
+                let weekday = calendar.component(.weekday, from: date)
+                return days.contains(weekday)
+            case .monthly(let days):
+                let day = calendar.component(.day, from: date)
+                return days.contains(day)
+            case .monthlyOrdinal(let patterns):
+                return recurrence.shouldOccurOn(date: date)
+            case .yearly:
+                return recurrence.shouldOccurOn(date: date)
+            }
+        }
+        
+        let allDayTasks = singleDayTasks + recurringDayTasks
+        
+        let completedCount = allDayTasks.filter { task in
+            task.completions[date]?.isCompleted == true
+        }.count
+        
+        return (completed: completedCount, total: allDayTasks.count)
+    }
+}
+
+private struct CategoryCompletionBreakdown: View {
+    let selectedPeriod: TaskCompletionCard.CompletionPeriod
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text("By Category")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            
+            if categoryCompletionStats.isEmpty {
+                Text("No Data Available")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 4)
+            } else {
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 6),
+                    GridItem(.flexible(), spacing: 6)
+                ], spacing: 6) {
+                    ForEach(categoryCompletionStats, id: \.name) { stat in
+                        CompactCategoryItem(stat: stat)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var categoryCompletionStats: [(name: String, color: String, completionRate: Double, completed: Int, total: Int)] {
+        let calendar = Calendar.current
+        let today = Date()
+        let startDate = calendar.date(byAdding: .day, value: selectedPeriod.dayOffset, to: today)!
+        
+        var categoryStats: [String: (completed: Int, total: Int, color: String)] = [:]
+        let allTasks = TaskManager.shared.tasks
+        
+        var currentNode = startDate
+        while currentNode <= today {
+            let startOfDay = calendar.startOfDay(for: currentNode)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
+            
+            let singleDayTasks = allTasks.filter { task in
+                task.recurrence == nil && calendar.isDate(task.startTime, inSameDayAs: currentNode)
+            }
+            
+            let recurringDayTasks = allTasks.filter { task in
+                guard let recurrence = task.recurrence else { return false }
+                if task.startTime > endOfDay { return false }
+                if let endDate = recurrence.endDate, endDate < startOfDay { return false }
+                
+                switch recurrence.type {
+                case .daily:
+                    return true
+                case .weekly(let days):
+                    let weekday = calendar.component(.weekday, from: currentNode)
+                    return days.contains(weekday)
+                case .monthly(let days):
+                    let day = calendar.component(.day, from: currentNode)
+                    return days.contains(day)
+                case .monthlyOrdinal(let patterns):
+                    return recurrence.shouldOccurOn(date: currentNode)
+                case .yearly:
+                    return recurrence.shouldOccurOn(date: currentNode)
+                }
+            }
+            
+            let allDayTasks = singleDayTasks + recurringDayTasks
+            
+            for task in allDayTasks {
+                let categoryName = task.category?.name ?? "No Category"
+                let categoryColor = task.category?.color ?? "#8E8E93"
+                let isCompleted = task.completions[startOfDay]?.isCompleted == true
+                
+                if categoryStats[categoryName] == nil {
+                    categoryStats[categoryName] = (completed: 0, total: 0, color: categoryColor)
+                }
+                categoryStats[categoryName]?.total += 1
+                if isCompleted {
+                    categoryStats[categoryName]?.completed += 1
+                }
+            }
+            
+            currentNode = calendar.date(byAdding: .day, value: 1, to: currentNode)!
+        }
+        
+        return categoryStats.compactMap { (name, data) in
+            let completionRate = data.total > 0 ? Double(data.completed) / Double(data.total) : 0.0
+            return (name: name, color: data.color, completionRate: completionRate, completed: data.completed, total: data.total)
+        }.sorted { $0.completionRate > $1.completionRate }
+    }
+}
+
+private struct OverallStreakCard: View {
+    @ObservedObject var viewModel: StatisticsViewModel
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("Overall Streak")
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            
+            HStack(spacing: 30) {
+                VStack(spacing: 8) {
+                    Text("\(viewModel.currentStreak)")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(.orange)
+                    Text("Current")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                
+                Divider()
+                    .frame(height: 60)
+                
+                VStack(spacing: 8) {
+                    Text("\(viewModel.bestStreak)")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(.red)
+                    Text("Best")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+        }
+        .padding(20)
+        .background(cardBackground)
+    }
+}
+
+private struct TaskStreakCard: View {
+    let taskStreak: StatisticsViewModel.TaskStreak
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 12) {
+                if let categoryColor = taskStreak.categoryColor {
+                    Circle()
+                        .fill(Color(hex: categoryColor))
+                        .frame(width: 12, height: 12)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(taskStreak.taskName)
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    if let categoryName = taskStreak.categoryName {
+                        Text(categoryName)
+                            .font(.system(.caption, design: .rounded, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(Int(taskStreak.completionRate * 100))%")
+                        .font(.system(.title3, design: .rounded, weight: .bold))
+                        .foregroundColor(.primary)
+                    Text("Complete")
+                        .font(.system(.caption2, design: .rounded, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            HStack(spacing: 24) {
+                StatisticsStatItem(
+                    title: "Current",
+                    value: "\(taskStreak.currentStreak)",
+                    color: .orange,
+                    icon: "flame.fill"
+                )
+                
+                StatisticsStatItem(
+                    title: "Best",
+                    value: "\(taskStreak.bestStreak)",
+                    color: .red,
+                    icon: "trophy.fill"
+                )
+                
+                StatisticsStatItem(
+                    title: "Completed",
+                    value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)",
+                    color: .green,
+                    icon: "checkmark.circle.fill"
+                )
+                
+                Spacer()
+            }
+            
+            if !taskStreak.streakHistory.isEmpty {
+                Chart(taskStreak.streakHistory) { point in
+                    LineMark(
+                        x: .value("Date", point.date),
+                        y: .value("Streak", point.streakValue)
+                    )
+                    .foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1"))
+                    .lineStyle(.init(lineWidth: 2, lineCap: .round))
+                    .symbol(.circle)
+                    .symbolSize(40)
+                }
+                .frame(height: 80)
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+            }
+        }
+        .padding(20)
+        .background(cardBackground)
+    }
+}
+
+private struct EmptyStreaksView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "flame")
+                .font(.system(size: 56))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.orange.opacity(0.6), .red.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            VStack(spacing: 10) {
+                Text("No Streaks Yet")
+                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                Text("Complete recurring tasks to build streaks")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 40)
+        .background(cardBackground)
+    }
+}
+
+private struct EmptyTimeDistributionView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "chart.pie")
+                .font(.system(size: 48))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            VStack(spacing: 8) {
+                Text("No Time Data")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text("Complete tasks to see time distribution")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(height: 180)
+    }
+}
+
+private var cardBackground: some View {
+    RoundedRectangle(cornerRadius: 16)
+        .fill(Color(.systemBackground))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+}
+
+private struct SimpleTaskDetailSheet: View {
+    let task: StatisticsViewModel.TaskPerformanceAnalytics
+    @ObservedObject var viewModel: StatisticsViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text("Task Summary")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        
+                        HStack(spacing: 20) {
+                            if let avgQuality = task.averageQuality {
+                                TaskStatCard(
+                                    title: "Avg Quality",
+                                    value: String(format: "%.1f/10", avgQuality),
+                                    icon: "star.fill",
+                                    color: .yellow
+                                )
+                            }
+                            
+                            if let avgDifficulty = task.averageDifficulty {
+                                TaskStatCard(
+                                    title: "Avg Difficulty", 
+                                    value: String(format: "%.1f/10", avgDifficulty),
+                                    icon: "bolt.fill",
+                                    color: .orange
+                                )
+                            }
+                            
+                            TaskStatCard(
+                                title: "Completions",
+                                value: "\(task.completions.count)",
+                                icon: "checkmark.circle.fill",
+                                color: .green
+                            )
+                        }
+                    }
+                    .padding(20)
+                    .background(cardBackground)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Performance Details")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let categoryName = task.categoryName {
+                                HStack {
+                                    Text("Category:")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+                                    Text(categoryName)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                            
+                            HStack {
+                                Text("Trend:")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                                HStack(spacing: 4) {
+                                    Image(systemName: task.improvementTrend.icon)
+                                        .foregroundColor(task.improvementTrend.color)
+                                    Text(task.improvementTrend.rawValue)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(task.improvementTrend.color)
+                                }
+                            }
+                            
+                            if let avgDuration = task.averageDuration {
+                                HStack {
+                                    Text("Avg Duration:")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+                                    Text(formatDuration(avgDuration))
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .background(cardBackground)
+                }
+                .padding()
+            }
+            .navigationTitle(task.taskName)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = Int(duration) % 3600 / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+}
+
+private struct TaskStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.1))
+        )
+    }
+}
+
+private struct CompactTaskPerformanceCard: View {
+    let task: StatisticsViewModel.TaskPerformanceAnalytics
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                if let categoryColor = task.categoryColor {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(hex: categoryColor))
+                        .frame(width: 3, height: 32)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(task.taskName)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    if let categoryName = task.categoryName {
+                        Text(categoryName)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 8) {
+                    if let avgQuality = task.averageQuality {
+                        VStack(spacing: 1) {
+                            Text(String(format: "%.1f", avgQuality))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.yellow)
+                            Text("★")
+                                .font(.caption2)
+                                .foregroundColor(.yellow)
+                        }
+                    }
+                    
+                    if let avgDifficulty = task.averageDifficulty {
+                        VStack(spacing: 1) {
+                            Text(String(format: "%.1f", avgDifficulty))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.orange)
+                            Text("⚡")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                    
+                    VStack(spacing: 1) {
+                        Text("\(task.completions.count)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                        Text("×")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemGray6))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct EnhancedTaskPerformanceCard: View {
+    let task: StatisticsViewModel.TaskPerformanceAnalytics
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    if let categoryColor = task.categoryColor {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(hex: categoryColor))
+                            .frame(width: 4, height: 40)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(task.taskName)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        
+                        if let categoryName = task.categoryName {
+                            Text(categoryName)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Text("\(task.completions.count) completions")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(.systemGray5))
+                        )
+                }
+                
+                HStack(spacing: 16) {
+                    if let avgQuality = task.averageQuality {
+                        VStack(spacing: 4) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.yellow)
+                                Text(String(format: "%.1f", avgQuality))
+                                    .font(.system(.callout, design: .rounded, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
+                            Text("Quality")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    
+                    if let avgDifficulty = task.averageDifficulty {
+                        VStack(spacing: 4) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.orange)
+                                Text(String(format: "%.1f", avgDifficulty))
+                                    .font(.system(.callout, design: .rounded, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
+                            Text("Difficulty")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    
+                    VStack(spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: task.improvementTrend.icon)
+                                .font(.system(size: 12))
+                                .foregroundColor(task.improvementTrend.color)
+                            Text(trendText(task.improvementTrend))
+                                .font(.system(.callout, design: .rounded, weight: .bold))
+                                .foregroundColor(task.improvementTrend.color)
+                        }
+                        Text("Trend")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private func trendText(_ trend: StatisticsViewModel.ImprovementTrend) -> String {
+        switch trend {
+        case .improving: return "↗"
+        case .stable: return "→"
+        case .declining: return "↘"
+        case .insufficient: return "?"
+        }
+    }
+}
+
+private struct PerformanceStatCard: View {
+    let title: String
+    let value: String  
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(value)
+                .font(.system(.title3, design: .rounded, weight: .bold))
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.system(.caption, design: .rounded, weight: .medium))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(color.opacity(0.1))
+        )
+    }
+}
+
+private struct TimeRangeButton: View {
+    let range: StatisticsViewModel.TimeRange
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(range.rawValue)
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isSelected ? Color.blue : Color(.systemGray5))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct PeriodButton: View {
+    let period: TaskCompletionCard.CompletionPeriod
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(period.rawValue)
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isSelected ? Color.blue : Color(.systemGray5))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct CategoryLegendItem: View {
+    let stat: StatisticsViewModel.CategoryStat
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color(hex: stat.color))
+                .frame(width: 12, height: 12)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(stat.name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                Text("\(String(format: "%.1f", stat.hours))h")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+    }
+}
+
+private struct CompactCategoryItem: View {
+    let stat: (name: String, color: String, completionRate: Double, completed: Int, total: Int)
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color(hex: stat.color))
+                .frame(width: 8, height: 8)
+            Text(stat.name)
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+            
+            Spacer()
+            
+            Text("\(Int(stat.completionRate * 100))%")
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(.systemGray6))
+        )
+    }
+}
+
+private struct StatisticsStatItem: View {
+    let title: String
+    let value: String
+    let color: Color
+    let icon: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            
+            Text(title)
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+private enum StatisticsTab: String, CaseIterable {
+    case overview = "Overview"
+    case streaks = "Streaks" 
+    case consistency = "Consistency"
+    case performance = "Performance"
+    
+    var icon: String {
+        switch self {
+        case .overview: return "chart.pie.fill"
+        case .streaks: return "flame.fill"
+        case .consistency: return "chart.line.uptrend.xyaxis"
+        case .performance: return "speedometer"
+        }
+    }
+}
+
+#Preview {
+    StatisticsView()
+}

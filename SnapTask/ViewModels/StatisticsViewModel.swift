@@ -90,6 +90,20 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
+    enum ConsistencyTimeRange: String, CaseIterable {
+        case week = "Week"
+        case month = "Month"
+        case year = "Year"
+        
+        var daysCount: Int {
+            switch self {
+            case .week: return 7
+            case .month: return 30
+            case .year: return 365
+            }
+        }
+    }
+    
     @Published private(set) var categoryStats: [CategoryStat] = []
     @Published private(set) var weeklyStats: [WeeklyStat] = []
     @Published private(set) var currentStreak: Int = 0
@@ -97,6 +111,9 @@ class StatisticsViewModel: ObservableObject {
     @Published private(set) var taskStreaks: [TaskStreak] = []
     @Published var selectedTimeRange: TimeRange = .today
     @Published private(set) var recurringTasks: [TodoTask] = []
+    @Published private(set) var taskPerformanceAnalytics: [TaskPerformanceAnalytics] = []
+    @Published private(set) var topPerformingTasks: [TaskPerformanceAnalytics] = []
+    @Published private(set) var tasksNeedingImprovement: [TaskPerformanceAnalytics] = []
     
     var trackedRecurringTasks: [TodoTask] {
         recurringTasks.filter { task in
@@ -111,7 +128,7 @@ class StatisticsViewModel: ObservableObject {
         recurringTasks
     }
     
-    private var cancellables = Set<AnyCancellable>()
+    private var cancellables: Set<AnyCancellable> = []
     private let taskManager: TaskManager
     private let categoryManager = CategoryManager.shared
     private let cloudKitService = CloudKitService.shared
@@ -224,6 +241,7 @@ class StatisticsViewModel: ObservableObject {
         updateStreakStats()
         updateTaskStreaks()
         updateRecurringTasks()
+        updateTaskPerformanceAnalytics()
         objectWillChange.send()
     }
     
@@ -270,11 +288,25 @@ class StatisticsViewModel: ObservableObject {
                             return nil
                         }
                         
-                        if task.hasDuration && task.duration > 0 {
-                            print("📊   -> Included: Task '\(task.name)' completed on \(date) with duration: \(task.duration/3600.0)h")
-                            return task.duration / 3600.0
+                        var taskDuration: TimeInterval = 0
+                        var durationSource = "no duration"
+                        
+                        if let actualDuration = completion.actualDuration, actualDuration > 0 {
+                            taskDuration = actualDuration
+                            durationSource = "completion actual duration"
+                        } else if task.totalTrackedTime > 0 {
+                            taskDuration = task.totalTrackedTime
+                            durationSource = "tracked time"
+                        } else if task.hasDuration && task.duration > 0 {
+                            taskDuration = task.duration
+                            durationSource = "estimated duration"
+                        }
+                        
+                        if taskDuration > 0 {
+                            print("📊   -> Included: Task '\(task.name)' completed on \(date) with \(String(format: "%.2f", taskDuration/3600.0))h (\(durationSource))")
+                            return taskDuration / 3600.0
                         } else {
-                            print("📊   -> Excluded: Task '\(task.name)' completed on \(date) but has NO duration set")
+                            print("📊   -> Excluded: Task '\(task.name)' completed on \(date) but has NO duration data")
                             return nil
                         }
                     }
@@ -626,6 +658,265 @@ class StatisticsViewModel: ObservableObject {
             return recurrence.shouldOccurOn(date: date)
         case .yearly:
             return recurrence.shouldOccurOn(date: date)
+        }
+    }
+    
+    struct TaskPerformanceAnalytics: Identifiable, Equatable {
+        let id = UUID()
+        let taskId: UUID
+        let taskName: String
+        let categoryName: String?
+        let categoryColor: String?
+        let completions: [TaskCompletionAnalytics]
+        let averageDifficulty: Double?
+        let averageQuality: Double?
+        let averageDuration: TimeInterval?
+        let estimationAccuracy: Double? 
+        let improvementTrend: ImprovementTrend
+        
+        static func == (lhs: TaskPerformanceAnalytics, rhs: TaskPerformanceAnalytics) -> Bool {
+            return lhs.taskId == rhs.taskId &&
+                   lhs.averageDifficulty == rhs.averageDifficulty &&
+                   lhs.averageQuality == rhs.averageQuality
+        }
+    }
+    
+    struct TaskCompletionAnalytics: Identifiable, Equatable {
+        let id = UUID()
+        let date: Date
+        let actualDuration: TimeInterval?
+        let difficultyRating: Int?
+        let qualityRating: Int?
+        let estimatedDuration: TimeInterval?
+        let wasTracked: Bool
+        
+        static func == (lhs: TaskCompletionAnalytics, rhs: TaskCompletionAnalytics) -> Bool {
+            return lhs.date == rhs.date &&
+                   lhs.actualDuration == rhs.actualDuration &&
+                   lhs.difficultyRating == rhs.difficultyRating &&
+                   lhs.qualityRating == rhs.qualityRating
+        }
+    }
+    
+    enum ImprovementTrend: String, CaseIterable {
+        case improving = "Improving"
+        case stable = "Stable"
+        case declining = "Declining"
+        case insufficient = "Insufficient Data"
+        
+        var color: Color {
+            switch self {
+            case .improving: return .green
+            case .stable: return .blue
+            case .declining: return .orange
+            case .insufficient: return .gray
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .improving: return "arrow.up.right"
+            case .stable: return "arrow.right"
+            case .declining: return "arrow.down.right"
+            case .insufficient: return "questionmark"
+            }
+        }
+    }
+    
+    private func updateTaskPerformanceAnalytics() {
+        let allTasks = taskManager.tasks
+        let (startDate, endDate) = selectedTimeRange.dateRange
+        
+        var analyticsArray: [TaskPerformanceAnalytics] = []
+        
+        for task in allTasks {
+            let completionAnalytics = getTaskCompletionAnalytics(for: task, startDate: startDate, endDate: endDate)
+            
+            guard !completionAnalytics.isEmpty else { continue }
+            
+            let avgDifficulty = completionAnalytics.compactMap { $0.difficultyRating }.isEmpty ? nil :
+                Double(completionAnalytics.compactMap { $0.difficultyRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.difficultyRating }.count)
+            
+            let avgQuality = completionAnalytics.compactMap { $0.qualityRating }.isEmpty ? nil :
+                Double(completionAnalytics.compactMap { $0.qualityRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.qualityRating }.count)
+            
+            let avgDuration = completionAnalytics.compactMap { $0.actualDuration }.isEmpty ? nil :
+                completionAnalytics.compactMap { $0.actualDuration }.reduce(0, +) / Double(completionAnalytics.compactMap { $0.actualDuration }.count)
+            
+            let estimationAccuracy = calculateEstimationAccuracy(for: completionAnalytics)
+            let improvementTrend = calculateImprovementTrend(for: completionAnalytics)
+            
+            let analytics = TaskPerformanceAnalytics(
+                taskId: task.id,
+                taskName: task.name,
+                categoryName: task.category?.name,
+                categoryColor: task.category?.color,
+                completions: completionAnalytics,
+                averageDifficulty: avgDifficulty,
+                averageQuality: avgQuality,
+                averageDuration: avgDuration,
+                estimationAccuracy: estimationAccuracy,
+                improvementTrend: improvementTrend
+            )
+            
+            analyticsArray.append(analytics)
+        }
+        
+        taskPerformanceAnalytics = analyticsArray
+        topPerformingTasks = analyticsArray
+            .filter { $0.averageQuality ?? 0 >= 7.0 }
+            .sorted { ($0.averageQuality ?? 0) > ($1.averageQuality ?? 0) }
+            .prefix(5)
+            .map { $0 }
+        
+        tasksNeedingImprovement = analyticsArray
+            .filter { analytics in
+                (analytics.averageQuality ?? 10) < 6.0 || 
+                (analytics.averageDifficulty ?? 0) > 7.0 ||
+                analytics.improvementTrend == .declining
+            }
+            .sorted { analytics1, analytics2 in
+                let score1 = (analytics1.averageQuality ?? 0) - (analytics1.averageDifficulty ?? 0)
+                let score2 = (analytics2.averageQuality ?? 0) - (analytics2.averageDifficulty ?? 0)
+                return score1 < score2
+            }
+            .prefix(5)
+            .map { $0 }
+    }
+    
+    func getWeeklyStatsForDay(date: Date) -> (completed: Int, total: Int, rate: Double) {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
+        
+        let singleDayTasks = taskManager.tasks.filter { task in
+            task.recurrence == nil && calendar.isDate(task.startTime, inSameDayAs: date)
+        }
+        
+        let recurringDayTasks = taskManager.tasks.filter { task in
+            guard let recurrence = task.recurrence else { return false }
+            
+            if task.startTime > endOfDay { return false }
+            if let endDate = recurrence.endDate, endDate < startOfDay { return false }
+            
+            return shouldTaskOccurOnDate(task: task, date: startOfDay)
+        }
+        
+        let allDayTasks = singleDayTasks + recurringDayTasks
+        let completedCount = allDayTasks.filter { task in
+            task.completions[startOfDay]?.isCompleted == true
+        }.count
+        
+        let totalCount = allDayTasks.count
+        let rate = totalCount > 0 ? Double(completedCount) / Double(totalCount) : 0.0
+        
+        return (completed: completedCount, total: totalCount, rate: rate)
+    }
+    
+    func getWeeklyStatsForWeekOffset(_ weekOffset: Int) -> (completed: Int, total: Int, rate: Double) {
+        let calendar = Calendar.current
+        let today = Date()
+        let weekStart = calendar.date(byAdding: .weekOfYear, value: -weekOffset, to: today)!
+        let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+        
+        var totalCompleted = 0
+        var totalTasks = 0
+        
+        var currentDate = weekStart
+        while currentDate <= weekEnd {
+            let dayStats = getWeeklyStatsForDay(date: currentDate)
+            totalCompleted += dayStats.completed
+            totalTasks += dayStats.total
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+        }
+        
+        let rate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
+        return (completed: totalCompleted, total: totalTasks, rate: rate)
+    }
+    
+    func getMonthlyStatsForMonth(_ month: Date) -> (completed: Int, total: Int, rate: Double) {
+        let calendar = Calendar.current
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: month))!
+        let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart)!.addingTimeInterval(-1)
+        
+        var totalCompleted = 0
+        var totalTasks = 0
+        
+        var currentDate = monthStart
+        while currentDate <= monthEnd {
+            let dayStats = getWeeklyStatsForDay(date: currentDate)
+            totalCompleted += dayStats.completed
+            totalTasks += dayStats.total
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+        }
+        
+        let rate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
+        return (completed: totalCompleted, total: totalTasks, rate: rate)
+    }
+    
+    private func getTaskCompletionAnalytics(for task: TodoTask, startDate: Date, endDate: Date) -> [TaskCompletionAnalytics] {
+        var analytics: [TaskCompletionAnalytics] = []
+        
+        for (date, completion) in task.completions {
+            guard completion.isCompleted &&
+                  date >= Calendar.current.startOfDay(for: startDate) &&
+                  date <= Calendar.current.startOfDay(for: endDate) else { continue }
+            
+            let trackingSessions = taskManager.getTrackingSessions(for: task.id)
+            let sessionForDate = trackingSessions.first { session in
+                Calendar.current.isDate(session.startTime, inSameDayAs: date)
+            }
+            
+            let completionAnalytic = TaskCompletionAnalytics(
+                date: date,
+                actualDuration: completion.actualDuration,
+                difficultyRating: completion.difficultyRating,
+                qualityRating: completion.qualityRating,
+                estimatedDuration: task.hasDuration ? task.duration : nil,
+                wasTracked: sessionForDate != nil
+            )
+            
+            analytics.append(completionAnalytic)
+        }
+        
+        return analytics.sorted { $0.date < $1.date }
+    }
+    
+    private func calculateEstimationAccuracy(for completions: [TaskCompletionAnalytics]) -> Double? {
+        let accuracyData = completions.compactMap { completion -> Double? in
+            guard let actual = completion.actualDuration,
+                  let estimated = completion.estimatedDuration,
+                  estimated > 0 else { return nil }
+            
+            return abs(actual - estimated) / estimated
+        }
+        
+        guard !accuracyData.isEmpty else { return nil }
+        
+        let avgAccuracy = accuracyData.reduce(0, +) / Double(accuracyData.count)
+        return max(0, 1.0 - avgAccuracy) // Convert to accuracy percentage
+    }
+    
+    private func calculateImprovementTrend(for completions: [TaskCompletionAnalytics]) -> ImprovementTrend {
+        guard completions.count >= 3 else { return .insufficient }
+        
+        let qualityRatings = completions.compactMap { $0.qualityRating }
+        guard qualityRatings.count >= 3 else { return .insufficient }
+        
+        let recentHalf = qualityRatings.suffix(qualityRatings.count / 2)
+        let olderHalf = qualityRatings.prefix(qualityRatings.count / 2)
+        
+        let recentAvg = Double(recentHalf.reduce(0, +)) / Double(recentHalf.count)
+        let olderAvg = Double(olderHalf.reduce(0, +)) / Double(olderHalf.count)
+        
+        let improvement = recentAvg - olderAvg
+        
+        if improvement > 0.5 {
+            return .improving
+        } else if improvement < -0.5 {
+            return .declining
+        } else {
+            return .stable
         }
     }
 }

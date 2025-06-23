@@ -18,6 +18,26 @@ enum RewardFrequency: String, Codable, CaseIterable, Identifiable {
         case .oneTime: return "One Time"
         }
     }
+    
+    var shortDisplayName: String {
+        switch self {
+        case .daily: return "Day"
+        case .weekly: return "Week"
+        case .monthly: return "Month"
+        case .yearly: return "Year"
+        case .oneTime: return "Once"
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .daily: return "sun.max"
+        case .weekly: return "calendar.circle"
+        case .monthly: return "calendar"
+        case .yearly: return "star.circle"
+        case .oneTime: return "infinity"
+        }
+    }
 }
 
 struct Reward: Identifiable, Codable, Equatable {

@@ -192,6 +192,37 @@ class TaskManager: ObservableObject {
         }
     }
     
+    func addTrackedTime(_ duration: TimeInterval, to taskId: UUID, on date: Date = Date()) {
+        guard let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+        
+        var task = tasks[taskIndex]
+        let startOfDay = date.startOfDay
+        
+        // Get or create completion for this date
+        var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
+        
+        // Add tracked time
+        completion.trackedTime += duration
+        task.completions[startOfDay] = completion
+        
+        // Update last modified date
+        task.lastModifiedDate = Date()
+        tasks[taskIndex] = task
+        
+        // Save changes
+        DispatchQueue.main.async { [weak self] in
+            self?.saveTasks()
+            self?.notifyTasksUpdated()
+            self?.objectWillChange.send()
+            
+            // Sync with CloudKit
+            CloudKitService.shared.saveTask(task)
+            
+            // Sync with iOS
+            self?.synchronizeWithWatch()
+        }
+    }
+    
     func saveTasks() {
         do {
             let data = try JSONEncoder().encode(tasks)
@@ -256,4 +287,4 @@ class TaskManager: ObservableObject {
 
 extension Notification.Name {
     static let tasksDidUpdate = Notification.Name("tasksDidUpdate")
-} 
+}

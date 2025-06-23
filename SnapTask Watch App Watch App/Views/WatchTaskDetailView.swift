@@ -6,7 +6,7 @@ struct WatchTaskDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var taskManager = TaskManager.shared
     @State private var showingEditForm = false
-    @State private var showingPomodoro = false
+    @State private var showingTrackingModeSelection = false
     
     var body: some View {
         NavigationStack {
@@ -117,26 +117,24 @@ struct WatchTaskDetailView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Pomodoro Button
-                        if task.pomodoroSettings != nil {
-                            Button(action: { showingPomodoro = true }) {
-                                HStack {
-                                    Image(systemName: "timer")
-                                        .font(.system(size: 14))
-                                    
-                                    Text("Start Pomodoro")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.blue)
-                                )
+                        // Single Track button instead of two separate buttons
+                        Button(action: { showingTrackingModeSelection = true }) {
+                            HStack {
+                                Image(systemName: "play.circle")
+                                    .font(.system(size: 14))
+                                
+                                Text("Track")
+                                    .font(.system(size: 12, weight: .medium))
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.blue)
+                            )
                         }
+                        .buttonStyle(PlainButtonStyle())
                         
                         // Edit Button
                         Button(action: { showingEditForm = true }) {
@@ -171,8 +169,8 @@ struct WatchTaskDetailView: View {
         .sheet(isPresented: $showingEditForm) {
             WatchTaskFormView(task: task, initialDate: selectedDate, isPresented: $showingEditForm)
         }
-        .sheet(isPresented: $showingPomodoro) {
-            WatchTaskPomodoroView(task: task)
+        .sheet(isPresented: $showingTrackingModeSelection) {
+            WatchTrackingModeSelectionView(task: task)
         }
     }
     

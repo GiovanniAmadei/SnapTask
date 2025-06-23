@@ -26,7 +26,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     // Time tracking properties
     var totalTrackedTime: TimeInterval = 0
     var lastTrackedDate: Date?
-    
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -155,6 +155,48 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var currentStreak: Int {
         streakForDate(Date())
     }
+    
+    func hasRatings(for date: Date) -> Bool {
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+        return completions[targetDate]?.hasRatings == true
+    }
+    
+    func actualDuration(for date: Date) -> TimeInterval? {
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+        return completions[targetDate]?.actualDuration
+    }
+    
+    func formattedActualDuration(for date: Date) -> String? {
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+        return completions[targetDate]?.formattedActualDuration
+    }
+    
+    func difficultyRating(for date: Date) -> Int? {
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+        return completions[targetDate]?.difficultyRating
+    }
+    
+    func qualityRating(for date: Date) -> Int? {
+        let calendar = Calendar.current
+        let targetDate = calendar.startOfDay(for: date)
+        return completions[targetDate]?.qualityRating
+    }
+    
+    // Check if task has historical rating data
+    var hasHistoricalRatings: Bool {
+        let ratingsCount = completions.values.reduce(0) { count, completion in
+            let hasQuality = completion.qualityRating != nil
+            let hasDifficulty = completion.difficultyRating != nil
+            return count + (hasQuality || hasDifficulty ? 1 : 0)
+        }
+        return ratingsCount >= 2 // At least 2 completions with ratings
+    }
+    
+    // These have been removed to force explicit date usage
     
     static func == (lhs: TodoTask, rhs: TodoTask) -> Bool {
         lhs.id == rhs.id &&

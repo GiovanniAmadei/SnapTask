@@ -135,7 +135,7 @@ struct TaskCard: View {
             PomodoroView(task: task)
         }
         .navigationDestination(isPresented: $showingDetailView) {
-            TaskDetailView(task: task)
+            TaskDetailView(taskId: task.id, targetDate: nil)
         }
     }
 }

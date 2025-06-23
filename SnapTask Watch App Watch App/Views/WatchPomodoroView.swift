@@ -103,6 +103,7 @@ class WatchPomodoroViewModel: ObservableObject {
     @Published var state: PomodoroState = .notStarted
     @Published var currentSession: Int = 1
     @Published var totalSessions: Int = 4
+    @Published var completedWorkSessions: Int = 0
     
     private var workDuration: TimeInterval = 25 * 60
     private var breakDuration: TimeInterval = 5 * 60
@@ -134,6 +135,7 @@ class WatchPomodoroViewModel: ObservableObject {
         timeRemaining = self.workDuration
         state = .notStarted
         currentSession = 1
+        completedWorkSessions = 0
     }
     
     func start() {
@@ -164,6 +166,7 @@ class WatchPomodoroViewModel: ObservableObject {
         timeRemaining = workDuration
         state = .notStarted
         currentSession = 1
+        completedWorkSessions = 0
     }
     
     private func updateTimer() {
@@ -183,6 +186,8 @@ class WatchPomodoroViewModel: ObservableObject {
                 
                 // Logic to switch between working and breaks
                 if self.state == .working {
+                    self.completedWorkSessions += 1
+                    
                     self.state = .onBreak
                     
                     // Check if it's time for a long break
@@ -209,4 +214,4 @@ class WatchPomodoroViewModel: ObservableObject {
             }
         }
     }
-} 
+}

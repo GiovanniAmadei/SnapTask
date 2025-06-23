@@ -198,7 +198,7 @@ struct TaskRowView: View {
             }
         }
         .navigationDestination(isPresented: $showingDetailView) {
-            TaskDetailView(task: task)
+            TaskDetailView(taskId: task.id, targetDate: date)
         }
         .onAppear {
             viewModel.refreshTask(task, for: date)

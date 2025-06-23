@@ -4,6 +4,8 @@ struct WatchTaskPomodoroView: View {
     let task: TodoTask
     @Environment(\.dismiss) private var dismiss
     @StateObject private var pomodoroViewModel: WatchPomodoroViewModel
+    @State private var showingCompletion = false
+    @State private var totalFocusTime: TimeInterval = 0
     
     init(task: TodoTask) {
         self.task = task
@@ -64,66 +66,98 @@ struct WatchTaskPomodoroView: View {
                     .frame(height: 100)
                     
                     // Session Info
-                    Text("Session \(pomodoroViewModel.currentSession)")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 12) {
+                        Text("Session \(pomodoroViewModel.currentSession)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        if totalFocusTime > 0 {
+                            Text("Focus: \(formatFocusTime(totalFocusTime))")
+                                .font(.system(size: 10))
+                                .foregroundColor(.blue)
+                        }
+                    }
                 }
                 
                 // Control Buttons
-                HStack(spacing: 12) {
-                    if pomodoroViewModel.state == .notStarted {
-                        Button(action: { pomodoroViewModel.start() }) {
-                            Text("Start")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.blue)
-                                )
+                VStack(spacing: 8) {
+                    HStack(spacing: 12) {
+                        if pomodoroViewModel.state == .notStarted {
+                            Button(action: { pomodoroViewModel.start() }) {
+                                Text("Start")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.blue)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        } else if pomodoroViewModel.state == .paused {
+                            Button(action: { pomodoroViewModel.start() }) {
+                                Text("Resume")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.green)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        } else if pomodoroViewModel.state == .working || pomodoroViewModel.state == .onBreak {
+                            Button(action: { pomodoroViewModel.pause() }) {
+                                Text("Pause")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.orange)
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
-                    } else if pomodoroViewModel.state == .paused {
-                        Button(action: { pomodoroViewModel.start() }) {
-                            Text("Resume")
+                        
+                        Button(action: { pomodoroViewModel.reset() }) {
+                            Text("Reset")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white)
+                                .foregroundColor(.red)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.green)
-                                )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    } else if pomodoroViewModel.state == .working || pomodoroViewModel.state == .onBreak {
-                        Button(action: { pomodoroViewModel.pause() }) {
-                            Text("Pause")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.orange)
+                                        .stroke(Color.red, lineWidth: 1)
                                 )
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                     
-                    Button(action: { pomodoroViewModel.reset() }) {
-                        Text("Reset")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.red)
+                    if totalFocusTime > 0 {
+                        Button(action: {
+                            pomodoroViewModel.pause() // Stop current timer
+                            showingCompletion = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10))
+                                Text("Complete Session")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 6)
                             .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.red, lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.green)
                             )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
                 
                 Spacer()
@@ -139,6 +173,27 @@ struct WatchTaskPomodoroView: View {
         }
         .onAppear {
             setupPomodoro()
+        }
+        .onChange(of: pomodoroViewModel.completedWorkSessions) { _, newValue in
+            if let settings = task.pomodoroSettings {
+                totalFocusTime = TimeInterval(newValue) * settings.workDuration
+            }
+        }
+        .sheet(isPresented: $showingCompletion) {
+            WatchTimeTrackingCompletionView(
+                task: task,
+                timeSpent: totalFocusTime,
+                onSave: {
+                    pomodoroViewModel.reset()
+                    totalFocusTime = 0
+                    dismiss()
+                },
+                onDiscard: {
+                    pomodoroViewModel.reset()
+                    totalFocusTime = 0
+                    dismiss()
+                }
+            )
         }
     }
     
@@ -157,6 +212,17 @@ struct WatchTaskPomodoroView: View {
         let minutes = Int(timeInterval) / 60
         let seconds = Int(timeInterval) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    private func formatFocusTime(_ timeInterval: TimeInterval) -> String {
+        let minutes = Int(timeInterval) / 60
+        if minutes >= 60 {
+            let hours = minutes / 60
+            let remainingMinutes = minutes % 60
+            return "\(hours)h \(remainingMinutes)m"
+        } else {
+            return "\(minutes)m"
+        }
     }
     
     private var stateText: String {

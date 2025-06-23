@@ -74,6 +74,8 @@ class TimelineViewModel: ObservableObject {
     @Published var showingFilterSheet = false
     @Published var showingTimelineView = false
     
+    @Published var openSwipeTaskId: UUID? = nil
+    
     private let tasksKey = "saved_tasks"
     private var cancellables = Set<AnyCancellable>()
     
@@ -143,7 +145,15 @@ class TimelineViewModel: ObservableObject {
             }
             
             return false
-        }.sorted { $0.startTime < $1.startTime }
+        }
+        .sorted { task1, task2 in
+            // First, sort by start time
+            if task1.startTime != task2.startTime {
+                return task1.startTime < task2.startTime
+            }
+            // Then by creation date - older tasks first (new tasks go to bottom)
+            return task1.creationDate < task2.creationDate
+        }
         
         objectWillChange.send()
     }
@@ -486,6 +496,21 @@ class TimelineViewModel: ObservableObject {
         formatter.dateFormat = "MMMM yyyy"
         monthYearString = formatter.string(from: selectedDate)
     }
+    
+    func setOpenSwipeTask(_ taskId: UUID?) {
+        if openSwipeTaskId != taskId {
+            openSwipeTaskId = taskId
+        }
+    }
+    
+    func closeAllSwipeMenus() {
+        openSwipeTaskId = nil
+    }
+    
+    func isSwipeMenuOpen(for taskId: UUID) -> Bool {
+        return openSwipeTaskId == taskId
+    }
+    
 }
 
 enum OrganizedTasks {

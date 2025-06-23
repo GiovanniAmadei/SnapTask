@@ -9,10 +9,12 @@ struct RewardsView: View {
     @State private var showingPointsHistory = false
     @State private var showingRedeemedRewards = false
     @State private var showingCategoryPointsBreakdown = false
+    @State private var selectedFilter: RewardFrequency = .daily
     @Environment(\.colorScheme) private var colorScheme
     
-    private var allRewards: [Reward] {
-        (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards)
+    private var filteredRewards: [Reward] {
+        let allRewards = (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards)
+        return allRewards.filter { $0.frequency == selectedFilter }
             .sorted { $0.pointsCost < $1.pointsCost }
     }
     
@@ -24,8 +26,8 @@ struct RewardsView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Compact Header with current points
-                        compactHeaderView
+                        // Unified Points & Filter View
+                        unifiedPointsFilterView
                         
                         // Quick Actions
                         quickActionsView
@@ -45,7 +47,7 @@ struct RewardsView: View {
                         .padding(.bottom, 16)
                 }
             }
-            .navigationTitle("rewards".localized)
+            .navigationTitle("Rewards")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingAddReward) {
                 RewardFormView()
@@ -68,15 +70,15 @@ struct RewardsView: View {
         }
     }
     
-    private var compactHeaderView: some View {
-        Button(action: {
-            showingCategoryPointsBreakdown = true
-        }) {
-            VStack(spacing: 14) {
-                // Main points section
+    private var unifiedPointsFilterView: some View {
+        VStack(spacing: 16) {
+            // Header with total points and detail button
+            Button(action: {
+                showingCategoryPointsBreakdown = true
+            }) {
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("available_points".localized)
+                        Text("Available Points")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.secondary)
                         
@@ -113,63 +115,120 @@ struct RewardsView: View {
                             .lineLimit(2)
                     }
                 }
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Period breakdown chips
+            HStack(spacing: 6) {
+                CompactPointsChip(title: "Today", points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
+                CompactPointsChip(title: "Week", points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
+                CompactPointsChip(title: "Month", points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
+                CompactPointsChip(title: "Year", points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+            }
+            
+            // Filter Section
+            VStack(spacing: 10) {
+                HStack {
+                    Text("Filter by Frequency")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    let currentPoints = viewModel.currentPoints(for: selectedFilter)
+                    Text("\(currentPoints) pts available")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(selectedFilter == .daily ? Color(hex: "FF6B6B") : 
+                                       selectedFilter == .weekly ? Color(hex: "4ECDC4") :
+                                       selectedFilter == .monthly ? Color(hex: "45B7D1") : 
+                                       Color(hex: "FFD700"))
+                }
                 
-                // Breakdown chips
                 HStack(spacing: 6) {
-                    CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
-                    CompactPointsChip(title: "week".localized, points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
-                    CompactPointsChip(title: "month".localized, points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
-                    CompactPointsChip(title: "year".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+                    ForEach([RewardFrequency.daily, .weekly, .monthly, .yearly], id: \.self) { frequency in
+                        Button(action: {
+                            selectedFilter = frequency
+                        }) {
+                            VStack(spacing: 3) {
+                                Image(systemName: frequency.iconName)
+                                    .font(.system(size: 14, weight: .medium))
+                                
+                                Text(frequency.shortDisplayName)
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(selectedFilter == frequency ? 
+                                          (frequency == .daily ? Color(hex: "FF6B6B") :
+                                           frequency == .weekly ? Color(hex: "4ECDC4") :
+                                           frequency == .monthly ? Color(hex: "45B7D1") : 
+                                           Color(hex: "FFD700")) : 
+                                          Color(UIColor.secondarySystemGroupedBackground))
+                            )
+                            .foregroundColor(selectedFilter == frequency ? .white : .primary)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(
+                                        selectedFilter == frequency ? 
+                                        Color.clear : 
+                                        Color.primary.opacity(0.2), 
+                                        lineWidth: 1
+                                    )
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 18)
-            .background(
-                ZStack {
-                    // Base background
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color(UIColor.secondarySystemGroupedBackground))
-                    
-                    // Gradient overlay
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(hex: "5E5CE6").opacity(0.06),
-                                    Color(hex: "9747FF").opacity(0.03),
-                                    Color.clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    
-                    // Border
-                    RoundedRectangle(cornerRadius: 18)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    Color(hex: "5E5CE6").opacity(0.2),
-                                    Color(hex: "9747FF").opacity(0.1),
-                                    Color.clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                }
-            )
-            .shadow(color: Color(hex: "5E5CE6").opacity(0.08), radius: 8, x: 0, y: 4)
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
+        .background(
+            ZStack {
+                // Base background
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+                
+                // Gradient overlay
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: "5E5CE6").opacity(0.06),
+                                Color(hex: "9747FF").opacity(0.03),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                // Border
+                RoundedRectangle(cornerRadius: 18)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: "5E5CE6").opacity(0.2),
+                                Color(hex: "9747FF").opacity(0.1),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+        )
+        .shadow(color: Color(hex: "5E5CE6").opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.top, 8)
     }
     
     private var quickActionsView: some View {
         HStack(spacing: 8) {
             CompactActionCard(
-                title: "points_history".localized,
+                title: "Points History",
                 icon: "chart.line.uptrend.xyaxis",
                 color: Color(hex: "00C853")
             ) {
@@ -177,7 +236,7 @@ struct RewardsView: View {
             }
             
             CompactActionCard(
-                title: "redeemed_rewards".localized,
+                title: "Redeemed Rewards",
                 icon: "gift.circle",
                 color: Color(hex: "FF6B6B")
             ) {
@@ -189,21 +248,21 @@ struct RewardsView: View {
     private var rewardsListView: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("available_rewards".localized)
+                Text("Available Rewards")
                     .font(.system(size: 20, weight: .semibold))
                 
                 Spacer()
                 
-                Text("\(allRewards.count) " + "rewards".localized)
+                Text("\(filteredRewards.count) rewards")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }
             
-            if allRewards.isEmpty {
+            if filteredRewards.isEmpty {
                 emptyRewardsView
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(allRewards) { reward in
+                    ForEach(filteredRewards) { reward in
                         RewardCard(
                             reward: reward,
                             canRedeem: viewModel.canRedeemReward(reward),
@@ -237,10 +296,10 @@ struct RewardsView: View {
             }
             
             VStack(spacing: 8) {
-                Text("no_rewards_yet".localized)
+                Text("No Rewards Yet")
                     .font(.system(size: 18, weight: .semibold))
                 
-                Text("create_first_reward_motivation".localized)
+                Text("Create your first reward to get motivated!")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -396,7 +455,11 @@ struct RewardCard: View {
     @StateObject private var categoryManager = CategoryManager.shared
     
     private var progress: Double {
-        min(Double(currentPoints) / Double(reward.pointsCost), 1.0)
+        let safeCurrentPoints = max(currentPoints, 0)
+        let actualAvailablePoints = reward.isGeneralReward ? 
+            RewardManager.shared.availablePoints(for: reward.frequency) :
+            RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
+        return min(Double(actualAvailablePoints) / Double(reward.pointsCost), 1.0)
     }
     
     private var categoryColor: Color {
@@ -413,93 +476,17 @@ struct RewardCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(UIColor.secondarySystemGroupedBackground))
             
-            // Multi-layer translucent progress effect with category color
             ZStack {
-                // Base progress layer with category color
+                // Base progress layer
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
                         LinearGradient(
                             colors: reward.isGeneralReward ? 
-                            [Color(hex: "5E5CE6").opacity(0.25), Color(hex: "9747FF").opacity(0.35)] :
-                            [categoryColor.opacity(0.25), categoryColor.opacity(0.35)],
+                            [Color(hex: "5E5CE6").opacity(0.15), Color(hex: "9747FF").opacity(0.20)] :
+                            [categoryColor.opacity(0.15), categoryColor.opacity(0.20)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
-                    )
-                    .mask(
-                        GeometryReader { geometry in
-                            HStack {
-                                Rectangle()
-                                    .frame(width: geometry.size.width * progress)
-                                Spacer(minLength: 0)
-                            }
-                        }
-                    )
-                
-                // Glass morphism layer with blur effect simulation
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color.white.opacity(0.4),
-                                Color.white.opacity(0.1),
-                                Color.clear
-                            ],
-                            center: .topLeading,
-                            startRadius: 10,
-                            endRadius: 100
-                        )
-                    )
-                    .mask(
-                        GeometryReader { geometry in
-                            HStack {
-                                Rectangle()
-                                    .frame(width: geometry.size.width * progress)
-                                Spacer(minLength: 0)
-                            }
-                        }
-                    )
-                    .blendMode(.overlay)
-                
-                // Animated shimmer wave
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.clear,
-                                Color.white.opacity(0.6),
-                                Color.clear
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .mask(
-                        GeometryReader { geometry in
-                            HStack {
-                                Rectangle()
-                                    .frame(width: geometry.size.width * progress)
-                                Spacer(minLength: 0)
-                            }
-                        }
-                    )
-                    .animation(
-                        Animation.easeInOut(duration: 2.5)
-                            .repeatForever(autoreverses: true),
-                        value: progress
-                    )
-                
-                // Edge highlight for depth with category color
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: reward.isGeneralReward ? 
-                            [Color(hex: "5E5CE6").opacity(0.3), Color.clear] :
-                            [categoryColor.opacity(0.3), Color.clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
                     )
                     .mask(
                         GeometryReader { geometry in
@@ -512,67 +499,55 @@ struct RewardCard: View {
                     )
             }
             
-            // Card content
-            HStack(spacing: 14) {
-                // Enhanced icon with category color
-                ZStack {
-                    // Icon shadow
-                    Circle()
-                        .fill(Color.black.opacity(0.1))
-                        .frame(width: 46, height: 46)
-                        .offset(x: 1, y: 2)
+            // Card content with improved layout
+            VStack(spacing: 12) {
+                // Header row with icon and title
+                HStack(spacing: 14) {
+                    // Enhanced icon with category color
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: canRedeem ? 
+                                (reward.isGeneralReward ? 
+                                 [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
+                                 [categoryColor, categoryColor.opacity(0.8)]) :
+                                [Color.gray.opacity(0.4), Color.gray.opacity(0.5)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: reward.icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
                     
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: canRedeem ? 
-                            (reward.isGeneralReward ? 
-                             [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
-                             [categoryColor, categoryColor.opacity(0.8)]) :
-                            [Color.gray.opacity(0.4), Color.gray.opacity(0.5)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            Color.white.opacity(0.3),
-                                            Color.clear
-                                        ],
-                                        center: .topLeading,
-                                        startRadius: 5,
-                                        endRadius: 20
-                                    )
-                                )
-                        )
-                    
-                    Image(systemName: reward.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
+                    // Title and tag
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(reward.name)
+                                .font(.system(size: 16, weight: .semibold))
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            
+                            Spacer()
+                            
+                            rewardTypeTag
+                        }
+                        
+                        if let description = reward.description, !description.isEmpty {
+                            Text(description)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
                 
-                // Content
-                VStack(alignment: .leading, spacing: 4) {
+                // Category tag (if category-specific)
+                if !reward.isGeneralReward, let categoryName = reward.categoryName {
                     HStack {
-                        Text(reward.name)
-                            .font(.system(size: 16, weight: .semibold))
-                        
-                        Spacer()
-                        
-                        rewardTypeTag
-                    }
-                    
-                    if let description = reward.description, !description.isEmpty {
-                        Text(description)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    
-                    if !reward.isGeneralReward, let categoryName = reward.categoryName {
                         HStack(spacing: 6) {
                             Circle()
                                 .fill(categoryColor)
@@ -581,6 +556,7 @@ struct RewardCard: View {
                             Text(categoryName)
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(categoryColor)
+                                .lineLimit(1)
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -592,74 +568,76 @@ struct RewardCard: View {
                                         .strokeBorder(categoryColor.opacity(0.2), lineWidth: 0.5)
                                 )
                         )
+                        
+                        Spacer()
                     }
-                    
-                    HStack {
+                }
+                
+                // Bottom row with points and redeem button
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
                         if reward.isGeneralReward {
-                            Text("\(currentPoints)/\(reward.pointsCost) points")
+                            let actualPoints = RewardManager.shared.availablePoints(for: reward.frequency)
+                            let safePoints = max(actualPoints, 0)
+                            Text("\(safePoints)/\(reward.pointsCost) points")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(canRedeem ? Color(hex: "00C853") : Color(hex: "5E5CE6"))
                         } else if let categoryId = reward.categoryId {
                             let categoryPoints = RewardManager.shared.availablePointsForCategory(categoryId, frequency: reward.frequency)
-                            Text("\(categoryPoints)/\(reward.pointsCost) points")
+                            let safeCategoryPoints = max(categoryPoints, 0)
+                            Text("\(safeCategoryPoints)/\(reward.pointsCost) points")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(canRedeem ? Color(hex: "00C853") : categoryColor)
                         }
                         
-                        Spacer()
-                        
-                        Button(action: onRedeemTapped) {
-                            Text("redeem".localized)
-                                .font(.system(size: 12, weight: .semibold))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(
-                                                canRedeem ?
-                                                (reward.isGeneralReward ?
-                                                 LinearGradient(
-                                                    colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                 ) :
-                                                 LinearGradient(
-                                                    colors: [categoryColor, categoryColor.opacity(0.8)],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                 )) :
-                                                LinearGradient(
-                                                    colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                )
-                                            )
-                                        
-                                        if canRedeem {
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .fill(
-                                                    LinearGradient(
-                                                        colors: [
-                                                            Color.white.opacity(0.3),
-                                                            Color.clear
-                                                        ],
-                                                        startPoint: .top,
-                                                        endPoint: .bottom
-                                                    )
-                                                )
-                                        }
-                                    }
-                                )
-                                .foregroundColor(.white)
-                                .shadow(color: canRedeem ? (reward.isGeneralReward ? Color(hex: "5E5CE6").opacity(0.3) : categoryColor.opacity(0.3)) : Color.clear, radius: 2, x: 0, y: 1)
+                        if !canRedeem {
+                            let actualAvailablePoints = reward.isGeneralReward ? 
+                                RewardManager.shared.availablePoints(for: reward.frequency) :
+                                RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
+                            let missingPoints = reward.pointsCost - max(actualAvailablePoints, 0)
+                            Text("Need \(missingPoints) more")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
                         }
-                        .disabled(!canRedeem)
                     }
+                    
+                    Spacer()
+                    
+                    Button(action: onRedeemTapped) {
+                        Text("redeem".localized)
+                            .font(.system(size: 12, weight: .semibold))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(
+                                        canRedeem ?
+                                        (reward.isGeneralReward ?
+                                         LinearGradient(
+                                            colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                         ) :
+                                         LinearGradient(
+                                            colors: [categoryColor, categoryColor.opacity(0.8)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                         )) :
+                                        LinearGradient(
+                                            colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                            .foregroundColor(.white)
+                            .shadow(color: canRedeem ? (reward.isGeneralReward ? Color(hex: "5E5CE6").opacity(0.3) : categoryColor.opacity(0.3)) : Color.clear, radius: 2, x: 0, y: 1)
+                    }
+                    .disabled(!canRedeem)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
         .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
         .contextMenu {

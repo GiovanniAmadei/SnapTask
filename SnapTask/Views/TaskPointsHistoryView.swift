@@ -219,18 +219,21 @@ struct TaskPointsHistoryView: View {
                 StatCard(
                     title: "Tasks",
                     value: "\(stats.totalTasks)",
+                    icon: "list.bullet",
                     color: selectedFilter.color
                 )
                 
                 StatCard(
                     title: "Completions",
                     value: "\(stats.totalCompletions)",
+                    icon: "checkmark.circle.fill",
                     color: selectedFilter.color
                 )
                 
                 StatCard(
                     title: "Avg/Day",
                     value: String(format: "%.1f", stats.averagePerDay),
+                    icon: "clock.fill",
                     color: selectedFilter.color
                 )
             }
@@ -289,30 +292,6 @@ struct TaskPointsHistoryView: View {
         case .year:
             return calendar.isDate(date, equalTo: now, toGranularity: .year)
         }
-    }
-}
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(color)
-            
-            Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-        )
     }
 }
 

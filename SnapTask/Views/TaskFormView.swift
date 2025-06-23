@@ -126,7 +126,7 @@ struct TaskFormView: View {
                                 LocationPickerView(selectedLocation: $viewModel.location)
                             } label: {
                                 HStack {
-                                    Text("location".localized)
+                                    Text("Location".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
                                     Spacer()
@@ -136,7 +136,7 @@ struct TaskFormView: View {
                                             .foregroundColor(.secondary)
                                             .lineLimit(1)
                                     } else {
-                                        Text("add_location".localized)
+                                        Text("Add Location".localized)
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                     }
@@ -150,7 +150,7 @@ struct TaskFormView: View {
                                 IconPickerView(selectedIcon: $viewModel.icon)
                             } label: {
                                 ModernNavigationRow(
-                                    title: "icon".localized,
+                                    title: "Icon".localized,
                                     value: viewModel.icon,
                                     isSystemImage: true
                                 )
@@ -159,14 +159,14 @@ struct TaskFormView: View {
                     }
                     
                     // Time Card
-                    ModernCard(title: "time".localized, icon: "clock") {
+                    ModernCard(title: "Time".localized, icon: "clock") {
                         VStack(spacing: 16) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("specific_time".localized)
+                                    Text("Specific Time".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
-                                    Text("set_exact_time".localized)
+                                    Text("Set Exact Time".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -176,7 +176,7 @@ struct TaskFormView: View {
                             
                             if viewModel.hasSpecificTime {
                                 HStack {
-                                    Text("start_time".localized)
+                                    Text("Start Time".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
                                     Spacer()
@@ -191,10 +191,10 @@ struct TaskFormView: View {
                             
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("duration".localized)
+                                    Text("Duration".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
-                                    Text("add_duration".localized)
+                                    Text("Add Duration".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -204,7 +204,7 @@ struct TaskFormView: View {
                             
                             if viewModel.hasDuration {
                                 HStack {
-                                    Text("duration_value".localized)
+                                    Text("Duration Value".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
                                     
@@ -237,13 +237,13 @@ struct TaskFormView: View {
                     .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasDuration)
                     
                     // Category & Priority Card
-                    ModernCard(title: "category_priority".localized, icon: "folder") {
+                    ModernCard(title: "Category & Priority".localized, icon: "folder") {
                         VStack(spacing: 16) {
                             NavigationLink {
                                 CategoryPickerView(selectedCategory: $viewModel.selectedCategory)
                             } label: {
                                 HStack {
-                                    Text("category".localized)
+                                    Text("Category".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
                                     Spacer()
@@ -257,7 +257,7 @@ struct TaskFormView: View {
                                                 .foregroundColor(.secondary)
                                         }
                                     } else {
-                                        Text("select_category".localized)
+                                        Text("Select Category".localized)
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                     }
@@ -268,7 +268,7 @@ struct TaskFormView: View {
                             }
                             
                             HStack {
-                                Text("priority".localized)
+                                Text("Priority".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 Spacer()
@@ -298,10 +298,10 @@ struct TaskFormView: View {
                     }
                     
                     // Recurrence Card
-                    ModernCard(title: "recurrence".localized, icon: "repeat") {
+                    ModernCard(title: "Recurrence".localized, icon: "repeat") {
                         VStack(spacing: 16) {
                             HStack {
-                                Text("repeat_task".localized)
+                                Text("Repeat Task".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 Spacer()
@@ -314,7 +314,7 @@ struct TaskFormView: View {
                                         EnhancedRecurrenceSettingsView(viewModel: viewModel)
                                     } label: {
                                         HStack {
-                                            Text("frequency".localized)
+                                            Text("Frequency".localized)
                                                 .font(.subheadline.weight(.medium))
                                                 .foregroundColor(.primary)
                                             Spacer()
@@ -328,7 +328,7 @@ struct TaskFormView: View {
                                     }
                                     
                                     HStack {
-                                        Text("track_in_consistency".localized)
+                                        Text("Track in Consistency".localized)
                                             .font(.subheadline.weight(.medium))
                                             .foregroundColor(.primary)
                                         Spacer()
@@ -346,10 +346,10 @@ struct TaskFormView: View {
                     .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isRecurring)
                     
                     // Subtasks Card
-                    ModernCard(title: "subtasks".localized, icon: "checklist") {
+                    ModernCard(title: "Subtasks".localized, icon: "checklist") {
                         VStack(spacing: 16) {
                             HStack(spacing: 12) {
-                                TextField("add_subtask".localized, text: $newSubtaskName)
+                                TextField("Add Subtask".localized, text: $newSubtaskName)
                                     .textFieldStyle(PlainTextFieldStyle())
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
@@ -365,7 +365,7 @@ struct TaskFormView: View {
                                         newSubtaskName = ""
                                     }
                                 }) {
-                                    Text("add".localized)
+                                    Text("Add".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 16)
@@ -407,10 +407,10 @@ struct TaskFormView: View {
                     .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.subtasks.count)
                     
                     // Pomodoro Card
-                    ModernCard(title: "pomodoro_mode".localized, icon: "timer") {
+                    ModernCard(title: "Pomodoro Mode".localized, icon: "timer") {
                         VStack(spacing: 16) {
                             HStack {
-                                Text("enable_pomodoro".localized)
+                                Text("Enable Pomodoro".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 Spacer()
@@ -422,7 +422,7 @@ struct TaskFormView: View {
                                     PomodoroSettingsView(settings: $viewModel.pomodoroSettings)
                                 } label: {
                                     HStack {
-                                        Text("pomodoro_settings".localized)
+                                        Text("Pomodoro Settings".localized)
                                             .font(.subheadline.weight(.medium))
                                             .foregroundColor(.primary)
                                         Spacer()
@@ -442,10 +442,10 @@ struct TaskFormView: View {
                     .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isPomodoroEnabled)
                     
                     // Rewards Card
-                    ModernCard(title: "reward_points".localized, icon: "star") {
+                    ModernCard(title: "Reward Points".localized, icon: "star") {
                         VStack(spacing: 16) {
                             HStack {
-                                Text("earn_reward_points".localized)
+                                Text("Earn Reward Points".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 Spacer()
@@ -455,7 +455,7 @@ struct TaskFormView: View {
                             if viewModel.hasRewardPoints {
                                 VStack(spacing: 16) {
                                     HStack {
-                                        Text("custom_points".localized)
+                                        Text("Custom Points".localized)
                                             .font(.subheadline.weight(.medium))
                                             .foregroundColor(.primary)
                                         Spacer()
@@ -463,7 +463,7 @@ struct TaskFormView: View {
                                     }
                                     
                                     HStack(alignment: .center) {
-                                        Text("points".localized)
+                                        Text("Points".localized)
                                             .font(.subheadline.weight(.medium))
                                             .foregroundColor(.primary)
                                         Spacer()
@@ -471,7 +471,7 @@ struct TaskFormView: View {
                                         Group {
                                             if viewModel.useCustomPoints {
                                                 HStack {
-                                                    TextField("points".localized, text: $viewModel.customPointsText)
+                                                    TextField("Points".localized, text: $viewModel.customPointsText)
                                                         .keyboardType(.numberPad)
                                                         .textFieldStyle(PlainTextFieldStyle())
                                                         .multilineTextAlignment(.center)
@@ -498,7 +498,7 @@ struct TaskFormView: View {
                                                         .foregroundColor(.secondary)
                                                 }
                                             } else {
-                                                Picker("points".localized, selection: $viewModel.rewardPoints) {
+                                                Picker("Points".localized, selection: $viewModel.rewardPoints) {
                                                     ForEach([1, 2, 3, 5, 8, 10], id: \.self) { points in
                                                         Text("\(points)").tag(points)
                                                     }
@@ -521,16 +521,16 @@ struct TaskFormView: View {
                                     }
                                     
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("point_guidelines".localized)
+                                        Text("Point Guidelines".localized)
                                             .font(.caption.weight(.medium))
                                             .foregroundColor(.secondary)
-                                        Text("quick_tasks_5_15_min".localized)
+                                        Text("Quick Tasks (5-15 min)".localized)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
-                                        Text("regular_tasks_30_90_min".localized)
+                                        Text("Regular Tasks (30-90 min)".localized)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
-                                        Text("complex_tasks_2_4_hours".localized)
+                                        Text("Complex Tasks (2-4 hours)".localized)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -558,7 +558,7 @@ struct TaskFormView: View {
                         HStack {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 16, weight: .medium))
-                            Text("save_task".localized)
+                            Text("Save Task".localized)
                                 .font(.headline)
                         }
                         .foregroundColor(.white)
@@ -588,18 +588,18 @@ struct TaskFormView: View {
                     }
             )
             .contentShape(Rectangle())
-            .navigationTitle("new_task".localized)
+            .navigationTitle("New Task".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("cancel".localized) {
+                    Button("Cancel".localized) {
                         dismiss()
                     }
                     .foregroundColor(.secondary)
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("save".localized) {
+                    Button("Save".localized) {
                         let task = viewModel.createTask()
                         onSave(task)
                         dismiss()
@@ -611,7 +611,7 @@ struct TaskFormView: View {
                 
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("done".localized) {
+                    Button("Done".localized) {
                         focusedField = nil
                     }
                 }

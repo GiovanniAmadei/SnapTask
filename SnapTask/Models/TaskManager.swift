@@ -34,7 +34,7 @@ class TaskManager: ObservableObject {
             .sink { [weak self] _ in
                 // CloudKit data changed, but we'll let the sync process handle it
                 // to avoid infinite loops
-                print("📥 CloudKit data changed notification received")
+                print(" CloudKit data changed notification received")
             }
             .store(in: &cancellables)
     }
@@ -62,7 +62,7 @@ class TaskManager: ObservableObject {
         
         handleTaskCalendarSync(updatedTask, isNew: true)
         
-        print("✅ Task added: \(updatedTask.name)")
+        print(" Task added: \(updatedTask.name)")
     }
     
     func updateTask(_ updatedTask: TodoTask) {
@@ -112,7 +112,7 @@ class TaskManager: ObservableObject {
             
             handleTaskCalendarSync(task, isNew: false)
             
-            print("✅ Task updated: \(task.name)")
+            print(" Task updated: \(task.name)")
         }
     }
     
@@ -129,7 +129,7 @@ class TaskManager: ObservableObject {
         // Sync with Apple Watch
         synchronizeWithWatch()
         
-        print("✅ Updated \(newTasks.count) tasks from sync")
+        print(" Updated \(newTasks.count) tasks from sync")
     }
     
     func removeTask(_ task: TodoTask) {
@@ -160,7 +160,7 @@ class TaskManager: ObservableObject {
             await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
         }
         
-        print("✅ Task removed: \(task.name)")
+        print(" Task removed: \(task.name)")
     }
     
     func saveTrackingSession(_ session: TrackingSession) {
@@ -172,7 +172,29 @@ class TaskManager: ObservableObject {
         trackingSessions.append(updatedSession)
         saveTrackingSessions()
         
-        print("✅ Tracking session saved: \(formatDuration(session.effectiveWorkTime))")
+        if let taskId = session.taskId,
+           let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) {
+            
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            
+            // Check if this specific completion already has actualDuration set
+            let existingCompletion = tasks[taskIndex].completions[today]
+            if existingCompletion?.actualDuration == nil {
+                let effectiveWorkTime = session.effectiveWorkTime
+                
+                // Update task with the tracked time as actual duration for today
+                updateTaskRating(
+                    taskId: taskId,
+                    actualDuration: effectiveWorkTime,
+                    for: today
+                )
+                
+                print(" Auto-set actualDuration for task '\(tasks[taskIndex].name)' on \(today): \(formatDuration(effectiveWorkTime))")
+            }
+        }
+        
+        print(" Tracking session saved: \(formatDuration(session.effectiveWorkTime))")
     }
     
     func addTrackedTime(_ duration: TimeInterval, to taskId: UUID) {
@@ -189,7 +211,89 @@ class TaskManager: ObservableObject {
             // Sync with CloudKit
             debouncedSaveTask(tasks[index])
             
-            print("✅ Added \(formatDuration(duration)) to task: \(tasks[index].name)")
+            print(" Added \(formatDuration(duration)) to task: \(tasks[index].name)")
+        }
+    }
+    
+    func updateTaskRating(taskId: UUID, actualDuration: TimeInterval? = nil, difficultyRating: Int? = nil, qualityRating: Int? = nil, for date: Date = Date()) {
+        guard !isUpdatingFromSync else { return }
+        
+        if let index = tasks.firstIndex(where: { $0.id == taskId }) {
+            var task = tasks[index]
+            let calendar = Calendar.current
+            let targetDate = calendar.startOfDay(for: date)
+            
+            print("🎯 [DEBUG] ==========================================")
+            print("🎯 [DEBUG] Updating task rating for '\(task.name)' on \(targetDate)")
+            print("🎯 [DEBUG] Task ID: \(taskId.uuidString.prefix(8))")
+            print("🎯 [DEBUG] Total completions in task: \(task.completions.count)")
+            
+            // Log all existing completions
+            for (dateKey, completion) in task.completions {
+                print("🎯 [DEBUG] Existing completion: \(dateKey) -> isCompleted=\(completion.isCompleted), actualDuration=\(completion.actualDuration ?? -1), difficulty=\(completion.difficultyRating ?? -1), quality=\(completion.qualityRating ?? -1)")
+            }
+            
+            // Get or create completion for this specific date - PRESERVE existing data, only update what's passed
+            var completion = task.completions[targetDate] ?? TaskCompletion(
+                isCompleted: false,
+                completedSubtasks: [],
+                actualDuration: nil,
+                difficultyRating: nil,
+                qualityRating: nil,
+                completionDate: nil
+            )
+            
+            print("🎯 [DEBUG] Existing completion for \(targetDate): isCompleted=\(completion.isCompleted), actualDuration=\(completion.actualDuration ?? -1), difficulty=\(completion.difficultyRating ?? -1), quality=\(completion.qualityRating ?? -1)")
+            
+            // Update ONLY the ratings that were passed in
+            if let actualDuration = actualDuration {
+                completion.actualDuration = actualDuration
+                print("🎯 [DEBUG] Set actualDuration to \(actualDuration)")
+            }
+            
+            if let difficultyRating = difficultyRating {
+                completion.difficultyRating = difficultyRating
+                print("🎯 [DEBUG] Set difficultyRating to \(difficultyRating)")
+            }
+            
+            if let qualityRating = qualityRating {
+                completion.qualityRating = qualityRating
+                print("🎯 [DEBUG] Set qualityRating to \(qualityRating)")
+            }
+            
+            // Set completion date if not already set and this completion has any data
+            if completion.completionDate == nil && (completion.actualDuration != nil || completion.difficultyRating != nil || completion.qualityRating != nil) {
+                completion.completionDate = Date()
+                print("🎯 [DEBUG] Set completionDate to \(Date())")
+            }
+            
+            print("🎯 [DEBUG] Updated completion object: actualDuration=\(completion.actualDuration ?? -1), difficulty=\(completion.difficultyRating ?? -1), quality=\(completion.qualityRating ?? -1)")
+            
+            // Update the completion in the task - this should NOT affect other dates
+            task.completions[targetDate] = completion
+            
+            print("🎯 [DEBUG] After assignment - task.completions[\(targetDate)]: actualDuration=\(task.completions[targetDate]?.actualDuration ?? -1), difficulty=\(task.completions[targetDate]?.difficultyRating ?? -1), quality=\(task.completions[targetDate]?.qualityRating ?? -1)")
+            
+            // Verify other dates are NOT affected
+            for (dateKey, otherCompletion) in task.completions {
+                if dateKey != targetDate {
+                    print("🎯 [DEBUG] Other completion \(dateKey): actualDuration=\(otherCompletion.actualDuration ?? -1), difficulty=\(otherCompletion.difficultyRating ?? -1), quality=\(otherCompletion.qualityRating ?? -1)")
+                }
+            }
+            
+            task.lastModifiedDate = Date()
+            tasks[index] = task
+            
+            print("🎯 [DEBUG] Final task completions count: \(tasks[index].completions.count)")
+            print("🎯 [DEBUG] ==========================================")
+            
+            saveTasks()
+            notifyTasksUpdated()
+            
+            // Sync with CloudKit
+            debouncedSaveTask(task)
+            
+            print("✅ Updated ratings for task: \(task.name) on \(targetDate)")
         }
     }
     
@@ -235,17 +339,27 @@ class TaskManager: ObservableObject {
             let startOfDay = Calendar.current.startOfDay(for: date)
             
             // DEBUG: Log current state
-            print("🔄 Toggling task completion for \(task.name) on \(startOfDay)")
-            print("🔄 Current completion: \(task.completions[startOfDay]?.isCompleted ?? false)")
+            print("🔄 [DEBUG] Toggling task completion for '\(task.name)' on \(startOfDay)")
+            print("🔄 [DEBUG] Task ID: \(taskId.uuidString.prefix(8))")
+            print("🔄 [DEBUG] Current completion: \(task.completions[startOfDay]?.isCompleted ?? false)")
+            print("🔄 [DEBUG] Total completions: \(task.completions.count)")
             
             // Get current completion status
             let currentCompletion = task.completions[startOfDay]
             let wasCompleted = currentCompletion?.isCompleted ?? false
             let isCompleting = !wasCompleted
             
-            // Update completion
-            var completion = currentCompletion ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
-            completion.isCompleted = isCompleting
+            print("🔄 [DEBUG] Was completed: \(wasCompleted), Is completing: \(isCompleting)")
+            
+            // Update completion - ALWAYS create new completion to avoid reference issues
+            var completion = TaskCompletion(
+                isCompleted: isCompleting,
+                completedSubtasks: currentCompletion?.completedSubtasks ?? [],
+                actualDuration: currentCompletion?.actualDuration,
+                difficultyRating: currentCompletion?.difficultyRating,
+                qualityRating: currentCompletion?.qualityRating,
+                completionDate: currentCompletion?.completionDate
+            )
             
             // If completing the main task, mark all subtasks as completed
             if isCompleting && !task.subtasks.isEmpty {
@@ -254,6 +368,7 @@ class TaskManager: ObservableObject {
                 for i in 0..<task.subtasks.count {
                     task.subtasks[i].isCompleted = true
                 }
+                print("🔄 [DEBUG] Marked all \(task.subtasks.count) subtasks as completed")
             } else if !isCompleting {
                 // If uncompleting, clear all subtask completions
                 completion.completedSubtasks.removeAll()
@@ -261,6 +376,7 @@ class TaskManager: ObservableObject {
                 for i in 0..<task.subtasks.count {
                     task.subtasks[i].isCompleted = false
                 }
+                print("🔄 [DEBUG] Unmarked all subtasks")
             }
             
             task.completions[startOfDay] = completion
@@ -269,9 +385,11 @@ class TaskManager: ObservableObject {
             if completion.isCompleted {
                 if !task.completionDates.contains(startOfDay) {
                     task.completionDates.append(startOfDay)
+                    print("🔄 [DEBUG] Added completion date: \(startOfDay)")
                 }
             } else {
                 task.completionDates.removeAll { $0 == startOfDay }
+                print("🔄 [DEBUG] Removed completion date: \(startOfDay)")
             }
             
             // Tasks with subtasks get points handled in toggleSubtask
@@ -281,13 +399,13 @@ class TaskManager: ObservableObject {
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print("🎯 Added \(task.rewardPoints) points for completing task without subtasks")
+                    print(" Added \(task.rewardPoints) points for completing task without subtasks")
                 } else if wasCompleted {
                     RewardManager.shared.addPoints(-task.rewardPoints, on: date)
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(-task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print("🎯 Removed \(task.rewardPoints) points for uncompleting task without subtasks")
+                    print(" Removed \(task.rewardPoints) points for uncompleting task without subtasks")
                 }
             }
             
@@ -295,9 +413,8 @@ class TaskManager: ObservableObject {
             task.lastModifiedDate = Date()
             tasks[index] = task
             
-            // DEBUG: Log new state
-            print("🔄 New completion: \(completion.isCompleted)")
-            print("🔄 Completions count: \(task.completions.count)")
+            print("🔄 [DEBUG] New completion: \(completion.isCompleted)")
+            print("🔄 [DEBUG] Completions count: \(task.completions.count)")
             
             // Save and sync immediately
             saveTasks()
@@ -316,7 +433,7 @@ class TaskManager: ObservableObject {
                 }
             }
             
-            print("✅ Task completion toggled: \(task.name)")
+            print(" Task completion toggled: \(task.name)")
         }
     }
     
@@ -328,14 +445,14 @@ class TaskManager: ObservableObject {
         let startOfDay = Calendar.current.startOfDay(for: date)
         
         // DEBUG: Log current state
-        print("🔄 Toggling subtask for \(task.name) on \(startOfDay)")
+        print(" Toggling subtask for \(task.name) on \(startOfDay)")
         
         var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
         
         // Determine if we're completing or uncompleting the subtask
         let wasCompleted = completion.completedSubtasks.contains(subtaskId)
         
-        print("🔄 Subtask was completed: \(wasCompleted)")
+        print(" Subtask was completed: \(wasCompleted)")
         
         if wasCompleted {
             completion.completedSubtasks.remove(subtaskId)
@@ -368,13 +485,13 @@ class TaskManager: ObservableObject {
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print("🎯 Added \(task.rewardPoints) points - all subtasks completed")
+                    print(" Added \(task.rewardPoints) points - all subtasks completed")
                 } else if !allSubtasksCompleted && wasAllCompleted {
                     RewardManager.shared.addPoints(-task.rewardPoints, on: date)
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(-task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print("🎯 Removed \(task.rewardPoints) points - not all subtasks completed")
+                    print(" Removed \(task.rewardPoints) points - not all subtasks completed")
                 }
             }
             
@@ -386,13 +503,13 @@ class TaskManager: ObservableObject {
                     if !task.completionDates.contains(startOfDay) {
                         task.completionDates.append(startOfDay)
                     }
-                    print("✅ Auto-completed task - all subtasks done")
+                    print(" Auto-completed task - all subtasks done")
                 } else if !allSubtasksCompleted && wasAllCompleted {
                     // Not all subtasks completed -> mark task as uncompleted
                     completion.isCompleted = false
                     task.completions[startOfDay] = completion
                     task.completionDates.removeAll { $0 == startOfDay }
-                    print("❌ Auto-uncompleted task - not all subtasks done")
+                    print(" Auto-uncompleted task - not all subtasks done")
                 }
             }
         }
@@ -401,8 +518,8 @@ class TaskManager: ObservableObject {
         task.lastModifiedDate = Date()
         tasks[taskIndex] = task
         
-        print("🔄 Subtask now completed: \(!wasCompleted)")
-        print("🔄 Completed subtasks: \(completion.completedSubtasks.count)")
+        print(" Subtask now completed: \(!wasCompleted)")
+        print(" Completed subtasks: \(completion.completedSubtasks.count)")
         
         // Save and sync immediately
         saveTasks()
@@ -421,7 +538,7 @@ class TaskManager: ObservableObject {
             }
         }
         
-        print("✅ Subtask toggled: \(task.name)")
+        print(" Subtask toggled: \(task.name)")
     }
     
     private func debouncedSaveTask(_ task: TodoTask) {
@@ -452,8 +569,8 @@ class TaskManager: ObservableObject {
             // UPDATE: Force widget refresh
             WidgetCenter.shared.reloadAllTimelines()
             
-            print("📱 App: Saved \(tasks.count) tasks to both UserDefaults")
-            NSLog("📱 APP DEBUG: Saved \(tasks.count) tasks to shared UserDefaults")
+            print(" App: Saved \(tasks.count) tasks to both UserDefaults")
+            NSLog(" APP DEBUG: Saved \(tasks.count) tasks to shared UserDefaults")
             
         } catch {
             print("Error saving tasks: \(error)")
@@ -469,7 +586,7 @@ class TaskManager: ObservableObject {
             appGroupUserDefaults?.set(data, forKey: trackingSessionsKey)
             appGroupUserDefaults?.synchronize()
             
-            print("📱 App: Saved \(trackingSessions.count) tracking sessions")
+            print(" App: Saved \(trackingSessions.count) tracking sessions")
             
         } catch {
             print("Error saving tracking sessions: \(error)")
@@ -480,7 +597,7 @@ class TaskManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: trackingSessionsKey) {
             do {
                 trackingSessions = try JSONDecoder().decode([TrackingSession].self, from: data)
-                print("✅ Loaded \(trackingSessions.count) tracking sessions")
+                print(" Loaded \(trackingSessions.count) tracking sessions")
             } catch {
                 print("Error loading tracking sessions: \(error)")
                 trackingSessions = []
@@ -492,11 +609,48 @@ class TaskManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: tasksKey) {
             do {
                 tasks = try JSONDecoder().decode([TodoTask].self, from: data)
+                migrateTaskDataIfNeeded()
             } catch {
                 print("Error loading tasks: \(error)")
                 tasks = []
             }
         }
+    }
+    
+    private func migrateTaskDataIfNeeded() {
+        let migrationKey = "task_performance_data_migrated_v2"
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+        
+        print("🔄 Migrating task performance data to per-completion format...")
+        
+        var tasksMigrated = 0
+        for i in 0..<tasks.count {
+            var task = tasks[i]
+            var wasModified = false
+            
+            // If we find any completions without performance data but the task has legacy data,
+            // we should clear the legacy data to avoid confusion
+            for (date, completion) in task.completions {
+                if completion.isCompleted && completion.actualDuration == nil && completion.difficultyRating == nil && completion.qualityRating == nil {
+                    // This completion doesn't have performance data, which is expected for per-completion data
+                    // The old global data should not be used
+                    wasModified = true
+                }
+            }
+            
+            if wasModified {
+                tasks[i] = task
+                tasksMigrated += 1
+            }
+        }
+        
+        if tasksMigrated > 0 {
+            saveTasks()
+            print("✅ Migrated \(tasksMigrated) tasks to new performance data format")
+        }
+        
+        UserDefaults.standard.set(true, forKey: migrationKey)
+        print("✅ Task performance data migration completed")
     }
     
     private func notifyTasksUpdated() {
