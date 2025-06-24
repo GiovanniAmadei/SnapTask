@@ -56,22 +56,6 @@ struct DurationPickerView: View {
                 }
                 .padding(.horizontal)
                 
-                VStack(spacing: 8) {
-                    Text("Selected Duration")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text(formatDuration(TimeInterval(hours * 3600 + minutes * 60)))
-                        .font(.title3.bold())
-                        .foregroundColor(.primary)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGroupedBackground))
-                )
-                .padding(.horizontal)
-                
                 Spacer()
             }
             .navigationTitle("Actual Duration")
@@ -102,21 +86,6 @@ struct DurationPickerView: View {
         let totalMinutes = Int(duration / 60)
         hours = totalMinutes / 60
         minutes = totalMinutes % 60
-    }
-    
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let hours = Int(duration) / 3600
-        let minutes = Int(duration) % 3600 / 60
-        
-        if hours > 0 && minutes > 0 {
-            return "\(hours)h \(minutes)m"
-        } else if hours > 0 {
-            return "\(hours)h"
-        } else if minutes > 0 {
-            return "\(minutes)m"
-        } else {
-            return "0m"
-        }
     }
 }
 

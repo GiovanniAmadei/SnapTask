@@ -8,6 +8,8 @@ struct FeedbackView: View {
     @State private var expandedItems: Set<UUID> = []
     @State private var showingDeleteAlert = false
     @State private var feedbackToDelete: FeedbackItem?
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
@@ -31,12 +33,18 @@ struct FeedbackView: View {
                 }
                 Button("Delete", role: .destructive) {
                     if let feedback = feedbackToDelete {
+                        print("🗑️ [UI] User confirmed deletion for: '\(feedback.title)'")
                         feedbackManager.deleteFeedback(feedback)
                     }
                     feedbackToDelete = nil
                 }
             } message: {
                 Text("Are you sure you want to delete this feedback? This action cannot be undone.")
+            }
+            .alert("Error", isPresented: $showingErrorAlert) {
+                Button("OK") { }
+            } message: {
+                Text(errorMessage)
             }
             .onAppear {
                 feedbackManager.loadFeedback()

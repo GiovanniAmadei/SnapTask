@@ -7,6 +7,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
     var difficultyRating: Int?  // 1-10 scale
     var qualityRating: Int?     // 1-10 scale
     var completionDate: Date?   // When this specific completion happened
+    var notes: String?          // User notes/comments about this completion
     
     init(
         isCompleted: Bool = false, 
@@ -14,7 +15,8 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         actualDuration: TimeInterval? = nil,
         difficultyRating: Int? = nil,
         qualityRating: Int? = nil,
-        completionDate: Date? = nil
+        completionDate: Date? = nil,
+        notes: String? = nil
     ) {
         self.isCompleted = isCompleted
         self.completedSubtasks = completedSubtasks
@@ -22,6 +24,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         self.difficultyRating = difficultyRating
         self.qualityRating = qualityRating
         self.completionDate = completionDate
+        self.notes = notes
     }
     
     enum CodingKeys: String, CodingKey {
@@ -31,6 +34,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         case difficultyRating
         case qualityRating
         case completionDate
+        case notes
     }
     
     init(from decoder: Decoder) throws {
@@ -50,6 +54,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         difficultyRating = try container.decodeIfPresent(Int.self, forKey: .difficultyRating)
         qualityRating = try container.decodeIfPresent(Int.self, forKey: .qualityRating)
         completionDate = try container.decodeIfPresent(Date.self, forKey: .completionDate)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -64,9 +69,14 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         try container.encodeIfPresent(difficultyRating, forKey: .difficultyRating)
         try container.encodeIfPresent(qualityRating, forKey: .qualityRating)
         try container.encodeIfPresent(completionDate, forKey: .completionDate)
+        try container.encodeIfPresent(notes, forKey: .notes)
     }
     
     var hasRatings: Bool {
+        actualDuration != nil || difficultyRating != nil || qualityRating != nil
+    }
+    
+    var hasPerformanceData: Bool {
         actualDuration != nil || difficultyRating != nil || qualityRating != nil
     }
     

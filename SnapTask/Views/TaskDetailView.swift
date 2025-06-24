@@ -109,7 +109,7 @@ struct TaskDetailView: View {
                             return task.completions[effectiveDate]?.actualDuration ?? 0 
                         },
                         set: { newDuration in
-                            updateLocalTaskRating(actualDuration: newDuration)
+                            updateLocalTaskRating(actualDuration: newDuration, updateDuration: true)
                         }
                     )
                 )
@@ -137,7 +137,7 @@ struct TaskDetailView: View {
         }
     }
     
-    private func updateLocalTaskRating(actualDuration: TimeInterval? = nil, difficultyRating: Int? = nil, qualityRating: Int? = nil) {
+    private func updateLocalTaskRating(actualDuration: TimeInterval? = nil, difficultyRating: Int? = nil, qualityRating: Int? = nil, notes: String? = nil, updateDuration: Bool = false, updateDifficulty: Bool = false, updateQuality: Bool = false, updateNotes: Bool = false) {
         guard var task = localTask else { return }
         
         // Get or create completion for this specific date
@@ -147,24 +147,29 @@ struct TaskDetailView: View {
             actualDuration: nil,
             difficultyRating: nil,
             qualityRating: nil,
-            completionDate: nil
+            completionDate: nil,
+            notes: nil
         )
         
-        // Update only the specified rating
-        if let actualDuration = actualDuration {
-            completion.actualDuration = actualDuration
+        // Update only the fields explicitly requested
+        if updateDuration {
+            completion.actualDuration = actualDuration == 0 ? nil : actualDuration
         }
         
-        if let difficultyRating = difficultyRating {
-            completion.difficultyRating = difficultyRating
+        if updateDifficulty {
+            completion.difficultyRating = difficultyRating == 0 ? nil : difficultyRating
         }
         
-        if let qualityRating = qualityRating {
-            completion.qualityRating = qualityRating
+        if updateQuality {
+            completion.qualityRating = qualityRating == 0 ? nil : qualityRating
+        }
+        
+        if updateNotes {
+            completion.notes = notes?.isEmpty == true ? nil : notes
         }
         
         // Set completion date if not already set and this completion has any data
-        if completion.completionDate == nil && (completion.actualDuration != nil || completion.difficultyRating != nil || completion.qualityRating != nil) {
+        if completion.completionDate == nil && (completion.actualDuration != nil || completion.difficultyRating != nil || completion.qualityRating != nil || completion.notes != nil) {
             completion.completionDate = Date()
         }
         
@@ -175,8 +180,38 @@ struct TaskDetailView: View {
         // Save to local state immediately
         localTask = task
         
-        // Then save to TaskManager (this will update other views)
-        TaskManager.shared.updateTaskRating(taskId: taskId, actualDuration: actualDuration, difficultyRating: difficultyRating, qualityRating: qualityRating, for: effectiveDate)
+        // FIXED: Use the correct method to save performance data
+        if updateDuration {
+            TaskManager.shared.updateTaskRating(
+                taskId: task.id, 
+                actualDuration: actualDuration, 
+                for: effectiveDate
+            )
+        }
+        
+        if updateDifficulty {
+            TaskManager.shared.updateTaskRating(
+                taskId: task.id, 
+                difficultyRating: difficultyRating, 
+                for: effectiveDate
+            )
+        }
+        
+        if updateQuality {
+            TaskManager.shared.updateTaskRating(
+                taskId: task.id, 
+                qualityRating: qualityRating, 
+                for: effectiveDate
+            )
+        }
+        
+        if updateNotes {
+            TaskManager.shared.updateTaskRating(
+                taskId: task.id, 
+                notes: notes, 
+                for: effectiveDate
+            )
+        }
     }
     
     private func taskContent(_ task: TodoTask) -> some View {
@@ -297,9 +332,10 @@ struct TaskDetailView: View {
                 recurrenceCard(task, recurrence)
             }
             
-            if isCompleted || task.hasRatings(for: effectiveDate) {
-                postCompletionInsightsCard(task)
-            }
+            // Notes Card - Always visible
+            notesCard(task)
+            
+            postCompletionInsightsCard(task)
             
             if !task.subtasks.isEmpty {
                 subtasksCard(task)
@@ -368,16 +404,132 @@ struct TaskDetailView: View {
                         .foregroundColor(.primary)
                 }
                 
-                if task.hasDuration {
+                durationSection(task)
+            }
+        }
+    }
+    
+    private func durationSection(_ task: TodoTask) -> some View {
+        let hasActualDuration = task.completions[effectiveDate]?.actualDuration != nil
+        let hasEstimatedDuration = task.hasDuration
+        let actualDuration = task.completions[effectiveDate]?.actualDuration
+        let estimatedDuration = task.duration
+        
+        return Group {
+            if hasActualDuration {
+                // Priority to actual duration
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Actual Duration")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 8) {
+                            Button("Edit") {
+                                showingDurationPicker = true
+                            }
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                            
+                            Button("Clear") {
+                                updateLocalTaskRating(actualDuration: 0, updateDuration: true)
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        }
+                    }
+                    
+                    HStack {
+                        Text(formatDuration(actualDuration!))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.green)
+                        Spacer()
+                    }
+                    
+                    // Show comparison with estimated if available
+                    if hasEstimatedDuration {
+                        HStack {
+                            Text("vs estimated")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            
+                            let difference = actualDuration! - estimatedDuration
+                            let isUnder = difference < 0
+                            let percentage = abs(difference) / estimatedDuration * 100
+                            
+                            HStack(spacing: 4) {
+                                Text(formatDuration(estimatedDuration))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .strikethrough()
+                                
+                                Text(isUnder ? "(-\(Int(percentage))%)" : "(+\(Int(percentage))%)")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundColor(isUnder ? .green : .orange)
+                            }
+                        }
+                    }
+                }
+            } else if hasEstimatedDuration {
+                // Show estimated duration with option to add actual
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Estimated Duration")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(formatDuration(estimatedDuration))
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+                    
+                    Button(action: {
+                        showingDurationPicker = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                            Text("Add actual duration")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            Spacer()
+                        }
+                        .padding(.top, 2)
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
+                }
+            } else {
+                // No duration at all - option to add
+                VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Duration")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(formatDuration(task.duration))
+                        Text("Not set")
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .foregroundColor(.secondary)
                     }
+                    
+                    Button(action: {
+                        showingDurationPicker = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                            Text("Add duration")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            Spacer()
+                        }
+                        .padding(.top, 2)
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
                 }
             }
         }
@@ -529,6 +681,19 @@ struct TaskDetailView: View {
         }
     }
     
+    private func notesCard(_ task: TodoTask) -> some View {
+        DetailCard(icon: "note.text", title: "Notes", color: .purple) {
+            TaskNotesSection(
+                notes: Binding(
+                    get: { task.completions[effectiveDate]?.notes ?? "" },
+                    set: { newValue in
+                        updateLocalTaskRating(notes: newValue, updateNotes: true)
+                    }
+                )
+            )
+        }
+    }
+    
     private func actionButtons(_ task: TodoTask) -> some View {
         VStack(spacing: 0) {
             LinearGradient(
@@ -569,13 +734,13 @@ struct TaskDetailView: View {
             .padding(.vertical, 16)
             .background(
                 LinearGradient(
-                    colors: [Color.yellow, Color.yellow.opacity(0.8)],
+                    colors: [.yellow, .yellow.opacity(0.8)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             )
             .cornerRadius(16)
-            .shadow(color: Color.yellow.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: .yellow.opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
     
@@ -594,13 +759,13 @@ struct TaskDetailView: View {
             .padding(.vertical, 16)
             .background(
                 LinearGradient(
-                    colors: isCompleted ? [Color.orange, Color.orange.opacity(0.8)] : [Color.green, Color.green.opacity(0.8)],
+                    colors: isCompleted ? [.orange, .orange.opacity(0.8)] : [.green, .green.opacity(0.8)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             )
             .cornerRadius(16)
-            .shadow(color: (isCompleted ? Color.orange.opacity(0.3) : Color.green.opacity(0.3)), radius: 8, x: 0, y: 4)
+            .shadow(color: (isCompleted ? .orange.opacity(0.3) : .green.opacity(0.3)), radius: 8, x: 0, y: 4)
         }
     }
     
@@ -619,19 +784,19 @@ struct TaskDetailView: View {
             .padding(.vertical, 16)
             .background(
                 LinearGradient(
-                    colors: [Color.pink, Color.pink.opacity(0.8)],
+                    colors: [.pink, .pink.opacity(0.8)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             )
             .cornerRadius(16)
-            .shadow(color: Color.pink.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: .pink.opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {
         let hours = Int(duration) / 3600
-        let minutes = Int(duration) / 60 % 60
+        let minutes = Int(duration) % 3600 / 60
         if hours > 0 {
             return "\(hours)h \(minutes)m"
         }
@@ -654,97 +819,74 @@ struct TaskDetailView: View {
     }
     
     private func postCompletionInsightsCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "chart.line.uptrend.xyaxis", title: "Post-Completion Insights", color: .cyan) {
+        DetailCard(icon: "chart.line.uptrend.xyaxis", title: "Performance Tracking", color: .cyan) {
             VStack(alignment: .leading, spacing: 16) {
-                // Actual Duration Section
+                
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Actual Duration")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
-                    
-                    if let actualDuration = task.completions[effectiveDate]?.actualDuration {
-                        HStack {
-                            Text(task.completions[effectiveDate]?.formattedActualDuration ?? "")
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Button("Edit") {
-                                showingDurationPicker = true
-                            }
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                        }
-                    } else {
-                        Button(action: {
-                            showingDurationPicker = true
-                        }) {
-                            HStack {
-                                Image(systemName: "plus.circle")
-                                    .foregroundColor(.blue)
-                                Text("Add duration")
-                                    .foregroundColor(.blue)
-                                Spacer()
-                            }
-                            .font(.subheadline)
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
-                    }
-                }
-                
-                Divider()
-                
-                // Difficulty Rating Section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Difficulty Rating")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
-                    
-                    DifficultyRatingView(
-                        rating: Binding(
-                            get: { task.completions[effectiveDate]?.difficultyRating ?? 0 },
-                            set: { newValue in
-                                updateLocalTaskRating(difficultyRating: newValue == 0 ? nil : newValue)
-                            }
-                        )
-                    )
-                }
-                
-                Divider()
-                
-                // Quality Rating Section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Quality Rating")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
-                    
-                    QualityRatingView(
-                        rating: Binding(
-                            get: { task.completions[effectiveDate]?.qualityRating ?? 0 },
-                            set: { newValue in
-                                updateLocalTaskRating(qualityRating: newValue == 0 ? nil : newValue)
-                            }
-                        )
-                    )
-                }
-                
-                // Show historical data if available
-                if task.completions[effectiveDate]?.hasRatings == true {
-                    Divider()
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Insights")
+                    HStack {
+                        Text("Difficulty Rating")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(.secondary)
                         
-                        if let difficulty = task.completions[effectiveDate]?.difficultyRating, 
-                           let quality = task.completions[effectiveDate]?.qualityRating {
-                            let insight = generateInsight(difficulty: difficulty, quality: quality)
-                            Text(insight)
+                        Spacer()
+                        
+                        if let difficultyRating = task.completions[effectiveDate]?.difficultyRating, difficultyRating > 0 {
+                            Button("Clear") {
+                                updateLocalTaskRating(difficultyRating: 0, updateDifficulty: true)
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        } else if !isCompleted {
+                            Text("Rate after completing")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .italic()
                         }
                     }
+                    
+                    DifficultyRatingView(
+                        rating: Binding(
+                            get: { task.completions[effectiveDate]?.difficultyRating ?? 0 },
+                            set: { newValue in
+                                updateLocalTaskRating(difficultyRating: newValue == 0 ? nil : newValue, updateDifficulty: true)
+                            }
+                        )
+                    )
+                }
+                
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Quality Rating")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+
+                        
+                        if let qualityRating = task.completions[effectiveDate]?.qualityRating, qualityRating > 0 {
+                            Button("Clear") {
+                                updateLocalTaskRating(qualityRating: 0, updateQuality: true)
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        } else if !isCompleted {
+                            Text("Rate after completing")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .italic()
+                        }
+                    }
+                    
+                    QualityRatingView(
+                        rating: Binding(
+                            get: { task.completions[effectiveDate]?.qualityRating ?? 0 },
+                            set: { newValue in
+                                updateLocalTaskRating(qualityRating: newValue, updateQuality: true)
+                            }
+                        )
+                    )
                 }
                 
                 if task.hasHistoricalRatings {
@@ -778,21 +920,6 @@ struct TaskDetailView: View {
                     .buttonStyle(.plain)
                 }
             }
-        }
-    }
-    
-    private func generateInsight(difficulty: Int, quality: Int) -> String {
-        switch (difficulty, quality) {
-        case (1...3, 8...10):
-            return "Easy task with high quality execution! "
-        case (8...10, 8...10):
-            return "Challenging task completed with excellence! "
-        case (8...10, 1...4):
-            return "Difficult task - consider more time or resources next time"
-        case (1...4, 1...4):
-            return "Consider breaking this down into smaller steps"
-        default:
-            return "Great job completing this task!"
         }
     }
     
@@ -1040,6 +1167,46 @@ private struct TaskPerformanceChartView: View {
         )
     }
     
+    private func loadTaskAnalytics() {
+        // Generate analytics for this specific task
+        let completionAnalytics = task.completions.compactMap { (date, completion) -> StatisticsViewModel.TaskCompletionAnalytics? in
+            guard completion.isCompleted else { return nil }
+            
+            return StatisticsViewModel.TaskCompletionAnalytics(
+                date: date,
+                actualDuration: completion.actualDuration,
+                difficultyRating: completion.difficultyRating,
+                qualityRating: completion.qualityRating,
+                estimatedDuration: task.hasDuration ? task.duration : nil,
+                wasTracked: false // We can enhance this later
+            )
+        }.sorted { $0.date < $1.date }
+        
+        if !completionAnalytics.isEmpty {
+            let avgDifficulty = completionAnalytics.compactMap { $0.difficultyRating }.isEmpty ? nil :
+                Double(completionAnalytics.compactMap { $0.difficultyRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.difficultyRating }.count)
+            
+            let avgQuality = completionAnalytics.compactMap { $0.qualityRating }.isEmpty ? nil :
+                Double(completionAnalytics.compactMap { $0.qualityRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.qualityRating }.count)
+            
+            let avgDuration = completionAnalytics.compactMap { $0.actualDuration }.isEmpty ? nil :
+                completionAnalytics.compactMap { $0.actualDuration }.reduce(0, +) / Double(completionAnalytics.compactMap { $0.actualDuration }.count)
+            
+            taskAnalytics = StatisticsViewModel.TaskPerformanceAnalytics(
+                taskId: task.id,
+                taskName: task.name,
+                categoryName: task.category?.name,
+                categoryColor: task.category?.color,
+                completions: completionAnalytics,
+                averageDifficulty: avgDifficulty,
+                averageQuality: avgQuality,
+                averageDuration: avgDuration,
+                estimationAccuracy: nil,
+                improvementTrend: .stable // We can calculate this later
+            )
+        }
+    }
+    
     private var emptyDataStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "calendar.badge.exclamationmark")
@@ -1116,46 +1283,6 @@ private struct TaskPerformanceChartView: View {
                 .fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
-    }
-    
-    private func loadTaskAnalytics() {
-        // Generate analytics for this specific task
-        let completionAnalytics = task.completions.compactMap { (date, completion) -> StatisticsViewModel.TaskCompletionAnalytics? in
-            guard completion.isCompleted else { return nil }
-            
-            return StatisticsViewModel.TaskCompletionAnalytics(
-                date: date,
-                actualDuration: completion.actualDuration,
-                difficultyRating: completion.difficultyRating,
-                qualityRating: completion.qualityRating,
-                estimatedDuration: task.hasDuration ? task.duration : nil,
-                wasTracked: false // We can enhance this later
-            )
-        }.sorted { $0.date < $1.date }
-        
-        if !completionAnalytics.isEmpty {
-            let avgDifficulty = completionAnalytics.compactMap { $0.difficultyRating }.isEmpty ? nil :
-                Double(completionAnalytics.compactMap { $0.difficultyRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.difficultyRating }.count)
-            
-            let avgQuality = completionAnalytics.compactMap { $0.qualityRating }.isEmpty ? nil :
-                Double(completionAnalytics.compactMap { $0.qualityRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.qualityRating }.count)
-            
-            let avgDuration = completionAnalytics.compactMap { $0.actualDuration }.isEmpty ? nil :
-                completionAnalytics.compactMap { $0.actualDuration }.reduce(0, +) / Double(completionAnalytics.compactMap { $0.actualDuration }.count)
-            
-            taskAnalytics = StatisticsViewModel.TaskPerformanceAnalytics(
-                taskId: task.id,
-                taskName: task.name,
-                categoryName: task.category?.name,
-                categoryColor: task.category?.color,
-                completions: completionAnalytics,
-                averageDifficulty: avgDifficulty,
-                averageQuality: avgQuality,
-                averageDuration: avgDuration,
-                estimationAccuracy: nil,
-                improvementTrend: .stable // We can calculate this later
-            )
-        }
     }
     
     private func taskInfoHeader(_ analytics: StatisticsViewModel.TaskPerformanceAnalytics) -> some View {
@@ -1264,7 +1391,7 @@ private struct TaskPerformanceChartView: View {
                     
                     PointMark(
                         x: .value("Date", point.0),
-                        y: .value("Quality", point.1)
+                        y: .value("Difficulty", point.1)
                     )
                     .foregroundStyle(Color(hex: analytics.categoryColor ?? "#6366F1"))
                     .symbolSize(60)

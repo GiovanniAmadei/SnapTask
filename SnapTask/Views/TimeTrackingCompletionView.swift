@@ -373,15 +373,60 @@ struct TimeTrackingCompletionView: View {
         // Mark the task as completed if tracking as task
         if trackAsTask, let task = task {
             print("Tracking \(editedFocusTime/60) minutes for task: \(editedTaskName)")
-            taskManager.toggleTaskCompletion(task.id)
             
-            // Save time tracking data to statistics as individual task
+            // Check if task still exists and hasn't been modified during tracking
+            if let currentTask = TaskManager.shared.tasks.first(where: { $0.id == task.id }) {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: Date())
+                
+                // First mark task as completed
+                TaskManager.shared.toggleTaskCompletion(task.id, on: today)
+                
+                // Then save the actual duration to the task's completion data
+                TaskManager.shared.updateTaskRating(
+                    taskId: task.id, 
+                    actualDuration: editedFocusTime, 
+                    difficultyRating: nil, 
+                    qualityRating: nil, 
+                    notes: nil, 
+                    for: today
+                )
+                
+                print(" [TRACKING] Successfully saved duration \(editedFocusTime) to task completion")
+            } else {
+                print(" [TRACKING ERROR] Task \(task.id.uuidString) no longer exists - task was deleted during tracking")
+                // Still save to statistics as individual entry but with warning
+                await saveToStatistics(categoryId: nil, timeSpent: editedFocusTime, taskName: "\(editedTaskName) (deleted)", taskId: task.id)
+                return
+            }
+            
+            // Save time tracking data to statistics as individual task (this will now sync with task completion)
             await saveToStatistics(categoryId: nil, timeSpent: editedFocusTime, taskName: editedTaskName, taskId: task.id)
         } else if let category = selectedCategory {
             // Track time for selected category
             print("Tracking \(editedFocusTime/60) minutes for category: \(category.name)")
             if let task = task {
-                taskManager.toggleTaskCompletion(task.id)
+                // Check if task still exists
+                if TaskManager.shared.tasks.contains(where: { $0.id == task.id }) {
+                    let calendar = Calendar.current
+                    let today = calendar.startOfDay(for: Date())
+                    
+                    TaskManager.shared.toggleTaskCompletion(task.id, on: today)
+                    
+                    // Save the actual duration to the task's completion data even when tracking as category
+                    TaskManager.shared.updateTaskRating(
+                        taskId: task.id, 
+                        actualDuration: editedFocusTime, 
+                        difficultyRating: nil, 
+                        qualityRating: nil, 
+                        notes: nil, 
+                        for: today
+                    )
+                    
+                    print(" [TRACKING] Successfully saved duration \(editedFocusTime) to task completion (category mode)")
+                } else {
+                    print("Task \(task.id.uuidString) no longer exists during category tracking")
+                }
             }
             
             // Save time tracking data to statistics for the selected category
@@ -429,7 +474,7 @@ struct TimeTrackingCompletionView: View {
         UserDefaults.standard.synchronize()
         
         // Notify statistics to refresh
-        NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
+        NotificationCenter.default.post(name: Notification.Name.timeTrackingUpdated, object: nil)
     }
     
     private func formatDuration(_ seconds: TimeInterval) -> String {

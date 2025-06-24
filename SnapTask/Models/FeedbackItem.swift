@@ -17,8 +17,19 @@ struct FeedbackItem: Identifiable, Codable, Equatable {
     
     var isAuthoredByCurrentUser: Bool {
         guard let authorId = authorId else { return false }
-        let currentUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
-        return authorId == currentUserId
+        
+        // Get both old and new user IDs for compatibility
+        let oldUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
+        let newUserId = UserDefaults.standard.string(forKey: "anonymous_user_id") ?? ""
+        
+        // MIGRATION: If we have old ID but no new ID, migrate it
+        if !oldUserId.isEmpty && newUserId.isEmpty {
+            UserDefaults.standard.set(oldUserId, forKey: "anonymous_user_id")
+            print("Migrated user ID: \(oldUserId)")
+        }
+        
+        // Check against both IDs for backward compatibility
+        return authorId == oldUserId || authorId == newUserId
     }
     
     init(
@@ -65,8 +76,13 @@ struct FeedbackReply: Identifiable, Codable, Equatable {
     
     var isAuthoredByCurrentUser: Bool {
         guard let authorId = authorId else { return false }
-        let currentUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
-        return authorId == currentUserId
+        
+        // Get both old and new user IDs for compatibility
+        let oldUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
+        let newUserId = UserDefaults.standard.string(forKey: "anonymous_user_id") ?? ""
+        
+        // Check against both IDs for backward compatibility
+        return authorId == oldUserId || authorId == newUserId
     }
     
     init(

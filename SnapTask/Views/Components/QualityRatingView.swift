@@ -5,14 +5,15 @@ struct QualityRatingView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 2) {
                 ForEach(1...10, id: \.self) { level in
                     Button(action: {
                         rating = rating == level ? 0 : level
                     }) {
                         Image(systemName: level <= rating ? "star.fill" : "star")
                             .foregroundColor(level <= rating ? colorForLevel(level) : .gray.opacity(0.3))
-                            .font(.system(size: 14))
+                            .font(.system(size: 12))
+                            .frame(width: 20, height: 20)
                     }
                     .buttonStyle(BorderlessButtonStyle())
                 }

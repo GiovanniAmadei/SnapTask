@@ -183,7 +183,6 @@ struct WatchStatisticsView: View {
     private func isTaskCompleted(_ task: TodoTask) -> Bool {
         // This needs to check completions within the selectedTimeRange, not just "today"
         // For now, keeping original logic for simplicity, but this is an area for improvement.
-        let today = Calendar.current.startOfDay(for: Date()) 
         if let completion = task.completions.first(where: { Calendar.current.isDate($0.key, inSameDayAs: task.startTime) }) {
              return completion.value.isCompleted
         }

@@ -248,13 +248,29 @@ class FirebaseService: ObservableObject {
     
     func deleteFeedback(_ feedback: FeedbackItem) async throws {
         let userId = getOrCreateAnonymousUserId()
+        print("🗑️ [FIREBASE DELETE] Current Firebase user ID: \(userId)")
+        print("🗑️ [FIREBASE DELETE] Feedback author ID: \(feedback.authorId ?? "nil")")
         
-        guard feedback.authorId == userId else {
+        // IMPROVED: Check both old and new user IDs for authorization
+        let oldUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
+        let newUserId = userId
+        
+        let isAuthorized = feedback.authorId == oldUserId || feedback.authorId == newUserId
+        
+        print("🗑️ [FIREBASE DELETE] Old user ID: \(oldUserId)")
+        print("🗑️ [FIREBASE DELETE] New user ID: \(newUserId)")
+        print("🗑️ [FIREBASE DELETE] Is authorized: \(isAuthorized)")
+        
+        guard isAuthorized else {
+            print("❌ [FIREBASE DELETE] Authorization failed")
             throw FirebaseError.unauthorizedDeletion
         }
         
+        print("✅ [FIREBASE DELETE] Authorization passed, proceeding with deletion...")
+        
         let feedbackRef = db.collection(feedbackCollection).document(feedback.id.uuidString)
         
+        // Get all related votes and likes
         let votesSnapshot = try await db.collection(votesCollection)
             .whereField("feedbackId", isEqualTo: feedback.id.uuidString)
             .getDocuments()
@@ -263,21 +279,28 @@ class FirebaseService: ObservableObject {
             .whereField("feedbackId", isEqualTo: feedback.id.uuidString)
             .getDocuments()
         
+        print("🗑️ [FIREBASE DELETE] Found \(votesSnapshot.documents.count) votes to delete")
+        print("🗑️ [FIREBASE DELETE] Found \(likesSnapshot.documents.count) likes to delete")
+        
         let batch = db.batch()
         
+        // Delete all related votes
         for voteDoc in votesSnapshot.documents {
             batch.deleteDocument(voteDoc.reference)
         }
         
+        // Delete all related likes
         for likeDoc in likesSnapshot.documents {
             batch.deleteDocument(likeDoc.reference)
         }
         
+        // Delete the feedback document
         batch.deleteDocument(feedbackRef)
         
+        print("🗑️ [FIREBASE DELETE] Executing batch delete...")
         try await batch.commit()
         
-        print("✅ Feedback and all related data deleted from Firebase: \(feedback.title)")
+        print("✅ [FIREBASE DELETE] Feedback and all related data deleted successfully: \(feedback.title)")
     }
     
     private func createFeedbackItem(from data: [String: Any]) -> FeedbackItem? {

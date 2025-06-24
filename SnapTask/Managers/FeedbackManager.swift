@@ -19,21 +19,28 @@ class FeedbackManager: ObservableObject {
     }
     
     func loadFeedback() {
-        guard !isLoading else { return }
+        guard !isLoading else {
+            print("🔄 [LOAD] Already loading, skipping...")
+            return
+        }
         
         isLoading = true
+        print("🔄 [LOAD] Starting to load feedback from Firebase...")
         
         Task {
             do {
                 // Try to fetch from Firebase first
                 let remoteFeedback = try await firebaseService.fetchFeedback()
+                print("✅ [LOAD] Successfully fetched \(remoteFeedback.count) feedback items from Firebase")
+                
                 await MainActor.run {
                     self.feedbackItems = remoteFeedback.sorted { $0.votes > $1.votes }
                     self.saveLocalFeedback() // Cache locally
                     self.isLoading = false
+                    print("🔄 [LOAD] UI updated with \(self.feedbackItems.count) items")
                 }
             } catch {
-                print("❌ Failed to fetch from Firebase: \(error)")
+                print("❌ [LOAD] Failed to fetch from Firebase: \(error)")
                 // Fallback to local data if Firebase fails
                 await MainActor.run {
                     self.isLoading = false
@@ -156,17 +163,52 @@ class FeedbackManager: ObservableObject {
     }
     
     func deleteFeedback(_ feedback: FeedbackItem) {
+        print("🗑️ [DELETE] Starting deletion for feedback: '\(feedback.title)'")
+        print("🗑️ [DELETE] Feedback authorId: \(feedback.authorId ?? "nil")")
+        print("🗑️ [DELETE] Current user ID: \(getCurrentUserId())")
+        print("🗑️ [DELETE] Is authored by current user: \(feedback.isAuthoredByCurrentUser)")
+        
+        isLoading = true
+        
         Task {
             do {
                 try await firebaseService.deleteFeedback(feedback)
-                // Reload feedback to get updated list
+                print("✅ [DELETE] Successfully deleted from Firebase")
+                
+                // FIXED: Immediate local update + reload from Firebase
                 await MainActor.run {
+                    // Remove from local array immediately for instant UI update
+                    self.feedbackItems.removeAll { $0.id == feedback.id }
+                    print("🔄 [DELETE] Removed from local array, remaining items: \(self.feedbackItems.count)")
+                    
+                    // Save updated local cache
+                    self.saveLocalFeedback()
+                    
+                    // Set loading to false first
+                    self.isLoading = false
+                    
+                    // Then reload from Firebase to ensure consistency
                     Task {
                         self.loadFeedback()
                     }
                 }
             } catch {
-                print("❌ Failed to delete feedback: \(error)")
+                print("❌ [DELETE] Failed to delete feedback: \(error)")
+                print("❌ [DELETE] Error details: \(error.localizedDescription)")
+                
+                // Check if it's an authorization error
+                if let firebaseError = error as? FirebaseError {
+                    switch firebaseError {
+                    case .unauthorizedDeletion:
+                        print("❌ [DELETE] Authorization failed - user is not the author")
+                    default:
+                        print("❌ [DELETE] Other Firebase error: \(firebaseError)")
+                    }
+                }
+                
+                await MainActor.run {
+                    self.isLoading = false
+                }
             }
         }
     }
@@ -176,12 +218,26 @@ class FeedbackManager: ObservableObject {
     }
     
     private func getCurrentUserId() -> String {
-        let userIdKey = "firebase_user_id"
-        if let existingId = UserDefaults.standard.string(forKey: userIdKey) {
+        // Get both old and new user IDs
+        let oldUserIdKey = "firebase_user_id"
+        let newUserIdKey = "anonymous_user_id"
+        
+        let oldUserId = UserDefaults.standard.string(forKey: oldUserIdKey)
+        let newUserId = UserDefaults.standard.string(forKey: newUserIdKey)
+        
+        // MIGRATION: If we have old ID but no new ID, migrate it
+        if let oldId = oldUserId, !oldId.isEmpty, newUserId == nil {
+            UserDefaults.standard.set(oldId, forKey: newUserIdKey)
+            print("🔄 Migrated user ID from firebase_user_id to anonymous_user_id: \(oldId)")
+            return oldId
+        }
+        
+        // Use new key primarily
+        if let existingId = UserDefaults.standard.string(forKey: newUserIdKey) {
             return existingId
         } else {
             let newId = UUID().uuidString
-            UserDefaults.standard.set(newId, forKey: userIdKey)
+            UserDefaults.standard.set(newId, forKey: newUserIdKey)
             return newId
         }
     }
