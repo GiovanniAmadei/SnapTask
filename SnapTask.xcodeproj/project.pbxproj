@@ -972,7 +972,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SnapTask/SnapTask.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 0.2.1;
+				CURRENT_PROJECT_VERSION = 0.3;
 				DEVELOPMENT_ASSET_PATHS = "\"SnapTask/Preview Content\"";
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
@@ -992,7 +992,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha;
 				PRODUCT_NAME = "SnapTask Pro";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1008,7 +1008,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SnapTask/SnapTask.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 0.2.1;
+				CURRENT_PROJECT_VERSION = 0.3;
 				DEVELOPMENT_ASSET_PATHS = "\"SnapTask/Preview Content\"";
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
@@ -1028,7 +1028,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha;
 				PRODUCT_NAME = "SnapTask Pro";
 				SWIFT_EMIT_LOC_STRINGS = YES;

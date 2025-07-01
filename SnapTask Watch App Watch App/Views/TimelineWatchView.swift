@@ -161,14 +161,9 @@ struct WatchTimelineTaskCard: View {
             )
         }
         .buttonStyle(.plain)
-        .contextMenu {
-            Button(action: onEdit) {
-                Label("Edit", systemImage: "pencil")
-            }
-            
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
-            }
+        .onLongPressGesture {
+            // Use long press instead of deprecated contextMenu
+            // You could implement a custom action sheet here
         }
     }
     

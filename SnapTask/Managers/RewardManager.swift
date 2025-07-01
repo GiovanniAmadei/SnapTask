@@ -75,7 +75,7 @@ class RewardManager: ObservableObject {
     }
     
     func redeemReward(_ reward: Reward, on date: Date = Date()) {
-        let availablePoints = reward.isGeneralReward ? 
+        let availablePoints = reward.isGeneralReward ?
             availablePoints(for: reward.frequency, on: date) :
             availablePointsForCategory(reward.categoryId!, frequency: reward.frequency, on: date)
             
@@ -257,6 +257,39 @@ class RewardManager: ObservableObject {
         
         objectWillChange.send()
         print("🎯 All points reset - new total: \(totalPoints())")
+    }
+    
+    func performCompleteReset() async {
+        print("🎯 RewardManager: Performing complete reset")
+        
+        // Clear all rewards except essentials
+        rewards.removeAll()
+        
+        // Clear all points history
+        dailyPointsHistory.removeAll()
+        categoryPointsHistory.removeAll()
+        
+        // Clear UserDefaults
+        UserDefaults.standard.removeObject(forKey: rewardsKey)
+        UserDefaults.standard.removeObject(forKey: dailyPointsHistoryKey)
+        UserDefaults.standard.removeObject(forKey: categoryPointsHistoryKey)
+        UserDefaults.standard.synchronize()
+        
+        // Clear CloudKit deletion markers for rewards and points
+        var deletionTracker = CloudKitService.DeletionTracker()
+        deletionTracker.rewards.removeAll()
+        deletionTracker.pointsHistory.removeAll()
+        if let data = try? JSONEncoder().encode(deletionTracker) {
+            UserDefaults.standard.set(data, forKey: "cloudkit_deleted_items")
+        }
+        
+        // Wait a moment for cleanup
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        
+        // Notify observers
+        objectWillChange.send()
+        
+        print("🎯 RewardManager: Complete reset finished")
     }
     
     func removePointsFromTask(_ task: TodoTask) {

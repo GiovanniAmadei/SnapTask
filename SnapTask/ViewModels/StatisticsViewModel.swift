@@ -115,6 +115,11 @@ class StatisticsViewModel: ObservableObject {
     @Published private(set) var topPerformingTasks: [TaskPerformanceAnalytics] = []
     @Published private(set) var tasksNeedingImprovement: [TaskPerformanceAnalytics] = []
     
+    private var updateTimer: Timer?
+    private var lastUpdateTime: Date = Date()
+    private let minUpdateInterval: TimeInterval = 2.0 
+    private var pendingUpdate = false
+    
     var trackedRecurringTasks: [TodoTask] {
         recurringTasks.filter { task in
             if let recurrence = task.recurrence {
@@ -139,67 +144,120 @@ class StatisticsViewModel: ObservableObject {
     }
     
     func refreshStats() {
-        DispatchQueue.main.async { [weak self] in
-            self?.updateStats()
-        }
+        scheduleUpdate()
     }
     
     func refreshAfterSync() {
-        DispatchQueue.main.async { [weak self] in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self?.updateStats()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.scheduleUpdate()
+        }
+    }
+    
+    private func scheduleUpdate() {
+        let now = Date()
+        let timeSinceLastUpdate = now.timeIntervalSince(lastUpdateTime)
+        
+        if timeSinceLastUpdate >= minUpdateInterval {
+            performUpdate()
+        } else {
+            pendingUpdate = true
+            updateTimer?.invalidate()
+            
+            let delay = minUpdateInterval - timeSinceLastUpdate
+            updateTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+                if self?.pendingUpdate == true {
+                    self?.performUpdate()
+                }
             }
+        }
+    }
+    
+    private func performUpdate() {
+        lastUpdateTime = Date()
+        pendingUpdate = false
+        updateTimer?.invalidate()
+        
+        let oldCategoryStats = categoryStats
+        let oldWeeklyStats = weeklyStats
+        let oldCurrentStreak = currentStreak
+        let oldBestStreak = bestStreak
+        let oldTaskStreaks = taskStreaks
+        let oldTaskPerformanceAnalytics = taskPerformanceAnalytics
+        
+        updateCategoryStats()
+        updateWeeklyStats()
+        updateStreakStats()
+        updateTaskStreaks()
+        updateRecurringTasks()
+        updateTaskPerformanceAnalytics()
+        
+        let dataChanged = categoryStats != oldCategoryStats ||
+                         weeklyStats != oldWeeklyStats ||
+                         currentStreak != oldCurrentStreak ||
+                         bestStreak != oldBestStreak ||
+                         taskStreaks != oldTaskStreaks ||
+                         taskPerformanceAnalytics != oldTaskPerformanceAnalytics
+        
+        if dataChanged {
+            print("📊 Data changed, updating UI")
+            objectWillChange.send()
+        } else {
+            print("📊 No data changes detected, skipping UI update")
         }
     }
     
     private func setupObservers() {
         NotificationCenter.default.publisher(for: .tasksDidUpdate)
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 Tasks updated, refreshing statistics")
-                self?.updateStats()
+                print("📊 Tasks updated (debounced)")
+                self?.scheduleUpdate()
             }
             .store(in: &cancellables)
             
         NotificationCenter.default.publisher(for: .categoriesDidUpdate)
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 Categories updated, refreshing statistics")
-                self?.updateStats()
+                print("📊 Categories updated (debounced)")
+                self?.scheduleUpdate()
             }
             .store(in: &cancellables)
         
         NotificationCenter.default.publisher(for: .timeTrackingUpdated)
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 Time tracking updated, refreshing statistics")
-                self?.updateStats()
+                print("📊 Time tracking updated (debounced)")
+                self?.scheduleUpdate()
             }
             .store(in: &cancellables)
         
         categoryManager.$categories
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 Category manager updated, refreshing statistics")
-                self?.updateStats()
+                print("📊 Category manager updated (debounced)")
+                self?.scheduleUpdate()
             }
             .store(in: &cancellables)
         
         taskManager.$tasks
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 Task manager updated, refreshing statistics")
-                self?.updateStats()
+                print("📊 Task manager updated (debounced)")
+                self?.scheduleUpdate()
             }
             .store(in: &cancellables)
         
         NotificationCenter.default.publisher(for: .cloudKitDataChanged)
+            .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 CloudKit data changed, refreshing statistics")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self?.updateStats()
-                }
+                print("📊 CloudKit data changed (debounced)")
+                self?.scheduleUpdate()
             }
             .store(in: &cancellables)
         
@@ -207,9 +265,9 @@ class StatisticsViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
                 if status == .success {
-                    print("📊 CloudKit sync completed, refreshing statistics")
+                    print("📊 CloudKit sync completed")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        self?.refreshAfterSync()
+                        self?.scheduleUpdate()
                     }
                 }
             }
@@ -218,9 +276,9 @@ class StatisticsViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 App became active, refreshing statistics")
+                print("📊 App became active")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    self?.updateStats()
+                    self?.scheduleUpdate()
                 }
             }
             .store(in: &cancellables)
@@ -229,20 +287,10 @@ class StatisticsViewModel: ObservableObject {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                print("📊 Time range changed, refreshing statistics")
-                self?.updateStats()
+                print("📊 Time range changed - immediate update")
+                self?.performUpdate() 
             }
             .store(in: &cancellables)
-    }
-    
-    private func updateStats() {
-        updateCategoryStats()
-        updateWeeklyStats()
-        updateStreakStats()
-        updateTaskStreaks()
-        updateRecurringTasks()
-        updateTaskPerformanceAnalytics()
-        objectWillChange.send()
     }
     
     private func updateCategoryStats() {
@@ -894,7 +942,7 @@ class StatisticsViewModel: ObservableObject {
         guard !accuracyData.isEmpty else { return nil }
         
         let avgAccuracy = accuracyData.reduce(0, +) / Double(accuracyData.count)
-        return max(0, 1.0 - avgAccuracy) // Convert to accuracy percentage
+        return max(0, 1.0 - avgAccuracy) 
     }
     
     private func calculateImprovementTrend(for completions: [TaskCompletionAnalytics]) -> ImprovementTrend {

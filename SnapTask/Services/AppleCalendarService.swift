@@ -50,14 +50,14 @@ class AppleCalendarService: ObservableObject {
         }
         
         return await withCheckedContinuation { continuation in
-            eventStore.requestWriteOnlyAccessToEvents { granted, error in
+            eventStore.requestAccess(to: .event) { granted, error in
                 Task { @MainActor in
                     let newStatus = EKEventStore.authorizationStatus(for: .event)
                     print("📅 New status after request: \(newStatus.rawValue), granted: \(granted)")
                     
                     self.authorizationStatus = newStatus
                     if granted && error == nil {
-                        print("✅ Calendar access granted")
+                        print("✅ Calendar FULL access granted - can create, read, and DELETE events")
                         self.loadCalendars()
                         continuation.resume(returning: true)
                     } else {
@@ -167,9 +167,15 @@ class AppleCalendarService: ObservableObject {
         
         do {
             try eventStore.remove(event, span: .thisEvent)
+            print("✅ Successfully deleted event: \(eventId)")
         } catch {
+            print("❌ Failed to delete event \(eventId): \(error.localizedDescription)")
             throw CalendarError.failedToDeleteEvent(error.localizedDescription)
         }
+    }
+    
+    func eventExists(eventId: String) -> Bool {
+        return eventStore.event(withIdentifier: eventId) != nil
     }
     
     private func createRecurrenceRule(from recurrence: Recurrence) -> EKRecurrenceRule {

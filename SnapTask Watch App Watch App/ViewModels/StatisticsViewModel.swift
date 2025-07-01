@@ -69,7 +69,7 @@ class StatisticsViewModel: ObservableObject {
             
             // Calcola il tempo totale per categoria
             let categoryName = task.category?.name ?? "Uncategorized"
-            let categoryColor = task.category?.color ?? "AAAAAA"
+            let _ = task.category?.color ?? "AAAAAA"
             let taskDuration = Double(task.duration) * 60 // Converti in secondi
             
             let totalTaskTime = taskDuration * Double(completions.count)
@@ -191,4 +191,4 @@ class StatisticsViewModel: ObservableObject {
             return false
         }.count
     }
-} 
+}

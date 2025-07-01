@@ -24,19 +24,33 @@ struct RewardsView: View {
                 Color(UIColor.systemGroupedBackground)
                     .ignoresSafeArea()
                 
-                ScrollView {
+                VStack(spacing: 0) {
+                    // Header con titolo manuale come in StatisticsView
                     VStack(spacing: 16) {
-                        // Unified Points & Filter View
-                        unifiedPointsFilterView
-                        
-                        // Quick Actions
-                        quickActionsView
-                        
-                        // Rewards List
-                        rewardsListView
+                        HStack {
+                            Text("Rewards")
+                                .font(.largeTitle.bold())
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
+                    
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // Unified Points & Filter View
+                            unifiedPointsFilterView
+                            
+                            // Quick Actions
+                            quickActionsView
+                            
+                            // Rewards List
+                            rewardsListView
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 100)
+                    }
                 }
                 
                 // Centered Add Button
@@ -47,8 +61,7 @@ struct RewardsView: View {
                         .padding(.bottom, 16)
                 }
             }
-            .navigationTitle("Rewards")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
             .sheet(isPresented: $showingAddReward) {
                 RewardFormView()
             }
@@ -222,7 +235,7 @@ struct RewardsView: View {
             }
         )
         .shadow(color: Color(hex: "5E5CE6").opacity(0.08), radius: 8, x: 0, y: 4)
-        .padding(.top, 8)
+        .padding(.top, 4)
     }
     
     private var quickActionsView: some View {

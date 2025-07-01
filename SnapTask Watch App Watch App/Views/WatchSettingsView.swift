@@ -1,14 +1,87 @@
 import SwiftUI
 
 struct WatchSettingsView: View {
+    @StateObject private var taskManager = TaskManager.shared
+    @StateObject private var connectivityManager = WatchConnectivityManager.shared
+    @StateObject private var cloudKitService = CloudKitService.shared
     @StateObject private var settingsViewModel = SettingsViewModel()
     @State private var showingSyncStatus = false
     @State private var showingPointsHistory = false
+    @State private var showingResetAlert = false
+    @State private var lastSyncTime: Date?
     
     var body: some View {
-        // COPIO ESATTAMENTE la struttura del WatchMenuView!
         ScrollView {
-            VStack(spacing: 6) {
+            VStack(spacing: 16) {
+                // TESTING: Connection Status
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Connection")
+                        .font(.headline)
+                        .foregroundColor(.blue)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Circle()
+                                .fill(connectivityManager.isReachable ? .green : .red)
+                                .frame(width: 8, height: 8)
+                            Text(connectivityManager.isReachable ? "iPhone Connected" : "iPhone Disconnected")
+                                .font(.caption)
+                        }
+                        
+                        if let lastSync = lastSyncTime {
+                            Text("Last sync: \(lastSync.formatted(date: .omitted, time: .shortened))")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding()
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                
+                // TESTING: Sync Controls
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Sync")
+                        .font(.headline)
+                        .foregroundColor(.green)
+                    
+                    VStack(spacing: 8) {
+                        Button("Force Sync with iPhone") {
+                            connectivityManager.forceSync()
+                            lastSyncTime = Date()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .font(.caption)
+                        
+                        Button("Sync with CloudKit") {
+                            cloudKitService.syncTasks()
+                            lastSyncTime = Date()
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.caption)
+                    }
+                    .padding()
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                
+                // TESTING: Task Status
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Tasks")
+                        .font(.headline)
+                        .foregroundColor(.purple)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Local tasks: \(taskManager.tasks.count)")
+                            .font(.caption)
+                        Text("Received tasks: \(connectivityManager.receivedTasks.count)")
+                            .font(.caption)
+                    }
+                    .padding()
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(8)
+                }
+
                 // Sync Status row
                 Button(action: { showingSyncStatus = true }) {
                     HStack(spacing: 12) {
@@ -119,15 +192,34 @@ struct WatchSettingsView: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.secondary.opacity(0.1))
                 )
+
+                // Reset Button
+                VStack {
+                    Button("Reset All Data") {
+                        showingResetAlert = true
+                    }
+                    .foregroundColor(.red)
+                    .font(.caption)
+                }
+                .padding()
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(8)
             }
-            .padding(.horizontal, 8) // IDENTICO al menu
-            .padding(.vertical, 8)   // IDENTICO al menu
+            .padding()
         }
         .sheet(isPresented: $showingSyncStatus) {
             WatchSyncStatusView()
         }
         .sheet(isPresented: $showingPointsHistory) {
             WatchPointsHistoryView()
+        }
+        .alert("Reset All Data", isPresented: $showingResetAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Reset", role: .destructive) {
+                taskManager.resetUserDefaults()
+            }
+        } message: {
+            Text("This will delete all local data. CloudKit data will remain intact.")
         }
     }
 }

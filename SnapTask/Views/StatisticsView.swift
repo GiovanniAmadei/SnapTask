@@ -34,7 +34,45 @@ struct StatisticsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                CustomTabBar(selectedTab: $selectedTab)
+                // Header con titolo manuale - REMOVE: background bianco
+                VStack(spacing: 16) {
+                    HStack {
+                        Text("statistics".localized)
+                            .font(.largeTitle.bold())
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    
+                    // Tab bar senza background
+                    HStack(spacing: 0) {
+                        ForEach(StatisticsTab.allCases, id: \.self) { tab in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    selectedTab = tab
+                                }
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: tab.icon)
+                                        .font(.system(size: 18, weight: .medium))
+                                    
+                                    Text(tab.displayName)
+                                        .font(.system(.caption, design: .rounded, weight: .medium))
+                                }
+                                .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 60)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(selectedTab == tab ? Color.accentColor.opacity(0.1) : Color.clear)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
                 
                 TabView(selection: $selectedTab) {
                     OverviewTab(viewModel: viewModel)
@@ -51,8 +89,7 @@ struct StatisticsView: View {
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
-            .navigationTitle("statistics".localized)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
         }
         .onAppear {
             viewModel.refreshStats()
@@ -65,42 +102,6 @@ struct StatisticsView: View {
         .refreshable {
             viewModel.refreshStats()
         }
-    }
-}
-
-// MARK: - Custom Tab Bar
-private struct CustomTabBar: View {
-    @Binding var selectedTab: StatisticsView.StatisticsTab
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(StatisticsView.StatisticsTab.allCases, id: \.self) { tab in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        selectedTab = tab
-                    }
-                } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 18, weight: .medium))
-                        
-                        Text(tab.displayName)
-                            .font(.system(.caption, design: .rounded, weight: .medium))
-                    }
-                    .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 60)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(selectedTab == tab ? Color.accentColor.opacity(0.1) : Color.clear)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -118,7 +119,6 @@ private struct OverviewTab: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -141,7 +141,6 @@ private struct StreaksTab: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -157,7 +156,6 @@ private struct ConsistencyTab: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -784,6 +782,7 @@ private struct PerformanceStatCard: View {
 // MARK: - TimeDistributionCard
 private struct TimeDistributionCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
+    @State private var hasAnimated = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -801,7 +800,10 @@ private struct TimeDistributionCard: View {
                 ], spacing: 8) {
                     ForEach(StatisticsViewModel.TimeRange.allCases, id: \.self) { range in
                         TimeRangeButton(range: range, isSelected: viewModel.selectedTimeRange == range) {
-                            withAnimation(.smooth(duration: 0.8)) { viewModel.selectedTimeRange = range }
+                            hasAnimated = false
+                            withAnimation(.smooth(duration: 0.8)) { 
+                                viewModel.selectedTimeRange = range 
+                            }
                         }
                     }
                 }
@@ -810,16 +812,29 @@ private struct TimeDistributionCard: View {
             if viewModel.categoryStats.isEmpty {
                 EmptyTimeDistributionView()
             } else {
-                Chart(viewModel.categoryStats) { stat in
-                    SectorMark(angle: .value("Hours", stat.hours), innerRadius: .ratio(0.618), angularInset: 1.5)
-                        .cornerRadius(3)
-                        .foregroundStyle(Color(hex: stat.color))
-                }
-                .frame(height: 200)
-                .animation(.smooth(duration: 0.8), value: viewModel.categoryStats)
-                
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                    ForEach(viewModel.categoryStats) { stat in CategoryLegendItem(stat: stat) }
+                VStack(spacing: 12) {
+                    Chart(viewModel.categoryStats) { stat in
+                        SectorMark(angle: .value("Hours", stat.hours), innerRadius: .ratio(0.618), angularInset: 1.5)
+                            .cornerRadius(3)
+                            .foregroundStyle(Color(hex: stat.color))
+                    }
+                    .frame(height: 200)
+                    .animation(hasAnimated ? nil : .smooth(duration: 0.8), value: viewModel.categoryStats)
+                    .onAppear {
+                        if !viewModel.categoryStats.isEmpty && !hasAnimated {
+                            hasAnimated = true
+                        }
+                    }
+                    .onChange(of: viewModel.selectedTimeRange) { _, _ in
+                        hasAnimated = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            hasAnimated = true
+                        }
+                    }
+                    
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                        ForEach(viewModel.categoryStats) { stat in CategoryLegendItem(stat: stat) }
+                    }
                 }
             }
         }
@@ -828,6 +843,7 @@ private struct TimeDistributionCard: View {
     }
 }
 
+// MARK: - TaskCompletionCard 
 private struct TaskCompletionCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var selectedPeriod: CompletionPeriod = .week
@@ -882,29 +898,35 @@ private struct TaskCompletionCard: View {
                 }
             }
             VStack(spacing: 12) {
-                Chart(completionStats) { stat in
-                    BarMark(
-                        x: .value("Day", stat.day),
-                        y: .value("Completed", Double(stat.completedTasks))
-                    )
-                    .foregroundStyle(Color.green)
-                    .cornerRadius(4)
-                    
-                    BarMark(
-                        x: .value("Day", stat.day),
-                        y: .value("Incomplete", Double(max(0, stat.totalTasks - stat.completedTasks))),
-                        stacking: .standard
-                    )
-                    .foregroundStyle(Color.secondary.opacity(0.3))
-                    .cornerRadius(4)
+                VStack(spacing: 12) {
+                    if hasTaskData {
+                        Chart(completionStats) { stat in
+                            BarMark(
+                                x: .value("Day", stat.day),
+                                y: .value("Completed", Double(stat.completedTasks))
+                            )
+                            .foregroundStyle(Color.green)
+                            .cornerRadius(4)
+                            
+                            BarMark(
+                                x: .value("Day", stat.day),
+                                y: .value("Incomplete", Double(max(0, stat.totalTasks - stat.completedTasks))),
+                                stacking: .standard
+                            )
+                            .foregroundStyle(Color.secondary.opacity(0.3))
+                            .cornerRadius(4)
+                        }
+                        .frame(height: 140)
+                        .chartXAxis { AxisMarks(position: .bottom) { _ in AxisValueLabel().font(.caption2) } }
+                        .chartYAxis { AxisMarks(position: .leading) { _ in AxisValueLabel().font(.caption2) } }
+                        .animation(.smooth(duration: 0.8), value: completionStats)
+                        statsLegend
+                    } else {
+                        EmptyTaskCompletionView()
+                    }
                 }
-                .frame(height: 140)
-                .chartXAxis { AxisMarks(position: .bottom) { _ in AxisValueLabel().font(.caption2) } }
-                .chartYAxis { AxisMarks(position: .leading) { _ in AxisValueLabel().font(.caption2) } }
-                .animation(.smooth(duration: 0.8), value: completionStats)
-                statsLegend
             }
-            CategoryCompletionBreakdown(selectedPeriod: selectedPeriod)
+            CategoryCompletionBreakdown(selectedPeriod: selectedPeriod, viewModel: viewModel)
         }
         .padding(16)
         .background(cardBackground)
@@ -922,6 +944,11 @@ private struct TaskCompletionCard: View {
         }
     }
     
+    private var hasTaskData: Bool {
+        let totalTasks = completionStats.reduce(0) { $0 + $1.totalTasks }
+        return totalTasks > 0
+    }
+    
     private var completionStats: [StatisticsViewModel.WeeklyStat] {
         let calendar = Calendar.current
         let today = Date()
@@ -931,109 +958,140 @@ private struct TaskCompletionCard: View {
         case .week:
             return Array(0...6).map { dayOffset in
                 let date = calendar.date(byAdding: .day, value: dayOffset, to: startDate)!
+                let dayStats = viewModel.getWeeklyStatsForDay(date: date)
                 return StatisticsViewModel.WeeklyStat(
-                    day: date.formatted(.dateTime.weekday(.abbreviated)), 
-                    completedTasks: Int.random(in: 0...5), 
-                    totalTasks: Int.random(in: 3...8), 
-                    completionRate: Double.random(in: 0.3...1.0)
+                    day: date.formatted(.dateTime.weekday(.abbreviated)),
+                    completedTasks: dayStats.completed,
+                    totalTasks: dayStats.total,
+                    completionRate: dayStats.rate
                 )
             }
         case .month:
             return Array(0..<5).map { weekOffset in
+                let weekStats = viewModel.getWeeklyStatsForWeekOffset(weekOffset)
                 return StatisticsViewModel.WeeklyStat(
-                    day: "W\(weekOffset + 1)", 
-                    completedTasks: Int.random(in: 5...20), 
-                    totalTasks: Int.random(in: 15...30), 
-                    completionRate: Double.random(in: 0.4...1.0)
+                    day: "W\(weekOffset + 1)",
+                    completedTasks: weekStats.completed,
+                    totalTasks: weekStats.total,
+                    completionRate: weekStats.rate
                 )
             }
         case .year:
             return Array(0..<12).map { monthOffset in
                 let monthStart = calendar.date(byAdding: .month, value: monthOffset, to: startDate)!
+                let monthStats = viewModel.getMonthlyStatsForMonth(monthStart)
                 return StatisticsViewModel.WeeklyStat(
-                    day: monthStart.formatted(.dateTime.month(.abbreviated)), 
-                    completedTasks: Int.random(in: 20...80), 
-                    totalTasks: Int.random(in: 50...120), 
-                    completionRate: Double.random(in: 0.5...1.0)
+                    day: monthStart.formatted(.dateTime.month(.abbreviated)),
+                    completedTasks: monthStats.completed,
+                    totalTasks: monthStats.total,
+                    completionRate: monthStats.rate
                 )
             }
         }
     }
 }
 
-// MARK: - Button Components
-private struct PeriodButton: View {
-    let period: TaskCompletionCard.CompletionPeriod
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(period.displayName)
-                .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
-                .foregroundColor(isSelected ? .accentColor : .primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 28)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
-                        )
-                )
-        }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
-    }
-}
-
-private struct TimeRangeButton: View {
-    let range: StatisticsViewModel.TimeRange
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(range.rawValue)
-                .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
-                .foregroundColor(isSelected ? .accentColor : .primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 28)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
-                        )
-                )
-        }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
-    }
-}
-
-// MARK: - Supporting Views
+// MARK: - CategoryCompletionBreakdown 
 private struct CategoryCompletionBreakdown: View {
     let selectedPeriod: TaskCompletionCard.CompletionPeriod
+    @ObservedObject var viewModel: StatisticsViewModel
+    
     private var categoryCompletionStats: [(name: String, color: String, completionRate: Double, completed: Int, total: Int)] {
-        return [("Work", "#FF9500", 0.8, 8, 10), ("Personal", "#34C759", 0.6, 6, 10)]
+        let categories = CategoryManager.shared.categories
+        let calendar = Calendar.current
+        let today = Date()
+        let startDate = calendar.date(byAdding: .day, value: selectedPeriod.dayOffset, to: today)!
+        
+        return categories.compactMap { category in
+            var totalCompleted = 0
+            var totalTasks = 0
+            
+            switch selectedPeriod {
+            case .week:
+                for dayOffset in 0...6 {
+                    let date = calendar.date(byAdding: .day, value: dayOffset, to: startDate)!
+                    let dayStats = viewModel.getWeeklyStatsForDay(date: date)
+                    totalCompleted += dayStats.completed / max(1, categories.count)
+                    totalTasks += dayStats.total / max(1, categories.count)
+                }
+            case .month:
+                for weekOffset in 0..<5 {
+                    let weekStats = viewModel.getWeeklyStatsForWeekOffset(weekOffset)
+                    totalCompleted += weekStats.completed / max(1, categories.count)
+                    totalTasks += weekStats.total / max(1, categories.count)
+                }
+            case .year:
+                for monthOffset in 0..<12 {
+                    let monthStart = calendar.date(byAdding: .month, value: monthOffset, to: startDate)!
+                    let monthStats = viewModel.getMonthlyStatsForMonth(monthStart)
+                    totalCompleted += monthStats.completed / max(1, categories.count)
+                    totalTasks += monthStats.total / max(1, categories.count)
+                }
+            }
+            
+            let completionRate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
+            
+            return (
+                name: category.name,
+                color: category.color,
+                completionRate: completionRate,
+                completed: totalCompleted,
+                total: totalTasks
+            )
+        }
     }
-    var body: some View { VStack(spacing: 8) { HStack { Text("By Category").font(.system(.caption, design: .rounded, weight: .semibold)).foregroundColor(.primary); Spacer() }; if categoryCompletionStats.isEmpty { Text("no_data".localized).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary).padding(.vertical, 4) } else { LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) { ForEach(categoryCompletionStats, id: \.name) { stat in CompactCategoryItem(stat: stat) } } } } }
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text("By Category")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            if categoryCompletionStats.isEmpty {
+                Text("no_data".localized)
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 4)
+            } else {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
+                    ForEach(categoryCompletionStats, id: \.name) { stat in
+                        CompactCategoryItem(stat: stat)
+                    }
+                }
+            }
+        }
+    }
 }
 
 private struct CompactCategoryItem: View {
     let stat: (name: String, color: String, completionRate: Double, completed: Int, total: Int)
-    var body: some View { HStack(spacing: 6) { Circle().fill(Color(hex: stat.color)).frame(width: 8, height: 8); Text(stat.name).font(.system(.caption2, design: .rounded, weight: .medium)).lineLimit(1).foregroundColor(.primary); Spacer(minLength: 0) }.padding(.horizontal, 6).padding(.vertical, 4).background(RoundedRectangle(cornerRadius: 4).fill(Color(hex: stat.color).opacity(0.06))) }
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color(hex: stat.color))
+                .frame(width: 8, height: 8)
+            Text(stat.name)
+                .font(.system(.caption2, design: .rounded, weight: .medium))
+                .lineLimit(1)
+                .foregroundColor(.primary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color(hex: stat.color).opacity(0.06))
+        )
+    }
 }
 
+// MARK: - OverallStreakCard
 private struct OverallStreakCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
+    
     var body: some View {
         VStack(spacing: 20) {
             HStack {
@@ -1042,9 +1100,23 @@ private struct OverallStreakCard: View {
                 Spacer()
             }
             HStack(spacing: 30) {
-                VStack(spacing: 8) { Text("\(viewModel.currentStreak)").font(.system(size: 36, weight: .bold, design: .rounded)).foregroundColor(.orange); Text("current".localized).font(.system(.subheadline, design: .rounded, weight: .medium)).foregroundColor(.secondary) }
+                VStack(spacing: 8) {
+                    Text("\(viewModel.currentStreak)")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(.orange)
+                    Text("current".localized)
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
                 Divider().frame(height: 60)
-                VStack(spacing: 8) { Text("\(viewModel.bestStreak)").font(.system(size: 36, weight: .bold, design: .rounded)).foregroundColor(.red); Text("best".localized).font(.system(.subheadline, design: .rounded, weight: .medium)).foregroundColor(.secondary) }
+                VStack(spacing: 8) {
+                    Text("\(viewModel.bestStreak)")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(.red)
+                    Text("best".localized)
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
             }
         }
@@ -1053,42 +1125,45 @@ private struct OverallStreakCard: View {
     }
 }
 
+// MARK: - EmptyStreaksView
+private struct EmptyStreaksView: View {
+    var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("No Streaks Yet").font(.system(.title2, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
+}
+
+// MARK: - EmptyTimeDistributionView
+private struct EmptyTimeDistributionView: View {
+    var body: some View { VStack(spacing: 16) { Image(systemName: "chart.pie").font(.system(size: 48)).foregroundStyle(LinearGradient(colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 8) { Text("No Time Data").font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_tasks_time_distribution".localized).font(.system(.caption, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(height: 180, alignment: .center) }
+}
+
+// MARK: - CategoryLegendItem
+private struct CategoryLegendItem: View {
+    let stat: StatisticsViewModel.CategoryStat
+    var body: some View { HStack(spacing: 10) { Circle().fill(Color(hex: stat.color)).frame(width: 12, height: 12); VStack(alignment: .leading, spacing: 1) { Text(stat.name).font(.system(.caption, design: .rounded, weight: .semibold)).lineLimit(1).foregroundColor(.primary); Text(formatTimeValue(stat.hours)).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(.secondary).animation(.smooth(duration: 0.8), value: stat.hours) }; Spacer(minLength: 0) }.padding(.horizontal, 12).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: stat.color).opacity(0.03))) }
+
+    private func formatTimeValue(_ hours: Double) -> String {
+        let totalMinutes = Int(hours * 60)
+        let displayHours = totalMinutes / 60
+        let displayMinutes = totalMinutes % 60
+        
+        if displayHours > 0 {
+            return "\(displayHours)h \(displayMinutes)m"
+        } else {
+            return "\(displayMinutes)m"
+        }
+    }}
+// MARK: - TaskStreakCard
 private struct TaskStreakCard: View { 
     let taskStreak: StatisticsViewModel.TaskStreak
     var body: some View { VStack(spacing: 16) { HStack(spacing: 12) { if let categoryColor = taskStreak.categoryColor { Circle().fill(Color(hex: categoryColor)).frame(width: 12, height: 12) }; VStack(alignment: .leading, spacing: 2) { Text(taskStreak.taskName).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary).lineLimit(1); if let categoryName = taskStreak.categoryName { Text(categoryName).font(.system(.caption, design: .rounded, weight: .medium)).foregroundColor(.secondary) } }; Spacer(); VStack(alignment: .trailing, spacing: 2) { Text("\(Int(taskStreak.completionRate * 100))%").font(.system(.title3, design: .rounded, weight: .bold)).foregroundColor(.primary); Text("complete".localized).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }; HStack(spacing: 24) { StatisticsStatItem(title: "current".localized, value: "\(taskStreak.currentStreak)", color: .orange, icon: "flame.fill"); StatisticsStatItem(title: "best".localized, value: "\(taskStreak.bestStreak)", color: .red, icon: "trophy.fill"); StatisticsStatItem(title: "completed".localized, value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)", color: .green, icon: "checkmark.circle.fill"); Spacer() }; if !taskStreak.streakHistory.isEmpty { Chart(taskStreak.streakHistory) { point in LineMark(x: .value("Date", point.date), y: .value("Streak", point.streakValue)).foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1")).lineStyle(.init(lineWidth: 2, lineCap: .round)).symbol(.circle).symbolSize(40) }.frame(height: 80).chartXAxis(.hidden).chartYAxis(.hidden) } }.padding(20).background(cardBackground) }
 }
 
-private struct StatisticsStatItem: View {
-    let title: String; let value: String; let color: Color; let icon: String
-    var body: some View { VStack(spacing: 6) { HStack(spacing: 4) { Image(systemName: icon).font(.system(.caption2, weight: .medium)).foregroundColor(color); Text(value).font(.system(.callout, design: .rounded, weight: .bold)).foregroundColor(.primary) }; Text(title).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }
-}
-
-private struct EmptyStreaksView: View {
-    var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("No Streaks Yet").font(.system(.title2, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
-}
-
-private struct EmptyTimeDistributionView: View {
-    var body: some View { VStack(spacing: 16) { Image(systemName: "chart.pie").font(.system(size: 48)).foregroundStyle(LinearGradient(colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 8) { Text("No Time Data").font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_tasks_time_distribution".localized).font(.system(.caption, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(height: 180, alignment: .center) }
-}
-
-private struct CategoryLegendItem: View {
-    let stat: StatisticsViewModel.CategoryStat
-    var body: some View { HStack(spacing: 10) { Circle().fill(Color(hex: stat.color)).frame(width: 12, height: 12); VStack(alignment: .leading, spacing: 1) { Text(stat.name).font(.system(.caption, design: .rounded, weight: .semibold)).lineLimit(1).foregroundColor(.primary); Text(String(format: "%.1fh", stat.hours)).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(.secondary).animation(.smooth(duration: 0.8), value: stat.hours) }; Spacer(minLength: 0) }.padding(.horizontal, 12).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: stat.color).opacity(0.03))) }
-}
-
-// MARK: - TaskPerformanceDetail View
+// MARK: - TaskPerformanceDetailView
 private struct TaskPerformanceDetailView: View {
     let task: StatisticsViewModel.TaskPerformanceAnalytics
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedTimeRange: TaskPerformanceTimeRange = .month
+    @State private var selectedTimeRange: TaskPerformanceDetailView.TaskPerformanceTimeRange = .month
     
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 16)
-            .fill(Color(.systemBackground))
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-    }
-    
-    enum TaskPerformanceTimeRange: String, CaseIterable {
+    private enum TaskPerformanceTimeRange: String, CaseIterable {
         case week = "Week"
         case month = "Month"
         case year = "Year"
@@ -1172,7 +1247,7 @@ private struct TaskPerformanceDetailView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 8) {
-                ForEach(TaskPerformanceTimeRange.allCases, id: \.self) { range in
+                ForEach(TaskPerformanceDetailView.TaskPerformanceTimeRange.allCases, id: \.self) { range in
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             selectedTimeRange = range
@@ -1577,12 +1652,7 @@ private struct CompletionRowView: View {
     }
 }
 
-private var cardBackground: some View {
-    RoundedRectangle(cornerRadius: 16)
-        .fill(Color(.systemBackground))
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-}
-
+// MARK: - TaskDetailMetricCard
 private struct TaskDetailMetricCard: View {
     let title: String
     let value: String
@@ -1616,4 +1686,102 @@ private struct TaskDetailMetricCard: View {
                 .fill(color.opacity(0.08))
         )
     }
+}
+
+// MARK: - Button Components
+private struct PeriodButton: View {
+    let period: TaskCompletionCard.CompletionPeriod
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(period.displayName)
+                .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
+                .foregroundColor(isSelected ? .accentColor : .primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+private struct TimeRangeButton: View {
+    let range: StatisticsViewModel.TimeRange
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(range.rawValue)
+                .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
+                .foregroundColor(isSelected ? .accentColor : .primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+// MARK: - EmptyTaskCompletionView
+private struct EmptyTaskCompletionView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "chart.bar")
+                .font(.system(size: 48))
+                .foregroundStyle(LinearGradient(
+                    colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], 
+                    startPoint: .topLeading, 
+                    endPoint: .bottomTrailing
+                ))
+            
+            VStack(spacing: 8) {
+                Text("No Completion Data")
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                Text("Complete tasks to see your completion rate trends")
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+            }
+        }
+        .frame(height: 180, alignment: .center)
+    }
+}
+
+// MARK: - StatisticsStatItem
+private struct StatisticsStatItem: View {
+    let title: String; let value: String; let color: Color; let icon: String
+    var body: some View { VStack(spacing: 6) { HStack(spacing: 4) { Image(systemName: icon).font(.system(.caption2, weight: .medium)).foregroundColor(color); Text(value).font(.system(.callout, design: .rounded, weight: .bold)).foregroundColor(.primary) }; Text(title).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }
+}
+
+// MARK: - Supporting Views
+private var cardBackground: some View {
+    RoundedRectangle(cornerRadius: 16)
+        .fill(Color(.systemBackground))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
 }

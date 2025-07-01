@@ -181,7 +181,7 @@ struct CalendarIntegrationView: View {
             HStack {
                 Text("Synced Events")
                 Spacer()
-                Text("\(integrationManager.calendarEvents.count)")
+                Text("\(integrationManager.getSyncedTasksCount())")
                     .foregroundColor(.secondary)
             }
             
@@ -189,6 +189,14 @@ struct CalendarIntegrationView: View {
                 syncAllTasks()
             }
             .disabled(isLoading || integrationManager.settings.selectedCalendarId == nil)
+            
+            if integrationManager.getSyncedTasksCount() > 0 {
+                Button("Delete All Synced Tasks") {
+                    deleteAllSyncedTasks()
+                }
+                .disabled(isLoading)
+                .foregroundColor(.red)
+            }
             
             if isLoading {
                 HStack {
@@ -268,6 +276,17 @@ struct CalendarIntegrationView: View {
             
             print("📅 Starting sync of \(tasks.count) tasks")
             await integrationManager.syncAllTasksToCalendar(tasks)
+            
+            isLoading = false
+        }
+    }
+    
+    private func deleteAllSyncedTasks() {
+        Task {
+            isLoading = true
+            
+            print("📅 Starting deletion of all synced tasks from calendar")
+            await integrationManager.deleteAllSyncedTasksFromCalendar()
             
             isLoading = false
         }

@@ -166,6 +166,38 @@ class TaskManager: ObservableObject {
         print(" Task removed: \(task.name)")
     }
     
+    func removeTaskFromRemoteSync(_ task: TodoTask) {
+        print("TaskManager iOS: Removing task from remote sync with ID: \(task.id.uuidString)")
+        
+        // Rimuovi i punti reward associati alla task se presente
+        if task.hasRewardPoints {
+            RewardManager.shared.removePointsFromTask(task)
+        }
+        
+        // Rimuovi tutte le durate tracked di questa task dalle statistiche
+        removeTaskFromStatistics(task.id)
+        
+        // Rimuovi la task dall'array locale
+        tasks.removeAll { $0.id == task.id }
+        
+        // Salva i cambiamenti nel database locale
+        saveTasks()
+        notifyTasksUpdated()
+        objectWillChange.send()
+        
+        // Sincronizza con Apple Watch
+        synchronizeWithWatch()
+        
+        // NON chiamare CloudKitService.shared.deleteTask perché stiamo ricevendo la cancellazione da CloudKit
+        
+        // Rimuovi dal calendario se configurato
+        Task {
+            await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
+        }
+        
+        print("✅ Task removed from remote sync: \(task.name)")
+    }
+    
     func saveTrackingSession(_ session: TrackingSession) {
         guard !isUpdatingFromSync else { return }
         
@@ -175,29 +207,45 @@ class TaskManager: ObservableObject {
         trackingSessions.append(updatedSession)
         saveTrackingSessions()
         
-        if let taskId = session.taskId,
-           let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) {
-            
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
-            
-            // Check if this specific completion already has actualDuration set
-            let existingCompletion = tasks[taskIndex].completions[today]
-            if existingCompletion?.actualDuration == nil {
-                let effectiveWorkTime = session.effectiveWorkTime
-                
-                // Update task with the tracked time as actual duration for today
-                updateTaskRating(
-                    taskId: taskId,
-                    actualDuration: effectiveWorkTime,
-                    for: today
-                )
-                
-                print(" Auto-set actualDuration for task '\(tasks[taskIndex].name)' on \(today): \(formatDuration(effectiveWorkTime))")
-            }
-        }
+        // Sync with CloudKit
+        CloudKitService.shared.saveTrackingSession(updatedSession)
         
-        print(" Tracking session saved: \(formatDuration(session.effectiveWorkTime))")
+        CloudKitService.shared.syncNow()
+        
+        print(" Tracking session saved from \(updatedSession.deviceDisplayInfo): \(formatDuration(session.effectiveWorkTime))")
+    }
+    
+    func updateAllTrackingSessions(_ newSessions: [TrackingSession]) {
+        isUpdatingFromSync = true
+        
+        trackingSessions = newSessions
+        
+        saveTrackingSessions()
+        objectWillChange.send()
+        isUpdatingFromSync = false
+        
+        print(" Updated \(newSessions.count) tracking sessions from sync")
+    }
+    
+    func deleteTrackingSession(_ session: TrackingSession) {
+        guard !isUpdatingFromSync else { return }
+        
+        trackingSessions.removeAll { $0.id == session.id }
+        saveTrackingSessions()
+        
+        // Delete from CloudKit
+        CloudKitService.shared.deleteTrackingSession(session)
+        
+        print(" Tracking session deleted: \(session.deviceDisplayInfo)")
+    }
+    
+    func getTrackingSessionsFromDevice(_ deviceType: DeviceType) -> [TrackingSession] {
+        return trackingSessions.filter { $0.deviceType == deviceType }
+    }
+    
+    func getAllDevicesUsed() -> [DeviceType] {
+        let devices = Set(trackingSessions.map { $0.deviceType })
+        return Array(devices).sorted { $0.rawValue < $1.rawValue }
     }
     
     func addTrackedTime(_ duration: TimeInterval, to taskId: UUID) {
@@ -299,12 +347,12 @@ class TaskManager: ObservableObject {
             // SYNC WITH STATISTICS: If actualDuration was updated, sync with time tracking data
             if actualDuration != nil && oldActualDuration != completion.actualDuration {
                 syncActualDurationWithStatistics(
-                    taskId: taskId, 
-                    taskName: task.name, 
-                    categoryId: task.category?.id, 
+                    taskId: taskId,
+                    taskName: task.name,
+                    categoryId: task.category?.id,
                     categoryColor: task.category?.color,
-                    oldDuration: oldActualDuration, 
-                    newDuration: completion.actualDuration, 
+                    oldDuration: oldActualDuration,
+                    newDuration: completion.actualDuration,
                     for: targetDate
                 )
             }
@@ -734,7 +782,7 @@ class TaskManager: ObservableObject {
     }
     
     private func notifyTasksUpdated() {
-        NotificationCenter.default.post(name: .tasksDidUpdate, object: nil)
+        NotificationCenter.default.post(name: Notification.Name("tasksDidUpdate"), object: nil)
     }
     
     // Function to synchronize tasks with Apple Watch
@@ -841,6 +889,7 @@ class TaskManager: ObservableObject {
     }
 }
 
+// MARK: - Notification Extensions
 extension Notification.Name {
     static let tasksDidUpdate = Notification.Name("tasksDidUpdate")
 }

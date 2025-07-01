@@ -100,8 +100,8 @@ struct ViewControlBarView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // View mode toggle - better sized for iPhone 13 mini
-            HStack(spacing: 3) {
+            // View mode toggle - font leggermente più grande ma sempre compatto
+            HStack(spacing: 2) {
                 ForEach(TimelineViewMode.allCases, id: \.self) { mode in
                     Button(action: {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -113,9 +113,11 @@ struct ViewControlBarView: View {
                                 .font(.system(size: 11, weight: .medium))
                             Text(mode == .list ? "list".localized : "time".localized)
                                 .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                         }
                         .foregroundColor(viewModel.viewMode == mode ? .white : .pink)
-                        .padding(.horizontal, 10)
+                        .padding(.horizontal, 9)
                         .padding(.vertical, 7)
                         .background(
                             RoundedRectangle(cornerRadius: 6)
@@ -135,8 +137,8 @@ struct ViewControlBarView: View {
             
             Spacer()
             
-            // Organization status
-            HStack(spacing: 5) {
+            // Organization status - font leggermente più grande
+            HStack(spacing: 4) {
                 Image(systemName: viewModel.organization.icon)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
@@ -145,38 +147,39 @@ struct ViewControlBarView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 7)
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color.gray.opacity(0.08))
             )
-            
-            
-            // Filter button - properly sized for iPhone 13 mini
+			
+			
+            // Filter button - icona leggermente più grande
             Button(action: {
                 viewModel.showingFilterSheet = true
             }) {
                 Image(systemName: "line.3.horizontal.decrease.circle")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 19, weight: .medium))
                     .foregroundColor(.pink)
-                    .frame(width: 38, height: 38)
+                    .frame(width: 36, height: 36)
                     .background(
                         Circle()
                             .fill(Color.pink.opacity(0.08))
                     )
             }
             
-            // Reset button
+            // Reset button - icona leggermente più grande
             if viewModel.organization != .none {
                 Button(action: {
                     viewModel.resetView()
                 }) {
                     Image(systemName: "arrow.clockwise.circle")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundColor(.secondary)
-                        .frame(width: 34, height: 34)
+                        .frame(width: 32, height: 32)
                         .background(
                             Circle()
                                 .fill(Color.gray.opacity(0.08))
@@ -184,8 +187,8 @@ struct ViewControlBarView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
     }
 }
 

@@ -370,9 +370,9 @@ struct TimeTrackingCompletionView: View {
     }
     
     private func saveTimeTracking() async {
-        // Mark the task as completed if tracking as task
+        // Save based on user selection - ONLY ONE SAVE, not both
         if trackAsTask, let task = task {
-            print("Tracking \(editedFocusTime/60) minutes for task: \(editedTaskName)")
+            print("🎯 [TRACKING] Saving as individual task: \(editedTaskName)")
             
             // Check if task still exists and hasn't been modified during tracking
             if let currentTask = TaskManager.shared.tasks.first(where: { $0.id == task.id }) {
@@ -382,7 +382,6 @@ struct TimeTrackingCompletionView: View {
                 // First mark task as completed
                 TaskManager.shared.toggleTaskCompletion(task.id, on: today)
                 
-                // Then save the actual duration to the task's completion data
                 TaskManager.shared.updateTaskRating(
                     taskId: task.id, 
                     actualDuration: editedFocusTime, 
@@ -392,45 +391,76 @@ struct TimeTrackingCompletionView: View {
                     for: today
                 )
                 
-                print(" [TRACKING] Successfully saved duration \(editedFocusTime) to task completion")
+                if let session = session {
+                    var updatedSession = session
+                    updatedSession.categoryId = currentTask.category?.id
+                    updatedSession.categoryName = currentTask.category?.name
+                    updatedSession.totalDuration = editedFocusTime
+                    updatedSession.elapsedTime = editedFocusTime
+                    updatedSession.lastModifiedDate = Date()
+                    TaskManager.shared.saveTrackingSession(updatedSession)
+                }
+                
+                if let updatedTask = TaskManager.shared.tasks.first(where: { $0.id == task.id }) {
+                    CloudKitService.shared.saveTask(updatedTask)
+                }
+                
+                print("✅ [TRACKING] Successfully saved as individual task")
             } else {
-                print(" [TRACKING ERROR] Task \(task.id.uuidString) no longer exists - task was deleted during tracking")
+                print("❌ [TRACKING ERROR] Task \(task.id.uuidString) no longer exists - task was deleted during tracking")
                 // Still save to statistics as individual entry but with warning
-                await saveToStatistics(categoryId: nil, timeSpent: editedFocusTime, taskName: "\(editedTaskName) (deleted)", taskId: task.id)
-                return
+                await saveToStatistics(
+                    categoryId: nil, 
+                    timeSpent: editedFocusTime, 
+                    taskName: "\(editedTaskName) (deleted)", 
+                    taskId: task.id
+                )
             }
             
-            // Save time tracking data to statistics as individual task (this will now sync with task completion)
-            await saveToStatistics(categoryId: nil, timeSpent: editedFocusTime, taskName: editedTaskName, taskId: task.id)
         } else if let category = selectedCategory {
-            // Track time for selected category
-            print("Tracking \(editedFocusTime/60) minutes for category: \(category.name)")
+            print("📁 [TRACKING] Saving to category: \(category.name)")
+            
+            // Mark task as completed if it exists, but DON'T save as individual task
             if let task = task {
-                // Check if task still exists
                 if TaskManager.shared.tasks.contains(where: { $0.id == task.id }) {
                     let calendar = Calendar.current
                     let today = calendar.startOfDay(for: Date())
                     
                     TaskManager.shared.toggleTaskCompletion(task.id, on: today)
                     
-                    // Save the actual duration to the task's completion data even when tracking as category
+                    // Just save basic rating data without duration to avoid syncActualDurationWithStatistics
                     TaskManager.shared.updateTaskRating(
                         taskId: task.id, 
-                        actualDuration: editedFocusTime, 
+                        actualDuration: nil, // NO DURATION to prevent double tracking
                         difficultyRating: nil, 
                         qualityRating: nil, 
                         notes: nil, 
                         for: today
                     )
                     
-                    print(" [TRACKING] Successfully saved duration \(editedFocusTime) to task completion (category mode)")
+                    if let session = session {
+                        var updatedSession = session
+                        updatedSession.categoryId = category.id
+                        updatedSession.categoryName = category.name
+                        updatedSession.totalDuration = editedFocusTime
+                        updatedSession.elapsedTime = editedFocusTime
+                        updatedSession.lastModifiedDate = Date()
+                        TaskManager.shared.saveTrackingSession(updatedSession)
+                    }
+                    
+                    if let updatedTask = TaskManager.shared.tasks.first(where: { $0.id == task.id }) {
+                        CloudKitService.shared.saveTask(updatedTask)
+                    }
+                    
+                    print("✅ [TRACKING] Task marked complete but time tracked to category")
                 } else {
-                    print("Task \(task.id.uuidString) no longer exists during category tracking")
+                    print("⚠️ [TRACKING] Task no longer exists during category tracking")
                 }
             }
             
-            // Save time tracking data to statistics for the selected category
+            // Save time tracking data to statistics ONLY for the selected category
             await saveToStatistics(categoryId: category.id, timeSpent: editedFocusTime)
+            print("✅ [TRACKING] Successfully saved to category only")
         }
     }
     

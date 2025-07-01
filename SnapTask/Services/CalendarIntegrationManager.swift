@@ -188,6 +188,75 @@ class CalendarIntegrationManager: ObservableObject {
         }
     }
     
+    func deleteAllSyncedTasksFromCalendar() async {
+        guard settings.isEnabled else {
+            syncStatus = .error("Calendar integration is disabled")
+            return
+        }
+        
+        print("📅 Starting deletion of all synced tasks from calendar")
+        syncStatus = .syncing
+        
+        var successCount = 0
+        var errorCount = 0
+        var cleanedCount = 0
+        
+        // Get all stored event IDs
+        let userDefaults = UserDefaults.standard
+        let allKeys = userDefaults.dictionaryRepresentation().keys
+        let eventKeys = allKeys.filter { $0.hasPrefix("calendar_event_") }
+        
+        print("📅 Found \(eventKeys.count) synced events to delete")
+        
+        for eventKey in eventKeys {
+            if let eventId = userDefaults.string(forKey: eventKey) {
+                // Check if event exists before trying to delete
+                switch settings.provider {
+                case .apple:
+                    if appleService.eventExists(eventId: eventId) {
+                        do {
+                            try await appleService.deleteEvent(eventId: eventId)
+                            successCount += 1
+                            print("✅ Deleted event: \(eventId)")
+                        } catch {
+                            print("❌ Failed to delete event \(eventId): \(error.localizedDescription)")
+                            errorCount += 1
+                        }
+                    } else {
+                        print("🧹 Event \(eventId) no longer exists, cleaning up stored ID")
+                        cleanedCount += 1
+                    }
+                case .google:
+                    // Implement Google Calendar deletion when available
+                    break
+                }
+                
+                // Always remove the stored event ID
+                userDefaults.removeObject(forKey: eventKey)
+            }
+        }
+        
+        // Provide meaningful status based on results
+        if errorCount == 0 {
+            syncStatus = .success
+            let totalProcessed = successCount + cleanedCount
+            if cleanedCount > 0 {
+                print("✅ All synced events processed: \(successCount) deleted, \(cleanedCount) cleaned up (already removed)")
+            } else {
+                print("✅ All synced tasks deleted from calendar (\(successCount) events)")
+            }
+        } else {
+            syncStatus = .error("Processed \(successCount + cleanedCount) events, \(errorCount) failed")
+            print("⚠️ Deletion completed with errors: \(successCount) deleted, \(cleanedCount) cleaned, \(errorCount) failed")
+        }
+    }
+    
+    func getSyncedTasksCount() -> Int {
+        let userDefaults = UserDefaults.standard
+        let allKeys = userDefaults.dictionaryRepresentation().keys
+        return allKeys.filter { $0.hasPrefix("calendar_event_") }.count
+    }
+    
     private func storeEventId(_ eventId: String, for taskId: UUID) async {
         let key = "calendar_event_\(taskId.uuidString)"
         UserDefaults.standard.set(eventId, forKey: key)

@@ -18,6 +18,7 @@ class CloudKitService: ObservableObject {
     internal let categoryRecordType = "Category"
     private let rewardRecordType = "Reward"
     private let pointsHistoryRecordType = "PointsHistory"
+    private let trackingSessionRecordType = "TrackingSession"
     private let settingsRecordType = "AppSettings"
     private let deletionMarkerRecordType = "DeletionMarker"
     
@@ -86,6 +87,7 @@ class CloudKitService: ObservableObject {
         var categories: Set<String> = []
         var rewards: Set<String> = []
         var pointsHistory: Set<String> = []
+        var trackingSessions: Set<String> = []
     }
     
     private var deletedItems: DeletionTracker {
@@ -98,6 +100,51 @@ class CloudKitService: ObservableObject {
             let data = try? JSONEncoder().encode(newValue)
             UserDefaults.standard.set(data, forKey: "cloudkit_deleted_items")
         }
+    }
+    
+    // MARK: - Deletion Tracking
+    private enum ItemType {
+        case task, category, reward, pointsHistory, trackingSession
+    }
+    
+    private func markAsDeleted(itemID: String, type: ItemType) {
+        var tracker = deletedItems
+        
+        switch type {
+        case .task:
+            tracker.tasks.insert(itemID)
+        case .category:
+            tracker.categories.insert(itemID)
+        case .reward:
+            tracker.rewards.insert(itemID)
+        case .pointsHistory:
+            tracker.pointsHistory.insert(itemID)
+        case .trackingSession:
+            tracker.trackingSessions.insert(itemID)
+        }
+        
+        deletedItems = tracker
+        print("🗑️ Marked \(type) as deleted: \(itemID)")
+    }
+    
+    private func removeFromDeleted(itemID: String, type: ItemType) {
+        var tracker = deletedItems
+        
+        switch type {
+        case .task:
+            tracker.tasks.remove(itemID)
+        case .category:
+            tracker.categories.remove(itemID)
+        case .reward:
+            tracker.rewards.remove(itemID)
+        case .pointsHistory:
+            tracker.pointsHistory.remove(itemID)
+        case .trackingSession:
+            tracker.trackingSessions.remove(itemID)
+        }
+        
+        deletedItems = tracker
+        print("✅ Removed from deleted \(type): \(itemID)")
     }
     
     // MARK: - Initialization
@@ -179,9 +226,9 @@ class CloudKitService: ObservableObject {
     
     // MARK: - Public API
     func syncNow() {
-        guard isCloudKitEnabled else { 
+        guard isCloudKitEnabled else {
             print("🔄 CloudKit sync is disabled")
-            return 
+            return
         }
         
         if isSyncing {
@@ -194,6 +241,27 @@ class CloudKitService: ObservableObject {
             print("🔄 Sync throttled - too frequent")
             return
         }
+        
+        activeSyncTask?.cancel()
+        activeSyncTask = Task {
+            await performFullSync()
+        }
+    }
+    
+    func forceFullSync() {
+        guard isCloudKitEnabled else {
+            print("🔄 CloudKit sync is disabled")
+            return
+        }
+        
+        print("🔄 Force full sync requested - clearing change token")
+        
+        // Clear change token to force full sync
+        serverChangeToken = nil
+        
+        // Reset sync state
+        syncRetryCount = 0
+        lastErrorTime = .distantPast
         
         activeSyncTask?.cancel()
         activeSyncTask = Task {
@@ -429,6 +497,50 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    // MARK: - Tracking Session Operations
+    func saveTrackingSession(_ session: TrackingSession) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createTrackingSessionRecord(from: session)
+                _ = try await privateDatabase.save(record)
+                print("✅ Tracking session saved: \(session.deviceDisplayInfo) - \(formatDuration(session.effectiveWorkTime))")
+            } catch {
+                print("❌ Failed to save tracking session: \(error)")
+            }
+        }
+    }
+    
+    func deleteTrackingSession(_ session: TrackingSession) {
+        guard isCloudKitEnabled else { return }
+        
+        markAsDeleted(itemID: session.id.uuidString, type: .trackingSession)
+        
+        Task {
+            do {
+                let recordID = CKRecord.ID(recordName: session.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                print("✅ Tracking session deleted: \(session.deviceDisplayInfo)")
+            } catch let error as CKError where error.code == .unknownItem {
+                print("ℹ️ Tracking session already deleted")
+            } catch {
+                print("❌ Failed to delete tracking session: \(error)")
+            }
+        }
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = Int(duration) % 3600 / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
     // MARK: - Sync Implementation
     private func performFullSync() async {
         print("🔄 Starting full sync")
@@ -468,6 +580,7 @@ class CloudKitService: ObservableObject {
         var categories: [Category] = []
         var rewards: [Reward] = []
         var pointsHistory: [PointsHistory] = []
+        var trackingSessions: [TrackingSession] = []
         var settings: [String: Any] = [:]
         var deletedRecordIDs: [CKRecord.ID] = []
     }
@@ -509,6 +622,10 @@ class CloudKitService: ObservableObject {
                 if let settings = self.createSettings(from: record) {
                     changes.settings = settings
                 }
+            case self.trackingSessionRecordType:
+                if let session = self.createTrackingSession(from: record) {
+                    changes.trackingSessions.append(session)
+                }
             default:
                 break
             }
@@ -525,9 +642,96 @@ class CloudKitService: ObservableObject {
             
             operation.recordZoneFetchCompletionBlock = { [weak self] _, token, _, _, error in
                 if let error = error {
+                    // Handle specific "client knowledge differs" error
+                    if let ckError = error as? CKError, 
+                       ckError.code == .changeTokenExpired {
+                        print("⚠️ Change token expired, clearing and retrying full sync")
+                        self?.serverChangeToken = nil
+                        // Retry without token for full sync
+                        Task {
+                            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+                            do {
+                                let freshChanges = try await self?.fetchChangesWithoutToken()
+                                continuation.resume(returning: freshChanges ?? changes)
+                            } catch {
+                                continuation.resume(throwing: error)
+                            }
+                        }
+                        return
+                    }
                     continuation.resume(throwing: error)
                 } else {
                     self?.serverChangeToken = token
+                    continuation.resume(returning: changes)
+                }
+            }
+            
+            privateDatabase.add(operation)
+        }
+    }
+    
+    // MARK: - Fresh Sync Without Token
+    private func fetchChangesWithoutToken() async throws -> SyncChanges {
+        print("🔄 Performing fresh sync without change token")
+        
+        let operation = CKFetchRecordZoneChangesOperation(recordZoneIDs: [zoneID])
+        
+        var changes = SyncChanges()
+        
+        // No token configuration - fetch all records
+        operation.configurationsByRecordZoneID = [
+            zoneID: CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+        ]
+        
+        operation.recordChangedBlock = { [weak self] record in
+            guard let self = self else { return }
+            
+            switch record.recordType {
+            case self.taskRecordType:
+                if let task = self.createTask(from: record) {
+                    changes.tasks.append(task)
+                }
+            case self.categoryRecordType:
+                if let category = self.createCategory(from: record) {
+                    changes.categories.append(category)
+                }
+            case self.rewardRecordType:
+                if let reward = self.createReward(from: record) {
+                    changes.rewards.append(reward)
+                }
+            case self.pointsHistoryRecordType:
+                if let pointsEntry = self.createPointsHistory(from: record) {
+                    changes.pointsHistory.append(pointsEntry)
+                }
+            case self.settingsRecordType:
+                if let settings = self.createSettings(from: record) {
+                    changes.settings = settings
+                }
+            case self.trackingSessionRecordType:
+                if let session = self.createTrackingSession(from: record) {
+                    changes.trackingSessions.append(session)
+                }
+            default:
+                break
+            }
+        }
+        
+        operation.recordWithIDWasDeletedBlock = { recordID, _ in
+            changes.deletedRecordIDs.append(recordID)
+        }
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            operation.recordZoneChangeTokensUpdatedBlock = { [weak self] _, token, _ in
+                self?.serverChangeToken = token
+                print("✅ Fresh change token saved")
+            }
+            
+            operation.recordZoneFetchCompletionBlock = { [weak self] _, token, _, _, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    self?.serverChangeToken = token
+                    print("✅ Fresh full sync completed")
                     continuation.resume(returning: changes)
                 }
             }
@@ -545,6 +749,7 @@ class CloudKitService: ObservableObject {
         await mergeCategories(changes.categories)
         await mergeRewards(changes.rewards)
         await mergePointsHistory(changes.pointsHistory)
+        await mergeTrackingSessions(changes.trackingSessions)
         
         if !changes.settings.isEmpty {
             await applySettings(changes.settings)
@@ -563,7 +768,7 @@ class CloudKitService: ObservableObject {
                 let tasks = TaskManager.shared.tasks
                 if let taskIndex = tasks.firstIndex(where: { $0.id == uuid }) {
                     let task = tasks[taskIndex]
-                    TaskManager.shared.removeTask(task)
+                    TaskManager.shared.removeTaskFromRemoteSync(task)
                     print("🗑️ Deleted task from remote: \(task.name)")
                 }
                 
@@ -581,6 +786,14 @@ class CloudKitService: ObservableObject {
                     let reward = rewards[rewardIndex]
                     RewardManager.shared.removeReward(reward)
                     print("🗑️ Deleted reward from remote: \(reward.name)")
+                }
+                
+                // Handle tracking session deletions
+                let trackingSessions = TaskManager.shared.getTrackingSessions()
+                if let sessionIndex = trackingSessions.firstIndex(where: { $0.id == uuid }) {
+                    let session = trackingSessions[sessionIndex]
+                    TaskManager.shared.deleteTrackingSession(session)
+                    print("🗑️ Deleted tracking session from remote: \(session.deviceDisplayInfo)")
                 }
             }
         }
@@ -753,6 +966,43 @@ class CloudKitService: ObservableObject {
         print("📥 Merged \(remoteHistory.count) points history entries")
     }
     
+    private func mergeTrackingSessions(_ remoteSessions: [TrackingSession]) async {
+        guard !remoteSessions.isEmpty else { return }
+        
+        let localSessions = TaskManager.shared.getTrackingSessions()
+        let localMap = Dictionary(uniqueKeysWithValues: localSessions.map { ($0.id, $0) })
+        
+        var mergedSessions = localSessions
+        var hasChanges = false
+        
+        for remoteSession in remoteSessions {
+            if deletedItems.trackingSessions.contains(remoteSession.id.uuidString) {
+                continue // Skip deleted items
+            }
+            
+            if let localSession = localMap[remoteSession.id] {
+                // Merge sessions - prefer the one with the latest modification date
+                if remoteSession.lastModifiedDate > localSession.lastModifiedDate {
+                    if let index = mergedSessions.firstIndex(where: { $0.id == remoteSession.id }) {
+                        mergedSessions[index] = remoteSession
+                        hasChanges = true
+                        print("🔄 Updated tracking session from \(remoteSession.deviceDisplayInfo)")
+                    }
+                }
+            } else {
+                // New remote session
+                mergedSessions.append(remoteSession)
+                hasChanges = true
+                print("📥 Added tracking session from \(remoteSession.deviceDisplayInfo) - \(formatDuration(remoteSession.effectiveWorkTime))")
+            }
+        }
+        
+        if hasChanges {
+            // We'll need to add this method to TaskManager
+            TaskManager.shared.updateAllTrackingSessions(mergedSessions)
+        }
+    }
+    
     private func applySettings(_ settings: [String: Any]) async {
         // Apply remote settings to UserDefaults
         for (key, value) in settings {
@@ -773,7 +1023,7 @@ class CloudKitService: ObservableObject {
         record["name"] = task.name.isEmpty ? "Untitled Task" : task.name
         record["taskDescription"] = task.description
         record["startTime"] = task.startTime
-        record["hasSpecificTime"] = task.hasSpecificTime 
+        record["hasSpecificTime"] = task.hasSpecificTime
         record["duration"] = max(0, task.duration) // Ensure non-negative
         record["hasDuration"] = task.hasDuration
         record["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
@@ -809,7 +1059,7 @@ class CloudKitService: ObservableObject {
         
         let description = record["taskDescription"] as? String
         let startTime = record["startTime"] as? Date ?? Date()
-        let hasSpecificTime = record["hasSpecificTime"] as? Bool ?? true 
+        let hasSpecificTime = record["hasSpecificTime"] as? Bool ?? true
         let duration = record["duration"] as? TimeInterval ?? 0
         let hasDuration = record["hasDuration"] as? Bool ?? false
         let icon = record["icon"] as? String ?? "circle"
@@ -833,7 +1083,7 @@ class CloudKitService: ObservableObject {
             description: description,
             location: location,
             startTime: startTime,
-            hasSpecificTime: hasSpecificTime, 
+            hasSpecificTime: hasSpecificTime,
             duration: duration,
             hasDuration: hasDuration,
             category: category,
@@ -1036,6 +1286,90 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    // MARK: - Tracking Session Record Creation
+    private func createTrackingSessionRecord(from session: TrackingSession) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: session.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: trackingSessionRecordType, recordID: recordID)
+        
+        // Basic session info
+        record["sessionId"] = session.id.uuidString
+        record["taskId"] = session.taskId?.uuidString
+        record["taskName"] = session.taskName
+        record["mode"] = session.mode.rawValue
+        record["categoryId"] = session.categoryId?.uuidString
+        record["categoryName"] = session.categoryName
+        record["startTime"] = session.startTime
+        record["deviceType"] = session.deviceType.rawValue
+        record["deviceName"] = session.deviceName
+        record["sessionCreatedAt"] = session.creationDate
+        record["sessionModifiedAt"] = session.lastModifiedDate
+        
+        // Tracking state
+        record["isRunning"] = session.isRunning
+        record["isPaused"] = session.isPaused
+        record["elapsedTime"] = session.elapsedTime
+        record["totalDuration"] = session.totalDuration
+        record["pausedDuration"] = session.pausedDuration
+        record["isCompleted"] = session.isCompleted
+        record["endTime"] = session.endTime
+        record["notes"] = session.notes
+        
+        return record
+    }
+    
+    private func createTrackingSession(from record: CKRecord) -> TrackingSession? {
+        guard let sessionIdString = record["sessionId"] as? String,
+              let sessionId = UUID(uuidString: sessionIdString),
+              let modeString = record["mode"] as? String,
+              let mode = TrackingMode(rawValue: modeString),
+              let startTime = record["startTime"] as? Date,
+              let deviceTypeString = record["deviceType"] as? String,
+              let deviceType = DeviceType(rawValue: deviceTypeString),
+              let deviceName = record["deviceName"] as? String else {
+            print("❌ Failed to decode tracking session from record")
+            return nil
+        }
+        
+        let creationDate = record["sessionCreatedAt"] as? Date ?? record.creationDate
+        let lastModifiedDate = record["sessionModifiedAt"] as? Date ?? record.modificationDate ?? creationDate
+        
+        let taskId = (record["taskId"] as? String).flatMap { UUID(uuidString: $0) }
+        let taskName = record["taskName"] as? String
+        let categoryId = (record["categoryId"] as? String).flatMap { UUID(uuidString: $0) }
+        let categoryName = record["categoryName"] as? String
+        
+        let isRunning = record["isRunning"] as? Bool ?? false
+        let isPaused = record["isPaused"] as? Bool ?? false
+        let elapsedTime = record["elapsedTime"] as? TimeInterval ?? 0
+        let totalDuration = record["totalDuration"] as? TimeInterval ?? 0
+        let pausedDuration = record["pausedDuration"] as? TimeInterval ?? 0
+        let isCompleted = record["isCompleted"] as? Bool ?? false
+        let endTime = record["endTime"] as? Date
+        let notes = record["notes"] as? String
+        
+        var session = TrackingSession(
+            id: sessionId,
+            taskId: taskId,
+            taskName: taskName,
+            mode: mode,
+            categoryId: categoryId,
+            categoryName: categoryName,
+            startTime: startTime,
+            elapsedTime: elapsedTime,
+            isRunning: isRunning,
+            isPaused: isPaused
+        )
+        
+        // Set additional properties
+        session.totalDuration = totalDuration
+        session.pausedDuration = pausedDuration
+        session.isCompleted = isCompleted
+        session.endTime = endTime
+        session.notes = notes
+        
+        return session
+    }
+    
     // MARK: - Helper Methods
     private func encodeToRecord<T: Codable>(_ record: CKRecord, key: String, value: T?) {
         guard let value = value else { return }
@@ -1095,46 +1429,6 @@ class CloudKitService: ObservableObject {
     }
     
     // MARK: - Deletion Tracking
-    private enum ItemType {
-        case task, category, reward, pointsHistory
-    }
-    
-    private func markAsDeleted(itemID: String, type: ItemType) {
-        var tracker = deletedItems
-        
-        switch type {
-        case .task:
-            tracker.tasks.insert(itemID)
-        case .category:
-            tracker.categories.insert(itemID)
-        case .reward:
-            tracker.rewards.insert(itemID)
-        case .pointsHistory:
-            tracker.pointsHistory.insert(itemID)
-        }
-        
-        deletedItems = tracker
-        print("🗑️ Marked \(type) as deleted: \(itemID)")
-    }
-    
-    private func removeFromDeleted(itemID: String, type: ItemType) {
-        var tracker = deletedItems
-        
-        switch type {
-        case .task:
-            tracker.tasks.remove(itemID)
-        case .category:
-            tracker.categories.remove(itemID)
-        case .reward:
-            tracker.rewards.remove(itemID)
-        case .pointsHistory:
-            tracker.pointsHistory.remove(itemID)
-        }
-        
-        deletedItems = tracker
-        print("✅ Removed from deleted \(type): \(itemID)")
-    }
-    
     private func updateSyncStatus(for accountStatus: CKAccountStatus) async {
         switch accountStatus {
         case .available:
@@ -1167,17 +1461,40 @@ class CloudKitService: ObservableObject {
             case .zoneNotFound:
                 syncStatus = .error("Zone missing")
                 try? await ensureZoneExists()
+            case .changeTokenExpired:
+                print("⚠️ Change token expired - clearing token and retrying")
+                syncStatus = .error("Sync token expired, retrying...")
+                serverChangeToken = nil
+                if syncRetryCount < maxSyncRetries {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                        await performFullSync()
+                    }
+                }
             case .serverRecordChanged:
                 syncStatus = .error("Sync conflict")
                 // Only retry if under limit
                 if syncRetryCount < maxSyncRetries {
-                    Task { 
+                    Task {
                         try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
-                        await performFullSync() 
+                        await performFullSync()
                     }
                 }
             default:
-                syncStatus = .error("Sync failed: \(ckError.localizedDescription)")
+                // Handle the "client knowledge differs" error specifically
+                if ckError.localizedDescription.contains("client knowledge differs") {
+                    print("⚠️ Client knowledge differs from server - clearing token and retrying")
+                    syncStatus = .error("Sync state mismatch, retrying...")
+                    serverChangeToken = nil
+                    if syncRetryCount < maxSyncRetries {
+                        Task {
+                            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 second delay
+                            await performFullSync()
+                        }
+                    }
+                } else {
+                    syncStatus = .error("Sync failed: \(ckError.localizedDescription)")
+                }
             }
         } else {
             syncStatus = .error("Sync failed")
@@ -1199,9 +1516,9 @@ class CloudKitService: ObservableObject {
         case .serverRecordChanged:
             print("⚠️ Record conflict detected, will retry sync")
             if syncRetryCount < maxSyncRetries {
-                Task { 
+                Task {
                     try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
-                    await performFullSync() 
+                    await performFullSync()
                 }
             }
         case .unknownItem:
@@ -1212,9 +1529,9 @@ class CloudKitService: ObservableObject {
             syncStatus = .error("Zone missing, recreating...")
             try? await ensureZoneExists()
             if syncRetryCount < maxSyncRetries {
-                Task { 
+                Task {
                     try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-                    await performFullSync() 
+                    await performFullSync()
                 }
             }
         case .limitExceeded:
@@ -1275,7 +1592,7 @@ class CloudKitService: ObservableObject {
         existingRecord["name"] = task.name.isEmpty ? "Untitled Task" : task.name
         existingRecord["taskDescription"] = task.description
         existingRecord["startTime"] = task.startTime
-        existingRecord["hasSpecificTime"] = task.hasSpecificTime 
+        existingRecord["hasSpecificTime"] = task.hasSpecificTime
         existingRecord["duration"] = max(0, task.duration)
         existingRecord["hasDuration"] = task.hasDuration
         existingRecord["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
@@ -1298,19 +1615,12 @@ class CloudKitService: ObservableObject {
     }
     
     private func mergeTaskConflict(local: TodoTask, remote: TodoTask) -> TodoTask {
-        var merged = remote // Start with remote as base
+        var merged = remote
         
         var mergedCompletions = remote.completions
+        
         for (date, localCompletion) in local.completions {
-            if let remoteCompletion = mergedCompletions[date] {
-                // Compare modification times - use the most recent task's completion state
-                if local.lastModifiedDate > remote.lastModifiedDate {
-                    // Local is more recent, use local completion
-                    mergedCompletions[date] = localCompletion
-                }
-                // If remote is more recent or equal, keep remote (already in mergedCompletions)
-            } else {
-                // Local completion doesn't exist remotely, add it
+            if mergedCompletions[date] == nil {
                 mergedCompletions[date] = localCompletion
             }
         }
@@ -1363,6 +1673,32 @@ class CloudKitService: ObservableObject {
         
         // Perform fresh sync
         await performFullSync()
+    }
+    
+    func clearSyncTokens() {
+        print("🗑️ Clearing all sync tokens and state")
+        serverChangeToken = nil
+        UserDefaults.standard.removeObject(forKey: changeTokenKey)
+        syncRetryCount = 0
+        lastErrorTime = .distantPast
+        syncStatus = .idle
+    }
+    
+    func getSyncDiagnostics() -> [String: Any] {
+        return [
+            "isCloudKitEnabled": isCloudKitEnabled,
+            "syncStatus": syncStatus.description,
+            "lastSyncDate": lastSyncDate?.description ?? "Never",
+            "syncRetryCount": syncRetryCount,
+            "hasChangeToken": serverChangeToken != nil,
+            "deletedItemsCount": [
+                "tasks": deletedItems.tasks.count,
+                "categories": deletedItems.categories.count,
+                "rewards": deletedItems.rewards.count,
+                "pointsHistory": deletedItems.pointsHistory.count,
+                "trackingSessions": deletedItems.trackingSessions.count
+            ]
+        ]
     }
 }
 

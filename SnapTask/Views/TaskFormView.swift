@@ -608,13 +608,6 @@ struct TaskFormView: View {
                     .foregroundColor(.pink)
                     .disabled(!viewModel.isValid)
                 }
-                
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done".localized) {
-                        focusedField = nil
-                    }
-                }
             }
             .sheet(isPresented: $showDurationPicker) {
                 DurationPickerView(duration: $viewModel.duration)

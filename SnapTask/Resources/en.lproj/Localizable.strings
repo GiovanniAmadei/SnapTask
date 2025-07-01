@@ -209,6 +209,13 @@
 "your_daily_motivation" = "Your Daily Motivation";
 "help_continue_improving" = "Help us continue improving SnapTask";
 "support_development" = "Support Development";
+"data_management" = "Data Management";
+"delete_all_data" = "Delete All Data";
+"delete_all_data_description" = "Delete all tasks, categories, statistics and rewards";
+"delete_all_data_footer" = "This action will permanently delete all your tasks, custom categories, rewards, statistics and tracking data. Only default categories will remain.";
+"delete_all_data_confirmation_title" = "Delete All Data?";
+"delete_all_data_confirmation_message" = "This action cannot be undone. All your tasks, custom categories, rewards, points, statistics and tracking sessions will be permanently deleted. Only the default categories (Work, Personal, Health) will remain.";
+"delete_all_data_button" = "Delete All Data";
 
 // Focus Tab View
 "focus_mode" = "Focus Mode";
@@ -274,3 +281,23 @@
 "nice_dinner" = "A nice dinner 🍽️";
 "support" = "Support";
 "support_development" = "Support development";
+
+// Update Banner 0.2.2
+"whats_new" = "What's New";
+"version_update" = "Version";
+"got_it" = "Got it!";
+"view_all_updates" = "View all updates";
+
+// Version 0.2.2 Features
+"task_quality_rating" = "Task Quality & Difficulty Rating";
+"task_quality_rating_desc" = "Rate the quality and difficulty of completed tasks for better insights";
+"manual_time_tracking" = "Manual Time Tracking";
+"manual_time_tracking_desc" = "Manually enter time spent on tasks directly from task details";
+"enhanced_statistics" = "Enhanced Statistics";
+"enhanced_statistics_desc" = "Track quality and difficulty trends over time with detailed analytics";
+"task_comments" = "Task Comments";
+"task_comments_desc" = "Add comments and notes to your tasks for better tracking";
+"data_reset_option" = "Complete Data Reset";
+"data_reset_option_desc" = "Option to delete all data and start fresh when needed";
+"general_improvements" = "General Bug Fixes";
+"general_improvements_desc" = "Various bug fixes and performance improvements based on feedback";

@@ -46,9 +46,16 @@ struct ContentView: View {
             // Update Banner Overlay
             if showingUpdateBanner {
                 UpdateBannerView(isPresented: $showingUpdateBanner)
+                    .onAppear {
+                        // Trigger the animation when the banner appears
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.rootViewController?.children.last?.view.subviews.last?.layer.removeAllAnimations()
+                        }
+                    }
             }
         }
         .onAppear {
+            print("📱 ContentView onAppear - hasShownWelcome: \(hasShownWelcome)")
             if !hasShownWelcome {
                 showingWelcome = true
             } else {
@@ -67,6 +74,10 @@ struct ContentView: View {
             print("🌍 ContentView received language change notification")
             refreshID = UUID()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ForceShowUpdateBanner"))) { _ in
+            print("🎉 Force showing update banner...")
+            showingUpdateBanner = true
+        }
         .fullScreenCover(isPresented: $showingWelcome) {
             WelcomeView()
                 .onDisappear {
@@ -79,13 +90,22 @@ struct ContentView: View {
     }
     
     private func checkForUpdateBanner() {
-        if UpdateBannerManager.shouldShowUpdateBanner() {
+        print("🔍 Checking for update banner...")
+        let shouldShow = UpdateBannerManager.shouldShowUpdateBanner()
+        print("🎯 Should show banner: \(shouldShow)")
+        
+        if shouldShow {
             print("🎉 Showing update banner...")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                showingUpdateBanner = true
-            }
+            showingUpdateBanner = true
         } else {
-            print("📱 Update banner already shown, skipping")
+            print("📱 Update banner already shown for this version, skipping")
         }
+    }
+}
+
+// MARK: - Debug Helper (for testing)
+extension ContentView {
+    func resetUpdateBannerForTesting() {
+        UpdateBannerManager.resetBannerForTesting()
     }
 }

@@ -352,10 +352,25 @@ class TimeTrackerViewModel: ObservableObject {
     
     // Save specific session
     func saveSession(id: UUID) {
-        guard let session = completedSession else { return }
+        guard var session = completedSession else { return }
         
-        // Save to task manager
-        taskManager.saveTrackingSession(session)
+        // IMPORTANT: Always use current task data for category tracking, not captured data
+        // If this is a task-specific session, get the current task data
+        if let taskId = session.taskId,
+           let currentTask = taskManager.tasks.first(where: { $0.id == taskId }) {
+            
+            print("🔄 Updating session category from captured to current task state")
+            print("   Session had: categoryId=\(session.categoryId?.uuidString.prefix(8) ?? "nil"), categoryName=\(session.categoryName ?? "nil")")
+            print("   Current task: categoryId=\(currentTask.category?.id.uuidString.prefix(8) ?? "nil"), categoryName=\(currentTask.category?.name ?? "nil")")
+            
+            // Update session with current task category (not captured category)
+            session.categoryId = currentTask.category?.id
+            session.categoryName = currentTask.category?.name
+            
+            print("   Updated session: categoryId=\(session.categoryId?.uuidString.prefix(8) ?? "nil"), categoryName=\(session.categoryName ?? "nil")")
+        }
+        
+        // Let TimeTrackingCompletionView handle the actual saving based on user selection
         
         // Update task's tracked time if it's task-specific
         if let taskId = session.taskId {

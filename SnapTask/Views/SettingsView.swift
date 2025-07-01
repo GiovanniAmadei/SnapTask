@@ -20,10 +20,30 @@ struct SettingsView: View {
     @State private var showingPermissionAlert = false
     @State private var showingCalendarIntegrationView = false
     @State private var showingWelcome = false
-    
+    @State private var showingDeleteConfirmation = false
+    @State private var isDeleting = false
+
     var body: some View {
         NavigationStack {
             List {
+                // Header integrato nella List
+                Section {
+                    EmptyView()
+                } header: {
+                    HStack {
+                        Text("settings".localized)
+                            .font(.largeTitle.bold())
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 0)
+                    .padding(.top, 8)
+                    .listRowInsets(EdgeInsets())
+                    .textCase(nil)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                
                 // Quote Section - iOS style
                 Section("quote_of_the_day".localized) {
                     IOSQuoteCard()
@@ -163,21 +183,10 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Sync Section
-                Section("sync".localized) {
+                // Synchronization Section
+                Section {
                     NavigationLink(destination: CloudKitSyncSettingsView()) {
-                        HStack {
-                            Image(systemName: "icloud.fill")
-                                .foregroundColor(.blue)
-                                .frame(width: 24)
-                            
-                            Text("icloud_sync".localized)
-                            
-                            Spacer()
-                            
-                            // Show sync status indicator
-                            SyncStatusIndicator()
-                        }
+                        Label("iCloud Sync", systemImage: "icloud")
                     }
                     
                     Button {
@@ -185,10 +194,10 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "calendar")
-                                .foregroundColor(.orange)
+                                .foregroundColor(.green)
                                 .frame(width: 24)
                             
-                            Text("calendar_integration".localized)
+                            Text("Calendar Integration")
                             
                             Spacer()
                             
@@ -199,6 +208,11 @@ struct SettingsView: View {
                         }
                     }
                     .foregroundColor(.primary)
+                    
+                } header: {
+                    Text("Synchronization")
+                } footer: {
+                    Text("Manage data synchronization and calendar integration across your devices.")
                 }
                 
                 // Community Section
@@ -267,8 +281,45 @@ struct SettingsView: View {
                             .foregroundColor(.pink)
                     }
                 }
+                
+                // Data Management Section
+                Section {
+                    Button(action: {
+                        showingDeleteConfirmation = true
+                    }) {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                                .foregroundColor(.red)
+                                .frame(width: 24)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("delete_all_data")
+                                    .foregroundColor(.red)
+                                    .font(.body)
+                                
+                                Text("delete_all_data_description")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            
+                            Spacer()
+                            
+                            if isDeleting {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                    }
+                    .disabled(isDeleting)
+                } header: {
+                    Text("data_management")
+                } footer: {
+                    Text("delete_all_data_footer")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
-            .navigationTitle("settings".localized)
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
@@ -311,9 +362,20 @@ struct SettingsView: View {
             } message: {
                 Text("notification_permission_message".localized)
             }
+            .alert("delete_all_data_confirmation_title", isPresented: $showingDeleteConfirmation) {
+                Button("cancel".localized, role: .cancel) { }
+                Button("delete_all_data_button", role: .destructive) {
+                    Task {
+                        await deleteAllData()
+                    }
+                }
+            } message: {
+                Text("delete_all_data_confirmation_message")
+            }
             .fullScreenCover(isPresented: $showingWelcome) {
                 WelcomeView()
             }
+            .navigationBarHidden(true)
         }
     }
     
@@ -420,6 +482,81 @@ struct SettingsView: View {
         formatter.dateFormat = "HH:mm"
         dailyQuoteNotificationTime = formatter.string(from: selectedNotificationTime)
     }
+    
+    private func deleteAllData() async {
+        isDeleting = true
+        
+        do {
+            // Wait a bit for UI feedback
+            try await Task.sleep(nanoseconds: 500_000_000)
+            
+            // Delete all tasks first (which also clears statistics and rewards)
+            let taskManager = TaskManager.shared
+            let allTasks = taskManager.tasks
+            
+            // Remove each task individually to trigger proper cleanup
+            for task in allTasks {
+                taskManager.removeTask(task)
+            }
+            
+            // Clear any remaining data
+            taskManager.resetUserDefaults()
+            
+            // Reset rewards and points
+            let rewardManager = RewardManager.shared
+            await rewardManager.performCompleteReset()
+            
+            // Reset categories to defaults
+            let categoryManager = CategoryManager.shared
+            await categoryManager.performCompleteReset()
+            
+            // Clear time tracking statistics
+            UserDefaults.standard.removeObject(forKey: "timeTracking")
+            UserDefaults.standard.removeObject(forKey: "taskMetadata")
+            
+            // Clear all focus session data (Timer sessions)
+            let userDefaults = UserDefaults.standard
+            let allKeys = userDefaults.dictionaryRepresentation().keys
+            let timerSessionKeys = allKeys.filter { $0.hasPrefix("timer_session_") }
+            for key in timerSessionKeys {
+                userDefaults.removeObject(forKey: key)
+                print(" Removed timer session: \(key)")
+            }
+            
+            // Clear Pomodoro background state
+            userDefaults.removeObject(forKey: "pomodoro_background_timestamp")
+            userDefaults.removeObject(forKey: "pomodoro_time_remaining")
+            userDefaults.removeObject(forKey: "pomodoro_state")
+            userDefaults.removeObject(forKey: "pomodoro_current_session")
+            userDefaults.removeObject(forKey: "pomodoro_total_paused_time")
+            
+            // Stop any active focus sessions
+            let timeTrackerViewModel = TimeTrackerViewModel.shared
+            let pomodoroViewModel = PomodoroViewModel.shared
+            
+            // Remove all active timer sessions
+            for session in timeTrackerViewModel.activeSessions {
+                timeTrackerViewModel.removeSession(id: session.id)
+            }
+            
+            // Stop any active Pomodoro session
+            pomodoroViewModel.stop()
+            
+            // Synchronize UserDefaults
+            UserDefaults.standard.synchronize()
+            
+            // Notify statistics to refresh
+            NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
+            
+            print(" All data successfully deleted and reset to defaults")
+            print(" Cleared timer sessions, Pomodoro state, and focus tracking data")
+            
+        } catch {
+            print(" Error during data deletion: \(error)")
+        }
+        
+        isDeleting = false
+    }
 }
 
 struct IOSQuoteCard: View {
@@ -508,314 +645,6 @@ struct TimePickerView: View {
                     .fontWeight(.semibold)
                 }
             }
-        }
-    }
-}
-
-struct SyncStatusIndicator: View {
-    @StateObject private var cloudKitService = CloudKitService.shared
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            if cloudKitService.isCloudKitEnabled {
-                switch cloudKitService.syncStatus {
-                case .syncing:
-                    ProgressView()
-                        .scaleEffect(0.7)
-                case .success:
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.caption)
-                case .error:
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .foregroundColor(.red)
-                        .font(.caption)
-                default:
-                    Image(systemName: "circle")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                }
-            } else {
-                Image(systemName: "icloud.slash")
-                    .foregroundColor(.secondary)
-                    .font(.caption)
-            }
-            
-        }
-    }
-}
-
-struct CompactSettingsCard: View {
-    let title: String
-    let icon: String
-    let iconColor: Color
-    let destination: AnyView
-    
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        NavigationLink(destination: destination) {
-            VStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    iconColor.opacity(0.3),
-                                    iconColor.opacity(0.1)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                    
-                    Image(systemName: icon)
-                        .font(.title3)
-                        .foregroundColor(iconColor)
-                }
-                
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Material.ultraThinMaterial)
-                    .shadow(
-                        color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
-                        radius: 6,
-                        x: 0,
-                        y: 3
-                    )
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct AppearanceCompactCard: View {
-    @StateObject private var languageManager = LanguageManager.shared
-    @AppStorage("isDarkMode") private var isDarkMode = false
-    @State private var showingLanguagePicker = false
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.indigo.opacity(0.3),
-                                Color.indigo.opacity(0.1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: "paintpalette.fill")
-                    .font(.title3)
-                    .foregroundColor(.indigo)
-            }
-            
-            Text("appearance".localized)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 8) {
-                Toggle("dark_mode".localized, isOn: $isDarkMode)
-                    .toggleStyle(SwitchToggleStyle(tint: .indigo))
-                    .scaleEffect(0.8)
-                
-                Button {
-                    showingLanguagePicker = true
-                } label: {
-                    Text(languageManager.currentLanguage.name)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Material.ultraThinMaterial))
-                        .foregroundColor(.primary)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Material.ultraThinMaterial)
-                .shadow(
-                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
-                    radius: 6,
-                    x: 0,
-                    y: 3
-                )
-        )
-        .actionSheet(isPresented: $showingLanguagePicker) {
-            ActionSheet(
-                title: Text("language".localized),
-                message: Text("choose_language".localized),
-                buttons: languageManager.availableLanguages.map { language in
-                    .default(Text(language.name)) {
-                        languageManager.setLanguage(language.code)
-                    }
-                } + [.cancel(Text("cancel".localized))]
-            )
-        }
-    }
-}
-
-struct SyncCompactCard: View {
-    @StateObject private var cloudKitService = CloudKitService.shared
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.blue.opacity(0.3),
-                                Color.blue.opacity(0.1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: "icloud.fill")
-                    .font(.title3)
-                    .foregroundColor(.blue)
-            }
-            
-            Text("icloud_sync".localized)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 4) {
-                Circle()
-                    .fill(syncStatusColor)
-                    .frame(width: 8, height: 8)
-                
-                Text(cloudKitService.syncStatus.description)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Material.ultraThinMaterial)
-                .shadow(
-                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
-                    radius: 6,
-                    x: 0,
-                    y: 3
-                )
-        )
-    }
-    
-    private var syncStatusColor: Color {
-        switch cloudKitService.syncStatus {
-        case .success:
-            return .green
-        case .syncing:
-            return .orange
-        case .error(_):
-            return .red
-        case .idle:
-            return .gray
-        case .disabled:
-            return .secondary
-        }
-    }
-}
-
-struct SupportCard: View {
-    @StateObject private var donationService = DonationService.shared
-    @State private var showingDonationSheet = false
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "heart.fill")
-                    .font(.title3)
-                    .foregroundColor(.pink)
-                
-                Text("support_snaptask".localized)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-            }
-            
-            Text("help_continue_improving".localized)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Button {
-                showingDonationSheet = true
-            } label: {
-                HStack {
-                    Text("support_development".localized)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Spacer()
-                    
-                    if donationService.hasEverDonated {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.subheadline)
-                    }
-                    
-                    Image(systemName: "arrow.right")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(
-                    LinearGradient(
-                        colors: [.pink.opacity(0.15), .purple.opacity(0.15)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .cornerRadius(10)
-                .foregroundColor(.primary)
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Material.ultraThinMaterial)
-                .shadow(
-                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
-                    radius: 6,
-                    x: 0,
-                    y: 3
-                )
-        )
-        .sheet(isPresented: $showingDonationSheet) {
-            DonationView()
         }
     }
 }
