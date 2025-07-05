@@ -27,6 +27,19 @@
 "general_focus_session" = "Sessione di Focus Generale";
 "general_pomodoro_session" = "Sessione pomodoro generale";
 "reset_to_default" = "Ripristina Predefinito";
+"error" = "Errore";
+"ok" = "OK";
+"none" = "Nessuno";
+"status" = "Stato";
+"allow" = "Consenti";
+"behavior" = "Comportamento";
+"notifications" = "Notifiche";
+"task_management" = "Gestione Attività";
+"visual_feedback" = "Feedback Visivo";
+"productivity_intelligence" = "Intelligenza Produttività";
+"task_completion" = "Completamento Attività";
+"priority_name" = "Nome Priorità";
+"new_priority" = "Nuova Priorità";
 
 // Main tabs
 "timeline" = "Timeline";
@@ -144,6 +157,9 @@
 "add_new_category" = "Aggiungi Nuova Categoria";
 "select_category" = "Seleziona Categoria";
 "select_color" = "Seleziona Colore";
+"manage_categories" = "Gestisci Categorie";
+"category_gradients" = "Gradienti Categoria";
+"category_gradients_description" = "I gradienti categoria aggiungono un effetto di colore sottile alle card delle attività basato sul colore della categoria. Le modifiche verranno applicate quando torni alla timeline.";
 
 // Settings
 "review_welcome_message" = "Rivedi il messaggio di benvenuto";
@@ -154,11 +170,11 @@
 "dark_mode" = "Modalità Scura";
 "priorities" = "Priorità";
 "add_priority" = "Aggiungi Priorità";
+"manage_priorities" = "Gestisci Priorità";
 "language" = "Lingua";
 "system" = "Sistema";
 "performance" = "Prestazioni";
 "biohacking" = "Biohacking";
-"behavior" = "Comportamento";
 "icloud_sync" = "Sincronizzazione iCloud";
 "calendar_integration" = "Integrazione Calendario";
 "synchronization" = "Sincronizzazione";
@@ -167,6 +183,66 @@
 "support" = "Supporto";
 "sync_error" = "Errore di Sincronizzazione";
 "last_synced" = "Ultima sincronizzazione";
+"try_sign_out_in" = "Prova a disconnetterti e riconnetterti a iCloud";
+"timer_colors" = "Colori Timer";
+
+// Customization - Auto Complete Tasks
+"auto_complete_tasks" = "Auto-completa Attività";
+"auto_complete_tasks_description" = "Completa automaticamente l'attività quando tutte le sottoattività sono finite";
+"auto_complete_tasks_footer" = "Quando abilitato, completare tutte le sottoattività completerà automaticamente l'attività principale.";
+
+// Behavior Settings
+"smart_notifications" = "Notifiche Intelligenti";
+"smart_notifications_description" = "Invia promemoria basati sulla priorità delle attività e le scadenze";
+"smart_notifications_footer" = "Prossimamente: Notifiche intelligenti che si adattano al tuo programma e all'importanza delle attività.";
+
+"auto_reschedule_overdue" = "Riprogramma Automaticamente Scadute";
+"auto_reschedule_overdue_description" = "Sposta automaticamente le attività incomplete al giorno successivo";
+"auto_reschedule_overdue_footer" = "Prossimamente: Opzione per riprogrammare automaticamente le attività incomplete per evitare che si accumulino.";
+
+"celebrate_completions" = "Celebra Completamenti";
+"celebrate_completions_description" = "Mostra animazioni ed effetti quando completi le attività";
+"celebrate_completions_footer" = "Prossimamente: Effetti di celebrazione personalizzabili per rendere il completamento delle attività più gratificante.";
+
+"focus_mode_suggestions" = "Suggerimenti Modalità Focus";
+"focus_mode_suggestions_description" = "Ricevi suggerimenti per sessioni di focus ottimali basate sulle tue abitudini";
+"focus_mode_suggestions_footer" = "Prossimamente: Suggerimenti basati su AI per aiutarti a lavorare più efficacemente.";
+
+// Calendar Integration
+"enable_calendar_integration" = "Abilita Integrazione Calendario";
+"integration" = "Integrazione";
+"sync_tasks_calendar_automatically" = "Sincronizza automaticamente le tue attività con l'app calendario";
+"calendar_provider" = "Provider Calendario";
+"apple_calendar" = "Calendario Apple";
+"google_calendar" = "Google Calendar";
+"calendar_selection" = "Selezione Calendario";
+"selected_calendar" = "Calendario Selezionato";
+"sync_options" = "Opzioni Sincronizzazione";
+"auto_sync_task_creation" = "Sincronizzazione automatica alla creazione attività";
+"auto_sync_task_updates" = "Sincronizzazione automatica agli aggiornamenti attività";
+"sync_completed_tasks" = "Sincronizza attività completate";
+"sync_recurring_tasks" = "Sincronizza attività ricorrenti";
+"provider_status" = "Stato Provider";
+"synced_events" = "Eventi Sincronizzati";
+"sync_all_tasks_now" = "Sincronizza Tutte le Attività Ora";
+"delete_all_synced_tasks" = "Elimina Tutte le Attività Sincronizzate";
+"syncing" = "Sincronizzazione...";
+"connected" = "Connesso";
+"not_connected" = "Non Connesso";
+"select_calendar" = "Seleziona Calendario";
+
+// Calendar Integration Alerts
+"enable_calendar_access" = "Abilita Accesso Calendario";
+"calendar_access_required" = "Accesso Calendario Richiesto";
+"open_settings" = "Apri Impostazioni";
+"calendar_access_message" = "SnapTask ha bisogno dell'accesso al tuo calendario per sincronizzare le tue attività e creare eventi del calendario automaticamente.";
+"calendar_access_required_message" = "L'accesso al calendario è richiesto per sincronizzare le tue attività. Abilita l'accesso al calendario per SnapTask nelle Impostazioni.";
+"calendar_access_denied_message" = "L'accesso al calendario è stato negato. Abilita l'accesso al calendario nelle Impostazioni iOS > Privacy e Sicurezza > Calendari > SnapTask.";
+
+// Calendar Integration Sync Status
+"sync_ready" = "Pronto";
+"sync_success" = "Sincronizzato con successo";
+"sync_error_prefix" = "Errore";
 
 // Pomodoro
 "pomodoro" = "Pomodoro";
@@ -229,13 +305,83 @@
 "save_task" = "Salva Attività";
 "choose_icon" = "Scegli Icona";
 
-// Rewards View
+// Rewards View - Main Interface
 "available_points" = "Punti Disponibili";
-"available_rewards" = "Premi Disponibili";
+"tap_for_details" = "Tocca per\ndettagli";
+"filter_by_frequency" = "Filtra per Frequenza";
+"pts_available" = "pts disponibili";
+"points_history" = "Cronologia Punti";
+"redeemed_rewards" = "Premi Riscattati";
 "no_rewards_yet" = "Nessun Premio Ancora";
 "create_first_reward_motivation" = "Crea il tuo primo premio per iniziare a motivarti!";
 "redeem" = "Riscatta";
 "general" = "Generale";
+"need_more_points" = "Servono {points} punti in più";
+"rewards_count" = "premi";
+"available_rewards" = "Premi Disponibili";
+
+// Reward Form View
+"reward_details" = "Dettagli Premio";
+"reward_name" = "Nome Premio";
+"enter_reward_name" = "Inserisci nome premio";
+"description" = "Descrizione";
+"add_description" = "Aggiungi descrizione";
+"use_specific_category" = "Usa Categoria Specifica";
+"use_points_from_specific_category" = "Usa punti da una categoria specifica";
+"no_categories_available" = "Nessuna categoria disponibile";
+"cost" = "Costo";
+"quick_rewards_worth" = "Piccoli premi";
+"regular_rewards_worth" = "Premi regolari";
+"complex_rewards_worth" = "Premi importanti";
+"premium_rewards_worth" = "Premi premium";
+"point_accumulation_period" = "Periodo di accumulo punti";
+"daily_rewards_reset" = "I premi giornalieri si resettano ogni giorno alle 00:00";
+"weekly_rewards_accumulate" = "I premi settimanali accumulano punti per tutta la settimana";
+"monthly_rewards_accumulate" = "I premi mensili accumulano punti per tutto il mese";
+"yearly_rewards_accumulate" = "I premi annuali accumulano punti per tutto l'anno";
+"onetime_rewards_once" = "I premi una tantum possono essere riscattati solo una volta";
+"available_category_points" = "Punti {category} disponibili";
+"available_total_points" = "Punti totali disponibili";
+"save_reward" = "Salva Premio";
+"new_reward" = "Nuovo Premio";
+"edit_reward" = "Modifica Premio";
+
+// Points History View
+"entries" = "voci";
+"entry" = "voce";
+"all_time" = "Sempre";
+"this_week" = "Questa Settimana";
+"this_month" = "Questo Mese";
+"this_year" = "Quest'Anno";
+"no_points_for" = "Nessun Punto per {period}";
+"complete_tasks_points_enabled" = "Completa attività con punti premio abilitati per vedere la cronologia qui.";
+"points_per_completion" = "punti per completamento";
+"times" = "volte";
+"recent_completions" = "Completamenti recenti:";
+"reset_all_points" = "Ripristina Tutti i Punti";
+"remove_selected" = "Rimuovi Selezionati";
+"reset_all_points_alert" = "Questo eliminerà permanentemente tutti i punti guadagnati. Questa azione non può essere annullata.";
+"remove_selected_points" = "Rimuovi Punti Selezionati";
+"remove_selected_alert" = "Questo rimuoverà i punti guadagnati dalle attività selezionate. Questa azione non può essere annullata.";
+"remove" = "Rimuovi";
+
+// Redeemed Rewards View
+"reward" = "premio";
+"no_rewards_redeemed_for" = "Nessun Premio Riscattato per {period}";
+"start_earning_redeem_first" = "Inizia a guadagnare punti e riscatta il tuo primo premio!";
+"last_redeemed" = "Ultimo riscatto:";
+
+// Points Overview/Breakdown View
+"points_overview" = "Panoramica Punti";
+"total_available_points" = "Punti Totali Disponibili";
+"top_categories" = "Categorie Principali";
+"points_by_period" = "Punti per Periodo";
+"points_by_category" = "Punti per Categoria";
+"create_categories_organize_rewards" = "Crea categorie per organizzare i tuoi premi";
+"daily" = "Giornaliero";
+"weekly" = "Settimanale";
+"monthly" = "Mensile";
+"yearly" = "Annuale";
 
 // Statistics View
 "overview" = "Panoramica";
@@ -345,7 +491,7 @@
 "pizza_for_giovanni" = "Pizza per Giovanni";
 "pizza_for_dinner" = "Una pizza per cena ";
 "dinner_for_giovanni" = "Cena per Giovanni";
-"nice_dinner" = "Una bella cena ";
+"nice_dinner" = "Una bella cena";
 
 // Update Banner 0.3
 "whats_new" = "Cosa c'è di Nuovo";
@@ -379,7 +525,6 @@
 "processing" = "Elaborazione in corso...";
 "operation_completed" = "Operazione completata";
 "operation_success" = "L'operazione è stata completata con successo.";
-"error" = "Errore";
 
 // Common interface elements
 "clear" = "Cancella";
@@ -395,6 +540,13 @@
 "default_view" = "Vista Predefinita";
 "no_category" = "Nessuna Categoria";
 "default" = "Predefinito";
+
+// Frequency filter chips - compact versions
+"day" = "Giorno";
+"settimana" = "Sett.";
+"mese" = "Mese";
+"anno" = "Anno";
+"sempre" = "Sempre";
 
 // Recurrence Types
 "daily_enum" = "Giornaliera";
@@ -426,7 +578,6 @@
 // iCloud Sync Settings
 "sync_now" = "Sincronizza Ora";
 "last_sync" = "Ultima sincronizzazione";
-"sync_options" = "Opzioni Sincronizzazione";
 "what_gets_synced" = "Cosa Viene Sincronizzato";
 "auto_sync" = "Sincronizzazione Automatica";
 "auto_sync_description" = "Quando la sincronizzazione automatica è abilitata, i cambiamenti verranno sincronizzati automaticamente quando li effettui.";
@@ -469,3 +620,7 @@
 // Additional sync-related strings
 "enabled" = "Abilitato";
 "disabled" = "Disabilitato";
+"common_solutions" = "Soluzioni Comuni:";
+"check_internet_connection" = "Controlla la connessione internet";
+"verify_icloud_enabled" = "Verifica che iCloud sia abilitato nelle Impostazioni";
+"ensure_icloud_storage" = "Assicurati di avere abbastanza spazio di archiviazione iCloud";

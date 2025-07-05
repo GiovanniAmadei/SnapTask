@@ -11,21 +11,21 @@ enum RewardFrequency: String, Codable, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .daily: return "Daily"
-        case .weekly: return "Weekly"
-        case .monthly: return "Monthly"
-        case .yearly: return "Yearly"
-        case .oneTime: return "One Time"
+        case .daily: return "daily".localized
+        case .weekly: return "weekly".localized
+        case .monthly: return "monthly".localized
+        case .yearly: return "yearly".localized
+        case .oneTime: return "onetime_rewards_once".localized
         }
     }
     
     var shortDisplayName: String {
         switch self {
-        case .daily: return "Day"
-        case .weekly: return "Week"
-        case .monthly: return "Month"
-        case .yearly: return "Year"
-        case .oneTime: return "Once"
+        case .daily: return "day".localized
+        case .weekly: return "settimana".localized
+        case .monthly: return "mese".localized
+        case .yearly: return "anno".localized
+        case .oneTime: return "1x"
         }
     }
     

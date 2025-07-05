@@ -5,39 +5,69 @@ struct CustomizationView: View {
     
     var body: some View {
         List {
-            Section(footer: Text("Category gradients add a subtle color effect to task cards based on their category color. Changes will be applied when you return to the timeline.")) {
+            Section {
                 NavigationLink {
                     CategoriesView(viewModel: viewModel)
                 } label: {
-                    Label("Manage Categories", systemImage: "folder.fill")
+                    Label("manage_categories".localized, systemImage: "folder.fill")
                         .foregroundColor(.blue)
                 }
                 
                 Toggle(isOn: $viewModel.showCategoryGradients) {
-                    Label("Category Gradients", systemImage: "paintpalette.fill")
+                    Label("category_gradients".localized, systemImage: "paintpalette.fill")
                         .foregroundColor(.cyan)
                 }
+            } header: {
+                Text("categories".localized)
+            } footer: {
+                Text("category_gradients_description".localized)
             }
             
-            Section("Priorities") {
+            Section("priorities".localized) {
                 NavigationLink {
                     PrioritiesView(viewModel: viewModel)
                 } label: {
-                    Label("Manage Priorities", systemImage: "flag.fill")
+                    Label("manage_priorities".localized, systemImage: "flag.fill")
                         .foregroundColor(.orange)
                 }
             }
             
-            Section("Pomodoro") {
+            Section("pomodoro".localized) {
                 NavigationLink {
                     PomodoroColorsView()
                 } label: {
-                    Label("Timer Colors", systemImage: "paintbrush.fill")
+                    Label("timer_colors".localized, systemImage: "paintbrush.fill")
                         .foregroundColor(.purple)
                 }
             }
+            
+            Section {
+                HStack {
+                    Image(systemName: "checklist")
+                        .foregroundColor(.green)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("auto_complete_tasks".localized)
+                            .font(.body)
+                        Text("auto_complete_tasks_description".localized)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $viewModel.autoCompleteTaskWithSubtasks)
+                        .toggleStyle(SwitchToggleStyle(tint: .green))
+                }
+            } header: {
+                Text("task_completion".localized)
+            } footer: {
+                Text("auto_complete_tasks_footer".localized)
+                    .font(.caption)
+            }
         }
-        .navigationTitle("Customization")
+        .navigationTitle("customization".localized)
     }
 }
 
@@ -51,7 +81,8 @@ struct PrioritiesView: View {
                 HStack {
                     Image(systemName: priority.icon)
                         .foregroundColor(Color(hex: priority.color))
-                    Text(priority.rawValue.capitalized)
+                        .frame(width: 20)
+                    Text(priority.displayName)
                     Spacer()
                 }
             }
@@ -60,10 +91,10 @@ struct PrioritiesView: View {
             }
             
             Button(action: { showingNewPrioritySheet = true }) {
-                Label("Add Priority", systemImage: "plus")
+                Label("add_priority".localized, systemImage: "plus")
             }
         }
-        .navigationTitle("Priorities")
+        .navigationTitle("priorities".localized)
         .sheet(isPresented: $showingNewPrioritySheet) {
             NavigationStack {
                 PriorityFormView { priority in
@@ -81,25 +112,25 @@ struct PriorityFormView: View {
     
     var body: some View {
         Form {
-            TextField("Priority Name", text: $name)
+            TextField("priority_name".localized, text: $name)
             
             if let priority = Priority(rawValue: name.lowercased()) {
                 HStack {
                     Image(systemName: priority.icon)
                         .foregroundColor(Color(hex: priority.color))
-                    Text("Preview")
+                    Text("preview".localized)
                         .foregroundColor(.secondary)
                 }
             }
         }
-        .navigationTitle("New Priority")
+        .navigationTitle("new_priority".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button("cancel".localized) { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button("save".localized) {
                     if let priority = Priority(rawValue: name.lowercased()) {
                         onSave(priority)
                     }

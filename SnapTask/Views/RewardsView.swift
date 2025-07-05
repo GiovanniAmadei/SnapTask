@@ -28,7 +28,7 @@ struct RewardsView: View {
                     // Header con titolo manuale come in StatisticsView
                     VStack(spacing: 16) {
                         HStack {
-                            Text("Rewards")
+                            Text("rewards".localized)
                                 .font(.largeTitle.bold())
                                 .foregroundColor(.primary)
                             Spacer()
@@ -91,7 +91,7 @@ struct RewardsView: View {
             }) {
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Available Points")
+                        Text("available_points".localized)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.secondary)
                         
@@ -121,7 +121,7 @@ struct RewardsView: View {
                                 .foregroundColor(Color(hex: "5E5CE6"))
                         }
                         
-                        Text("Tap for\ndetails")
+                        Text("tap_for_details".localized)
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -133,23 +133,23 @@ struct RewardsView: View {
             
             // Period breakdown chips
             HStack(spacing: 6) {
-                CompactPointsChip(title: "Today", points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
-                CompactPointsChip(title: "Week", points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
-                CompactPointsChip(title: "Month", points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
-                CompactPointsChip(title: "Year", points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+                CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
+                CompactPointsChip(title: "settimana".localized, points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
+                CompactPointsChip(title: "mese".localized, points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
+                CompactPointsChip(title: "anno".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
             }
             
             // Filter Section
             VStack(spacing: 10) {
                 HStack {
-                    Text("Filter by Frequency")
+                    Text("filter_by_frequency".localized)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.primary)
                     
                     Spacer()
                     
                     let currentPoints = viewModel.currentPoints(for: selectedFilter)
-                    Text("\(currentPoints) pts available")
+                    Text("\(currentPoints) " + "pts_available".localized)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(selectedFilter == .daily ? Color(hex: "FF6B6B") : 
                                        selectedFilter == .weekly ? Color(hex: "4ECDC4") :
@@ -166,7 +166,7 @@ struct RewardsView: View {
                                 Image(systemName: frequency.iconName)
                                     .font(.system(size: 14, weight: .medium))
                                 
-                                Text(frequency.shortDisplayName)
+                                Text(frequency.displayName)
                                     .font(.system(size: 10, weight: .medium))
                             }
                             .frame(maxWidth: .infinity)
@@ -241,7 +241,7 @@ struct RewardsView: View {
     private var quickActionsView: some View {
         HStack(spacing: 8) {
             CompactActionCard(
-                title: "Points History",
+                title: "points_history".localized,
                 icon: "chart.line.uptrend.xyaxis",
                 color: Color(hex: "00C853")
             ) {
@@ -249,7 +249,7 @@ struct RewardsView: View {
             }
             
             CompactActionCard(
-                title: "Redeemed Rewards",
+                title: "redeemed_rewards".localized,
                 icon: "gift.circle",
                 color: Color(hex: "FF6B6B")
             ) {
@@ -261,12 +261,12 @@ struct RewardsView: View {
     private var rewardsListView: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Available Rewards")
+                Text("available_rewards".localized)
                     .font(.system(size: 20, weight: .semibold))
                 
                 Spacer()
                 
-                Text("\(filteredRewards.count) rewards")
+                Text("\(filteredRewards.count) " + "rewards_count".localized)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }
@@ -309,10 +309,10 @@ struct RewardsView: View {
             }
             
             VStack(spacing: 8) {
-                Text("No Rewards Yet")
+                Text("no_rewards_yet".localized)
                     .font(.system(size: 18, weight: .semibold))
                 
-                Text("Create your first reward to get motivated!")
+                Text("create_first_reward_motivation".localized)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

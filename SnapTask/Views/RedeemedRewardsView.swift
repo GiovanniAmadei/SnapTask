@@ -12,6 +12,16 @@ struct RedeemedRewardsView: View {
         case month = "This Month"
         case year = "This Year"
         
+        var localizedName: String {
+            switch self {
+            case .all: return "all_time".localized
+            case .day: return "today".localized
+            case .week: return "this_week".localized
+            case .month: return "this_month".localized
+            case .year: return "this_year".localized
+            }
+        }
+        
         var color: Color {
             switch self {
             case .all: return Color(hex: "5E5CE6")
@@ -78,7 +88,7 @@ struct RedeemedRewardsView: View {
             .navigationBarHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                 }
@@ -90,13 +100,13 @@ struct RedeemedRewardsView: View {
         VStack(spacing: 16) {
             // Header with title and count
             HStack {
-                Text("Redeemed Rewards")
+                Text("redeemed_rewards".localized)
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
-                Text("\(filteredRedeemedRewards.count) \(filteredRedeemedRewards.count == 1 ? "reward" : "rewards")")
+                Text("\(filteredRedeemedRewards.count) \(filteredRedeemedRewards.count == 1 ? "reward".localized : "rewards".localized)")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 12)
@@ -148,10 +158,10 @@ struct RedeemedRewardsView: View {
             }
             
             VStack(spacing: 8) {
-                Text("No Rewards Redeemed for \(selectedTimeFilter.rawValue)")
+                Text("no_rewards_redeemed_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName))
                     .font(.system(size: 18, weight: .semibold))
                 
-                Text("Start earning points and redeem your first reward!")
+                Text("start_earning_redeem_first".localized)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -221,7 +231,7 @@ struct RedeemedRewardCard: View {
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(Color(hex: "FF6B6B"))
                     
-                    Text("\(redemptionDates.count) times")
+                    Text("\(redemptionDates.count) " + "times".localized)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
@@ -229,7 +239,7 @@ struct RedeemedRewardCard: View {
             
             if let lastRedeemed = lastRedeemed {
                 HStack {
-                    Text("Last redeemed:")
+                    Text("last_redeemed".localized)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                     
@@ -305,11 +315,11 @@ struct RedeemedTimeFilterChip: View {
     
     private var compactTitle: String {
         switch filter {
-        case .all: return "All"
-        case .day: return "Today"
-        case .week: return "Week"
-        case .month: return "Month"
-        case .year: return "Year"
+        case .all: return "sempre".localized
+        case .day: return "today".localized
+        case .week: return "settimana".localized
+        case .month: return "mese".localized
+        case .year: return "anno".localized
         }
     }
 }

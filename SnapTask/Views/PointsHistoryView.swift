@@ -36,6 +36,16 @@ struct PointsHistoryView: View {
             case .year: return Color(hex: "FFD700")
             }
         }
+        
+        var localizedName: String {
+            switch self {
+            case .all: return "all_time".localized
+            case .day: return "today".localized
+            case .week: return "this_week".localized
+            case .month: return "this_month".localized
+            case .year: return "this_year".localized
+            }
+        }
     }
     
     private var filteredPointsEarningTasks: [(TodoTask, [Date])] {
@@ -126,7 +136,7 @@ struct PointsHistoryView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !filteredPointsEarningTasks.isEmpty {
-                        Button(isEditMode ? "Cancel" : "Edit") {
+                        Button(isEditMode ? "cancel".localized : "edit".localized) {
                             withAnimation {
                                 isEditMode.toggle()
                                 if !isEditMode {
@@ -140,7 +150,7 @@ struct PointsHistoryView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
                         if isEditMode && !selectedTasks.isEmpty {
-                            Button("Remove Selected") {
+                            Button("remove_selected".localized) {
                                 showingRemoveSelectedAlert = true
                             }
                             .foregroundColor(.red)
@@ -148,7 +158,7 @@ struct PointsHistoryView: View {
                         
                         if !isEditMode {
                             Menu {
-                                Button("Reset All Points", role: .destructive) {
+                                Button("reset_all_points".localized, role: .destructive) {
                                     showingResetAlert = true
                                 }
                             } label: {
@@ -156,23 +166,23 @@ struct PointsHistoryView: View {
                             }
                         }
                         
-                        Button("Done") {
+                        Button("done".localized) {
                             dismiss()
                         }
                     }
                 }
             }
-            .alert("Reset All Points", isPresented: $showingResetAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Reset", role: .destructive) {
+            .alert("reset_all_points".localized, isPresented: $showingResetAlert) {
+                Button("cancel".localized, role: .cancel) { }
+                Button("reset".localized, role: .destructive) {
                     rewardManager.resetAllPoints()
                 }
             } message: {
-                Text("This will permanently delete all earned points. This action cannot be undone.")
+                Text("reset_all_points_alert".localized)
             }
-            .alert("Remove Selected Points", isPresented: $showingRemoveSelectedAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Remove", role: .destructive) {
+            .alert("remove_selected_points".localized, isPresented: $showingRemoveSelectedAlert) {
+                Button("cancel".localized, role: .cancel) { }
+                Button("remove".localized, role: .destructive) {
                     for taskId in selectedTasks {
                         if let task = taskManager.tasks.first(where: { $0.id == taskId }) {
                             rewardManager.removePointsFromTask(task)
@@ -182,7 +192,7 @@ struct PointsHistoryView: View {
                     isEditMode = false
                 }
             } message: {
-                Text("This will remove points earned from the selected tasks. This action cannot be undone.")
+                Text("remove_selected_alert".localized)
             }
         }
     }
@@ -191,13 +201,13 @@ struct PointsHistoryView: View {
         VStack(spacing: 16) {
             // Header with title and count
             HStack {
-                Text("Points History")
+                Text("points_history".localized)
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
-                Text("\(filteredPointsEarningTasks.count) \(filteredPointsEarningTasks.count == 1 ? "entry" : "entries")")
+                Text("\(filteredPointsEarningTasks.count) \(filteredPointsEarningTasks.count == 1 ? "entry".localized : "entries".localized)")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 12)
@@ -248,7 +258,7 @@ struct PointsHistoryView: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("\(selectedTimeFilter.rawValue) Points")
+                    Text("\(selectedTimeFilter.localizedName) " + "points".localized)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.9))
                     
@@ -288,10 +298,10 @@ struct PointsHistoryView: View {
             }
             
             VStack(spacing: 8) {
-                Text("No Points for \(selectedTimeFilter.rawValue)")
+                Text("no_points_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName))
                     .font(.system(size: 18, weight: .semibold))
                 
-                Text("Complete tasks with reward points enabled to see your earning history here.")
+                Text("complete_tasks_points_enabled".localized)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -336,11 +346,11 @@ struct TimeFilterChip: View {
     
     private var compactTitle: String {
         switch filter {
-        case .all: return "All"
-        case .day: return "Today"
-        case .week: return "Week"
-        case .month: return "Month" 
-        case .year: return "Year"
+        case .all: return "sempre".localized
+        case .day: return "today".localized
+        case .week: return "settimana".localized
+        case .month: return "mese".localized 
+        case .year: return "anno".localized
         }
     }
 }
@@ -402,7 +412,7 @@ struct TaskPointsCard: View {
                         Text(task.name)
                             .font(.system(size: 16, weight: .semibold))
                         
-                        Text("\(task.rewardPoints) points per completion")
+                        Text("\(task.rewardPoints) " + "points_per_completion".localized)
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
@@ -414,7 +424,7 @@ struct TaskPointsCard: View {
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(Color(hex: "00C853"))
                         
-                        Text("\(completionDates.count) times")
+                        Text("\(completionDates.count) " + "times".localized)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -422,7 +432,7 @@ struct TaskPointsCard: View {
                 
                 if completionDates.count > 1 {
                     HStack {
-                        Text("Recent completions:")
+                        Text("recent_completions".localized)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.secondary)
                         

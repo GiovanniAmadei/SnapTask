@@ -163,26 +163,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Behavior Section
-                Section("behavior".localized) {
-                    NavigationLink(destination: BehaviorSettingsView(viewModel: viewModel)) {
-                        HStack {
-                            Image(systemName: "gearshape.2")
-                                .foregroundColor(.green)
-                                .frame(width: 24)
-                            
-                            Text("app_behavior".localized)
-                            
-                            Spacer()
-                            
-                            // Show current auto-complete status as preview
-                            Text(viewModel.autoCompleteTaskWithSubtasks ? "auto_complete_on".localized : "manual".localized)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                
                 // Synchronization Section
                 Section {
                     NavigationLink(destination: CloudKitSyncSettingsView()) {
@@ -293,11 +273,11 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("delete_all_data")
+                                Text("delete_all_data".localized)
                                     .foregroundColor(.red)
                                     .font(.body)
                                 
-                                Text("delete_all_data_description")
+                                Text("delete_all_data_description".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.leading)
@@ -313,9 +293,9 @@ struct SettingsView: View {
                     }
                     .disabled(isDeleting)
                 } header: {
-                    Text("data_management")
+                    Text("data_management".localized)
                 } footer: {
-                    Text("delete_all_data_footer")
+                    Text("delete_all_data_footer".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -362,15 +342,15 @@ struct SettingsView: View {
             } message: {
                 Text("notification_permission_message".localized)
             }
-            .alert("delete_all_data_confirmation_title", isPresented: $showingDeleteConfirmation) {
+            .alert("delete_all_data_confirmation_title".localized, isPresented: $showingDeleteConfirmation) {
                 Button("cancel".localized, role: .cancel) { }
-                Button("delete_all_data_button", role: .destructive) {
+                Button("delete_all_data_button".localized, role: .destructive) {
                     Task {
                         await deleteAllData()
                     }
                 }
             } message: {
-                Text("delete_all_data_confirmation_message")
+                Text("delete_all_data_confirmation_message".localized)
             }
             .fullScreenCover(isPresented: $showingWelcome) {
                 WelcomeView()
