@@ -383,6 +383,56 @@
 
 // Common interface elements
 "clear" = "Clear";
+"icloud_sync" = "iCloud Sync";
+"sync_now" = "Sync Now";
+"last_sync" = "Last sync";
+"sync_options" = "Sync Options";
+"what_gets_synced" = "What Gets Synced";
+"auto_sync" = "Auto Sync";
+"auto_sync_description" = "When auto sync is enabled, changes will be automatically synchronized when you make them.";
+"sync_details" = "Sync Details";
+"view_sync_status" = "View Sync Status";
+"advanced" = "Advanced";
+"reset_sync_data" = "Reset Sync Data";
+"reset_sync_description" = "This will clear all sync data and force a fresh sync on next startup. Use this if you're experiencing sync issues.";
+"information" = "Information";
+"storage" = "Storage";
+"privacy" = "Privacy";
+"end_to_end_encrypted" = "End-to-End Encrypted";
+"reset_sync_data_alert_title" = "Reset Sync Data";
+"reset_sync_data_alert_message" = "This will clear all local sync data and force a fresh sync. Your data in iCloud will not be deleted. Continue?";
+"reset" = "Reset";
+"synchronized_data" = "Synchronized Data";
+"all_data_types_synced" = "All data types are automatically synchronized when iCloud sync is enabled.";
+"sync_options_title" = "Sync Options";
+"tasks_sync_description" = "All your tasks, subtasks, and completions";
+"rewards_sync_description" = "Rewards and redemption history";
+"points_history_sync_description" = "Points earned and spending history";
+"categories_sync_description" = "Custom categories and their settings";
+"app_settings_sync_description" = "Preferences and customization options";
+"current_status" = "Current Status";
+"sync_status" = "Sync Status";
+"account_information" = "Account Information";
+"service" = "Service";
+"encryption" = "Encryption";
+"zone" = "Zone";
+"sync_data_description" = "Your tasks, rewards, and settings will be synchronized across all your devices using iCloud.";
+"enable_icloud_sync_description" = "Enable iCloud sync to keep your data synchronized across all your devices.";
+"sync_idle" = "Ready";
+"sync_syncing" = "Syncing...";
+"sync_success" = "Up to date";
+"sync_error" = "Sync Error";
+"sync_disabled" = "Disabled";
+"enabled" = "Enabled";
+"disabled" = "Disabled";
+"common_solutions" = "Common Solutions:";
+"check_internet_connection" = "Check your internet connection";
+"verify_icloud_enabled" = "Verify iCloud is enabled in Settings";
+"ensure_icloud_storage" = "Ensure you have enough iCloud storage";
+"try_sign_out_in" = "Try signing out and back into iCloud";
+
+// Calendar Integration
+"calendar_integration" = "Calendar Integration";
 
 // Time and organization
 "list_view" = "List View";

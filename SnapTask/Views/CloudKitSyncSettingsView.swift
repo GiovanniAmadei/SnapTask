@@ -17,10 +17,10 @@ struct CloudKitSyncSettingsView: View {
                             .font(.title2)
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("iCloud Sync")
+                            Text("icloud_sync".localized)
                                 .font(.headline)
                             
-                            Text(cloudKitService.syncStatus.description)
+                            Text(cloudKitService.syncStatus.localizedDescription)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -42,7 +42,7 @@ struct CloudKitSyncSettingsView: View {
                         }) {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
-                                Text("Sync Now")
+                                Text("sync_now".localized)
                                 
                                 Spacer()
                                 
@@ -59,7 +59,7 @@ struct CloudKitSyncSettingsView: View {
                             HStack {
                                 Image(systemName: "clock")
                                     .foregroundColor(.secondary)
-                                Text("Last sync: \(lastSyncDate, style: .relative)")
+                                Text("\("last_sync".localized): \(lastSyncDate, style: .relative)")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Spacer()
@@ -67,12 +67,12 @@ struct CloudKitSyncSettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Synchronization")
+                    Text("synchronization".localized)
                 } footer: {
                     if cloudKitService.isCloudKitEnabled {
-                        Text("Your tasks, rewards, and settings will be synchronized across all your devices using iCloud.")
+                        Text("sync_data_description".localized)
                     } else {
-                        Text("Enable iCloud sync to keep your data synchronized across all your devices.")
+                        Text("enable_icloud_sync_description".localized)
                     }
                 }
                 
@@ -83,7 +83,7 @@ struct CloudKitSyncSettingsView: View {
                             HStack {
                                 Image(systemName: "externaldrive")
                                     .foregroundColor(.blue)
-                                Text("What Gets Synced")
+                                Text("what_gets_synced".localized)
                             }
                         }
                         
@@ -91,13 +91,13 @@ struct CloudKitSyncSettingsView: View {
                             HStack {
                                 Image(systemName: "arrow.clockwise.circle")
                                     .foregroundColor(.green)
-                                Text("Auto Sync")
+                                Text("auto_sync".localized)
                             }
                         }
                     } header: {
-                        Text("Sync Options")
+                        Text("sync_options".localized)
                     } footer: {
-                        Text("When auto sync is enabled, changes will be automatically synchronized when you make them.")
+                        Text("auto_sync_description".localized)
                     }
                     
                     // MARK: - Sync Details Section
@@ -108,7 +108,7 @@ struct CloudKitSyncSettingsView: View {
                             HStack {
                                 Image(systemName: "info.circle")
                                     .foregroundColor(.blue)
-                                Text("View Sync Status")
+                                Text("view_sync_status".localized)
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
@@ -117,7 +117,7 @@ struct CloudKitSyncSettingsView: View {
                         }
                         .foregroundColor(.primary)
                     } header: {
-                        Text("Sync Details")
+                        Text("sync_details".localized)
                     }
                     
                     // MARK: - Advanced Section
@@ -128,15 +128,15 @@ struct CloudKitSyncSettingsView: View {
                             HStack {
                                 Image(systemName: "trash.circle")
                                     .foregroundColor(.red)
-                                Text("Reset Sync Data")
+                                Text("reset_sync_data".localized)
                                 Spacer()
                             }
                         }
                         .foregroundColor(.red)
                     } header: {
-                        Text("Advanced")
+                        Text("advanced".localized)
                     } footer: {
-                        Text("This will clear all sync data and force a fresh sync on next startup. Use this if you're experiencing sync issues.")
+                        Text("reset_sync_description".localized)
                     }
                 }
                 
@@ -145,7 +145,7 @@ struct CloudKitSyncSettingsView: View {
                     HStack {
                         Image(systemName: "icloud")
                             .foregroundColor(.blue)
-                        Text("Storage")
+                        Text("storage".localized)
                         Spacer()
                         Text("iCloud")
                             .foregroundColor(.secondary)
@@ -154,27 +154,27 @@ struct CloudKitSyncSettingsView: View {
                     HStack {
                         Image(systemName: "lock.shield")
                             .foregroundColor(.green)
-                        Text("Privacy")
+                        Text("privacy".localized)
                         Spacer()
-                        Text("End-to-End Encrypted")
+                        Text("end_to_end_encrypted".localized)
                             .foregroundColor(.secondary)
                     }
                 } header: {
-                    Text("Information")
+                    Text("information".localized)
                 }
             }
-            .navigationTitle("iCloud Sync")
+            .navigationTitle("icloud_sync".localized)
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingSyncDetails) {
                 SyncDetailsView()
             }
-            .alert("Reset Sync Data", isPresented: $showingResetAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Reset", role: .destructive) {
+            .alert("reset_sync_data_alert_title".localized, isPresented: $showingResetAlert) {
+                Button("cancel".localized, role: .cancel) { }
+                Button("reset".localized, role: .destructive) {
                     resetSyncData()
                 }
             } message: {
-                Text("This will clear all local sync data and force a fresh sync. Your data in iCloud will not be deleted. Continue?")
+                Text("reset_sync_data_alert_message".localized)
             }
         }
     }
@@ -225,45 +225,45 @@ struct SyncDataOptionsView: View {
             Section {
                 SyncOptionRow(
                     icon: "checklist",
-                    title: "Tasks",
-                    description: "All your tasks, subtasks, and completions",
+                    title: "tasks".localized,
+                    description: "tasks_sync_description".localized,
                     isEnabled: true
                 )
                 
                 SyncOptionRow(
                     icon: "star",
-                    title: "Rewards",
-                    description: "Rewards and redemption history",
+                    title: "rewards".localized,
+                    description: "rewards_sync_description".localized,
                     isEnabled: true
                 )
                 
                 SyncOptionRow(
                     icon: "chart.bar",
-                    title: "Points History",
-                    description: "Points earned and spending history",
+                    title: "points".localized,
+                    description: "points_history_sync_description".localized,
                     isEnabled: true
                 )
                 
                 SyncOptionRow(
                     icon: "folder",
-                    title: "Categories",
-                    description: "Custom categories and their settings",
+                    title: "categories".localized,
+                    description: "categories_sync_description".localized,
                     isEnabled: true
                 )
                 
                 SyncOptionRow(
                     icon: "gearshape",
-                    title: "App Settings",
-                    description: "Preferences and customization options",
+                    title: "settings".localized,
+                    description: "app_settings_sync_description".localized,
                     isEnabled: true
                 )
             } header: {
-                Text("Synchronized Data")
+                Text("synchronized_data".localized)
             } footer: {
-                Text("All data types are automatically synchronized when iCloud sync is enabled.")
+                Text("all_data_types_synced".localized)
             }
         }
-        .navigationTitle("Sync Options")
+        .navigationTitle("sync_options_title".localized)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -306,46 +306,46 @@ struct SyncDetailsView: View {
     var body: some View {
         List {
             Section {
-                StatusRow(label: "Sync Status", value: cloudKitService.syncStatus.description)
+                StatusRow(label: "sync_status".localized, value: cloudKitService.syncStatus.localizedDescription)
                 
                 if let lastSyncDate = cloudKitService.lastSyncDate {
-                    StatusRow(label: "Last Sync", value: formatDate(lastSyncDate))
+                    StatusRow(label: "last_sync".localized, value: formatDate(lastSyncDate))
                 }
                 
-                StatusRow(label: "Auto Sync", value: CloudKitSettingsManager.shared.autoSyncEnabled ? "Enabled" : "Disabled")
+                StatusRow(label: "auto_sync".localized, value: CloudKitSettingsManager.shared.autoSyncEnabled ? "enabled".localized : "disabled".localized)
             } header: {
-                Text("Current Status")
+                Text("current_status".localized)
             }
             
             Section {
-                StatusRow(label: "Service", value: "iCloud")
-                StatusRow(label: "Encryption", value: "End-to-End")
-                StatusRow(label: "Zone", value: "SnapTaskZone")
+                StatusRow(label: "service".localized, value: "iCloud")
+                StatusRow(label: "encryption".localized, value: "end_to_end_encrypted".localized)
+                StatusRow(label: "zone".localized, value: "SnapTaskZone")
             } header: {
-                Text("Account Information")
+                Text("account_information".localized)
             }
             
             if cloudKitService.syncStatus == .error("") {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Common Solutions:")
+                        Text("common_solutions".localized)
                             .font(.headline)
                         
-                        Text("• Check your internet connection")
-                        Text("• Verify iCloud is enabled in Settings")
-                        Text("• Ensure you have enough iCloud storage")
-                        Text("• Try signing out and back into iCloud")
+                        Text("• \("check_internet_connection".localized)")
+                        Text("• \("verify_icloud_enabled".localized)")
+                        Text("• \("ensure_icloud_storage".localized)")
+                        Text("• \("try_sign_out_in".localized)")
                     }
                     .font(.caption)
                     .foregroundColor(.secondary)
                 }
             }
         }
-        .navigationTitle("Sync Details")
+        .navigationTitle("sync_details".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
+                Button("done".localized) {
                     dismiss()
                 }
             }
@@ -370,6 +370,24 @@ struct StatusRow: View {
             Spacer()
             Text(value)
                 .foregroundColor(.secondary)
+        }
+    }
+}
+
+// MARK: - CloudKit Sync Status Extension
+extension CloudKitService.SyncStatus {
+    var localizedDescription: String {
+        switch self {
+        case .idle:
+            return "sync_idle".localized
+        case .syncing:
+            return "sync_syncing".localized
+        case .success:
+            return "sync_success".localized
+        case .error:
+            return "sync_error".localized
+        case .disabled:
+            return "sync_disabled".localized
         }
     }
 }

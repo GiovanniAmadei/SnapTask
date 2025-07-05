@@ -28,59 +28,6 @@
 "general_pomodoro_session" = "Sessione pomodoro generale";
 "reset_to_default" = "Ripristina Predefinito";
 
-// Default categories
-"work_category" = "Lavoro";
-"personal_category" = "Personale"; 
-"health_category" = "Salute";
-
-// Priority display names
-"low_priority" = "Bassa";
-"medium_priority" = "Media";
-"high_priority" = "Alta";
-
-// Recurrence settings
-"recurrence_type" = "Tipo di Ricorrenza";
-"daily_recurrence" = "Ricorrenza Giornaliera";
-"weekly_recurrence" = "Ricorrenza Settimanale";
-"monthly_recurrence" = "Ricorrenza Mensile";
-"yearly_recurrence" = "Ricorrenza Annuale";
-"task_repeat_every_day" = "L'attività si ripeterà ogni giorno";
-"select_days_of_month" = "Seleziona i giorni del mese";
-"select_patterns_ordinal" = "Seleziona pattern come 'Prima Domenica' o 'Ultimo Venerdì'";
-"monthly_patterns" = "Pattern Mensili";
-"none_selected" = "Nessuno selezionato";
-"select_day_of_year" = "Seleziona il giorno dell'anno in cui l'attività si deve ripetere";
-"repeat_on" = "Ripeti il";
-"task_repeat_yearly_on" = "L'attività si ripeterà ogni anno il";
-"end_date" = "Data di Fine";
-"set_end_date" = "Imposta data di fine";
-
-// Recurrence Types
-"daily_enum" = "Giornaliera";
-"weekly_enum" = "Settimanale";
-"monthly_enum" = "Mensile";
-"yearly_enum" = "Annuale";
-
-// Monthly Selection Types
-"days_enum" = "Giorni";
-"patterns_enum" = "Pattern";
-
-// Ordinal positions
-"first" = "Primo";
-"second" = "Secondo";
-"third" = "Terzo";
-"fourth" = "Quarto";
-"last" = "Ultimo";
-
-// Ordinal pattern texts
-"select_patterns_description" = "Seleziona pattern come 'Prima Domenica' o 'Ultimo Venerdì'";
-"clear_all" = "Cancella Tutto";
-
-// Recurrence display texts
-"weekly_days_format" = "%d giorni";
-"monthly_days_format" = "%d giorni";
-"monthly_patterns_format" = "%d pattern";
-
 // Main tabs
 "timeline" = "Timeline";
 "focus" = "Focus";
@@ -290,31 +237,6 @@
 "redeem" = "Riscatta";
 "general" = "Generale";
 
-// Reward Form specific
-"reward_details" = "Dettagli Premio";
-"reward_name" = "Nome Premio";
-"enter_reward_name" = "Inserisci nome premio...";
-"use_specific_category" = "Usa Categoria Specifica";
-"use_points_from_specific_category" = "Usa punti solo da una categoria specifica";
-"no_categories_available" = "Nessuna categoria disponibile. Crea prima una categoria.";
-"cost" = "Costo";
-"quick_rewards_worth" = "Premi veloci (valore 5-15 min)";
-"regular_rewards_worth" = "Premi regolari (valore 30-90 min)";
-"complex_rewards_worth" = "Premi complessi (valore 2-4 ore)";
-"premium_rewards_worth" = "Premi premium (traguardi importanti)";
-"point_accumulation_period" = "Periodo di accumulo punti";
-"save_reward" = "Salva Premio";
-"new_reward" = "Nuovo Premio";
-"edit_reward" = "Modifica Premio";
-"available_category_points" = "Punti {category} Disponibili";
-"need_more_points" = "Servono {points} punti in più";
-"available_total_points" = "Punti Totali Disponibili";
-"daily_rewards_reset" = "I premi giornalieri si resettano a mezzanotte";
-"weekly_rewards_accumulate" = "I premi settimanali si accumulano da domenica a sabato";
-"monthly_rewards_accumulate" = "I premi mensili si accumulano per il mese calendario";
-"yearly_rewards_accumulate" = "I premi annuali si accumulano per l'anno calendario";
-"onetime_rewards_once" = "I premi una tantum possono essere riscattati solo una volta";
-
 // Statistics View
 "overview" = "Panoramica";
 "streaks" = "Serie";
@@ -473,3 +395,82 @@
 "default_view" = "Vista Predefinita";
 "no_category" = "Nessuna Categoria";
 "default" = "Predefinito";
+
+// Recurrence Types
+"daily_enum" = "Giornaliera";
+"weekly_enum" = "Settimanale";
+"monthly_enum" = "Mensile";
+"yearly_enum" = "Annuale";
+
+// Monthly Selection Types
+"days_enum" = "Giorni";
+"patterns_enum" = "Pattern";
+
+// Ordinal positions
+"first" = "Primo";
+"second" = "Secondo";
+"third" = "Terzo";
+"fourth" = "Quarto";
+"last" = "Ultimo";
+
+// Ordinal pattern texts
+"select_patterns_description" = "Seleziona pattern come 'Prima Domenica' o 'Ultimo Venerdì'";
+"monthly_patterns" = "Pattern Mensili";
+"clear_all" = "Cancella Tutto";
+
+// Recurrence display texts
+"weekly_days_format" = "%d giorni";
+"monthly_days_format" = "%d giorni";
+"monthly_patterns_format" = "%d pattern";
+
+// iCloud Sync Settings
+"sync_now" = "Sincronizza Ora";
+"last_sync" = "Ultima sincronizzazione";
+"sync_options" = "Opzioni Sincronizzazione";
+"what_gets_synced" = "Cosa Viene Sincronizzato";
+"auto_sync" = "Sincronizzazione Automatica";
+"auto_sync_description" = "Quando la sincronizzazione automatica è abilitata, i cambiamenti verranno sincronizzati automaticamente quando li effettui.";
+"sync_details" = "Dettagli Sincronizzazione";
+"view_sync_status" = "Visualizza Stato Sincronizzazione";
+"advanced" = "Avanzate";
+"reset_sync_data" = "Ripristina Dati Sincronizzazione";
+"reset_sync_description" = "Questo cancellerà tutti i dati di sincronizzazione e forzerà una sincronizzazione completa al prossimo avvio. Usa questa opzione se stai riscontrando problemi di sincronizzazione.";
+"information" = "Informazioni";
+"storage" = "Archiviazione";
+"privacy" = "Privacy";
+"end_to_end_encrypted" = "Crittografia End-to-End";
+"reset_sync_data_alert_title" = "Ripristina Dati Sincronizzazione";
+"reset_sync_data_alert_message" = "Questo cancellerà tutti i dati di sincronizzazione locali e forzerà una sincronizzazione completa. I tuoi dati in iCloud non verranno eliminati. Continuare?";
+"reset" = "Ripristina";
+"synchronized_data" = "Dati Sincronizzati";
+"all_data_types_synced" = "Tutti i tipi di dati vengono sincronizzati automaticamente quando la sincronizzazione iCloud è abilitata.";
+"sync_options_title" = "Opzioni Sincronizzazione";
+"tasks_sync_description" = "Tutte le tue attività, sottoattività e completamenti";
+"rewards_sync_description" = "Premi e cronologia dei riscatti";
+"points_history_sync_description" = "Cronologia punti guadagnati e spesi";
+"categories_sync_description" = "Categorie personalizzate e le loro impostazioni";
+"app_settings_sync_description" = "Preferenze e opzioni di personalizzazione";
+"current_status" = "Stato Attuale";
+"sync_status" = "Stato Sincronizzazione";
+"account_information" = "Informazioni Account";
+"service" = "Servizio";
+"encryption" = "Crittografia";
+"zone" = "Zona";
+"sync_data_description" = "Le tue attività, premi e impostazioni verranno sincronizzate su tutti i tuoi dispositivi utilizzando iCloud.";
+"enable_icloud_sync_description" = "Abilita la sincronizzazione iCloud per mantenere i tuoi dati sincronizzati su tutti i tuoi dispositivi.";
+
+// Sync Status descriptions
+"sync_idle" = "Pronto";
+"sync_syncing" = "Sincronizzazione...";
+"sync_success" = "Aggiornato";
+"sync_error" = "Errore Sincronizzazione";
+"sync_disabled" = "Disabilitato";
+
+// Additional sync-related strings
+"enabled" = "Abilitato";
+"disabled" = "Disabilitato";
+"common_solutions" = "Soluzioni Comuni:";
+"check_internet_connection" = "Controlla la connessione internet";
+"verify_icloud_enabled" = "Verifica che iCloud sia abilitato nelle Impostazioni";
+"ensure_icloud_storage" = "Assicurati di avere abbastanza spazio di archiviazione iCloud";
+"try_sign_out_in" = "Prova a disconnetterti e riconnetterti a iCloud";

@@ -186,7 +186,7 @@ struct SettingsView: View {
                 // Synchronization Section
                 Section {
                     NavigationLink(destination: CloudKitSyncSettingsView()) {
-                        Label("iCloud Sync", systemImage: "icloud")
+                        Label("icloud_sync".localized, systemImage: "icloud")
                     }
                     
                     Button {
@@ -197,7 +197,7 @@ struct SettingsView: View {
                                 .foregroundColor(.green)
                                 .frame(width: 24)
                             
-                            Text("Calendar Integration")
+                            Text("calendar_integration".localized)
                             
                             Spacer()
                             
@@ -210,9 +210,9 @@ struct SettingsView: View {
                     .foregroundColor(.primary)
                     
                 } header: {
-                    Text("Synchronization")
+                    Text("synchronization".localized)
                 } footer: {
-                    Text("Manage data synchronization and calendar integration across your devices.")
+                    Text("manage_data_sync".localized)
                 }
                 
                 // Community Section
