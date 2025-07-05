@@ -5,13 +5,13 @@ struct DayPickerView: View {
     @Binding var selectedDays: Set<Int>
     
     let weekdays = [
-        (1, "Monday"),
-        (2, "Tuesday"),
-        (3, "Wednesday"),
-        (4, "Thursday"),
-        (5, "Friday"),
-        (6, "Saturday"),
-        (7, "Sunday")
+        (1, "monday".localized),
+        (2, "tuesday".localized),
+        (3, "wednesday".localized),
+        (4, "thursday".localized),
+        (5, "friday".localized),
+        (6, "saturday".localized),
+        (7, "sunday".localized)
     ]
     
     var body: some View {
@@ -37,20 +37,20 @@ struct DayPickerView: View {
                     .foregroundColor(.primary)
                 }
             }
-            .navigationTitle("Select Days")
+            .navigationTitle("select_days".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                 }
             }
         }
     }
-} 
+}

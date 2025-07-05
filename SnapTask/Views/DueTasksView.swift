@@ -21,14 +21,14 @@ struct DueTasksView: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("Due Tasks")
+            .navigationTitle("due_tasks".localized)
             .overlay(
                 Group {
                     if viewModel.dueTasks.isEmpty {
                         ContentUnavailableView(
-                            "No Tasks Due",
+                            "no_tasks_due".localized,
                             systemImage: "checkmark.circle",
-                            description: Text("All caught up!")
+                            description: Text("all_caught_up".localized)
                         )
                     }
                 }
@@ -39,4 +39,4 @@ struct DueTasksView: View {
             }
         }
     }
-} 
+}

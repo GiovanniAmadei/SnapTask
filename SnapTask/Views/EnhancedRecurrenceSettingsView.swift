@@ -9,12 +9,12 @@ struct EnhancedRecurrenceSettingsView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 VStack(spacing: 12) {
-                    Text("Recurrence Type")
+                    Text("recurrence_type".localized)
                         .font(.headline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                     
-                    HStack(spacing: 4) {
+                    HStack(spacing: 2) {
                         RecurrenceTypeButton(type: .daily, selectedType: viewModel.recurrenceType) {
                             viewModel.recurrenceType = .daily
                         }
@@ -65,11 +65,11 @@ struct EnhancedRecurrenceSettingsView: View {
                     }
                 }
             }
-            .navigationTitle("Recurrence Settings")
+            .navigationTitle("recurrence_settings".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                     .fontWeight(.medium)
@@ -94,11 +94,14 @@ struct RecurrenceTypeButton: View {
                 action()
             }
         }) {
-            Text(type.rawValue)
-                .font(.system(size: 14, weight: .medium))
+            Text(type.localizedString)
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(selectedType == type ? .white : .pink)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 8)
                 .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(selectedType == type ? Color.pink : Color.clear)
@@ -111,11 +114,11 @@ struct RecurrenceTypeButton: View {
 struct DailyRecurrenceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Daily Recurrence")
+            Text("daily_recurrence".localized)
                 .font(.headline)
                 .padding(.horizontal)
             
-            Text("Task will repeat every day")
+            Text("task_repeat_every_day".localized)
                 .foregroundColor(.secondary)
                 .font(.subheadline)
                 .padding(.horizontal)
@@ -135,18 +138,18 @@ struct WeeklyRecurrenceView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Weekly Recurrence")
+            Text("weekly_recurrence".localized)
                 .font(.headline)
                 .padding(.horizontal)
             
             VStack(spacing: 12) {
-                WeekdayRow(weekday: (2, "Monday"), viewModel: viewModel)
-                WeekdayRow(weekday: (3, "Tuesday"), viewModel: viewModel)
-                WeekdayRow(weekday: (4, "Wednesday"), viewModel: viewModel)
-                WeekdayRow(weekday: (5, "Thursday"), viewModel: viewModel)
-                WeekdayRow(weekday: (6, "Friday"), viewModel: viewModel)
-                WeekdayRow(weekday: (7, "Saturday"), viewModel: viewModel)
-                WeekdayRow(weekday: (1, "Sunday"), viewModel: viewModel)
+                WeekdayRow(weekday: (2, "monday".localized), viewModel: viewModel)
+                WeekdayRow(weekday: (3, "tuesday".localized), viewModel: viewModel)
+                WeekdayRow(weekday: (4, "wednesday".localized), viewModel: viewModel)
+                WeekdayRow(weekday: (5, "thursday".localized), viewModel: viewModel)
+                WeekdayRow(weekday: (6, "friday".localized), viewModel: viewModel)
+                WeekdayRow(weekday: (7, "saturday".localized), viewModel: viewModel)
+                WeekdayRow(weekday: (1, "sunday".localized), viewModel: viewModel)
             }
         }
         .padding(.vertical, 16)
@@ -204,7 +207,7 @@ struct MonthlyRecurrenceView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Monthly Recurrence")
+            Text("monthly_recurrence".localized)
                 .font(.headline)
                 .padding(.horizontal)
             
@@ -253,11 +256,14 @@ struct MonthlyTypeButton: View {
                 action()
             }
         }) {
-            Text(type.rawValue)
+            Text(type.localizedString)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(selectedType == type ? .white : .pink)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(selectedType == type ? Color.pink : Color.clear)
@@ -272,7 +278,7 @@ struct MonthlyDaysView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Select days of the month")
+            Text("select_days_of_month".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
@@ -309,7 +315,7 @@ struct MonthlyPatternsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Select patterns like 'First Sunday' or 'Last Friday'")
+            Text("select_patterns_ordinal".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
@@ -319,12 +325,12 @@ struct MonthlyPatternsView: View {
             }) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Monthly Patterns")
+                        Text("monthly_patterns".localized)
                             .font(.subheadline)
                             .foregroundColor(.primary)
                         
                         if viewModel.selectedOrdinalPatterns.isEmpty {
-                            Text("None selected")
+                            Text("none_selected".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         } else {
@@ -362,17 +368,17 @@ struct YearlyRecurrenceView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Yearly Recurrence")
+            Text("yearly_recurrence".localized)
                 .font(.headline)
                 .padding(.horizontal)
             
-            Text("Select the day of the year when the task should repeat")
+            Text("select_day_of_year".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
             
             HStack {
-                Text("Repeat on")
+                Text("repeat_on".localized)
                     .font(.subheadline)
                 Spacer()
                 DatePicker("", selection: $viewModel.yearlyDate, displayedComponents: [.date])
@@ -380,7 +386,7 @@ struct YearlyRecurrenceView: View {
             }
             .padding(.horizontal)
             
-            Text("Task will repeat every year on \(formattedYearlyDate)")
+            Text("task_repeat_yearly_on".localized + " \(formattedYearlyDate)")
                 .font(.caption)
                 .foregroundColor(.pink)
                 .padding(.horizontal)
@@ -406,13 +412,13 @@ struct EndDateSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("End Date")
+            Text("end_date".localized)
                 .font(.headline)
                 .padding(.horizontal)
             
             VStack(spacing: 12) {
                 HStack {
-                    Text("Set end date")
+                    Text("set_end_date".localized)
                         .font(.subheadline)
                     Spacer()
                     Toggle("", isOn: $viewModel.hasRecurrenceEndDate)
@@ -422,7 +428,7 @@ struct EndDateSection: View {
                 
                 if viewModel.hasRecurrenceEndDate {
                     HStack {
-                        Text("End Date")
+                        Text("end_date".localized)
                             .font(.subheadline)
                         Spacer()
                         DatePicker("", selection: $viewModel.recurrenceEndDate, displayedComponents: .date)

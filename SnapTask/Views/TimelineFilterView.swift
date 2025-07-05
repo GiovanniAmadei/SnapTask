@@ -9,7 +9,7 @@ struct TimelineFilterView: View {
             VStack(spacing: 0) {
                 // Organization Options
                 List {
-                    Section("Organization Mode") {
+                    Section("organization_mode".localized) {
                         ForEach(TimelineOrganization.allCases, id: \.self) { organization in
                             HStack {
                                 Image(systemName: organization.icon)
@@ -44,7 +44,7 @@ struct TimelineFilterView: View {
                     
                     // Time Sort Order (only when organizing by time)
                     if viewModel.organization == .time {
-                        Section("Time Sort Order") {
+                        Section("time_sort_order".localized) {
                             ForEach(TimeSortOrder.allCases, id: \.self) { sortOrder in
                                 HStack {
                                     Image(systemName: sortOrder == .ascending ? "arrow.up" : "arrow.down")
@@ -90,18 +90,18 @@ struct TimelineFilterView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Organize Tasks")
+            .navigationTitle("organize_tasks".localized)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                     .fontWeight(.semibold)

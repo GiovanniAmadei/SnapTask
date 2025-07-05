@@ -6,7 +6,7 @@ struct PomodoroSettingsView: View {
     
     var body: some View {
         Form {
-            Section("Work Session") {
+            Section("work_session".localized) {
                 Stepper(
                     value: Binding(
                         get: { settings.workDuration / 60 },
@@ -16,7 +16,7 @@ struct PomodoroSettingsView: View {
                     step: 5
                 ) {
                     HStack {
-                        Text("Duration")
+                        Text("duration".localized)
                         Spacer()
                         Text("\(Int(settings.workDuration / 60)) min")
                             .foregroundColor(.secondary)
@@ -24,7 +24,7 @@ struct PomodoroSettingsView: View {
                 }
             }
             
-            Section("Break") {
+            Section("break".localized) {
                 Stepper(
                     value: Binding(
                         get: { settings.breakDuration / 60 },
@@ -34,7 +34,7 @@ struct PomodoroSettingsView: View {
                     step: 1
                 ) {
                     HStack {
-                        Text("Short Break")
+                        Text("short_break".localized)
                         Spacer()
                         Text("\(Int(settings.breakDuration / 60)) min")
                             .foregroundColor(.secondary)
@@ -50,7 +50,7 @@ struct PomodoroSettingsView: View {
                     step: 5
                 ) {
                     HStack {
-                        Text("Long Break")
+                        Text("long_break".localized)
                         Spacer()
                         Text("\(Int(settings.longBreakDuration / 60)) min")
                             .foregroundColor(.secondary)
@@ -62,7 +62,7 @@ struct PomodoroSettingsView: View {
                     in: 1...10
                 ) {
                     HStack {
-                        Text("Sessions until long break")
+                        Text("sessions_until_long_break".localized)
                         Spacer()
                         Text("\(settings.sessionsUntilLongBreak)")
                             .foregroundColor(.secondary)
@@ -70,10 +70,10 @@ struct PomodoroSettingsView: View {
                 }
             }
             
-            Section("Session Configuration") {
+            Section("session_configuration".localized) {
                 Picker("Configure by", selection: $useTimeDuration) {
-                    Text("Number of Sessions").tag(false)
-                    Text("Total Duration").tag(true)
+                    Text("number_of_sessions".localized).tag(false)
+                    Text("total_duration".localized).tag(true)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 
@@ -91,7 +91,7 @@ struct PomodoroSettingsView: View {
                         step: 15
                     ) {
                         HStack {
-                            Text("Total Duration")
+                            Text("total_duration".localized)
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("\(Int(settings.totalDuration)) min")
@@ -104,7 +104,7 @@ struct PomodoroSettingsView: View {
                     }
                     
                     HStack {
-                        Text("Estimated Sessions")
+                        Text("estimated_sessions".localized)
                         Spacer()
                         Text("\(settings.totalSessions)")
                             .foregroundColor(.secondary)
@@ -122,7 +122,7 @@ struct PomodoroSettingsView: View {
                         in: 1...20
                     ) {
                         HStack {
-                            Text("Total Sessions")
+                            Text("total_sessions".localized)
                             Spacer()
                             Text("\(settings.totalSessions)")
                                 .foregroundColor(.secondary)
@@ -130,7 +130,7 @@ struct PomodoroSettingsView: View {
                     }
                     
                     HStack {
-                        Text("Estimated Duration")
+                        Text("estimated_duration".localized)
                         Spacer()
                         VStack(alignment: .trailing) {
                             Text("\(Int(settings.estimatedTotalTime / 60)) min")
@@ -145,18 +145,18 @@ struct PomodoroSettingsView: View {
             
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Session Breakdown")
+                    Text("session_breakdown".localized)
                         .font(.subheadline.weight(.medium))
                     
                     HStack {
-                        Text("Work Time:")
+                        Text("work_time".localized + ":")
                         Spacer()
                         Text("\(formatDuration(Double(settings.totalSessions) * settings.workDuration))")
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
-                        Text("Break Time:")
+                        Text("break_time".localized + ":")
                         Spacer()
                         let breakTime = settings.estimatedTotalTime - (Double(settings.totalSessions) * settings.workDuration)
                         Text("\(formatDuration(breakTime))")
@@ -166,7 +166,7 @@ struct PomodoroSettingsView: View {
                     Divider()
                     
                     HStack {
-                        Text("Total Time:")
+                        Text("total_time".localized + ":")
                             .fontWeight(.medium)
                         Spacer()
                         Text("\(formatDuration(settings.estimatedTotalTime))")
@@ -175,10 +175,10 @@ struct PomodoroSettingsView: View {
                     }
                 }
             } header: {
-                Text("Summary")
+                Text("summary".localized)
             }
         }
-        .navigationTitle("Pomodoro Settings")
+        .navigationTitle("pomodoro_settings".localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             // Initialize useTimeDuration based on current settings

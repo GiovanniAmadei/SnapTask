@@ -5,21 +5,21 @@ struct OrdinalPatternPickerView: View {
     @Environment(\.dismiss) private var dismiss
     
     private let ordinals = [
-        (1, "First"),
-        (2, "Second"),
-        (3, "Third"),
-        (4, "Fourth"),
-        (-1, "Last")
+        (1, "first".localized),
+        (2, "second".localized),
+        (3, "third".localized),
+        (4, "fourth".localized),
+        (-1, "last".localized)
     ]
     
     private let weekdays = [
-        (1, "Sunday"),
-        (2, "Monday"),
-        (3, "Tuesday"),
-        (4, "Wednesday"),
-        (5, "Thursday"),
-        (6, "Friday"),
-        (7, "Saturday")
+        (1, "sunday".localized),
+        (2, "monday".localized),
+        (3, "tuesday".localized),
+        (4, "wednesday".localized),
+        (5, "thursday".localized),
+        (6, "friday".localized),
+        (7, "saturday".localized)
     ]
     
     var body: some View {
@@ -28,7 +28,7 @@ struct OrdinalPatternPickerView: View {
                 LazyVStack(spacing: 12) {
                     // Header moved inside ScrollView
                     VStack(spacing: 12) {
-                        Text("Select patterns like 'First Sunday' or 'Last Friday'")
+                        Text("select_patterns_description".localized)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -91,11 +91,11 @@ struct OrdinalPatternPickerView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Monthly Patterns")
+            .navigationTitle("monthly_patterns".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Clear All") {
+                    Button("clear_all".localized) {
                         selectedPatterns.removeAll()
                     }
                     .foregroundColor(.red)
@@ -103,7 +103,7 @@ struct OrdinalPatternPickerView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                     .fontWeight(.medium)

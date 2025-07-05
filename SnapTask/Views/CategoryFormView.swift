@@ -17,23 +17,23 @@ struct CategoryFormView: View {
     var body: some View {
         Form {
             Section {
-                TextField("Category Name", text: $name)
+                TextField("category_name".localized, text: $name)
                     .autocapitalization(.words)
             }
             
-            Section("Color") {
-                ColorPicker("Select Color", selection: $color)
+            Section("color".localized) {
+                ColorPicker("select_color".localized, selection: $color)
                     .padding(.vertical, 8)
             }
         }
-        .navigationTitle(editingCategory == nil ? "New Category" : "Edit Category")
+        .navigationTitle(editingCategory == nil ? "new_category".localized : "edit_category".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button("cancel".localized) { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button("save".localized) {
                     let category = Category(
                         id: editingCategory?.id ?? UUID(),
                         name: name,
@@ -46,4 +46,4 @@ struct CategoryFormView: View {
             }
         }
     }
-} 
+}

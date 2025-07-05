@@ -5,19 +5,19 @@ struct RecurrenceSettingsView: View {
     @Binding var selectedDays: Set<Int>
     
     private let weekdays = [
-        (1, "Monday"),
-        (2, "Tuesday"),
-        (3, "Wednesday"),
-        (4, "Thursday"),
-        (5, "Friday"),
-        (6, "Saturday"),
-        (7, "Sunday")
+        (1, "monday".localized),
+        (2, "tuesday".localized),
+        (3, "wednesday".localized),
+        (4, "thursday".localized),
+        (5, "friday".localized),
+        (6, "saturday".localized),
+        (7, "sunday".localized)
     ]
     
     var body: some View {
         Form {
             Section {
-                Toggle("Daily", isOn: $isDailyRecurrence)
+                Toggle("daily".localized, isOn: $isDailyRecurrence)
                 
                 if !isDailyRecurrence {
                     ForEach(weekdays, id: \.0) { day in
@@ -35,7 +35,7 @@ struct RecurrenceSettingsView: View {
                 }
             }
         }
-        .navigationTitle("Repeat Settings")
+        .navigationTitle("repeat_settings".localized)
         .navigationBarTitleDisplayMode(.inline)
     }
-} 
+}

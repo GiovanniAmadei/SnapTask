@@ -31,7 +31,7 @@ struct IconPickerView: View {
                 }
             }
         }
-        .navigationTitle("Choose Icon")
+        .navigationTitle("choose_icon".localized)
         .navigationBarTitleDisplayMode(.inline)
     }
-} 
+}

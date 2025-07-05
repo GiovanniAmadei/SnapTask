@@ -11,9 +11,9 @@ struct BackupRestoreView: View {
     
     var body: some View {
         List {
-            Section(header: Text("Backup")) {
+            Section(header: Text("backup".localized)) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Esporta tutti i tuoi dati in un file che puoi salvare")
+                    Text("export_all_data".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -22,7 +22,7 @@ struct BackupRestoreView: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.up.doc")
-                            Text("Esporta Backup")
+                            Text("export_backup".localized)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -32,13 +32,13 @@ struct BackupRestoreView: View {
                 .padding(.vertical, 8)
             }
             
-            Section(header: Text("Ripristino")) {
+            Section(header: Text("restore".localized)) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Ripristina i tuoi dati da un file di backup precedentemente salvato")
+                    Text("restore_from_backup".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    Text("⚠️ Questo sovrascriverà tutti i dati attuali")
+                    Text("will_overwrite_data".localized)
                         .font(.caption)
                         .foregroundColor(.orange)
                         .padding(.bottom, 4)
@@ -48,7 +48,7 @@ struct BackupRestoreView: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.down.doc")
-                            Text("Importa Backup")
+                            Text("import_backup".localized)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -58,11 +58,11 @@ struct BackupRestoreView: View {
                 .padding(.vertical, 8)
             }
         }
-        .navigationTitle("Backup e Ripristino")
+        .navigationTitle("backup_restore".localized)
         .overlay(
             Group {
                 if isProcessing {
-                    ProgressView("Elaborazione in corso...")
+                    ProgressView("processing".localized)
                         .padding()
                         .background(Color(.systemBackground))
                         .cornerRadius(10)
@@ -70,13 +70,13 @@ struct BackupRestoreView: View {
                 }
             }
         )
-        .alert("Operazione completata", isPresented: $showingSuccessAlert) {
-            Button("OK") { }
+        .alert("operation_completed".localized, isPresented: $showingSuccessAlert) {
+            Button("done".localized) { }
         } message: {
-            Text("L'operazione è stata completata con successo.")
+            Text("operation_success".localized)
         }
-        .alert("Errore", isPresented: $showingErrorAlert) {
-            Button("OK") { }
+        .alert("error".localized, isPresented: $showingErrorAlert) {
+            Button("done".localized) { }
         } message: {
             Text(errorMessage)
         }
@@ -165,4 +165,4 @@ struct BackupRestoreView: View {
     NavigationStack {
         BackupRestoreView()
     }
-} 
+}

@@ -30,14 +30,14 @@ struct RewardFormView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     // Reward Details Card
-                    ModernCard(title: "Reward Details", icon: "gift") {
+                    ModernCard(title: "reward_details".localized, icon: "gift") {
                         VStack(spacing: 16) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Reward Name")
+                                Text("reward_name".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 
-                                TextField("Enter reward name...", text: $rewardName)
+                                TextField("enter_reward_name".localized, text: $rewardName)
                                     .textFieldStyle(PlainTextFieldStyle())
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
@@ -50,11 +50,11 @@ struct RewardFormView: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Description")
+                                Text("description".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 
-                                TextField("Add description...", text: $rewardDescription, axis: .vertical)
+                                TextField("add_description".localized, text: $rewardDescription, axis: .vertical)
                                     .textFieldStyle(PlainTextFieldStyle())
                                     .lineLimit(3...6)
                                     .padding(.horizontal, 16)
@@ -71,7 +71,7 @@ struct RewardFormView: View {
                                 IconPickerView(selectedIcon: $icon)
                             } label: {
                                 ModernNavigationRow(
-                                    title: "Icon",
+                                    title: "icon".localized,
                                     value: icon,
                                     isSystemImage: true
                                 )
@@ -80,14 +80,14 @@ struct RewardFormView: View {
                     }
                     
                     // Category Selection Card
-                    ModernCard(title: "Category", icon: "folder") {
+                    ModernCard(title: "category".localized, icon: "folder") {
                         VStack(spacing: 16) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Use Specific Category")
+                                    Text("use_specific_category".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
-                                    Text("Use points from a specific category only")
+                                    Text("use_points_from_specific_category".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -105,12 +105,12 @@ struct RewardFormView: View {
                             
                             if !isGeneralReward {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text("Select Category")
+                                    Text("select_category".localized)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundColor(.primary)
                                     
                                     if categoryManager.categories.isEmpty {
-                                        Text("No categories available. Create a category first.")
+                                        Text("no_categories_available".localized)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                             .padding(.vertical, 8)
@@ -142,10 +142,10 @@ struct RewardFormView: View {
                     .animation(.easeInOut(duration: 0.2), value: isGeneralReward)
                     
                     // Points Card
-                    ModernCard(title: "Points", icon: "star.fill") {
+                    ModernCard(title: "points".localized, icon: "star.fill") {
                         VStack(spacing: 16) {
                             HStack {
-                                Text("Custom Points")
+                                Text("custom_points".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 Spacer()
@@ -153,7 +153,7 @@ struct RewardFormView: View {
                             }
                             
                             HStack(alignment: .center) {
-                                Text("Cost")
+                                Text("cost".localized)
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.primary)
                                 Spacer()
@@ -161,7 +161,7 @@ struct RewardFormView: View {
                                 Group {
                                     if useCustomPoints {
                                         HStack {
-                                            TextField("Points", text: $customPointsText)
+                                            TextField("points".localized, text: $customPointsText)
                                                 .keyboardType(.numberPad)
                                                 .textFieldStyle(PlainTextFieldStyle())
                                                 .multilineTextAlignment(.center)
@@ -187,7 +187,7 @@ struct RewardFormView: View {
                                                 .foregroundColor(.secondary)
                                         }
                                     } else {
-                                        Picker("Points", selection: $pointsCost) {
+                                        Picker("points".localized, selection: $pointsCost) {
                                             // Quick rewards (1-10)
                                             ForEach([1, 2, 3, 5, 8, 10], id: \.self) { points in
                                                 Text("\(points)").tag(points)
@@ -217,19 +217,19 @@ struct RewardFormView: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Point Guidelines:")
+                                Text("point_guidelines".localized + ":")
                                     .font(.caption.weight(.medium))
                                     .foregroundColor(.secondary)
-                                Text("• 1-10: Quick rewards (5-15 min worth)")
+                                Text("• 1-10: " + "quick_rewards_worth".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("• 15-50: Regular rewards (30-90 min worth)")
+                                Text("• 15-50: " + "regular_rewards_worth".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("• 75-200: Complex rewards (2-4 hours worth)")
+                                Text("• 75-200: " + "complex_rewards_worth".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("• 250-500: Premium rewards (major milestones)")
+                                Text("• 250-500: " + "premium_rewards_worth".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -243,9 +243,9 @@ struct RewardFormView: View {
                     .animation(.easeInOut(duration: 0.2), value: useCustomPoints)
                     
                     // Frequency Card
-                    ModernCard(title: "Frequency", icon: "repeat") {
+                    ModernCard(title: "frequency".localized, icon: "repeat") {
                         VStack(spacing: 16) {
-                            Picker("Frequency", selection: $selectedFrequency) {
+                            Picker("frequency".localized, selection: $selectedFrequency) {
                                 ForEach(RewardFrequency.allCases) { frequency in
                                     Text(frequency.displayName).tag(frequency)
                                 }
@@ -253,7 +253,7 @@ struct RewardFormView: View {
                             .pickerStyle(.segmented)
                             
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Point accumulation period:")
+                                Text("point_accumulation_period".localized + ":")
                                     .font(.caption.weight(.medium))
                                     .foregroundColor(.secondary)
                                 
@@ -274,7 +274,7 @@ struct RewardFormView: View {
                         HStack {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 16, weight: .medium))
-                            Text("Save Reward")
+                            Text("save_reward".localized)
                                 .font(.headline)
                         }
                         .foregroundColor(.white)
@@ -297,18 +297,18 @@ struct RewardFormView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(initialReward == nil ? "New Reward" : "Edit Reward")
+            .navigationTitle(initialReward == nil ? "new_reward".localized : "edit_reward".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                     .foregroundColor(.secondary)
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    Button("save".localized) {
                         saveReward()
                         dismiss()
                     }
@@ -340,19 +340,19 @@ struct RewardFormView: View {
             let availablePoints = RewardManager.shared.availablePointsForCategory(categoryId, frequency: selectedFrequency)
             
             VStack(alignment: .leading, spacing: 8) {
-                Text("Available \(categoryName) Points:")
+                Text("available_category_points".localized.replacingOccurrences(of: "{category}", with: categoryName))
                     .font(.caption.weight(.medium))
                     .foregroundColor(.secondary)
                 
                 HStack {
-                    Text("\(availablePoints) points")
+                    Text("\(availablePoints) " + "points".localized)
                         .font(.caption)
                         .foregroundColor(availablePoints >= pointsCost ? .green : .orange)
                     
                     Spacer()
                     
                     if availablePoints < pointsCost {
-                        Text("Need \(pointsCost - availablePoints) more")
+                        Text("need_more_points".localized.replacingOccurrences(of: "{points}", with: "\(pointsCost - availablePoints)"))
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
@@ -364,19 +364,19 @@ struct RewardFormView: View {
             let availablePoints = RewardManager.shared.availablePoints(for: selectedFrequency)
             
             VStack(alignment: .leading, spacing: 8) {
-                Text("Available Total Points:")
+                Text("available_total_points".localized)
                     .font(.caption.weight(.medium))
                     .foregroundColor(.secondary)
                 
                 HStack {
-                    Text("\(availablePoints) points")
+                    Text("\(availablePoints) " + "points".localized)
                         .font(.caption)
                         .foregroundColor(availablePoints >= pointsCost ? .green : .orange)
                     
                     Spacer()
                     
                     if availablePoints < pointsCost {
-                        Text("Need \(pointsCost - availablePoints) more")
+                        Text("need_more_points".localized.replacingOccurrences(of: "{points}", with: "\(pointsCost - availablePoints)"))
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
@@ -390,15 +390,15 @@ struct RewardFormView: View {
     private var frequencyDescription: String {
         switch selectedFrequency {
         case .daily:
-            return "Daily rewards reset at midnight"
+            return "daily_rewards_reset".localized
         case .weekly:
-            return "Weekly rewards accumulate Sunday through Saturday"
+            return "weekly_rewards_accumulate".localized
         case .monthly:
-            return "Monthly rewards accumulate for the calendar month"
+            return "monthly_rewards_accumulate".localized
         case .yearly:
-            return "Yearly rewards accumulate for the calendar year"
+            return "yearly_rewards_accumulate".localized
         case .oneTime:
-            return "One-time rewards can be redeemed only once"
+            return "onetime_rewards_once".localized
         }
     }
     

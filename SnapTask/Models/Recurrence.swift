@@ -16,23 +16,23 @@ struct Recurrence: Codable, Equatable, Hashable {
         var displayText: String {
             let ordinalText: String
             switch ordinal {
-            case 1: ordinalText = "First"
-            case 2: ordinalText = "Second"
-            case 3: ordinalText = "Third"
-            case 4: ordinalText = "Fourth"
-            case -1: ordinalText = "Last"
+            case 1: ordinalText = "first".localized
+            case 2: ordinalText = "second".localized
+            case 3: ordinalText = "third".localized
+            case 4: ordinalText = "fourth".localized
+            case -1: ordinalText = "last".localized
             default: ordinalText = "\(ordinal)th"
             }
             
             let weekdayText: String
             switch weekday {
-            case 1: weekdayText = "Sunday"
-            case 2: weekdayText = "Monday"
-            case 3: weekdayText = "Tuesday"
-            case 4: weekdayText = "Wednesday"
-            case 5: weekdayText = "Thursday"
-            case 6: weekdayText = "Friday"
-            case 7: weekdayText = "Saturday"
+            case 1: weekdayText = "sunday".localized
+            case 2: weekdayText = "monday".localized
+            case 3: weekdayText = "tuesday".localized
+            case 4: weekdayText = "wednesday".localized
+            case 5: weekdayText = "thursday".localized
+            case 6: weekdayText = "friday".localized
+            case 7: weekdayText = "saturday".localized
             default: weekdayText = "Day"
             }
             

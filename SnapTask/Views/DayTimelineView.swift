@@ -87,12 +87,12 @@ struct DayTimelineView: View {
                     }
                 }
             }
-            .navigationTitle("Day Timeline")
+            .navigationTitle("day_timeline".localized)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back") {
+                    Button("back".localized) {
                         dismiss()
                     }
                 }

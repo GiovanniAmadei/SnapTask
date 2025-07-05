@@ -15,8 +15,8 @@ struct PomodoroTabView: View {
     // Create a placeholder task for general pomodoro sessions
     private var generalPomodoroTask: TodoTask {
         TodoTask(
-            name: "General Focus Session",
-            description: "General pomodoro session",
+            name: "general_focus_session".localized,
+            description: "general_pomodoro_session".localized,
             startTime: Date(),
             category: nil,
             priority: .medium,
@@ -39,7 +39,7 @@ struct PomodoroTabView: View {
                             HStack {
                                 // Session indicator
                                 HStack(spacing: 4) {
-                                    Text("Session")
+                                    Text("session".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
@@ -115,7 +115,7 @@ struct PomodoroTabView: View {
                                             .font(.system(size: 14, weight: .medium))
                                             .foregroundColor(viewModel.state == .working ? focusColor : breakColor)
                                         
-                                        Text(viewModel.state == .working ? "Focus Time" : "Break Time")
+                                        Text(viewModel.state == .working ? "focus_time".localized : "break_time".localized)
                                             .font(.system(.subheadline, design: .rounded))
                                             .foregroundColor(.secondary)
                                     }
@@ -157,10 +157,10 @@ struct PomodoroTabView: View {
                     // Session Timeline - Redesigned
                     VStack(spacing: 12) {
                         HStack {
-                            Text("Session Overview")
+                            Text("session_overview".localized)
                                 .font(.headline.weight(.semibold))
                             Spacer()
-                            Text("\(formatTime(viewModel.timeRemaining)) left")
+                            Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -223,7 +223,7 @@ struct PomodoroTabView: View {
                                 Image(systemName: "clock")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("Finishes at \(formatTimeOnly(completionTime))")
+                                Text("finishes_at".localized + " \(formatTimeOnly(completionTime))")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -233,7 +233,7 @@ struct PomodoroTabView: View {
                     .padding(.bottom, 24)
                 }
             }
-            .navigationTitle("Pomodoro")
+            .navigationTitle("pomodoro".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

@@ -5,6 +5,14 @@ enum Priority: String, CaseIterable, Codable {
     case medium
     case high
     
+    var displayName: String {
+        switch self {
+        case .low: return "low_priority".localized
+        case .medium: return "medium_priority".localized  
+        case .high: return "high_priority".localized
+        }
+    }
+    
     var icon: String {
         switch self {
         case .low: return "arrow.down"
@@ -20,4 +28,4 @@ enum Priority: String, CaseIterable, Codable {
         case .high: return "#FF0000"
         }
     }
-} 
+}

@@ -286,7 +286,7 @@ struct TaskDetailView: View {
             Image(systemName: task.priority.icon)
                 .font(.system(size: 10))
                 .foregroundColor(Color(hex: task.priority.color))
-            Text(task.priority.rawValue.capitalized)
+            Text(task.priority.displayName)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

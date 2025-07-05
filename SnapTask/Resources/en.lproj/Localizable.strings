@@ -11,6 +11,22 @@
 "skip" = "Skip";
 "skip_intro" = "Skip intro";
 "start_using_app" = "Start using SnapTask";
+"close" = "Close";
+"retry" = "Retry";
+"try_again" = "Try Again";
+"duration" = "Duration";
+"color" = "Color";
+"preview" = "Preview";
+"points" = "Points";
+"location" = "Location";
+"priority" = "Priority";
+"recurrence" = "Recurrence";
+"icon" = "Icon";
+"time" = "Time";
+"category" = "Category";
+"general_focus_session" = "General Focus Session";
+"general_pomodoro_session" = "General pomodoro session";
+"reset_to_default" = "Reset to Default";
 
 // Main tabs
 "timeline" = "Timeline";
@@ -59,15 +75,29 @@
 "medium_priority" = "Medium";
 "low_priority" = "Low";
 "no_tasks_today" = "No tasks for today";
+"task_details" = "Task Details";
+"due_tasks" = "Due Tasks";
+"no_tasks_due" = "No Tasks Due";
+"all_caught_up" = "All caught up!";
+
+// Days of the week
+"monday" = "Monday";
+"tuesday" = "Tuesday";
+"wednesday" = "Wednesday";
+"thursday" = "Thursday";
+"friday" = "Friday";
+"saturday" = "Saturday";
+"sunday" = "Sunday";
 
 // Recurrence
 "daily" = "Daily";
 "weekly" = "Weekly";
 "monthly" = "Monthly";
 "recurrence_settings" = "Recurrence Settings";
+"repeat_settings" = "Repeat Settings";
 "select_days" = "Select Days";
 
-// Statistics
+// Statistics and Consistency
 "time_spent" = "Time Spent";
 "today" = "Today";
 "week" = "Week";
@@ -90,12 +120,30 @@
 "points_explanation" = "Each completed task = +1 point • Each missed task = -1 point";
 "track_in_consistency" = "Track in consistency statistics";
 
+// Task Consistency View
+"task_progress_over_time" = "Task Progress Over Time";
+"track_completion_patterns" = "Track completion patterns and consistency trends";
+"time_period" = "Time Period";
+"penalize_missed_tasks" = "Penalize Missed Tasks";
+"decrease_progress_missed" = "Decrease progress when recurring tasks are not completed";
+"no_consistency_data" = "No Consistency Data";
+"complete_recurring_see_progress" = "Complete some recurring tasks to see your progress patterns and consistency trends over time";
+"each_line_shows_task" = "Each line shows a task's completion progress over time";
+"higher_points_better" = "Higher points indicate better consistency";
+"tap_legend_highlight" = "Tap legend items to highlight specific tasks";
+"completed_tasks" = "Completed Tasks";
+"date" = "Date";
+
 // Categories
 "categories" = "Categories";
 "add_category" = "Add Category";
 "edit_category" = "Edit Category";
+"new_category" = "New Category";
 "category_name" = "Category Name";
 "category_color" = "Color";
+"add_new_category" = "Add New Category";
+"select_category" = "Select Category";
+"select_color" = "Select Color";
 
 // Settings
 "review_welcome_message" = "Review welcome message";
@@ -110,6 +158,15 @@
 "system" = "System";
 "performance" = "Performance";
 "biohacking" = "Biohacking";
+"behavior" = "Behavior";
+"icloud_sync" = "iCloud Sync";
+"calendar_integration" = "Calendar Integration";
+"synchronization" = "Synchronization";
+"manage_data_sync" = "Manage data synchronization and calendar integration across your devices.";
+"community" = "Community";
+"support" = "Support";
+"sync_error" = "Sync Error";
+"last_synced" = "Last synced";
 
 // Pomodoro
 "pomodoro" = "Pomodoro";
@@ -118,22 +175,39 @@
 "short_break" = "Short Break";
 "long_break" = "Long Break";
 "sessions_before_long_break" = "Sessions Before Long Break";
+"work_session" = "Work Session";
+"break" = "Break";
+"session_configuration" = "Session Configuration";
+"number_of_sessions" = "Number of Sessions";
+"total_duration" = "Total Duration";
+"total_sessions" = "Total Sessions";
+"estimated_sessions" = "Estimated Sessions";
+"estimated_duration" = "Estimated Duration";
+"session_breakdown" = "Session Breakdown";
+"work_time" = "Work Time";
+"break_time" = "Break Time";
+"total_time" = "Total Time";
+"summary" = "Summary";
+"sessions_until_long_break" = "Sessions until long break";
+"focus_time" = "Focus Time";
+"colors" = "Colors";
 
 // Timeline specific
 "list" = "List";
-"time" = "Time";
 "next_task_in_1_hour" = "Next task in 1 hour";
 "next_task_in_hours" = "Next task in %d hours";
 "all_day" = "All Day";
 "tap_plus_add_first_task" = "Tap the + button to add your first task";
 "track" = "Track";
+"organize_tasks" = "Organize Tasks";
+"organization_mode" = "Organization Mode";
+"time_sort_order" = "Time Sort Order";
+"day_timeline" = "Day Timeline";
 
 // Task Form specific
-"task_details" = "Task Details";
 "enter_task_name" = "Enter task name...";
 "add_description" = "Add description...";
 "add_location" = "Add Location";
-"icon" = "Icon";
 "specific_time" = "Specific Time";
 "set_exact_time" = "Set exact time";
 "start_time" = "Start Time";
@@ -141,22 +215,19 @@
 "duration_value" = "Duration Value";
 "category_priority" = "Category & Priority";
 "folder" = "Folder";
-"select_category" = "Select Category";
 "repeat_task" = "Repeat Task";
 "frequency" = "Frequency";
-"add_subtask" = "Add subtask...";
 "pomodoro_mode" = "Pomodoro Mode";
 "enable_pomodoro" = "Enable Pomodoro";
-"pomodoro_settings" = "Pomodoro Settings";
 "reward_points" = "Reward Points";
 "earn_reward_points" = "Earn reward points";
 "custom_points" = "Custom Points";
 "point_guidelines" = "Point Guidelines:";
-"quick_tasks_5_15_min" = "• 1-10: Quick tasks (5-15 min)";
-"regular_tasks_30_90_min" = "• 15-50: Regular tasks (30-90 min)";
-"complex_tasks_2_4_hours" = "• 75-200: Complex tasks (2-4 hours)";
+"quick_tasks_5_15_min" = "Quick Tasks (5-15 min)";
+"regular_tasks_30_90_min" = "Regular Tasks (30-90 min)";
+"complex_tasks_2_4_hours" = "Complex Tasks (2-4 hours)";
 "save_task" = "Save Task";
-"new_task" = "New Task";
+"choose_icon" = "Choose Icon";
 
 // Rewards View
 "available_points" = "Available Points";
@@ -185,9 +256,12 @@
 "by_category" = "By Category";
 "no_data" = "No data";
 "complete" = "Complete";
+"task_performance" = "Task Performance";
+"quality_rating" = "Quality Rating";
+"difficulty_rating" = "Difficulty Rating";
+"performance_charts" = "Performance Charts";
 
 // Settings View
-"quote_of_the_day" = "Quote of the Day";
 "daily_notifications" = "Daily Notifications";
 "daily_quote_reminder" = "Daily Quote Reminder";
 "notification_time" = "Notification Time";
@@ -196,9 +270,6 @@
 "auto_complete_on" = "Auto-complete On";
 "manual" = "Manual";
 "sync" = "Synchronization";
-"icloud_sync" = "iCloud Sync";
-"calendar_integration" = "Calendar Integration";
-"community" = "Community";
 "feedback_suggestions" = "Feedback & Suggestions";
 "whats_cooking" = "What's Cooking";
 "support_snaptask" = "Support SnapTask";
@@ -230,7 +301,6 @@
 "running" = "Running";
 "pomodoro_timer" = "Pomodoro Timer";
 "todays_focus" = "Today's Focus";
-"total_time" = "Total Time";
 "recent_sessions" = "Recent Sessions";
 "no_sessions_yet" = "No sessions yet";
 "pomodoro_session" = "Pomodoro Session";
@@ -240,16 +310,14 @@
 "session" = "Session";
 "left" = "left";
 "progress" = "Progress";
-"focus_time" = "Focus Time";
-"break_time" = "Break Time";
 "session_overview" = "Session Overview";
 "finishes_at" = "Finishes at";
+"focus_session" = "Focus Session";
 
 // Donation View
 "donations" = "Donations";
 "support_snaptask_pro" = "Support SnapTask Pro";
 "help_continue_development" = "Help me continue development with new features";
-"close" = "Close";
 "beta_mode" = "Beta Mode";
 "testflight_notice" = "We're still in TestFlight, so in-app donations are only simulated.";
 "after_appstore_release" = "After the App Store release they will work normally.";
@@ -260,7 +328,6 @@
 "loading_donation_options" = "Loading donation options...";
 "cannot_load_donation_options" = "Unable to load donation options";
 "check_internet_retry" = "Check your internet connection and try again";
-"retry" = "Retry";
 "paypal_alternative_title" = "PayPal Alternative";
 "if_iap_not_working" = "If in-app donations don't work, you can support me directly:";
 "prefer_paypal" = "Prefer PayPal?";
@@ -279,8 +346,6 @@
 "pizza_for_dinner" = "A pizza for dinner 🍕";
 "dinner_for_giovanni" = "Dinner for Giovanni";
 "nice_dinner" = "A nice dinner 🍽️";
-"support" = "Support";
-"support_development" = "Support development";
 
 // Update Banner 0.2.2
 "whats_new" = "What's New";
@@ -301,3 +366,60 @@
 "data_reset_option_desc" = "Option to delete all data and start fresh when needed";
 "general_improvements" = "General Bug Fixes";
 "general_improvements_desc" = "Various bug fixes and performance improvements based on feedback";
+
+// Backup and Restore
+"backup_restore" = "Backup & Restore";
+"backup" = "Backup";
+"restore" = "Restore";
+"export_all_data" = "Export all your data to a file you can save";
+"export_backup" = "Export Backup";
+"restore_from_backup" = "Restore your data from a previously saved backup file";
+"will_overwrite_data" = "⚠️ This will overwrite all current data";
+"import_backup" = "Import Backup";
+"processing" = "Processing...";
+"operation_completed" = "Operation completed";
+"operation_success" = "The operation was completed successfully.";
+"error" = "Error";
+
+// Common interface elements
+"clear" = "Clear";
+
+// Time and organization
+"list_view" = "List View";
+"timeline_view" = "Timeline View";
+"by_time" = "By Time";
+"by_category" = "By Category";
+"by_priority" = "By Priority";
+"early_to_late" = "Early to Late";
+"late_to_early" = "Late to Early";
+
+"default_view" = "Default View";
+"no_category" = "No Category";
+"default" = "Default";
+
+// Recurrence Types
+"daily_enum" = "Daily";
+"weekly_enum" = "Weekly";
+"monthly_enum" = "Monthly";
+"yearly_enum" = "Yearly";
+
+// Monthly Selection Types
+"days_enum" = "Days";
+"patterns_enum" = "Patterns";
+
+// Ordinal positions
+"first" = "First";
+"second" = "Second";
+"third" = "Third";
+"fourth" = "Fourth";
+"last" = "Last";
+
+// Ordinal pattern texts
+"select_patterns_description" = "Select patterns like 'First Sunday' or 'Last Friday'";
+"monthly_patterns" = "Monthly Patterns";
+"clear_all" = "Clear All";
+
+// Recurrence display texts
+"weekly_days_format" = "%d days";
+"monthly_days_format" = "%d days";
+"monthly_patterns_format" = "%d patterns";

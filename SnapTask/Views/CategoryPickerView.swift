@@ -35,15 +35,15 @@ struct CategoryPickerView: View {
             Button {
                 editingCategory = Category(id: UUID(), name: "", color: "#FF0000")
             } label: {
-                Label("Add New Category", systemImage: "plus")
+                Label("add_new_category".localized, systemImage: "plus")
                     .foregroundColor(.accentColor)
             }
         }
-        .navigationTitle("Select Category")
+        .navigationTitle("select_category".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit") {
+                Button("edit".localized) {
                     showingCategoryEditor = true
                 }
             }
@@ -66,4 +66,4 @@ struct CategoryPickerView: View {
             }
         }
     }
-} 
+}

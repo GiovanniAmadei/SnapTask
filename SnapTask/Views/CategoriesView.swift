@@ -25,10 +25,10 @@ struct CategoriesView: View {
             }
             
             Button(action: { showingNewCategorySheet = true }) {
-                Label("Add Category", systemImage: "plus")
+                Label("add_category".localized, systemImage: "plus")
             }
         }
-        .navigationTitle("Categories")
+        .navigationTitle("categories".localized)
         .sheet(isPresented: $showingNewCategorySheet) {
             NavigationStack {
                 CategoryFormView { category in
@@ -46,4 +46,4 @@ struct CategoriesView: View {
             }
         }
     }
-} 
+}

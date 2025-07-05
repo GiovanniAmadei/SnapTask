@@ -10,10 +10,10 @@ struct CategoryEditorView: View {
     
     var body: some View {
         List {
-            Section("Add New Category") {
+            Section("add_new_category".localized) {
                 HStack {
-                    TextField("Category Name", text: $newCategoryName)
-                    Button("Add") {
+                    TextField("category_name".localized, text: $newCategoryName)
+                    Button("add".localized) {
                         let newCategory = Category(
                             id: UUID(),
                             name: newCategoryName,
@@ -26,8 +26,8 @@ struct CategoryEditorView: View {
                 }
             }
             
-            Section("Color") {
-                ColorPicker("Select Color", selection: Binding(
+            Section("color".localized) {
+                ColorPicker("select_color".localized, selection: Binding(
                     get: { Color(hex: selectedColor) },
                     set: { selectedColor = $0.toHex() ?? "#FF0000" }
                 ))
@@ -60,7 +60,7 @@ struct CategoryEditorView: View {
                 }
             }
         }
-        .navigationTitle("Categories")
+        .navigationTitle("categories".localized)
         .sheet(item: $editingCategory) { category in
             NavigationStack {
                 CategoryFormView(
@@ -103,14 +103,14 @@ struct ColorPickerView: View {
                 }
             }
         }
-        .navigationTitle("Select Color")
+        .navigationTitle("select_color".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button("cancel".localized) {
                     dismiss()
                 }
             }
         }
     } 
-    } 
+}

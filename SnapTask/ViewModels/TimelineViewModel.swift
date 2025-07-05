@@ -9,8 +9,8 @@ enum TimelineViewMode: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .list: return "List View"
-        case .timeline: return "Timeline View"
+        case .list: return "list_view".localized
+        case .timeline: return "timeline_view".localized
         }
     }
     
@@ -30,10 +30,10 @@ enum TimelineOrganization: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .time: return "By Time"
-        case .category: return "By Category"
-        case .priority: return "By Priority"
-        case .none: return "Default"
+        case .time: return "by_time".localized
+        case .category: return "by_category".localized
+        case .priority: return "by_priority".localized
+        case .none: return "default".localized
         }
     }
     
@@ -53,8 +53,8 @@ enum TimeSortOrder: String, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .ascending: return "Early to Late"
-        case .descending: return "Late to Early"
+        case .ascending: return "early_to_late".localized
+        case .descending: return "late_to_early".localized
         }
     }
 }
@@ -257,7 +257,7 @@ class TimelineViewModel: ObservableObject {
     
     private func organizeByCategory(_ tasks: [TodoTask]) -> OrganizedTasks {
         let grouped = Dictionary(grouping: tasks) { task in
-            task.category?.name ?? "No Category"
+            task.category?.name ?? "no_category".localized
         }
         
         let sections = grouped.map { categoryName, tasks in
@@ -282,7 +282,7 @@ class TimelineViewModel: ObservableObject {
             guard let tasks = grouped[priority], !tasks.isEmpty else { return nil }
             return TaskSection(
                 id: priority.rawValue,
-                title: priority.rawValue.capitalized + " Priority",
+                title: priority.displayName + " " + "priority".localized,
                 color: priority.color,
                 icon: priority.icon,
                 tasks: tasks.sorted { $0.startTime < $1.startTime }
@@ -315,13 +315,13 @@ class TimelineViewModel: ObservableObject {
     var organizationStatusText: String {
         switch organization {
         case .none:
-            return "Default View"
+            return "default_view".localized
         case .time:
-            return "By Time (\(timeSortOrder.displayName))"
+            return "by_time".localized + " (\(timeSortOrder.displayName))"
         case .category:
-            return "By Category"
+            return "by_category".localized
         case .priority:
-            return "By Priority"
+            return "by_priority".localized
         }
     }
     

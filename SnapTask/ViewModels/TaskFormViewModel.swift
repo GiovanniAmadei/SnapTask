@@ -3,15 +3,23 @@ import SwiftUI
 import Combine
 
 enum RecurrenceType: String, CaseIterable {
-    case daily = "Daily"
-    case weekly = "Weekly"
-    case monthly = "Monthly"
-    case yearly = "Yearly"
+    case daily = "daily_enum"
+    case weekly = "weekly_enum"
+    case monthly = "monthly_enum"
+    case yearly = "yearly_enum"
+    
+    var localizedString: String {
+        return self.rawValue.localized
+    }
 }
 
 enum MonthlySelectionType: String, CaseIterable {
-    case days = "Days"
-    case ordinal = "Patterns"
+    case days = "days_enum"
+    case ordinal = "patterns_enum"
+    
+    var localizedString: String {
+        return self.rawValue.localized
+    }
 }
 
 @MainActor
@@ -117,18 +125,18 @@ class TaskFormViewModel: ObservableObject {
     var recurrenceDisplayText: String {
         switch recurrenceType {
         case .daily:
-            return "Daily"
+            return "daily_enum".localized
         case .weekly:
-            return selectedDays.isEmpty ? "Weekly" : "\(selectedDays.count) days"
+            return selectedDays.isEmpty ? "weekly_enum".localized : String(format: "weekly_days_format".localized, selectedDays.count)
         case .monthly:
             switch monthlySelectionType {
             case .days:
-                return selectedMonthlyDays.isEmpty ? "Monthly" : "\(selectedMonthlyDays.count) days"
+                return selectedMonthlyDays.isEmpty ? "monthly_enum".localized : String(format: "monthly_days_format".localized, selectedMonthlyDays.count)
             case .ordinal:
-                return selectedOrdinalPatterns.isEmpty ? "Monthly Patterns" : "\(selectedOrdinalPatterns.count) patterns"
+                return selectedOrdinalPatterns.isEmpty ? "monthly_patterns".localized : String(format: "monthly_patterns_format".localized, selectedOrdinalPatterns.count)
             }
         case .yearly:
-            return "Yearly"
+            return "yearly_enum".localized
         }
     }
     

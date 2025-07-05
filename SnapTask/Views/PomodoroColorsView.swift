@@ -21,7 +21,7 @@ struct PomodoroColorsView: View {
         VStack(spacing: 24) {
             // Preview Section
             VStack(spacing: 16) {
-                Text("Preview")
+                Text("preview".localized)
                     .font(.headline)
                 
                 // Mini Pomodoro Preview
@@ -56,7 +56,7 @@ struct PomodoroColorsView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                        Text("Focus")
+                        Text("focus".localized)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -84,7 +84,7 @@ struct PomodoroColorsView: View {
             
             // Color Selection
             List {
-                Section("Focus Time") {
+                Section("focus_time".localized) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
                         ForEach(colorOptions, id: \.1) { name, hex in
                             ColorDot(
@@ -98,7 +98,7 @@ struct PomodoroColorsView: View {
                     .padding(.vertical, 8)
                 }
                 
-                Section("Break Time") {
+                Section("break_time".localized) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
                         ForEach(colorOptions, id: \.1) { name, hex in
                             ColorDot(
@@ -117,10 +117,10 @@ struct PomodoroColorsView: View {
                 UserDefaults.standard.set(breakColor, forKey: "pomodoroBreakColor")
                 // CloudKitService.shared.savePomodoroColors(focusColor: focusColor, breakColor: breakColor)
             } label: {
-                Text("Save")
+                Text("save".localized)
             }
         }
-        .navigationTitle("Colors")
+        .navigationTitle("colors".localized)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

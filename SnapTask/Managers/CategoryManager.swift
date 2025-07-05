@@ -39,9 +39,9 @@ class CategoryManager: ObservableObject {
     
     private func createDefaultCategories() -> [Category] {
         return [
-            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID(), name: "Work", color: "007AFF"),
-            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002") ?? UUID(), name: "Personal", color: "34C759"),
-            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000003") ?? UUID(), name: "Health", color: "FF3B30")
+            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID(), name: "work_category".localized, color: "007AFF"),
+            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002") ?? UUID(), name: "personal_category".localized, color: "34C759"),
+            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000003") ?? UUID(), name: "health_category".localized, color: "FF3B30")
         ]
     }
     
@@ -190,9 +190,9 @@ class CategoryManager: ObservableObject {
         
         // Create fresh default categories with new UUIDs
         let defaultCategories = [
-            Category(id: UUID(), name: "Work", color: "007AFF"),
-            Category(id: UUID(), name: "Personal", color: "34C759"),
-            Category(id: UUID(), name: "Health", color: "FF3B30")
+            Category(id: UUID(), name: "work_category".localized, color: "007AFF"),
+            Category(id: UUID(), name: "personal_category".localized, color: "34C759"),
+            Category(id: UUID(), name: "health_category".localized, color: "FF3B30")
         ]
         
         categories = defaultCategories
