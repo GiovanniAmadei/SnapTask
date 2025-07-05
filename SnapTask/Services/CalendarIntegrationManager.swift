@@ -21,10 +21,10 @@ class CalendarIntegrationManager: ObservableObject {
         
         var displayText: String {
             switch self {
-            case .idle: return "Ready"
-            case .syncing: return "Syncing..."
-            case .success: return "Synced successfully"
-            case .error(let message): return "Error: \(message)"
+            case .idle: return "sync_ready".localized
+            case .syncing: return "sync_syncing".localized
+            case .success: return "sync_success".localized
+            case .error(let message): return "\(String("sync_error_prefix").localized): \(message)"
             }
         }
     }

@@ -19,8 +19,8 @@ enum CalendarProvider: String, CaseIterable, Codable {
     
     var displayName: String {
         switch self {
-        case .apple: return "Apple Calendar"
-        case .google: return "Google Calendar"
+        case .apple: return "apple_calendar".localized
+        case .google: return "google_calendar".localized
         }
     }
     

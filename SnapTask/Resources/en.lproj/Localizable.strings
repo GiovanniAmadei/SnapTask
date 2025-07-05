@@ -167,6 +167,51 @@
 "support" = "Support";
 "sync_error" = "Sync Error";
 "last_synced" = "Last synced";
+"try_sign_out_in" = "Try signing out and back into iCloud";
+
+// Calendar Integration
+"enable_calendar_integration" = "Enable Calendar Integration";
+"integration" = "Integration";
+"sync_tasks_calendar_automatically" = "Sync your tasks with your calendar app automatically";
+"calendar_provider" = "Calendar Provider";
+"apple_calendar" = "Apple Calendar";
+"google_calendar" = "Google Calendar";
+"calendar_selection" = "Calendar Selection";
+"selected_calendar" = "Selected Calendar";
+"none" = "None";
+"sync_options" = "Sync Options";
+"auto_sync_task_creation" = "Auto-sync on task creation";
+"auto_sync_task_updates" = "Auto-sync on task updates";
+"sync_completed_tasks" = "Sync completed tasks";
+"sync_recurring_tasks" = "Sync recurring tasks";
+"status" = "Status";
+"provider_status" = "Provider Status";
+"sync_status" = "Sync Status";
+"synced_events" = "Synced Events";
+"sync_all_tasks_now" = "Sync All Tasks Now";
+"delete_all_synced_tasks" = "Delete All Synced Tasks";
+"syncing" = "Syncing...";
+"connected" = "Connected";
+"not_connected" = "Not Connected";
+"select_calendar" = "Select Calendar";
+"done" = "Done";
+
+// Calendar Integration Alerts
+"error" = "Error";
+"ok" = "OK";
+"enable_calendar_access" = "Enable Calendar Access";
+"allow" = "Allow";
+"calendar_access_required" = "Calendar Access Required";
+"open_settings" = "Open Settings";
+"calendar_access_message" = "SnapTask needs access to your calendar to sync your tasks and create calendar events automatically.";
+"calendar_access_required_message" = "Calendar access is required to sync your tasks. Please enable calendar access for SnapTask in Settings.";
+"calendar_access_denied_message" = "Calendar access was denied. Please enable calendar access in iOS Settings > Privacy & Security > Calendars > SnapTask.";
+
+// Calendar Integration Sync Status
+"sync_ready" = "Ready";
+"sync_syncing" = "Syncing...";
+"sync_success" = "Synced successfully";
+"sync_error_prefix" = "Error";
 
 // Pomodoro
 "pomodoro" = "Pomodoro";
@@ -430,9 +475,6 @@
 "verify_icloud_enabled" = "Verify iCloud is enabled in Settings";
 "ensure_icloud_storage" = "Ensure you have enough iCloud storage";
 "try_sign_out_in" = "Try signing out and back into iCloud";
-
-// Calendar Integration
-"calendar_integration" = "Calendar Integration";
 
 // Time and organization
 "list_view" = "List View";

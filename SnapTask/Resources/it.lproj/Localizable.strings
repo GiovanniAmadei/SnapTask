@@ -343,9 +343,9 @@
 "coffee_for_giovanni" = "Caffè per Giovanni";
 "small_coffee" = "Un piccolo caffè";
 "pizza_for_giovanni" = "Pizza per Giovanni";
-"pizza_for_dinner" = "Una pizza per cena 🍕";
+"pizza_for_dinner" = "Una pizza per cena ";
 "dinner_for_giovanni" = "Cena per Giovanni";
-"nice_dinner" = "Una bella cena 🍽️";
+"nice_dinner" = "Una bella cena ";
 
 // Update Banner 0.3
 "whats_new" = "Cosa c'è di Nuovo";
@@ -374,7 +374,7 @@
 "export_all_data" = "Esporta tutti i tuoi dati in un file che puoi salvare";
 "export_backup" = "Esporta Backup";
 "restore_from_backup" = "Ripristina i tuoi dati da un file di backup precedentemente salvato";
-"will_overwrite_data" = "⚠️ Questo sovrascriverà tutti i dati attuali";
+"will_overwrite_data" = " Questo sovrascriverà tutti i dati attuali";
 "import_backup" = "Importa Backup";
 "processing" = "Elaborazione in corso...";
 "operation_completed" = "Operazione completata";
@@ -469,8 +469,3 @@
 // Additional sync-related strings
 "enabled" = "Abilitato";
 "disabled" = "Disabilitato";
-"common_solutions" = "Soluzioni Comuni:";
-"check_internet_connection" = "Controlla la connessione internet";
-"verify_icloud_enabled" = "Verifica che iCloud sia abilitato nelle Impostazioni";
-"ensure_icloud_storage" = "Assicurati di avere abbastanza spazio di archiviazione iCloud";
-"try_sign_out_in" = "Prova a disconnetterti e riconnetterti a iCloud";

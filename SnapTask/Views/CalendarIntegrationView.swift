@@ -25,32 +25,32 @@ struct CalendarIntegrationView: View {
                     statusSection
                 }
             }
-            .navigationTitle("Calendar Integration")
+            .navigationTitle("calendar_integration".localized)
             .navigationBarTitleDisplayMode(.large)
-            .alert("Error", isPresented: .constant(errorMessage != nil)) {
-                Button("OK") { errorMessage = nil }
+            .alert("error".localized, isPresented: .constant(errorMessage != nil)) {
+                Button("ok".localized) { errorMessage = nil }
             } message: {
                 if let error = errorMessage {
                     Text(error)
                 }
             }
-            .alert("Enable Calendar Access", isPresented: $showingPermissionAlert) {
-                Button("Allow") {
+            .alert("enable_calendar_access".localized, isPresented: $showingPermissionAlert) {
+                Button("allow".localized) {
                     Task {
                         await selectProvider(.apple)
                     }
                 }
-                Button("Cancel", role: .cancel) { }
+                Button("cancel".localized, role: .cancel) { }
             } message: {
-                Text("SnapTask needs access to your calendar to sync your tasks and create calendar events automatically.")
+                Text("calendar_access_message".localized)
             }
-            .alert("Calendar Access Required", isPresented: $showingSettingsAlert) {
-                Button("Open Settings") {
+            .alert("calendar_access_required".localized, isPresented: $showingSettingsAlert) {
+                Button("open_settings".localized) {
                     appleService.openCalendarSettings()
                 }
-                Button("Cancel", role: .cancel) { }
+                Button("cancel".localized, role: .cancel) { }
             } message: {
-                Text("Calendar access is required to sync your tasks. Please enable calendar access for SnapTask in Settings.")
+                Text("calendar_access_required_message".localized)
             }
             .sheet(isPresented: $showingCalendarPicker) {
                 CalendarSelectionView()
@@ -64,7 +64,7 @@ struct CalendarIntegrationView: View {
     
     private var enabledSection: some View {
         Section {
-            Toggle("Enable Calendar Integration", isOn: Binding(
+            Toggle("enable_calendar_integration".localized, isOn: Binding(
                 get: { integrationManager.settings.isEnabled },
                 set: { newValue in
                     var settings = integrationManager.settings
@@ -73,14 +73,14 @@ struct CalendarIntegrationView: View {
                 }
             ))
         } header: {
-            Text("Integration")
+            Text("integration".localized)
         } footer: {
-            Text("Sync your tasks with your calendar app automatically")
+            Text("sync_tasks_calendar_automatically".localized)
         }
     }
     
     private var providerSection: some View {
-        Section("Calendar Provider") {
+        Section("calendar_provider".localized) {
             ForEach(CalendarProvider.allCases, id: \.self) { provider in
                 HStack {
                     Image(systemName: provider.iconName)
@@ -105,14 +105,14 @@ struct CalendarIntegrationView: View {
     }
     
     private var calendarSelectionSection: some View {
-        Section("Calendar Selection") {
+        Section("calendar_selection".localized) {
             Button(action: {
                 showingCalendarPicker = true
             }) {
                 HStack {
-                    Text("Selected Calendar")
+                    Text("selected_calendar".localized)
                     Spacer()
-                    Text(integrationManager.settings.selectedCalendarName ?? "None")
+                    Text(integrationManager.settings.selectedCalendarName ?? "none".localized)
                         .foregroundColor(.secondary)
                     Image(systemName: "chevron.right")
                         .foregroundColor(.secondary)
@@ -124,8 +124,8 @@ struct CalendarIntegrationView: View {
     }
     
     private var syncOptionsSection: some View {
-        Section("Sync Options") {
-            Toggle("Auto-sync on task creation", isOn: Binding(
+        Section("sync_options".localized) {
+            Toggle("auto_sync_task_creation".localized, isOn: Binding(
                 get: { integrationManager.settings.autoSyncOnTaskCreate },
                 set: { newValue in
                     var settings = integrationManager.settings
@@ -134,7 +134,7 @@ struct CalendarIntegrationView: View {
                 }
             ))
             
-            Toggle("Auto-sync on task updates", isOn: Binding(
+            Toggle("auto_sync_task_updates".localized, isOn: Binding(
                 get: { integrationManager.settings.autoSyncOnTaskUpdate },
                 set: { newValue in
                     var settings = integrationManager.settings
@@ -143,7 +143,7 @@ struct CalendarIntegrationView: View {
                 }
             ))
             
-            Toggle("Sync completed tasks", isOn: Binding(
+            Toggle("sync_completed_tasks".localized, isOn: Binding(
                 get: { integrationManager.settings.autoSyncOnTaskComplete },
                 set: { newValue in
                     var settings = integrationManager.settings
@@ -152,7 +152,7 @@ struct CalendarIntegrationView: View {
                 }
             ))
             
-            Toggle("Sync recurring tasks", isOn: Binding(
+            Toggle("sync_recurring_tasks".localized, isOn: Binding(
                 get: { integrationManager.settings.syncRecurringTasks },
                 set: { newValue in
                     var settings = integrationManager.settings
@@ -164,34 +164,34 @@ struct CalendarIntegrationView: View {
     }
     
     private var statusSection: some View {
-        Section("Status") {
+        Section("status".localized) {
             HStack {
-                Text("Provider Status")
+                Text("provider_status".localized)
                 Spacer()
                 statusIndicator
             }
             
             HStack {
-                Text("Sync Status")
+                Text("sync_status".localized)
                 Spacer()
                 Text(integrationManager.syncStatus.displayText)
                     .foregroundColor(.secondary)
             }
             
             HStack {
-                Text("Synced Events")
+                Text("synced_events".localized)
                 Spacer()
                 Text("\(integrationManager.getSyncedTasksCount())")
                     .foregroundColor(.secondary)
             }
             
-            Button("Sync All Tasks Now") {
+            Button("sync_all_tasks_now".localized) {
                 syncAllTasks()
             }
             .disabled(isLoading || integrationManager.settings.selectedCalendarId == nil)
             
             if integrationManager.getSyncedTasksCount() > 0 {
-                Button("Delete All Synced Tasks") {
+                Button("delete_all_synced_tasks".localized) {
                     deleteAllSyncedTasks()
                 }
                 .disabled(isLoading)
@@ -202,7 +202,7 @@ struct CalendarIntegrationView: View {
                 HStack {
                     ProgressView()
                         .scaleEffect(0.8)
-                    Text("Syncing...")
+                    Text("syncing".localized)
                         .foregroundColor(.secondary)
                 }
             }
@@ -217,7 +217,7 @@ struct CalendarIntegrationView: View {
                     Circle()
                         .fill(appleService.authorizationStatus == .authorized ? .green : .red)
                         .frame(width: 8, height: 8)
-                    Text(appleService.authorizationStatus == .authorized ? "Connected" : "Not Connected")
+                    Text(appleService.authorizationStatus == .authorized ? "connected".localized : "not_connected".localized)
                         .foregroundColor(.secondary)
                 }
             case .google:
@@ -225,7 +225,7 @@ struct CalendarIntegrationView: View {
                     Circle()
                         .fill(googleService.isAuthenticated ? .green : .red)
                         .frame(width: 8, height: 8)
-                    Text(googleService.isAuthenticated ? "Connected" : "Not Connected")
+                    Text(googleService.isAuthenticated ? "connected".localized : "not_connected".localized)
                         .foregroundColor(.secondary)
                 }
             }
@@ -251,7 +251,7 @@ struct CalendarIntegrationView: View {
                     print("📅 Request result: \(granted), final status: \(appleService.authorizationStatus.rawValue)")
                     
                     if !granted {
-                        errorMessage = "Calendar access was denied. Please enable calendar access in iOS Settings > Privacy & Security > Calendars > SnapTask."
+                        errorMessage = "calendar_access_denied_message".localized
                     }
                 case .google:
                     if !googleService.isAuthenticated {
@@ -309,11 +309,11 @@ struct CalendarSelectionView: View {
                     googleCalendarList
                 }
             }
-            .navigationTitle("Select Calendar")
+            .navigationTitle("select_calendar".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                 }
