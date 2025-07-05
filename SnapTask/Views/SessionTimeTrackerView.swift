@@ -69,7 +69,7 @@ struct SessionTimeTrackerView: View {
                     fullscreenLayout
                 }
             } else {
-                Text("Session not available.")
+                Text("session_not_available".localized)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(isCompactMode ? Color(.systemBackground) : Color.clear)
@@ -126,11 +126,9 @@ struct SessionTimeTrackerView: View {
             }
         }
         .onAppear {
-            if let sessionOnAppear = self.session {
-                if !sessionOnAppear.isRunning && !sessionOnAppear.isPaused {
-                    viewModel.startTimer(for: sessionId)
-                }
-            } else {
+            // FIXED: Non avviare automaticamente il timer - lascia che l'utente decida
+            // Controlla solo se la sessione esiste, altrimenti chiudi la vista
+            if self.session == nil {
                 dismiss()
             }
         }
@@ -172,11 +170,11 @@ struct SessionTimeTrackerView: View {
                         Spacer()
                     }
                     
-                    Text("Focus Session")
+                    Text("focus_session".localized)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                 } else {
-                    Text("Timer Session")
+                    Text("timer_session".localized)
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                 }
@@ -208,7 +206,7 @@ struct SessionTimeTrackerView: View {
                         .foregroundColor(.primary)
                     
                     if session?.isPaused == true {
-                        Text("PAUSED")
+                        Text("paused_caps".localized)
                             .font(.system(size: 8, weight: .semibold))
                             .foregroundColor(.orange)
                             .padding(.horizontal, 6)
@@ -222,8 +220,8 @@ struct SessionTimeTrackerView: View {
             }
             
             Text(session?.isRunning == true ?
-                 (session?.isPaused == true ? "Tap play to resume" : "Session in progress") :
-                 "Ready to start tracking")
+                 (session?.isPaused == true ? "tap_play_to_resume".localized : "session_in_progress".localized) :
+                 "ready_to_start_tracking".localized)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -322,12 +320,12 @@ struct SessionTimeTrackerView: View {
                                     .foregroundColor(textColor)
                             }
                             
-                            Text("Focus Session")
+                            Text("focus_session".localized)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(secondaryTextColor)
                         }
                     } else {
-                        Text("Timer Session")
+                        Text("timer_session".localized)
                             .font(.system(size: 24, weight: .semibold, design: .rounded))
                             .foregroundColor(textColor)
                     }
@@ -383,7 +381,7 @@ struct SessionTimeTrackerView: View {
                                         .fill(Color.orange)
                                         .frame(width: 6, height: 6)
                                     
-                                    Text("PAUSED")
+                                    Text("paused_caps".localized)
                                         .font(.system(size: 12, weight: .semibold))
                                         .foregroundColor(.orange)
                                 }
@@ -402,11 +400,11 @@ struct SessionTimeTrackerView: View {
                     }
                     
                     if session?.isRunning == true {
-                        Text(session?.isPaused == true ? "Tap play to resume" : "Session in progress")
+                        Text(session?.isPaused == true ? "tap_play_to_resume".localized : "session_in_progress".localized)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(secondaryTextColor)
                     } else {
-                        Text("Ready to start tracking")
+                        Text("ready_to_start_tracking".localized)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(secondaryTextColor)
                     }

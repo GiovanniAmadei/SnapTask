@@ -67,10 +67,7 @@ struct TaskFormView: View {
                 vm.recurrenceEndDate = recurrence.endDate ?? Date().addingTimeInterval(86400 * 30)
                 vm.trackInStatistics = recurrence.trackInStatistics
             }
-            vm.isPomodoroEnabled = initialTask.pomodoroSettings != nil
-            if let pomodoroSettings = initialTask.pomodoroSettings {
-                vm.pomodoroSettings = pomodoroSettings
-            }
+            
             vm.hasRewardPoints = initialTask.hasRewardPoints
             vm.rewardPoints = initialTask.rewardPoints
             return vm
@@ -405,41 +402,6 @@ struct TaskFormView: View {
                         .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.subtasks.count)
                     }
                     .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.subtasks.count)
-                    
-                    // Pomodoro Card
-                    ModernCard(title: "pomodoro_mode".localized, icon: "timer") {
-                        VStack(spacing: 16) {
-                            HStack {
-                                Text("enable_pomodoro".localized)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                ModernToggle(isOn: $viewModel.isPomodoroEnabled)
-                            }
-                            
-                            if viewModel.isPomodoroEnabled {
-                                NavigationLink {
-                                    PomodoroSettingsView(settings: $viewModel.pomodoroSettings)
-                                } label: {
-                                    HStack {
-                                        Text("pomodoro_settings".localized)
-                                            .font(.subheadline.weight(.medium))
-                                            .foregroundColor(.primary)
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                .transition(.asymmetric(
-                                    insertion: .opacity,
-                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
-                                ))
-                            }
-                        }
-                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isPomodoroEnabled)
-                    }
-                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isPomodoroEnabled)
                     
                     // Rewards Card
                     ModernCard(title: "reward_points".localized, icon: "star") {

@@ -515,3 +515,37 @@
 "weekly_days_format" = "%d days";
 "monthly_days_format" = "%d days";
 "monthly_patterns_format" = "%d patterns";
+
+// Additional Focus and Timer strings
+"configure_by" = "Configure by";
+"min_unit" = "min";
+"session_not_available" = "Session not available.";
+"timer_session" = "Timer Session";
+"tap_play_to_resume" = "Tap play to resume";
+"session_in_progress" = "Session in progress";
+"ready_to_start_tracking" = "Ready to start tracking";
+"paused_caps" = "PAUSED";
+"focus_session_complete" = "Focus Session Complete!";
+"focused_for" = "Focused for";
+"session_details" = "Session Details";
+"task_name" = "Task Name";
+"task_name_placeholder" = "Task name";
+"focus_time" = "Focus Time";
+"hours" = "Hours";
+"minutes" = "Minutes";
+"mode" = "Mode";
+"original_category" = "Original Category";
+"track_time_in" = "Track Time In";
+"this_task_only" = "This Task Only";
+"save_and_finish" = "Save & Finish";
+"sessions" = "Sessions";
+"active_sessions" = "Active Sessions";
+
+"general_pomodoro_settings" = "General Pomodoro Settings";
+"task_pomodoro_settings" = "Task Pomodoro Settings";
+"general_focus_sessions_description" = "These settings apply to general focus sessions started from the Focus tab.";
+"task_pomodoro_sessions_description" = "These settings apply to Pomodoro sessions started from specific tasks.";
+"about" = "About";
+
+"list_view" = "List View";
+"timeline_view" = "Timeline View";

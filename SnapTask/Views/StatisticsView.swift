@@ -23,10 +23,10 @@ struct StatisticsView: View {
         
         var displayName: String {
             switch self {
-            case .overview: return "Overview"
-            case .streaks: return "Streaks"
-            case .consistency: return "Consistency"
-            case .performance: return "Performance"
+            case .overview: return "overview".localized
+            case .streaks: return "streaks".localized
+            case .consistency: return "consistency".localized
+            case .performance: return "performance".localized
             }
         }
     }
@@ -260,17 +260,17 @@ private struct QualityChart: View {
     var body: some View {
         Chart(flattenedQualityData) { point in
             LineMark(
-                x: .value("Date", point.date),
-                y: .value("Quality", point.value)
+                x: .value("date".localized, point.date),
+                y: .value("quality".localized, point.value)
             )
-            .foregroundStyle(by: .value("Task", point.taskName))
+            .foregroundStyle(by: .value("task".localized, point.taskName))
             .opacity(lineOpacity(for: point.taskName))
             
             PointMark(
-                x: .value("Date", point.date),
-                y: .value("Quality", point.value)
+                x: .value("date".localized, point.date),
+                y: .value("quality".localized, point.value)
             )
-            .foregroundStyle(by: .value("Task", point.taskName))
+            .foregroundStyle(by: .value("task".localized, point.taskName))
             .opacity(lineOpacity(for: point.taskName))
             .symbol(.circle)
         }
@@ -303,8 +303,8 @@ private struct QualityChart: View {
                 }
             }
         }
-        .chartXAxisLabel("Date", position: .bottom)
-        .chartYAxisLabel("Quality Rating", position: .leading)
+        .chartXAxisLabel("date".localized, position: .bottom)
+        .chartYAxisLabel("quality_rating".localized, position: .leading)
     }
     
     private var flattenedQualityData: [FlatChartPoint] {
@@ -341,17 +341,17 @@ private struct DifficultyChart: View {
     var body: some View {
         Chart(flattenedDifficultyData) { point in
             LineMark(
-                x: .value("Date", point.date),
-                y: .value("Difficulty", point.value)
+                x: .value("date".localized, point.date),
+                y: .value("difficulty".localized, point.value)
             )
-            .foregroundStyle(by: .value("Task", point.taskName))
+            .foregroundStyle(by: .value("task".localized, point.taskName))
             .opacity(lineOpacity(for: point.taskName))
             
             PointMark(
-                x: .value("Date", point.date),
-                y: .value("Difficulty", point.value)
+                x: .value("date".localized, point.date),
+                y: .value("difficulty".localized, point.value)
             )
-            .foregroundStyle(by: .value("Task", point.taskName))
+            .foregroundStyle(by: .value("task".localized, point.taskName))
             .opacity(lineOpacity(for: point.taskName))
             .symbol(.circle)
         }
@@ -384,8 +384,8 @@ private struct DifficultyChart: View {
                 }
             }
         }
-        .chartXAxisLabel("Date", position: .bottom)
-        .chartYAxisLabel("Difficulty Rating", position: .leading)
+        .chartXAxisLabel("date".localized, position: .bottom)
+        .chartYAxisLabel("difficulty_rating".localized, position: .leading)
     }
     
     private var flattenedDifficultyData: [FlatChartPoint] {
@@ -452,7 +452,7 @@ private struct PerformanceTab: View {
     private var timeRangeSelector: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Performance Analytics")
+                Text("performance_analytics".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                 Spacer()
             }
@@ -483,7 +483,7 @@ private struct PerformanceTab: View {
     private var overallMetricsSection: some View {
         VStack(spacing: 16) {
             HStack {
-                Text("Overview")
+                Text("overview".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                 Spacer()
             }
@@ -496,14 +496,14 @@ private struct PerformanceTab: View {
             
             HStack(spacing: 12) {
                 PerformanceStatCard(
-                    title: "Tasks",
+                    title: "tasks".localized,
                     value: "\(tasksWithRatings.count)",
                     color: .blue
                 )
                 
                 if avgQuality > 0 {
                     PerformanceStatCard(
-                        title: "Quality",
+                        title: "quality".localized,
                         value: String(format: "%.1f", avgQuality),
                         color: .yellow
                     )
@@ -511,7 +511,7 @@ private struct PerformanceTab: View {
                 
                 if avgDifficulty > 0 {
                     PerformanceStatCard(
-                        title: "Difficulty",
+                        title: "difficulty".localized,
                         value: String(format: "%.1f", avgDifficulty),
                         color: .orange
                     )
@@ -527,7 +527,7 @@ private struct PerformanceTab: View {
             HStack {
                 Image(systemName: "star.fill")
                     .foregroundColor(.yellow)
-                Text("Quality Progression")
+                Text("quality_progression".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                 Spacer()
             }
@@ -542,7 +542,7 @@ private struct PerformanceTab: View {
                     highlightedTaskId: $highlightedTaskId
                 )
             } else {
-                Text("No quality data available")
+                Text("no_quality_data_available".localized)
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundColor(.secondary)
                     .frame(height: 100, alignment: .center)
@@ -557,7 +557,7 @@ private struct PerformanceTab: View {
             HStack {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.orange)
-                Text("Difficulty Assessment")
+                Text("difficulty_assessment".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                 Spacer()
             }
@@ -572,7 +572,7 @@ private struct PerformanceTab: View {
                     highlightedTaskId: $highlightedTaskId
                 )
             } else {
-                Text("No difficulty data available")
+                Text("no_difficulty_data_available".localized)
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundColor(.secondary)
                     .frame(height: 100, alignment: .center)
@@ -611,7 +611,7 @@ private struct PerformanceTab: View {
             HStack {
                 Image(systemName: "list.bullet.circle")
                     .foregroundColor(.blue)
-                Text("Tasks With Performance Data")
+                Text("tasks_with_performance_data".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                 Spacer()
             }
@@ -634,7 +634,7 @@ private struct PerformanceTab: View {
                 .font(.system(size: 64))
                 .foregroundColor(.secondary)
             
-            Text("No Performance Data")
+            Text("no_performance_data".localized)
                 .font(.system(.title2, design: .rounded, weight: .semibold))
             
             Text("complete_recurring_tasks_performance".localized)
@@ -788,7 +788,7 @@ private struct TimeDistributionCard: View {
         VStack(spacing: 20) {
             VStack(spacing: 16) {
                 HStack {
-                    Text("Time Distribution")
+                    Text("time_distribution".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
                     Spacer()
                 }
@@ -814,7 +814,7 @@ private struct TimeDistributionCard: View {
             } else {
                 VStack(spacing: 12) {
                     Chart(viewModel.categoryStats) { stat in
-                        SectorMark(angle: .value("Hours", stat.hours), innerRadius: .ratio(0.618), angularInset: 1.5)
+                        SectorMark(angle: .value("hours".localized, stat.hours), innerRadius: .ratio(0.618), angularInset: 1.5)
                             .cornerRadius(3)
                             .foregroundStyle(Color(hex: stat.color))
                     }
@@ -855,9 +855,9 @@ private struct TaskCompletionCard: View {
         
         var displayName: String {
             switch self {
-            case .week: return "7 Days"
-            case .month: return "30 Days"
-            case .year: return "1 Year"
+            case .week: return "seven_days".localized
+            case .month: return "thirty_days".localized
+            case .year: return "one_year".localized
             }
         }
         
@@ -881,7 +881,7 @@ private struct TaskCompletionCard: View {
         VStack(spacing: 16) {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Task Completion Rate")
+                    Text("task_completion_rate".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
                     Spacer()
                 }
@@ -902,15 +902,15 @@ private struct TaskCompletionCard: View {
                     if hasTaskData {
                         Chart(completionStats) { stat in
                             BarMark(
-                                x: .value("Day", stat.day),
-                                y: .value("Completed", Double(stat.completedTasks))
+                                x: .value("day".localized, stat.day),
+                                y: .value("completed".localized, Double(stat.completedTasks))
                             )
                             .foregroundStyle(Color.green)
                             .cornerRadius(4)
                             
                             BarMark(
-                                x: .value("Day", stat.day),
-                                y: .value("Incomplete", Double(max(0, stat.totalTasks - stat.completedTasks))),
+                                x: .value("day".localized, stat.day),
+                                y: .value("incomplete".localized, Double(max(0, stat.totalTasks - stat.completedTasks))),
                                 stacking: .standard
                             )
                             .foregroundStyle(Color.secondary.opacity(0.3))
@@ -1044,7 +1044,7 @@ private struct CategoryCompletionBreakdown: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("By Category")
+                Text("by_category".localized)
                     .font(.system(.caption, design: .rounded, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
@@ -1095,7 +1095,7 @@ private struct OverallStreakCard: View {
     var body: some View {
         VStack(spacing: 20) {
             HStack {
-                Text("Overall Streak")
+                Text("overall_streak".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                 Spacer()
             }
@@ -1127,12 +1127,12 @@ private struct OverallStreakCard: View {
 
 // MARK: - EmptyStreaksView
 private struct EmptyStreaksView: View {
-    var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("No Streaks Yet").font(.system(.title2, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
+    var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("no_streaks_yet".localized).font(.system(.title2, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
 }
 
 // MARK: - EmptyTimeDistributionView
 private struct EmptyTimeDistributionView: View {
-    var body: some View { VStack(spacing: 16) { Image(systemName: "chart.pie").font(.system(size: 48)).foregroundStyle(LinearGradient(colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 8) { Text("No Time Data").font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_tasks_time_distribution".localized).font(.system(.caption, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(height: 180, alignment: .center) }
+    var body: some View { VStack(spacing: 16) { Image(systemName: "chart.pie").font(.system(size: 48)).foregroundStyle(LinearGradient(colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 8) { Text("no_time_data".localized).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_tasks_time_distribution".localized).font(.system(.caption, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(height: 180, alignment: .center) }
 }
 
 // MARK: - CategoryLegendItem
@@ -1154,7 +1154,7 @@ private struct CategoryLegendItem: View {
 // MARK: - TaskStreakCard
 private struct TaskStreakCard: View { 
     let taskStreak: StatisticsViewModel.TaskStreak
-    var body: some View { VStack(spacing: 16) { HStack(spacing: 12) { if let categoryColor = taskStreak.categoryColor { Circle().fill(Color(hex: categoryColor)).frame(width: 12, height: 12) }; VStack(alignment: .leading, spacing: 2) { Text(taskStreak.taskName).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary).lineLimit(1); if let categoryName = taskStreak.categoryName { Text(categoryName).font(.system(.caption, design: .rounded, weight: .medium)).foregroundColor(.secondary) } }; Spacer(); VStack(alignment: .trailing, spacing: 2) { Text("\(Int(taskStreak.completionRate * 100))%").font(.system(.title3, design: .rounded, weight: .bold)).foregroundColor(.primary); Text("complete".localized).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }; HStack(spacing: 24) { StatisticsStatItem(title: "current".localized, value: "\(taskStreak.currentStreak)", color: .orange, icon: "flame.fill"); StatisticsStatItem(title: "best".localized, value: "\(taskStreak.bestStreak)", color: .red, icon: "trophy.fill"); StatisticsStatItem(title: "completed".localized, value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)", color: .green, icon: "checkmark.circle.fill"); Spacer() }; if !taskStreak.streakHistory.isEmpty { Chart(taskStreak.streakHistory) { point in LineMark(x: .value("Date", point.date), y: .value("Streak", point.streakValue)).foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1")).lineStyle(.init(lineWidth: 2, lineCap: .round)).symbol(.circle).symbolSize(40) }.frame(height: 80).chartXAxis(.hidden).chartYAxis(.hidden) } }.padding(20).background(cardBackground) }
+    var body: some View { VStack(spacing: 16) { HStack(spacing: 12) { if let categoryColor = taskStreak.categoryColor { Circle().fill(Color(hex: categoryColor)).frame(width: 12, height: 12) }; VStack(alignment: .leading, spacing: 2) { Text(taskStreak.taskName).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary).lineLimit(1); if let categoryName = taskStreak.categoryName { Text(categoryName).font(.system(.caption, design: .rounded, weight: .medium)).foregroundColor(.secondary) } }; Spacer(); VStack(alignment: .trailing, spacing: 2) { Text("\(Int(taskStreak.completionRate * 100))%").font(.system(.title3, design: .rounded, weight: .bold)).foregroundColor(.primary); Text("complete".localized).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }; HStack(spacing: 24) { StatisticsStatItem(title: "current".localized, value: "\(taskStreak.currentStreak)", color: .orange, icon: "flame.fill"); StatisticsStatItem(title: "best".localized, value: "\(taskStreak.bestStreak)", color: .red, icon: "trophy.fill"); StatisticsStatItem(title: "completed".localized, value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)", color: .green, icon: "checkmark.circle.fill"); Spacer() }; if !taskStreak.streakHistory.isEmpty { Chart(taskStreak.streakHistory) { point in LineMark(x: .value("date".localized, point.date), y: .value("streak".localized, point.streakValue)).foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1")).lineStyle(.init(lineWidth: 2, lineCap: .round)).symbol(.circle).symbolSize(40) }.frame(height: 80).chartXAxis(.hidden).chartYAxis(.hidden) } }.padding(20).background(cardBackground) }
 }
 
 // MARK: - TaskPerformanceDetailView
@@ -1168,6 +1168,15 @@ private struct TaskPerformanceDetailView: View {
         case month = "Month"
         case year = "Year"
         case all = "All Time"
+        
+        var displayName: String {
+            switch self {
+            case .week: return "week".localized
+            case .month: return "month".localized
+            case .year: return "year".localized
+            case .all: return "all_time".localized
+            }
+        }
         
         func filterCompletions(_ completions: [StatisticsViewModel.TaskCompletionAnalytics]) -> [StatisticsViewModel.TaskCompletionAnalytics] {
             let calendar = Calendar.current
@@ -1221,11 +1230,11 @@ private struct TaskPerformanceDetailView: View {
                 .padding(16)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Task Performance")
+            .navigationTitle("task_performance".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                 }
@@ -1236,7 +1245,7 @@ private struct TaskPerformanceDetailView: View {
     private var timeRangeSelector: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Time Range")
+                Text("time_range".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                 Spacer()
             }
@@ -1253,7 +1262,7 @@ private struct TaskPerformanceDetailView: View {
                             selectedTimeRange = range
                         }
                     }) {
-                        Text(range.rawValue)
+                        Text(range.displayName)
                             .font(.system(.caption, design: .rounded, weight: selectedTimeRange == range ? .semibold : .medium))
                             .foregroundColor(selectedTimeRange == range ? .accentColor : .primary)
                             .padding(.horizontal, 8)
@@ -1306,7 +1315,7 @@ private struct TaskPerformanceDetailView: View {
             
             HStack(spacing: 6) {
                 TaskDetailMetricCard(
-                    title: "Completions",
+                    title: "completions".localized,
                     value: "\(filteredCompletions.count)",
                     color: .blue,
                     icon: "checkmark.circle.fill"
@@ -1315,7 +1324,7 @@ private struct TaskPerformanceDetailView: View {
                 if !filteredQuality.isEmpty {
                     let avgQuality = Double(filteredQuality.reduce(0, +)) / Double(filteredQuality.count)
                     TaskDetailMetricCard(
-                        title: "Quality",
+                        title: "quality".localized,
                         value: String(format: "%.1f", avgQuality),
                         color: .yellow,
                         icon: "star.fill"
@@ -1325,7 +1334,7 @@ private struct TaskPerformanceDetailView: View {
                 if !filteredDifficulty.isEmpty {
                     let avgDifficulty = Double(filteredDifficulty.reduce(0, +)) / Double(filteredDifficulty.count)
                     TaskDetailMetricCard(
-                        title: "Difficulty",
+                        title: "difficulty".localized,
                         value: String(format: "%.1f", avgDifficulty),
                         color: .orange,
                         icon: "bolt.fill"
@@ -1335,7 +1344,7 @@ private struct TaskPerformanceDetailView: View {
                 if !filteredDuration.isEmpty {
                     let avgDuration = filteredDuration.reduce(0, +) / Double(filteredDuration.count)
                     TaskDetailMetricCard(
-                        title: "Time",
+                        title: "time".localized,
                         value: formatDuration(avgDuration),
                         color: .green,
                         icon: "clock.fill"
@@ -1352,7 +1361,7 @@ private struct TaskPerformanceDetailView: View {
             HStack {
                 Image(systemName: "star.fill")
                     .foregroundColor(.yellow)
-                Text("Quality Over Time (\(selectedTimeRange.rawValue))")
+                Text("quality_over_time".localized + " (\(selectedTimeRange.displayName))")
                     .font(.headline)
                 Spacer()
             }
@@ -1365,15 +1374,15 @@ private struct TaskPerformanceDetailView: View {
             if !qualityPoints.isEmpty {
                 Chart(Array(qualityPoints.enumerated()), id: \.offset) { index, point in
                     LineMark(
-                        x: .value("Date", point.0),
-                        y: .value("Quality", point.1)
+                        x: .value("date".localized, point.0),
+                        y: .value("quality".localized, point.1)
                     )
                     .foregroundStyle(Color(hex: task.categoryColor ?? "#6366F1"))
                     .lineStyle(.init(lineWidth: 3.0, lineCap: .round))
                     
                     PointMark(
-                        x: .value("Date", point.0),
-                        y: .value("Quality", point.1)
+                        x: .value("date".localized, point.0),
+                        y: .value("quality".localized, point.1)
                     )
                     .foregroundStyle(Color(hex: task.categoryColor ?? "#6366F1"))
                     .symbolSize(60)
@@ -1407,15 +1416,15 @@ private struct TaskPerformanceDetailView: View {
                         }
                     }
                 }
-                .chartXAxisLabel("Date", position: .bottom)
-                .chartYAxisLabel("Quality Rating", position: .leading)
+                .chartXAxisLabel("date".localized, position: .bottom)
+                .chartYAxisLabel("quality_rating".localized, position: .leading)
             } else {
                 VStack(spacing: 8) {
-                    Text("No quality ratings in \(selectedTimeRange.rawValue.lowercased())")
+                    Text("no_quality_ratings_in_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName.lowercased()))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Complete tasks and add quality ratings to see trends")
+                    Text("complete_tasks_add_quality_ratings".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1432,7 +1441,7 @@ private struct TaskPerformanceDetailView: View {
             HStack {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.orange)
-                Text("Difficulty Over Time (\(selectedTimeRange.rawValue))")
+                Text("difficulty_over_time".localized + " (\(selectedTimeRange.displayName))")
                     .font(.headline)
                 Spacer()
             }
@@ -1445,15 +1454,15 @@ private struct TaskPerformanceDetailView: View {
             if !difficultyPoints.isEmpty {
                 Chart(Array(difficultyPoints.enumerated()), id: \.offset) { index, point in
                     LineMark(
-                        x: .value("Date", point.0),
-                        y: .value("Difficulty", point.1)
+                        x: .value("date".localized, point.0),
+                        y: .value("difficulty".localized, point.1)
                     )
                     .foregroundStyle(Color(hex: task.categoryColor ?? "#6366F1"))
                     .lineStyle(.init(lineWidth: 3.0, lineCap: .round))
                     
                     PointMark(
-                        x: .value("Date", point.0),
-                        y: .value("Difficulty", point.1)
+                        x: .value("date".localized, point.0),
+                        y: .value("difficulty".localized, point.1)
                     )
                     .foregroundStyle(Color(hex: task.categoryColor ?? "#6366F1"))
                     .symbolSize(60)
@@ -1487,15 +1496,15 @@ private struct TaskPerformanceDetailView: View {
                         }
                     }
                 }
-                .chartXAxisLabel("Date", position: .bottom)
-                .chartYAxisLabel("Difficulty Rating", position: .leading)
+                .chartXAxisLabel("date".localized, position: .bottom)
+                .chartYAxisLabel("difficulty_rating".localized, position: .leading)
             } else {
                 VStack(spacing: 8) {
-                    Text("No difficulty ratings in \(selectedTimeRange.rawValue.lowercased())")
+                    Text("no_difficulty_ratings_in_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName.lowercased()))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Complete tasks and add difficulty ratings to see trends")
+                    Text("complete_tasks_add_difficulty_ratings".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1512,18 +1521,18 @@ private struct TaskPerformanceDetailView: View {
             HStack {
                 Image(systemName: "list.bullet")
                     .foregroundColor(.blue)
-                Text("Completions (\(selectedTimeRange.rawValue))")
+                Text("completions_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName))
                     .font(.headline)
                 Spacer()
             }
             
             if filteredCompletions.isEmpty {
                 VStack(spacing: 8) {
-                    Text("No completions in \(selectedTimeRange.rawValue.lowercased())")
+                    Text("no_completions_in_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName.lowercased()))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Complete this task to start tracking performance")
+                    Text("complete_this_task_start_tracking".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1724,7 +1733,7 @@ private struct TimeRangeButton: View {
     
     var body: some View {
         Button(action: action) {
-            Text(range.rawValue)
+            Text(range.localizedName)
                 .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
                 .foregroundColor(isSelected ? .accentColor : .primary)
                 .padding(.horizontal, 8)
@@ -1758,11 +1767,11 @@ private struct EmptyTaskCompletionView: View {
                 ))
             
             VStack(spacing: 8) {
-                Text("No Completion Data")
+                Text("no_completion_data".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                     .foregroundColor(.primary)
                 
-                Text("Complete tasks to see your completion rate trends")
+                Text("complete_tasks_completion_rate_trends".localized)
                     .font(.system(.caption, design: .rounded))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

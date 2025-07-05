@@ -65,10 +65,10 @@ struct TimeTrackingCompletionView: View {
                         .symbolEffect(.bounce, value: showingSuccess)
                         
                         VStack(spacing: 8) {
-                            Text("Focus Session Complete!")
+                            Text("focus_session_complete".localized)
                                 .font(.title2.bold())
                             
-                            Text("Focused for \(formatDuration(editedFocusTime))")
+                            Text("focused_for".localized + " \(formatDuration(editedFocusTime))")
                                 .font(.body)
                                 .foregroundColor(.secondary)
                         }
@@ -78,10 +78,10 @@ struct TimeTrackingCompletionView: View {
                     // Session Details Card - Editable
                     VStack(spacing: 16) {
                         HStack {
-                            Text("Session Details")
+                            Text("session_details".localized)
                                 .font(.headline)
                             Spacer()
-                            Button(isEditingDetails ? "Done" : "Edit") {
+                            Button(isEditingDetails ? "done".localized : "edit".localized) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     isEditingDetails.toggle()
                                 }
@@ -93,12 +93,12 @@ struct TimeTrackingCompletionView: View {
                         VStack(spacing: 12) {
                             // Task Name
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Task Name")
+                                Text("task_name".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
                                 if isEditingDetails {
-                                    TextField("Task name", text: $editedTaskName)
+                                    TextField("task_name_placeholder".localized, text: $editedTaskName)
                                         .textFieldStyle(.roundedBorder)
                                 } else {
                                     HStack {
@@ -117,7 +117,7 @@ struct TimeTrackingCompletionView: View {
                             
                             // Focus Time with Wheel Picker
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Focus Time")
+                                Text("focus_time".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
@@ -125,10 +125,10 @@ struct TimeTrackingCompletionView: View {
                                     HStack {
                                         // Hours Picker
                                         VStack {
-                                            Text("Hours")
+                                            Text("hours".localized)
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
-                                            Picker("Hours", selection: $editedFocusHours) {
+                                            Picker("hours".localized, selection: $editedFocusHours) {
                                                 ForEach(0...23, id: \.self) { hour in
                                                     Text("\(hour)").tag(hour)
                                                 }
@@ -143,10 +143,10 @@ struct TimeTrackingCompletionView: View {
                                         
                                         // Minutes Picker
                                         VStack {
-                                            Text("Minutes")
+                                            Text("minutes".localized)
                                                 .font(.caption2)
                                                 .foregroundColor(.secondary)
-                                            Picker("Minutes", selection: $editedFocusMinutes) {
+                                            Picker("minutes".localized, selection: $editedFocusMinutes) {
                                                 ForEach(0...59, id: \.self) { minute in
                                                     Text(String(format: "%02d", minute)).tag(minute)
                                                 }
@@ -166,7 +166,7 @@ struct TimeTrackingCompletionView: View {
                             
                             // Mode
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Mode")
+                                Text("mode".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
@@ -174,7 +174,7 @@ struct TimeTrackingCompletionView: View {
                                     Image(systemName: session?.mode.icon ?? "timer")
                                         .foregroundColor(.yellow)
                                         .font(.system(size: 12))
-                                    Text(session?.mode.displayName ?? "Simple Timer")
+                                    Text(session?.mode.displayName ?? "simple_timer".localized)
                                         .font(.body)
                                     Spacer()
                                 }
@@ -184,7 +184,7 @@ struct TimeTrackingCompletionView: View {
                             // Category
                             if let category = task?.category {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("Original Category")
+                                    Text("original_category".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     
@@ -211,7 +211,7 @@ struct TimeTrackingCompletionView: View {
                     // Time Tracking Options
                     VStack(spacing: 16) {
                         HStack {
-                            Text("Track Time In")
+                            Text("track_time_in".localized)
                                 .font(.headline)
                             Spacer()
                         }
@@ -220,7 +220,7 @@ struct TimeTrackingCompletionView: View {
                         VStack(spacing: 12) {
                             // Task-specific option
                             TrackingOptionCard(
-                                title: "This Task Only",
+                                title: "this_task_only".localized,
                                 subtitle: editedTaskName,
                                 icon: "target",
                                 color: task?.category?.color ?? "#6366F1",
@@ -234,7 +234,7 @@ struct TimeTrackingCompletionView: View {
                             if let taskCategory = task?.category {
                                 TrackingOptionCard(
                                     title: taskCategory.name,
-                                    subtitle: "Category",
+                                    subtitle: "category".localized,
                                     icon: "folder.fill",
                                     color: taskCategory.color,
                                     isSelected: selectedCategory?.id == taskCategory.id && !trackAsTask
@@ -248,7 +248,7 @@ struct TimeTrackingCompletionView: View {
                             ForEach(availableCategories, id: \.id) { category in
                                 TrackingOptionCard(
                                     title: category.name,
-                                    subtitle: "Category",
+                                    subtitle: "category".localized,
                                     icon: "folder.fill",
                                     color: category.color,
                                     isSelected: selectedCategory?.id == category.id && !trackAsTask
@@ -275,7 +275,7 @@ struct TimeTrackingCompletionView: View {
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill")
-                        Text("Save & Finish")
+                        Text("save_and_finish".localized)
                     }
                     .font(.body.weight(.semibold))
                     .foregroundColor(.white)
@@ -299,7 +299,7 @@ struct TimeTrackingCompletionView: View {
                     } label: {
                         HStack {
                             Image(systemName: "play.circle")
-                            Text("Continue")
+                            Text("continue".localized)
                         }
                         .font(.body.weight(.medium))
                         .foregroundColor(.blue)
@@ -315,7 +315,7 @@ struct TimeTrackingCompletionView: View {
                     } label: {
                         HStack {
                             Image(systemName: "xmark.circle")
-                            Text("Skip")
+                            Text("skip".localized)
                         }
                         .font(.body.weight(.medium))
                         .foregroundColor(.secondary)
@@ -336,12 +336,12 @@ struct TimeTrackingCompletionView: View {
                 )
             )
         }
-        .navigationTitle("Focus Session")
+        .navigationTitle("focus_session".localized)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") {
+                Button("save".localized) {
                     Task { @MainActor in
                         await saveTimeTracking()
                         onSave()
@@ -372,7 +372,7 @@ struct TimeTrackingCompletionView: View {
     private func saveTimeTracking() async {
         // Save based on user selection - ONLY ONE SAVE, not both
         if trackAsTask, let task = task {
-            print("🎯 [TRACKING] Saving as individual task: \(editedTaskName)")
+            print(" Saving as individual task: \(editedTaskName)")
             
             // Check if task still exists and hasn't been modified during tracking
             if let currentTask = TaskManager.shared.tasks.first(where: { $0.id == task.id }) {
@@ -405,9 +405,9 @@ struct TimeTrackingCompletionView: View {
                     CloudKitService.shared.saveTask(updatedTask)
                 }
                 
-                print("✅ [TRACKING] Successfully saved as individual task")
+                print(" Successfully saved as individual task")
             } else {
-                print("❌ [TRACKING ERROR] Task \(task.id.uuidString) no longer exists - task was deleted during tracking")
+                print(" Task \(task.id.uuidString) no longer exists - task was deleted during tracking")
                 // Still save to statistics as individual entry but with warning
                 await saveToStatistics(
                     categoryId: nil, 
@@ -418,7 +418,7 @@ struct TimeTrackingCompletionView: View {
             }
             
         } else if let category = selectedCategory {
-            print("📁 [TRACKING] Saving to category: \(category.name)")
+            print(" Saving to category: \(category.name)")
             
             // Mark task as completed if it exists, but DON'T save as individual task
             if let task = task {
@@ -452,15 +452,15 @@ struct TimeTrackingCompletionView: View {
                         CloudKitService.shared.saveTask(updatedTask)
                     }
                     
-                    print("✅ [TRACKING] Task marked complete but time tracked to category")
+                    print(" Task marked complete but time tracked to category")
                 } else {
-                    print("⚠️ [TRACKING] Task no longer exists during category tracking")
+                    print(" Task no longer exists during category tracking")
                 }
             }
             
             // Save time tracking data to statistics ONLY for the selected category
             await saveToStatistics(categoryId: category.id, timeSpent: editedFocusTime)
-            print("✅ [TRACKING] Successfully saved to category only")
+            print(" Successfully saved to category only")
         }
     }
     

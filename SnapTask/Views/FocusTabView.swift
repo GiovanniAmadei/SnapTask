@@ -45,14 +45,19 @@ struct FocusTabView: View {
                                 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
-                                        // Show all active timer sessions
-                                        ForEach(timeTrackerViewModel.activeSessions) { session in
+                                        // FIXED: Show only sessions that have been actually started
+                                        ForEach(timeTrackerViewModel.activeSessions.filter { session in
+                                            session.isRunning || session.elapsedTime > 0 || session.isPaused
+                                        }) { session in
                                             MiniTimerWidget(
                                                 sessionId: session.id,
                                                 viewModel: timeTrackerViewModel,
                                                 onTap: {
-                                                    selectedSessionId = session.id
-                                                    showingWidgetTimer = true
+                                                    // FIXED: Verifica che la sessione esista prima di aprire la vista
+                                                    if timeTrackerViewModel.getSession(id: session.id) != nil {
+                                                        selectedSessionId = session.id
+                                                        showingWidgetTimer = true
+                                                    }
                                                 }
                                             )
                                         }
@@ -113,8 +118,11 @@ struct FocusTabView: View {
                         )
                     }
                     
-                    // Enhanced active sessions display
-                    if timeTrackerViewModel.hasActiveSession || pomodoroViewModel.hasActiveTask {
+                    let activeSessionsCount = timeTrackerViewModel.activeSessions.filter { session in
+                        session.isRunning || session.elapsedTime > 0 || session.isPaused
+                    }.count
+                    
+                    if activeSessionsCount > 0 || pomodoroViewModel.hasActiveTask {
                         activeSessionsCard
                     }
                     
@@ -281,16 +289,23 @@ struct FocusTabView: View {
                     .font(.headline)
                 Spacer()
                 
-                if timeTrackerViewModel.activeSessions.count > 1 {
-                    Text("\(timeTrackerViewModel.activeSessions.count) " + "timers".localized)
+                // FIXED: Count only sessions that have been actually started
+                let activeSessionsCount = timeTrackerViewModel.activeSessions.filter { session in
+                    session.isRunning || session.elapsedTime > 0 || session.isPaused
+                }.count
+                
+                if activeSessionsCount > 0 || pomodoroViewModel.hasActiveTask {
+                    Text("\(activeSessionsCount) " + "timers".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
             VStack(spacing: 12) {
-                // Show all timer sessions
-                ForEach(timeTrackerViewModel.activeSessions) { session in
+                // FIXED: Show only sessions that have been actually started
+                ForEach(timeTrackerViewModel.activeSessions.filter { session in
+                    session.isRunning || session.elapsedTime > 0 || session.isPaused
+                }) { session in
                     Button(action: {
                         selectedSessionId = session.id
                         showingWidgetTimer = true
@@ -330,7 +345,7 @@ struct FocusTabView: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
-                
+
                 // Show pomodoro session
                 if pomodoroViewModel.hasActiveTask {
                     Button(action: {

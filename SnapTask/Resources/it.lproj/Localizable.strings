@@ -407,6 +407,43 @@
 "difficulty_rating" = "Valutazione Difficoltà";
 "performance_charts" = "Grafici Prestazioni";
 
+// Statistics View - Performance Section  
+"performance_analytics" = "Analisi Prestazioni";
+"quality_progression" = "Progressione Qualità";
+"difficulty_assessment" = "Valutazione Difficoltà";
+"tasks_with_performance_data" = "Attività con Dati di Prestazione";
+"no_performance_data" = "Nessun Dato di Prestazione";
+"no_quality_data_available" = "Nessun dato qualità disponibile";
+"no_difficulty_data_available" = "Nessun dato difficoltà disponibile";
+"quality" = "Qualità";
+"difficulty" = "Difficoltà";
+"incomplete" = "Incomplete";
+"completions" = "Completamenti";
+"time_range" = "Intervallo Temporale";
+"quality_over_time" = "Qualità nel Tempo";
+"difficulty_over_time" = "Difficoltà nel Tempo";
+"completions_period" = "Completamenti ({period})";
+"no_quality_ratings_in_period" = "Nessuna valutazione qualità in {period}";
+"no_difficulty_ratings_in_period" = "Nessuna valutazione difficoltà in {period}";
+"no_completions_in_period" = "Nessun completamento in {period}";
+"complete_tasks_add_quality_ratings" = "Completa attività e aggiungi valutazioni qualità per vedere i trend";
+"complete_tasks_add_difficulty_ratings" = "Completa attività e aggiungi valutazioni difficoltà per vedere i trend";
+"complete_this_task_start_tracking" = "Completa questa attività per iniziare il tracciamento delle prestazioni";
+"no_completion_data" = "Nessun Dato di Completamento";
+"complete_tasks_completion_rate_trends" = "Completa attività per vedere i trend del tasso di completamento";
+"complete_recurring_tasks_performance" = "Completa attività ricorrenti per vedere le analisi delle prestazioni";
+
+// Time period filters for task completion
+"seven_days" = "7 Giorni";
+"thirty_days" = "30 Giorni";
+"one_year" = "1 Anno";
+
+// Additional missing localizations
+"progress" = "Progresso";
+"hours" = "Ore";
+"task" = "Attività";
+"streak" = "Serie";
+
 // Settings View
 "daily_notifications" = "Notifiche Giornaliere";
 "daily_quote_reminder" = "Promemoria Citazione Giornaliera";
@@ -624,3 +661,39 @@
 "check_internet_connection" = "Controlla la connessione internet";
 "verify_icloud_enabled" = "Verifica che iCloud sia abilitato nelle Impostazioni";
 "ensure_icloud_storage" = "Assicurati di avere abbastanza spazio di archiviazione iCloud";
+
+// Additional Focus and Timer strings
+"configure_by" = "Configura per";
+"min_unit" = "min";
+"session_not_available" = "Sessione non disponibile.";
+"timer_session" = "Sessione Timer";
+"tap_play_to_resume" = "Tocca play per riprendere";
+"session_in_progress" = "Sessione in corso";
+"ready_to_start_tracking" = "Pronto per iniziare il tracciamento";
+"paused_caps" = "IN PAUSA";
+"focus_session_complete" = "Sessione di Focus Completata!";
+"focused_for" = "Concentrato per";
+"session_details" = "Dettagli Sessione";
+"task_name" = "Nome Attività";
+"task_name_placeholder" = "Nome attività";
+"focus_time" = "Tempo di Concentrazione";
+"hours" = "Ore";
+"minutes" = "Minuti";
+"mode" = "Modalità";
+"original_category" = "Categoria Originale";
+"track_time_in" = "Traccia Tempo In";
+"this_task_only" = "Solo Questa Attività";
+"save_and_finish" = "Salva e Termina";
+"sessions" = "Sessioni";
+"active_sessions" = "Sessioni Attive";
+
+// Additional Pomodoro and Focus strings
+"general_pomodoro_settings" = "Impostazioni Pomodoro Generali";
+"task_pomodoro_settings" = "Impostazioni Pomodoro Attività";
+"general_focus_sessions_description" = "Queste impostazioni si applicano alle sessioni di focus generali avviate dalla scheda Focus.";
+"task_pomodoro_sessions_description" = "Queste impostazioni si applicano alle sessioni Pomodoro avviate da attività specifiche.";
+"about" = "Info";
+
+// Pomodoro completion strings
+"pomodoro_complete" = "Pomodoro Completato!";
+"you_focused_for" = "Ti sei concentrato per";

@@ -5,8 +5,17 @@ enum ConsistencyTimeRange: String, CaseIterable {
     case week = "Week"
     case month = "Month"
     case year = "Year"
+    // Existing code...
+    var displayName: String {
+        switch self {
+        case .week: return "week".localized
+        case .month: return "month".localized
+        case .year: return "year".localized
+        }
+    }
 }
 
+// Existing code...
 struct TaskConsistencyView: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var timeRange: ConsistencyTimeRange = .week
@@ -16,16 +25,14 @@ struct TaskConsistencyView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HeaderSection()
-            
+            // Existing code...
             if viewModel.consistency.isEmpty {
                 EmptyConsistencyView()
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     TimeRangeSection(timeRange: $timeRange)
-                    
                     PenaltyToggleSection(penalizeMissedTasks: $penalizeMissedTasks)
                 }
-                
                 ModernConsistencyChart(
                     tasks: viewModel.consistency,
                     timeRange: timeRange,
@@ -35,12 +42,10 @@ struct TaskConsistencyView: View {
                 )
                 .animation(.smooth(duration: 0.8), value: timeRange)
                 .animation(.smooth(duration: 0.8), value: penalizeMissedTasks)
-                
                 TaskLegendSection(
                     tasks: viewModel.consistency,
                     selectedTaskId: $selectedTaskId
                 )
-                
                 HelpTextSection()
             }
         }
@@ -55,11 +60,11 @@ struct TaskConsistencyView: View {
 private struct HeaderSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Task Progress Over Time")
+            Text("task_progress_over_time".localized)
                 .font(.system(.title2, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
-            
-            Text("Track completion patterns and consistency trends")
+            // Existing code...
+            Text("track_completion_patterns".localized)
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundColor(.secondary)
         }
@@ -73,13 +78,13 @@ private struct TimeRangeSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Time Period")
+            Text("time_period".localized)
                 .font(.system(.headline, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
-            
-            Picker("Time Range", selection: $timeRange) {
+            // Existing code...
+            Picker("time_range".localized, selection: $timeRange) {
                 ForEach(ConsistencyTimeRange.allCases, id: \.self) { range in
-                    Text(range.rawValue).tag(range)
+                    Text(range.displayName).tag(range)
                 }
             }
             .pickerStyle(.segmented)
@@ -95,18 +100,16 @@ private struct PenaltyToggleSection: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Penalize Missed Tasks")
+                    Text("penalize_missed_tasks".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundColor(.primary)
-                    
-                    Text("Decrease progress when recurring tasks are not completed")
+                    // Existing code...
+                    Text("decrease_progress_missed".localized)
                         .font(.system(.caption, design: .rounded))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                
                 Spacer()
-                
                 Toggle("", isOn: $penalizeMissedTasks)
                     .labelsHidden()
                     .scaleEffect(1.1)
@@ -151,11 +154,10 @@ private struct TaskLegendSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Tasks")
+            Text("tasks".localized)
                 .font(.system(.callout, design: .rounded, weight: .medium))
                 .foregroundColor(.primary)
                 .padding(.horizontal, 16)
-            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
@@ -188,24 +190,21 @@ private struct TaskLegendSection: View {
 private struct HelpTextSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("How to Read")
+            Text("how_to_read".localized)
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
                 .foregroundColor(.primary)
-            
             VStack(alignment: .leading, spacing: 6) {
                 HelpTextRow(
                     color: .blue,
-                    text: "Each line shows a task's completion progress over time"
+                    text: "each_line_shows_task".localized
                 )
-                
                 HelpTextRow(
                     color: .green,
-                    text: "Higher points indicate better consistency"
+                    text: "higher_points_better".localized
                 )
-                
                 HelpTextRow(
                     color: .orange,
-                    text: "Tap legend items to highlight specific tasks"
+                    text: "tap_legend_highlight".localized
                 )
             }
         }
@@ -261,8 +260,8 @@ private struct ModernConsistencyChart: View {
                 }
             }
             .chartYScale(domain: 0...getMaxYValue())
-            .chartYAxisLabel("Completed Tasks", position: .leading)
-            .chartXAxisLabel("Date", position: .bottom)
+            .chartYAxisLabel("completed_tasks".localized, position: .leading)
+            .chartXAxisLabel("date".localized, position: .bottom)
             .chartPlotStyle { plotArea in
                 plotArea.background(chartBackground)
             }
@@ -370,9 +369,9 @@ private struct ModernConsistencyChart: View {
         if !points.isEmpty {
             ForEach(Array(points.enumerated()), id: \.offset) { pointIndex, point in
                 LineMark(
-                    x: .value("Date", point.0),
-                    y: .value("Progress", point.1),
-                    series: .value("Task", task.name)
+                    x: .value("date".localized, point.0),
+                    y: .value("progress".localized, point.1),
+                    series: .value("task".localized, task.name)
                 )
                 .foregroundStyle(taskColor.opacity(opacity))
                 .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
@@ -493,13 +492,11 @@ private struct CompactLegendItem: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 colorIndicator
-                
                 VStack(alignment: .leading, spacing: 2) {
                     Text(task.name)
                         .font(.system(.caption, design: .rounded, weight: .medium))
                         .foregroundColor(.primary)
                         .lineLimit(1)
-                    
                     if let category = task.category {
                         Text(category.name)
                             .font(.system(.caption2, design: .rounded))
@@ -507,7 +504,6 @@ private struct CompactLegendItem: View {
                             .lineLimit(1)
                     }
                 }
-                
                 if isHighlighted {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(.caption2, weight: .medium))
@@ -567,7 +563,6 @@ private struct HelpTextRow: View {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
-            
             Text(text)
                 .font(.system(.caption, design: .rounded))
                 .foregroundColor(.secondary)
@@ -588,13 +583,11 @@ struct EmptyConsistencyView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-            
             VStack(spacing: 10) {
-                Text("No Consistency Data")
+                Text("no_consistency_data".localized)
                     .font(.system(.title3, design: .rounded, weight: .semibold))
                     .foregroundColor(.primary)
-                
-                Text("Complete some recurring tasks to see your progress patterns and consistency trends over time")
+                Text("complete_recurring_see_progress".localized)
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

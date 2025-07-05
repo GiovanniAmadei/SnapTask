@@ -666,15 +666,23 @@ struct PomodoroView: View {
     }
     
     private func handleDone() {
-        if viewModel.state == .working || viewModel.state == .onBreak || viewModel.state == .paused {
+        // Solo apri completion sheet se la sessione è effettivamente completa o fermata
+        if viewModel.state == .completed {
+            showingCompletionSheet = true
+        } else if viewModel.state == .working || viewModel.state == .onBreak || viewModel.state == .paused {
+            // Se la sessione è attiva, fermala prima e poi apri completion sheet
             let sessionProgress = viewModel.state == .working ? viewModel.progress : 1.0
             let completedFullSessions = max(0, viewModel.currentSession - 1)
             let currentSessionTime = sessionProgress * viewModel.settings.workDuration
             completedFocusTime = Double(completedFullSessions) * viewModel.settings.workDuration + currentSessionTime
-            showingCompletionSheet = true
-        } else if viewModel.state == .completed {
+            
+            // Ferma il timer
+            viewModel.stop()
+            
+            // Ora apri completion sheet
             showingCompletionSheet = true
         } else {
+            // Se non è iniziata, semplicemente chiudi
             dismiss()
         }
     }

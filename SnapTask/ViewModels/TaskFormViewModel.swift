@@ -52,16 +52,6 @@ class TaskFormViewModel: ObservableObject {
     @Published var hasRecurrenceEndDate: Bool = false
     @Published var recurrenceEndDate: Date = Date().addingTimeInterval(86400 * 30)
     @Published var trackInStatistics: Bool = true
-    @Published var isPomodoroEnabled = false
-    @Published var pomodoroSettings = PomodoroSettings(
-        workDuration: 25 * 60,
-        breakDuration: 5 * 60,
-        longBreakDuration: 15 * 60,
-        sessionsUntilLongBreak: 4,
-        totalSessions: 4,
-        totalDuration: 120
-    )
-    
     @Published var hasRewardPoints = false
     @Published var rewardPoints = 5 {
         didSet {
@@ -192,7 +182,7 @@ class TaskFormViewModel: ObservableObject {
             priority: selectedPriority,
             icon: icon,
             recurrence: recurrence,
-            pomodoroSettings: isPomodoroEnabled ? pomodoroSettings : nil,
+            pomodoroSettings: nil,
             subtasks: subtasks,
             hasRewardPoints: hasRewardPoints,
             rewardPoints: rewardPoints
@@ -234,15 +224,6 @@ class TaskFormViewModel: ObservableObject {
         hasRecurrenceEndDate = false
         recurrenceEndDate = Date().addingTimeInterval(86400 * 30)
         trackInStatistics = true
-        isPomodoroEnabled = false
-        pomodoroSettings = PomodoroSettings(
-            workDuration: 25 * 60,
-            breakDuration: 5 * 60,
-            longBreakDuration: 15 * 60,
-            sessionsUntilLongBreak: 4,
-            totalSessions: 4,
-            totalDuration: 120
-        )
         hasRewardPoints = false
         rewardPoints = 5
         useCustomPoints = false

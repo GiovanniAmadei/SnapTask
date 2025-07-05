@@ -71,6 +71,15 @@ class StatisticsViewModel: ObservableObject {
         case month = "Month"
         case year = "Year"
         
+        var localizedName: String {
+            switch self {
+            case .today: return "today".localized
+            case .week: return "week".localized
+            case .month: return "month".localized
+            case .year: return "year".localized
+            }
+        }
+        
         var dateRange: (start: Date, end: Date) {
             let calendar = Calendar.current
             let now = Date()

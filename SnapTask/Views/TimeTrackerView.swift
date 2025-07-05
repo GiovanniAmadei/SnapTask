@@ -134,13 +134,8 @@ struct TimeTrackerView: View {
             }
         }
         .onAppear {
-            if sessionId == nil {
-                if let task = task {
-                    sessionId = viewModel.startSession(for: task, mode: mode)
-                } else {
-                    sessionId = viewModel.startGeneralSession(mode: mode)
-                }
-            }
+            // FIXED: Non creare automaticamente la sessione - sarà creata quando l'utente preme play
+            // Questo previene la comparsa di timer widget a 00:00 che non sono mai stati avviati
         }
         .sheet(isPresented: $viewModel.showingCompletion) {
             if let completedSession = viewModel.completedSession {
@@ -263,6 +258,15 @@ struct TimeTrackerView: View {
                 .opacity(session?.isRunning == true ? 1.0 : 0.5)
                 
                 Button(action: {
+                    // FIXED: Crea la sessione solo quando l'utente preme play per la prima volta
+                    if sessionId == nil {
+                        if let task = task {
+                            sessionId = viewModel.startSession(for: task, mode: mode)
+                        } else {
+                            sessionId = viewModel.startGeneralSession(mode: mode)
+                        }
+                    }
+                    
                     guard let sessionId = sessionId else { return }
                     
                     if session?.isRunning != true {
@@ -429,6 +433,15 @@ struct TimeTrackerView: View {
                     isRunning: session?.isRunning == true,
                     isPaused: session?.isPaused == true,
                     onPlayPause: {
+                        // FIXED: Crea la sessione solo quando l'utente preme play per la prima volta
+                        if sessionId == nil {
+                            if let task = task {
+                                sessionId = viewModel.startSession(for: task, mode: mode)
+                            } else {
+                                sessionId = viewModel.startGeneralSession(mode: mode)
+                            }
+                        }
+                        
                         guard let sessionId = sessionId else { return }
                         
                         if session?.isRunning != true {

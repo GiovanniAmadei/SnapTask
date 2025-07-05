@@ -139,6 +139,17 @@ class TimeTrackerViewModel: ObservableObject {
         if currentSessionId == nil {
             currentSessionId = activeSessions.first?.id
         }
+        
+        // FIXED: Pulisci le sessioni "fantasma" - sessioni che non hanno mai avuto tempo tracciato
+        // e non sono mai state avviate
+        activeSessions.removeAll { session in
+            session.elapsedTime == 0 && !session.isRunning && !session.isPaused
+        }
+        
+        // Pulisci i dati salvati dopo il ripristino per evitare accumuli
+        Task {
+            await cleanupSessionStates()
+        }
     }
     
     private func cleanupSessionStates() async {
@@ -172,7 +183,9 @@ class TimeTrackerViewModel: ObservableObject {
     }
     
     var hasActiveSession: Bool {
-        return !activeSessions.isEmpty
+        return activeSessions.contains { session in
+            session.isRunning || session.elapsedTime > 0 || session.isPaused
+        }
     }
     
     var activeTask: TodoTask? {
