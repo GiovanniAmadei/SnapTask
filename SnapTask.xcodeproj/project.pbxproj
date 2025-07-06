@@ -627,6 +627,7 @@
 				Base,
 				it,
 				es,
+				fr,
 			);
 			mainGroup = ACCAD3DD2D37D10500A26002;
 			minimizedProjectReferenceProxies = 1;

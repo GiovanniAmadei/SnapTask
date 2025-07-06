@@ -13,7 +13,8 @@ class LanguageManager: ObservableObject {
         Language(code: "system", name: "System"),
         Language(code: "en", name: "English"),
         Language(code: "it", name: "Italiano"),
-        Language(code: "es", name: "Español")
+        Language(code: "es", name: "Español"),
+        Language(code: "fr", name: "Français")
     ]
     
     var localizedLanguages: [Language] {
@@ -28,6 +29,8 @@ class LanguageManager: ObservableObject {
                 localizedName = "italiano".localized
             case "es":
                 localizedName = "español".localized
+            case "fr":
+                localizedName = "français".localized
             default:
                 localizedName = language.name
             }
