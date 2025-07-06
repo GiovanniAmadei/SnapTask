@@ -22,9 +22,9 @@ enum RewardFrequency: String, Codable, CaseIterable, Identifiable {
     var shortDisplayName: String {
         switch self {
         case .daily: return "day".localized
-        case .weekly: return "settimana".localized
-        case .monthly: return "mese".localized
-        case .yearly: return "anno".localized
+        case .weekly: return "week_short".localized
+        case .monthly: return "month_short".localized
+        case .yearly: return "year_short".localized
         case .oneTime: return "1x"
         }
     }

@@ -19,7 +19,7 @@ struct FeedbackView: View {
                 
                 feedbackListSection
             }
-            .navigationTitle("Community")
+            .navigationTitle("community_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 toolbarContent
@@ -27,11 +27,11 @@ struct FeedbackView: View {
             .sheet(isPresented: $showingNewFeedback) {
                 NewFeedbackView()
             }
-            .alert("Delete Feedback", isPresented: $showingDeleteAlert) {
-                Button("Cancel", role: .cancel) {
+            .alert("delete_feedback_alert_title".localized, isPresented: $showingDeleteAlert) {
+                Button("cancel".localized, role: .cancel) {
                     feedbackToDelete = nil
                 }
-                Button("Delete", role: .destructive) {
+                Button("delete".localized, role: .destructive) {
                     if let feedback = feedbackToDelete {
                         print("🗑️ [UI] User confirmed deletion for: '\(feedback.title)'")
                         feedbackManager.deleteFeedback(feedback)
@@ -39,7 +39,7 @@ struct FeedbackView: View {
                     feedbackToDelete = nil
                 }
             } message: {
-                Text("Are you sure you want to delete this feedback? This action cannot be undone.")
+                Text("delete_feedback_alert_message".localized)
             }
             .alert("Error", isPresented: $showingErrorAlert) {
                 Button("OK") { }
@@ -72,7 +72,7 @@ struct FeedbackView: View {
                         )
                     )
                 
-                Text("Community Feedback")
+                Text("community_feedback_title".localized)
                     .font(.title3)
                     .fontWeight(.bold)
             }
@@ -105,7 +105,7 @@ struct FeedbackView: View {
                     .foregroundColor(.secondary)
                     .font(.title3)
                 
-                TextField("Search feedback...", text: $searchText)
+                TextField("search_feedback_placeholder".localized, text: $searchText)
                     .textFieldStyle(PlainTextFieldStyle())
             }
             .padding(.horizontal, 16)
@@ -185,11 +185,11 @@ struct FeedbackView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
             
-            Text("No feedback found")
+            Text("no_feedback_found_title".localized)
                 .font(.headline)
                 .foregroundColor(.secondary)
             
-            Text("Be the first to share your ideas!")
+            Text("be_the_first_to_share_ideas".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary.opacity(0.7))
         }

@@ -9,7 +9,7 @@ struct TimelineOrganizationView: View {
             VStack(spacing: 0) {
                 // Organization Options
                 List {
-                    Section("Organization Mode") {
+                    Section("organization_mode_title".localized) {
                         ForEach(TimelineOrganization.allCases, id: \.self) { organization in
                             HStack {
                                 Image(systemName: organization.icon)
@@ -44,7 +44,7 @@ struct TimelineOrganizationView: View {
                     
                     // Time Sort Order (only when organizing by time)
                     if viewModel.organization == .time {
-                        Section("Time Sort Order") {
+                        Section("time_sort_order_title".localized) {
                             ForEach(TimeSortOrder.allCases, id: \.self) { sortOrder in
                                 HStack {
                                     Image(systemName: sortOrder == .ascending ? "arrow.up" : "arrow.down")
@@ -78,7 +78,7 @@ struct TimelineOrganizationView: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.clockwise")
-                            Text("Reset to Default")
+                            Text("reset_to_default".localized)
                         }
                         .font(.headline)
                         .foregroundColor(.pink)
@@ -90,18 +90,18 @@ struct TimelineOrganizationView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Organize Tasks")
+            .navigationTitle("organize_tasks".localized)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -113,11 +113,11 @@ struct TimelineOrganizationView: View {
     private func organizationDescription(for organization: TimelineOrganization) -> String {
         switch organization {
         case .time:
-            return "Sort tasks by their scheduled time"
+            return "sort_by_time_description".localized
         case .category:
-            return "Group tasks under their categories"
+            return "group_by_category_description".localized
         case .priority:
-            return "Group tasks by priority level"
+            return "group_by_priority_description".localized
         case .none:
             return ""
         }

@@ -4,7 +4,9 @@ struct WhatsNewView: View {
     @StateObject private var updateNewsService = UpdateNewsService.shared
     @State private var selectedTab = 0
     
-    private let tabs = ["Recent", "Coming Soon", "Roadmap"]
+        private var tabs: [String] {
+        ["recent_tab".localized, "coming_soon_tab".localized, "roadmap_tab".localized]
+    }
     
     var body: some View {
         NavigationStack {
@@ -63,7 +65,7 @@ struct WhatsNewView: View {
                     await updateNewsService.fetchNews()
                 }
             }
-            .navigationTitle("What's Cooking")
+            .navigationTitle("whats_cooking_title".localized)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -116,7 +118,7 @@ struct RecentUpdatesWithVersionsView: View {
     private var groupedByVersion: [(String, [UpdateNews])] {
         let recentUpdates = newsItems.filter { $0.type == .recentUpdate }
         let versionGroups = Dictionary(grouping: recentUpdates.filter { $0.version != nil }) { news in
-            news.version ?? "Unknown"
+            news.version ?? "unknown_version".localized
         }
         
         return versionGroups.sorted { first, second in

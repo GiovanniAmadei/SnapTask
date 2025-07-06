@@ -7,19 +7,42 @@ class LanguageManager: ObservableObject {
     @AppStorage("useSystemLanguage") private var useSystemLanguage: Bool = true
     @AppStorage("selectedLanguage") private var selectedLanguageCode: String = ""
     
-    @Published var availableLanguages: [Language] = [
+    @Published var availableLanguages: [Language] = []
+    
+    private let baseLanguages: [Language] = [
         Language(code: "system", name: "System"),
         Language(code: "en", name: "English"),
-        Language(code: "it", name: "Italiano")
+        Language(code: "it", name: "Italiano"),
+        Language(code: "es", name: "Español")
     ]
+    
+    var localizedLanguages: [Language] {
+        return baseLanguages.map { language in
+            let localizedName: String
+            switch language.code {
+            case "system":
+                localizedName = "system".localized
+            case "en":
+                localizedName = "english".localized
+            case "it":
+                localizedName = "italiano".localized
+            case "es":
+                localizedName = "español".localized
+            default:
+                localizedName = language.name
+            }
+            return Language(code: language.code, name: localizedName)
+        }
+    }
     
     private var lastSystemLanguage: String = ""
     
     var currentLanguage: Language {
+        let languages = localizedLanguages
         if useSystemLanguage {
-            return availableLanguages.first { $0.code == "system" } ?? availableLanguages[0]
+            return languages.first { $0.code == "system" } ?? languages[0]
         } else {
-            return availableLanguages.first { $0.code == selectedLanguageCode } ?? availableLanguages[0]
+            return languages.first { $0.code == selectedLanguageCode } ?? languages[0]
         }
     }
     
@@ -43,6 +66,9 @@ class LanguageManager: ObservableObject {
     }
     
     init() {
+        // Initialize available languages
+        availableLanguages = baseLanguages
+        
         // Initialize last system language
         let preferredLanguage = Locale.preferredLanguages.first ?? "en"
         lastSystemLanguage = String(preferredLanguage.prefix(2))
@@ -112,7 +138,7 @@ class LanguageManager: ObservableObject {
             lastSystemLanguage = String(preferredLanguage.prefix(2))
             print("🌍 Switched to system language: \(lastSystemLanguage)")
         } else {
-            guard availableLanguages.contains(where: { $0.code == languageCode }) else { 
+            guard baseLanguages.contains(where: { $0.code == languageCode }) else { 
                 print("🌍 Language code \(languageCode) not found in available languages")
                 return 
             }

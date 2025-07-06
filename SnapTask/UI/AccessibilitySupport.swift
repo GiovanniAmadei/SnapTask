@@ -6,16 +6,16 @@ extension View {
     /// Adds proper accessibility label and hint for a task
     func taskAccessibility(task: TodoTask, completion: Bool? = nil) -> some View {
         let isCompleted = completion ?? (task.completions[Date().startOfDay]?.isCompleted ?? false)
-        let completionStatus = isCompleted ? "completato" : "non completato"
-        let categoryText = task.category?.name ?? "nessuna categoria"
+        let completionStatus = isCompleted ? "completed".localized : "not_completed".localized
+        let categoryText = task.category?.name ?? "no_category".localized
         
         let taskDescription = task.description?.isEmpty == false ? 
-            "Descrizione: \(task.description!)" : ""
+            "\(String("description_label".localized)) \(task.description!)" : ""
         
         let dueText = task.hasDuration ? 
-            "Durata: \(task.duration.formatted())" : ""
+            "\(String("duration_label".localized)) \(task.duration.formatted())" : ""
         
-        let priorityText = "Priorità: \(task.priority.rawValue.capitalized)"
+        let priorityText = "\(String("priority_label".localized)) \(task.priority.rawValue.capitalized)"
         
         return self
             .accessibilityLabel(Text(task.name))
@@ -177,7 +177,7 @@ struct AccessibilityPreview<Content: View>: View {
     
     var body: some View {
         VStack {
-            Toggle("Show VoiceOver Indicators", isOn: $showVoiceOverIndicators)
+            Toggle("show_voiceover_indicators".localized, isOn: $showVoiceOverIndicators)
                 .padding()
             
             content
@@ -185,4 +185,4 @@ struct AccessibilityPreview<Content: View>: View {
                 .border(showVoiceOverIndicators ? Color.blue.opacity(0.5) : Color.clear, width: 1)
         }
     }
-} 
+}

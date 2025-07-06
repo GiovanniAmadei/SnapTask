@@ -134,9 +134,9 @@ struct RewardsView: View {
             // Period breakdown chips
             HStack(spacing: 6) {
                 CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
-                CompactPointsChip(title: "settimana".localized, points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
-                CompactPointsChip(title: "mese".localized, points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
-                CompactPointsChip(title: "anno".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+                CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
+                CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
+                CompactPointsChip(title: "year_short".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
             }
             
             // Filter Section

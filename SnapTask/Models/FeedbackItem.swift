@@ -111,13 +111,13 @@ struct FeedbackReply: Identifiable, Codable, Equatable {
 enum FeedbackCategory: String, CaseIterable, Codable {
     case bugReport = "bug_report"
     case featureRequest = "feature_request"
-    case generalFeedback = "general_feedback"
+    case general = "general_feedback"
     
     var displayName: String {
         switch self {
-        case .bugReport: return "Bug Report"
-        case .featureRequest: return "Feature Request"
-        case .generalFeedback: return "General Feedback"
+        case .bugReport: return "bug_report_category".localized
+        case .featureRequest: return "feature_request_category".localized
+        case .general: return "general_category".localized
         }
     }
     
@@ -125,7 +125,7 @@ enum FeedbackCategory: String, CaseIterable, Codable {
         switch self {
         case .bugReport: return "ladybug.fill"
         case .featureRequest: return "lightbulb.fill"
-        case .generalFeedback: return "message.fill"
+        case .general: return "message.fill"
         }
     }
     
@@ -133,7 +133,7 @@ enum FeedbackCategory: String, CaseIterable, Codable {
         switch self {
         case .bugReport: return "#FF3B30"
         case .featureRequest: return "#007AFF"
-        case .generalFeedback: return "#34C759"
+        case .general: return "#34C759"
         }
     }
 }

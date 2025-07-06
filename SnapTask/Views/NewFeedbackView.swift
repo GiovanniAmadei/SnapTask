@@ -11,6 +11,8 @@ struct NewFeedbackView: View {
     @State private var authorName = ""
     @State private var isAnonymous = false
     @State private var isSubmitting = false
+    @State private var showingSuccessAlert = false
+    @State private var showingErrorAlert = false
     
     var body: some View {
         NavigationStack {
@@ -28,7 +30,7 @@ struct NewFeedbackView: View {
                                 )
                             )
                         
-                        Text("Share Your Feedback")
+                        Text("share_your_feedback_title".localized)
                             .font(.title3)
                             .fontWeight(.bold)
                     }
@@ -43,7 +45,7 @@ struct NewFeedbackView: View {
                                     .foregroundColor(.blue)
                                     .font(.title3)
                                 
-                                Text("Category")
+                                Text("feedback_category_title".localized)
                                     .font(.headline)
                                     .fontWeight(.semibold)
                             }
@@ -85,7 +87,7 @@ struct NewFeedbackView: View {
                                     .fontWeight(.semibold)
                             }
                             
-                            TextField("Brief summary of your feedback", text: $title)
+                            TextField("feedback_title_placeholder".localized, text: $title)
                                 .textFieldStyle(ModernTextFieldStyle())
                         }
                         .padding(20)
@@ -114,7 +116,7 @@ struct NewFeedbackView: View {
                             
                             ZStack(alignment: .topLeading) {
                                 if description.isEmpty {
-                                    Text("Describe your feedback in detail...")
+                                    Text("feedback_description_placeholder".localized)
                                         .foregroundColor(.secondary)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 12)
@@ -155,18 +157,18 @@ struct NewFeedbackView: View {
                                     .foregroundColor(.purple)
                                     .font(.title3)
                                 
-                                Text("Author Info")
+                                Text("author_info_title".localized)
                                     .font(.headline)
                                     .fontWeight(.semibold)
                             }
                             
                             VStack(alignment: .leading, spacing: 12) {
-                                Toggle("Submit anonymously", isOn: $isAnonymous)
+                                Toggle("submit_anonymously_toggle".localized, isOn: $isAnonymous)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                 
                                 if !isAnonymous {
-                                    TextField("Your name (optional)", text: $authorName)
+                                    TextField("author_name_placeholder".localized, text: $authorName)
                                         .textFieldStyle(ModernTextFieldStyle())
                                 }
                             }
@@ -199,7 +201,7 @@ struct NewFeedbackView: View {
                                     .font(.title3)
                             }
                             
-                            Text(isSubmitting ? "Submitting..." : "Submit Feedback")
+                            Text(isSubmitting ? "submitting_button".localized : "submit_feedback_button".localized)
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
@@ -231,10 +233,20 @@ struct NewFeedbackView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("close_button".localized) {
                         dismiss()
                     }
                 }
+            }
+            .alert("feedback_submitted_alert_title".localized, isPresented: $showingSuccessAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("feedback_submitted_alert_message".localized)
+            }
+            .alert("feedback_submission_failed_alert_title".localized, isPresented: $showingErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("feedback_submission_failed_alert_message".localized)
             }
         }
     }
@@ -255,10 +267,18 @@ struct NewFeedbackView: View {
         )
         
         Task {
-            await feedbackManager.submitFeedback(feedbackItem)
-            await MainActor.run {
-                isSubmitting = false
-                dismiss()
+            do {
+                try await feedbackManager.submitFeedback(feedbackItem)
+                await MainActor.run {
+                    isSubmitting = false
+                    showingSuccessAlert = true
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isSubmitting = false
+                    showingErrorAlert = true
+                }
             }
         }
     }

@@ -21,7 +21,7 @@ struct TaskPerformanceAnalyticsView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Task Performance")
+            .navigationTitle("task_performance".localized)
             .navigationBarTitleDisplayMode(.large)
         }
         .sheet(item: $selectedTask) { task in
@@ -30,7 +30,7 @@ struct TaskPerformanceAnalyticsView: View {
     }
     
     private var timeRangeSelector: some View {
-        Picker("Time Range", selection: $viewModel.selectedTimeRange) {
+        Picker("time_range".localized, selection: $viewModel.selectedTimeRange) {
             ForEach(StatisticsViewModel.TimeRange.allCases, id: \.self) { range in
                 Text(range.rawValue).tag(range)
             }
@@ -44,13 +44,13 @@ struct TaskPerformanceAnalyticsView: View {
             HStack {
                 Image(systemName: "trophy.fill")
                     .foregroundColor(.yellow)
-                Text("Top Performers")
+                Text("top_performers".localized)
                     .font(.headline)
                 Spacer()
             }
             
             if viewModel.topPerformingTasks.isEmpty {
-                Text("No high-quality completions yet")
+                Text("no_high_quality_completions".localized)
                     .foregroundColor(.secondary)
                     .font(.subheadline)
             } else {
@@ -74,13 +74,13 @@ struct TaskPerformanceAnalyticsView: View {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
-                Text("Needs Improvement")
+                Text("needs_improvement".localized)
                     .font(.headline)
                 Spacer()
             }
             
             if viewModel.tasksNeedingImprovement.isEmpty {
-                Text("All tasks performing well!")
+                Text("all_tasks_performing_well".localized)
                     .foregroundColor(.secondary)
                     .font(.subheadline)
             } else {
@@ -104,7 +104,7 @@ struct TaskPerformanceAnalyticsView: View {
             HStack {
                 Image(systemName: "list.bullet")
                     .foregroundColor(.blue)
-                Text("All Tasks")
+                Text("all_tasks".localized)
                     .font(.headline)
                 Spacer()
             }
@@ -129,11 +129,11 @@ struct TaskPerformanceAnalyticsView: View {
                 .font(.system(size: 64))
                 .foregroundColor(.secondary)
             
-            Text("No Performance Data")
+            Text("no_performance_data".localized)
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Complete tasks with quality and difficulty ratings to see analytics")
+            Text("complete_tasks_quality_difficulty_analytics".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -183,7 +183,7 @@ struct TaskPerformanceCard: View {
                                     .font(.caption)
                                     .fontWeight(.medium)
                             }
-                            Text("Quality")
+                            Text("quality".localized)
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -199,7 +199,7 @@ struct TaskPerformanceCard: View {
                                     .font(.caption)
                                     .fontWeight(.medium)
                             }
-                            Text("Difficulty")
+                            Text("difficulty".localized)
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -215,7 +215,7 @@ struct TaskPerformanceCard: View {
                                 .fontWeight(.medium)
                                 .foregroundColor(task.improvementTrend.color)
                         }
-                        Text("Trend")
+                        Text("trend".localized)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -267,7 +267,7 @@ struct TaskDetailAnalyticsView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("done".localized) { dismiss() }
                 }
             }
         }
@@ -276,7 +276,7 @@ struct TaskDetailAnalyticsView: View {
     private var summarySection: some View {
         VStack(spacing: 16) {
             HStack {
-                Text("Performance Summary")
+                Text("performance_summary".localized)
                     .font(.headline)
                 Spacer()
             }
@@ -284,7 +284,7 @@ struct TaskDetailAnalyticsView: View {
             HStack(spacing: 6) {
                 if let avgQuality = task.averageQuality {
                     StatCard(
-                        title: "Quality",
+                        title: "quality".localized,
                         value: String(format: "%.1f", avgQuality),
                         icon: "star.fill",
                         color: .yellow
@@ -293,7 +293,7 @@ struct TaskDetailAnalyticsView: View {
                 
                 if let avgDifficulty = task.averageDifficulty {
                     StatCard(
-                        title: "Difficulty",
+                        title: "difficulty".localized,
                         value: String(format: "%.1f", avgDifficulty),
                         icon: "bolt.fill",
                         color: .orange
@@ -301,7 +301,7 @@ struct TaskDetailAnalyticsView: View {
                 }
                 
                 StatCard(
-                    title: "Completions",
+                    title: "completions".localized,
                     value: "\(task.completions.count)",
                     icon: "checkmark.circle.fill",
                     color: .blue
@@ -318,7 +318,7 @@ struct TaskDetailAnalyticsView: View {
     
     private var qualityTrendChart: some View {
         ChartSection(
-            title: "Quality Trend",
+            title: "quality_trend".localized,
             icon: "star.fill",
             color: .yellow
         ) {
@@ -326,14 +326,14 @@ struct TaskDetailAnalyticsView: View {
                 ForEach(Array(task.completions.enumerated()), id: \.offset) { index, completion in
                     if let quality = completion.qualityRating {
                         LineMark(
-                            x: .value("Completion", index),
-                            y: .value("Quality", quality)
+                            x: .value("completion".localized, index),
+                            y: .value("quality".localized, quality)
                         )
                         .foregroundStyle(.yellow)
                         
                         PointMark(
-                            x: .value("Completion", index),
-                            y: .value("Quality", quality)
+                            x: .value("completion".localized, index),
+                            y: .value("quality".localized, quality)
                         )
                         .foregroundStyle(.yellow)
                     }
@@ -346,7 +346,7 @@ struct TaskDetailAnalyticsView: View {
     
     private var difficultyTrendChart: some View {
         ChartSection(
-            title: "Difficulty Trend",
+            title: "difficulty_trend".localized,
             icon: "bolt.fill",
             color: .orange
         ) {
@@ -354,14 +354,14 @@ struct TaskDetailAnalyticsView: View {
                 ForEach(Array(task.completions.enumerated()), id: \.offset) { index, completion in
                     if let difficulty = completion.difficultyRating {
                         LineMark(
-                            x: .value("Completion", index),
-                            y: .value("Difficulty", difficulty)
+                            x: .value("completion".localized, index),
+                            y: .value("difficulty".localized, difficulty)
                         )
                         .foregroundStyle(.orange)
                         
                         PointMark(
-                            x: .value("Completion", index),
-                            y: .value("Difficulty", difficulty)
+                            x: .value("completion".localized, index),
+                            y: .value("difficulty".localized, difficulty)
                         )
                         .foregroundStyle(.orange)
                     }
@@ -374,7 +374,7 @@ struct TaskDetailAnalyticsView: View {
     
     private var durationTrendChart: some View {
         ChartSection(
-            title: "Duration Trend",
+            title: "duration_trend".localized,
             icon: "clock.fill",
             color: .blue
         ) {
@@ -382,14 +382,14 @@ struct TaskDetailAnalyticsView: View {
                 ForEach(Array(task.completions.enumerated()), id: \.offset) { index, completion in
                     if let duration = completion.actualDuration {
                         LineMark(
-                            x: .value("Completion", index),
-                            y: .value("Duration (min)", duration / 60)
+                            x: .value("completion".localized, index),
+                            y: .value("duration_min".localized, duration / 60)
                         )
                         .foregroundStyle(.blue)
                         
                         PointMark(
-                            x: .value("Completion", index),
-                            y: .value("Duration (min)", duration / 60)
+                            x: .value("completion".localized, index),
+                            y: .value("duration_min".localized, duration / 60)
                         )
                         .foregroundStyle(.blue)
                     }
@@ -404,7 +404,7 @@ struct TaskDetailAnalyticsView: View {
             HStack {
                 Image(systemName: "target")
                     .foregroundColor(.purple)
-                Text("Estimation Accuracy")
+                Text("estimation_accuracy".localized)
                     .font(.headline)
                 Spacer()
                 Text("\(Int(accuracy * 100))%")
@@ -432,13 +432,13 @@ struct TaskDetailAnalyticsView: View {
     private func accuracyDescription(_ accuracy: Double) -> String {
         switch accuracy {
         case 0.8...:
-            return "Excellent estimation skills! Your time predictions are very accurate."
+            return "excellent_estimation_skills".localized
         case 0.6..<0.8:
-            return "Good estimation skills. Room for minor improvements."
+            return "good_estimation_skills".localized
         case 0.4..<0.6:
-            return "Fair estimation skills. Consider tracking more to improve."
+            return "fair_estimation_skills".localized
         default:
-            return "Consider breaking tasks down or tracking more to improve estimation."
+            return "consider_breaking_tasks".localized
         }
     }
 }

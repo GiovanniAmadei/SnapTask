@@ -312,7 +312,7 @@ struct SettingsView: View {
                 ActionSheet(
                     title: Text("language".localized),
                     message: Text("choose_language".localized),
-                    buttons: languageManager.availableLanguages.map { language in
+                    buttons: languageManager.localizedLanguages.map { language in
                         .default(Text(language.name)) {
                             languageManager.setLanguage(language.code)
                         }

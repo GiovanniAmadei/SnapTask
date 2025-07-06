@@ -6,6 +6,15 @@ enum HistoryTimeFilter: String, CaseIterable {
     case month = "Month"
     case year = "Year"
     
+    var localizedName: String {
+        switch self {
+        case .day: return "today".localized
+        case .week: return "week".localized
+        case .month: return "month".localized
+        case .year: return "year".localized
+        }
+    }
+    
     var icon: String {
         switch self {
         case .day: return "sun.max.fill"
@@ -112,12 +121,12 @@ struct TaskPointsHistoryView: View {
                 }
             }
             .background(Color(UIColor.systemGroupedBackground))
-            .navigationTitle("Points History")
+            .navigationTitle("points_history".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !filteredPointsEarningTasks.isEmpty {
-                        Button(isEditMode ? "Cancel" : "Edit") {
+                        Button(isEditMode ? "cancel".localized : "edit".localized) {
                             withAnimation {
                                 isEditMode.toggle()
                                 if !isEditMode {
@@ -131,21 +140,21 @@ struct TaskPointsHistoryView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
                         if isEditMode && !selectedTasks.isEmpty {
-                            Button("Remove Selected") {
+                            Button("remove_selected".localized) {
                                 showingRemoveSelectedAlert = true
                             }
                             .foregroundColor(.red)
                         }
                         
-                        Button("Done") {
+                        Button("done".localized) {
                             dismiss()
                         }
                     }
                 }
             }
-            .alert("Remove Selected Points", isPresented: $showingRemoveSelectedAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Remove", role: .destructive) {
+            .alert("remove_selected_points".localized, isPresented: $showingRemoveSelectedAlert) {
+                Button("cancel".localized, role: .cancel) { }
+                Button("remove".localized, role: .destructive) {
                     for taskId in selectedTasks {
                         if let task = taskManager.tasks.first(where: { $0.id == taskId }) {
                             rewardManager.removePointsFromTask(task)
@@ -155,7 +164,7 @@ struct TaskPointsHistoryView: View {
                     isEditMode = false
                 }
             } message: {
-                Text("This will remove points earned from the selected tasks. This action cannot be undone.")
+                Text("remove_selected_alert".localized)
             }
         }
     }
@@ -180,7 +189,7 @@ struct TaskPointsHistoryView: View {
                                     .foregroundColor(selectedFilter == filter ? .white : .secondary)
                             }
                             
-                            Text(filter.rawValue)
+                            Text(filter.localizedName)
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(selectedFilter == filter ? filter.color : .secondary)
                         }
@@ -204,34 +213,34 @@ struct TaskPointsHistoryView: View {
         
         return VStack(spacing: 16) {
             HStack {
-                Text("Stats for \(selectedFilter.rawValue)")
+                Text("stats_for".localized + " \(selectedFilter.localizedName)")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
-                Text("\(totalFilteredPoints) pts")
+                Text("$\(totalFilteredPoints) pts")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(selectedFilter.color)
             }
             
             HStack(spacing: 16) {
                 StatCard(
-                    title: "Tasks",
+                    title: "tasks".localized,
                     value: "\(stats.totalTasks)",
                     icon: "list.bullet",
                     color: selectedFilter.color
                 )
                 
                 StatCard(
-                    title: "Completions",
+                    title: "completions".localized,
                     value: "\(stats.totalCompletions)",
                     icon: "checkmark.circle.fill",
                     color: selectedFilter.color
                 )
                 
                 StatCard(
-                    title: "Avg/Day",
+                    title: "avg_day".localized,
                     value: String(format: "%.1f", stats.averagePerDay),
                     icon: "clock.fill",
                     color: selectedFilter.color
@@ -264,10 +273,10 @@ struct TaskPointsHistoryView: View {
             }
             
             VStack(spacing: 8) {
-                Text("No Points This \(selectedFilter.rawValue)")
+                Text("no_points_this".localized + " \(selectedFilter.localizedName)")
                     .font(.system(size: 18, weight: .semibold))
                 
-                Text("Complete tasks with reward points to see them here.")
+                Text("complete_tasks_points_enabled".localized)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

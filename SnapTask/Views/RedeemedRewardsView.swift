@@ -315,11 +315,11 @@ struct RedeemedTimeFilterChip: View {
     
     private var compactTitle: String {
         switch filter {
-        case .all: return "sempre".localized
+        case .all: return "all_time".localized
         case .day: return "today".localized
-        case .week: return "settimana".localized
-        case .month: return "mese".localized
-        case .year: return "anno".localized
+        case .week: return "week_short".localized
+        case .month: return "month_short".localized
+        case .year: return "year_short".localized
         }
     }
 }
