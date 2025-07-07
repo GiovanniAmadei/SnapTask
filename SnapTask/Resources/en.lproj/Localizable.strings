@@ -674,3 +674,43 @@
 "theme_preview" = "Theme Preview";
 "apply_theme" = "Apply Theme";
 "current_theme" = "Current Theme";
+
+// Premium Features
+"unlimited_categories" = "Unlimited Categories";
+"unlimited_categories_desc" = "Create as many categories as you want to organize your tasks perfectly";
+"task_evaluation" = "Task Evaluation";
+"task_evaluation_desc" = "Rate quality and difficulty of tasks for advanced analytics";
+"unlimited_rewards" = "Unlimited Rewards";
+"unlimited_rewards_desc" = "Create as many rewards as you want to motivate completion";
+"cloud_sync" = "Cloud Sync";
+"cloud_sync_desc" = "Sync all your data across all devices";
+"advanced_statistics" = "Advanced Statistics";
+"advanced_statistics_desc" = "Access all statistics sections for detailed analytics";
+
+// Subscription
+"snaptask_pro" = "SnapTask Pro";
+"upgrade_to_pro" = "Upgrade to Pro";
+"monthly_subscription" = "Monthly Subscription";
+"yearly_subscription" = "Yearly Subscription";
+"monthly_price" = "€3.99/month";
+"yearly_price" = "€34.99/year";
+"yearly_savings" = "Save 27%";
+"subscribe" = "Subscribe";
+"restore_purchases" = "Restore Purchases";
+"subscription_terms" = "Subscription Terms";
+"privacy_policy" = "Privacy Policy";
+"terms_of_service" = "Terms of Service";
+"manage_subscription" = "Manage Subscription";
+"cancel_subscription" = "Cancel Subscription";
+"subscription_active" = "Subscription Active";
+"subscription_expires" = "Expires";
+"subscription_expired" = "Subscription Expired";
+"premium_required" = "Premium Required";
+"premium_feature_locked" = "This feature is only available with SnapTask Pro";
+"premium_upgrade_message" = "Upgrade to SnapTask Pro to unlock all premium features";
+"free_plan_limits" = "Free Plan Limits";
+"categories_limit_reached" = "Categories Limit Reached";
+"categories_limit_message" = "You can create up to 4 categories with the free plan. Upgrade to Pro for unlimited categories.";
+"rewards_limit_reached" = "Rewards Limit Reached";
+"rewards_limit_message" = "You can create up to 3 rewards with the free plan. Upgrade to Pro for unlimited rewards.";
+"premium_badge" = "PRO";

@@ -4,18 +4,28 @@ import Combine
 struct RewardsView: View {
     @StateObject private var viewModel = RewardViewModel()
     @StateObject private var categoryManager = CategoryManager.shared
+    @ObservedObject var subscriptionManager = SubscriptionManager.shared
     @State private var showingAddReward = false
     @State private var selectedReward: Reward?
     @State private var showingPointsHistory = false
     @State private var showingRedeemedRewards = false
     @State private var showingCategoryPointsBreakdown = false
     @State private var selectedFilter: RewardFrequency = .daily
+    @State private var showingPremiumPaywall = false
     @Environment(\.colorScheme) private var colorScheme
     
     private var filteredRewards: [Reward] {
         let allRewards = (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards)
         return allRewards.filter { $0.frequency == selectedFilter }
             .sorted { $0.pointsCost < $1.pointsCost }
+    }
+    
+    private var canAddMoreRewards: Bool {
+        if subscriptionManager.hasAccess(to: .unlimitedRewards) {
+            return true
+        }
+        let totalRewards = viewModel.dailyRewards.count + viewModel.weeklyRewards.count + viewModel.monthlyRewards.count
+        return totalRewards < SubscriptionManager.maxRewardsForFree
     }
     
     var body: some View {
@@ -47,23 +57,36 @@ struct RewardsView: View {
                             
                             // Rewards List
                             rewardsListView
+                            
+                            // Premium limit info
+                            if !subscriptionManager.hasAccess(to: .unlimitedRewards) {
+                                premiumLimitInfo
+                            }
                         }
                         .padding(.horizontal, 16)
                         .padding(.bottom, 100)
                     }
                 }
                 
-                // Centered Add Button
+                // Centered Add Button - stesso posizionamento della Timeline
                 VStack {
                     Spacer()
                     
-                    AddRewardButton(isShowingRewardForm: $showingAddReward)
-                        .padding(.bottom, 16)
+                    AddRewardButton(
+                        isShowingRewardForm: $showingAddReward,
+                        canAdd: canAddMoreRewards,
+                        onPremiumTapped: {
+                            showingPremiumPaywall = true
+                        }
+                    )
+                    .padding(.bottom, 16)
                 }
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showingAddReward) {
-                RewardFormView()
+                if canAddMoreRewards {
+                    RewardFormView()
+                }
             }
             .sheet(item: $selectedReward) { reward in
                 RewardFormView(initialReward: reward)
@@ -76,6 +99,9 @@ struct RewardsView: View {
             }
             .sheet(isPresented: $showingCategoryPointsBreakdown) {
                 CategoryPointsBreakdownView()
+            }
+            .sheet(isPresented: $showingPremiumPaywall) {
+                PremiumPaywallView()
             }
             .onAppear {
                 viewModel.updatePoints()
@@ -323,50 +349,193 @@ struct RewardsView: View {
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
     }
-}
-
-// Add Reward Button with centered position and purple gradient
-private struct AddRewardButton: View {
-    @Binding var isShowingRewardForm: Bool
-    @Environment(\.colorScheme) private var colorScheme
     
-    var body: some View {
-        Button(action: { isShowingRewardForm = true }) {
-            Image(systemName: "plus")
-                .font(.system(size: 24, weight: .medium))
+    private var premiumLimitInfo: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundColor(.orange)
+                Text("Limiti Piano Gratuito")
+                    .font(.headline)
+                    .foregroundColor(.orange)
+            }
+            
+            Text("Il piano gratuito include fino a 3 premi personalizzati")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            HStack {
+                let totalRewards = viewModel.dailyRewards.count + viewModel.weeklyRewards.count + viewModel.monthlyRewards.count
+                Text("\(totalRewards)/\(SubscriptionManager.maxRewardsForFree)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button("Passa a Pro") {
+                    showingPremiumPaywall = true
+                }
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(.white)
-                .frame(width: 56, height: 56)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
                 .background(
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                        Circle()
-                            .fill(Color(hex: "5E5CE6").opacity(0.3))
-                            .blur(radius: 8)
-                            .scaleEffect(1.2)
-                        
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                    }
-                    .shadow(
-                        color: Color(hex: "5E5CE6").opacity(0.3),
-                        radius: 8,
-                        x: 0,
-                        y: 4
+                    LinearGradient(
+                        colors: [.purple, .pink],
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
                 )
+                .cornerRadius(8)
+            }
+        }
+        .padding(16)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(12)
+    }
+}
+
+private struct AddRewardButton: View {
+    @Binding var isShowingRewardForm: Bool
+    let canAdd: Bool
+    let onPremiumTapped: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: {
+            withAnimation(.interpolatingSpring(stiffness: 600, damping: 25)) {
+                isPressed = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                withAnimation(.interpolatingSpring(stiffness: 600, damping: 25)) {
+                    isPressed = false
+                }
+                
+                if canAdd {
+                    isShowingRewardForm = true
+                } else {
+                    onPremiumTapped()
+                }
+            }
+        }) {
+            ZStack {
+                if canAdd {
+                    // Design normale - viola invece di rosa
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.purple, Color.purple.opacity(0.8)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                    )
+                                Circle()
+                                    .fill(Color.purple.opacity(0.3))
+                                    .blur(radius: 8)
+                                    .scaleEffect(1.2)
+                                
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.purple, Color.purple.opacity(0.8)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                    )
+                            }
+                            .shadow(
+                                color: Color.purple.opacity(0.3),
+                                radius: 8,
+                                x: 0,
+                                y: 4
+                            )
+                        )
+                } else {
+                    // Design premium - gradient più accattivante
+                    VStack(spacing: 2) {
+                        HStack(spacing: 2) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                            
+                            Text("PRO")
+                                .font(.system(size: 8, weight: .black))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.white.opacity(0.25))
+                        )
+                    }
+                    .frame(width: 56, height: 56)
+                    .background(
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.purple,
+                                            Color.pink,
+                                            Color.purple.opacity(0.8)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                            Circle()
+                                .fill(Color.purple.opacity(0.4))
+                                .blur(radius: 12)
+                                .scaleEffect(1.3)
+                            
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.purple,
+                                            Color.pink,
+                                            Color.purple.opacity(0.8)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                            
+                            // Effetto shimmer per premium
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.white.opacity(0.0),
+                                            Color.white.opacity(0.3),
+                                            Color.white.opacity(0.0)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .opacity(0.8)
+                        }
+                        .shadow(
+                            color: Color.purple.opacity(0.4),
+                            radius: 12,
+                            x: 0,
+                            y: 6
+                        )
+                    )
+                }
+            }
+            .scaleEffect(isPressed ? 0.95 : (canAdd ? 1.0 : 1.05))
+            .animation(.interpolatingSpring(stiffness: 600, damping: 25), value: isPressed)
         }
         .padding(.horizontal, 20)
     }

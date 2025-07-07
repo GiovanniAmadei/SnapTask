@@ -4,8 +4,17 @@ struct CategoryPickerView: View {
     @Binding var selectedCategory: Category?
     @Environment(\.dismiss) private var dismiss
     @StateObject private var settingsViewModel = SettingsViewModel.shared
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showingCategoryEditor = false
     @State private var editingCategory: Category? = nil
+    @State private var showingPremiumPaywall = false
+    
+    private var canAddMoreCategories: Bool {
+        if subscriptionManager.hasAccess(to: .unlimitedCategories) {
+            return true
+        }
+        return settingsViewModel.categories.count < SubscriptionManager.maxCategoriesForFree
+    }
     
     var body: some View {
         List {
@@ -33,11 +42,20 @@ struct CategoryPickerView: View {
             }
             
             Button {
-                editingCategory = Category(id: UUID(), name: "", color: "#FF0000")
+                handleAddCategory()
             } label: {
-                Label("add_new_category".localized, systemImage: "plus")
-                    .foregroundColor(.accentColor)
+                HStack {
+                    Label("add_new_category".localized, systemImage: "plus")
+                        .foregroundColor(canAddMoreCategories ? .accentColor : .gray)
+                    
+                    Spacer()
+                    
+                    if !canAddMoreCategories {
+                        PremiumBadge(size: .small)
+                    }
+                }
             }
+            .disabled(!canAddMoreCategories)
         }
         .navigationTitle("select_category".localized)
         .navigationBarTitleDisplayMode(.inline)
@@ -64,6 +82,17 @@ struct CategoryPickerView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingPremiumPaywall) {
+            PremiumPaywallView()
+        }
+    }
+    
+    private func handleAddCategory() {
+        if canAddMoreCategories {
+            editingCategory = Category(id: UUID(), name: "", color: "#FF0000")
+        } else {
+            showingPremiumPaywall = true
         }
     }
 }

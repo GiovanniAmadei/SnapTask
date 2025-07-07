@@ -3,8 +3,10 @@ import Charts
 
 struct StatisticsView: View {
     @StateObject private var viewModel = StatisticsViewModel()
+    @ObservedObject var subscriptionManager = SubscriptionManager.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: StatisticsTab = .overview
+    @State private var showingPremiumPaywall = false
     
     enum StatisticsTab: String, CaseIterable {
         case overview = "overview"
@@ -29,12 +31,30 @@ struct StatisticsView: View {
             case .performance: return "performance".localized
             }
         }
+        
+        var isPremium: Bool {
+            switch self {
+            case .overview: return false
+            case .streaks, .consistency, .performance: return true
+            }
+        }
+    }
+    
+    private var availableTabs: [StatisticsTab] {
+        if subscriptionManager.hasAccess(to: .advancedStatistics) {
+            return StatisticsTab.allCases
+        } else {
+            return [.overview]
+        }
+    }
+    
+    private var allTabsForDisplay: [StatisticsTab] {
+        return StatisticsTab.allCases
     }
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Header con titolo manuale - REMOVE: background bianco
                 VStack(spacing: 16) {
                     HStack {
                         Text("statistics".localized)
@@ -45,22 +65,31 @@ struct StatisticsView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                     
-                    // Tab bar senza background
                     HStack(spacing: 0) {
-                        ForEach(StatisticsTab.allCases, id: \.self) { tab in
+                        ForEach(allTabsForDisplay, id: \.self) { tab in
                             Button {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    selectedTab = tab
-                                }
+                                handleTabSelection(tab)
                             } label: {
                                 VStack(spacing: 6) {
-                                    Image(systemName: tab.icon)
-                                        .font(.system(size: 18, weight: .medium))
+                                    HStack(spacing: 4) {
+                                        Image(systemName: tab.icon)
+                                            .font(.system(size: 18, weight: .medium))
+                                        
+                                        if tab.isPremium && !subscriptionManager.hasAccess(to: .advancedStatistics) {
+                                            PremiumBadge(size: .small)
+                                        }
+                                    }
                                     
                                     Text(tab.displayName)
                                         .font(.system(.caption, design: .rounded, weight: .medium))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
                                 }
-                                .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+                                .foregroundColor(
+                                    selectedTab == tab ? .accentColor :
+                                    (tab.isPremium && !subscriptionManager.hasAccess(to: .advancedStatistics)) ? .gray :
+                                    .secondary
+                                )
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 60)
                                 .background(
@@ -78,18 +107,32 @@ struct StatisticsView: View {
                     OverviewTab(viewModel: viewModel)
                         .tag(StatisticsTab.overview)
                     
-                    StreaksTab(viewModel: viewModel)
-                        .tag(StatisticsTab.streaks)
-                    
-                    ConsistencyTab(viewModel: viewModel)
-                        .tag(StatisticsTab.consistency)
-                    
-                    PerformanceTab(viewModel: viewModel)
-                        .tag(StatisticsTab.performance)
+                    if subscriptionManager.hasAccess(to: .advancedStatistics) {
+                        StreaksTab(viewModel: viewModel)
+                            .tag(StatisticsTab.streaks)
+                        
+                        ConsistencyTab(viewModel: viewModel)
+                            .tag(StatisticsTab.consistency)
+                        
+                        PerformanceTab(viewModel: viewModel)
+                            .tag(StatisticsTab.performance)
+                    } else {
+                        PremiumRequiredTab()
+                            .tag(StatisticsTab.streaks)
+                        
+                        PremiumRequiredTab()
+                            .tag(StatisticsTab.consistency)
+                        
+                        PremiumRequiredTab()
+                            .tag(StatisticsTab.performance)
+                    }
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
             .navigationBarHidden(true)
+        }
+        .sheet(isPresented: $showingPremiumPaywall) {
+            PremiumPaywallView()
         }
         .onAppear {
             viewModel.refreshStats()
@@ -103,9 +146,18 @@ struct StatisticsView: View {
             viewModel.refreshStats()
         }
     }
+    
+    private func handleTabSelection(_ tab: StatisticsTab) {
+        if tab.isPremium && !subscriptionManager.hasAccess(to: .advancedStatistics) {
+            showingPremiumPaywall = true
+        } else {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                selectedTab = tab
+            }
+        }
+    }
 }
 
-// MARK: - Overview Tab
 private struct OverviewTab: View {
     @ObservedObject var viewModel: StatisticsViewModel
     
@@ -122,7 +174,6 @@ private struct OverviewTab: View {
     }
 }
 
-// MARK: - Streaks Tab
 private struct StreaksTab: View {
     @ObservedObject var viewModel: StatisticsViewModel
     
@@ -144,7 +195,6 @@ private struct StreaksTab: View {
     }
 }
 
-// MARK: - Consistency Tab
 private struct ConsistencyTab: View {
     @ObservedObject var viewModel: StatisticsViewModel
     
@@ -159,7 +209,6 @@ private struct ConsistencyTab: View {
     }
 }
 
-// MARK: - Supporting Types for PerformanceTab
 private struct TaskChartData: Identifiable, Equatable {
     let id = UUID()
     let taskId: String
@@ -195,7 +244,6 @@ private struct FlatChartPoint: Identifiable {
     let color: String
 }
 
-// MARK: - Task Legend View for PerformanceTab
 private struct TaskLegendView: View {
     let tasks: [(id: String, name: String, color: String)]
     @Binding var highlightedTaskId: String?
@@ -415,7 +463,6 @@ private struct DifficultyChart: View {
     }
 }
 
-// MARK: - Performance Tab
 private struct PerformanceTab: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var selectedTaskForSheet: StatisticsViewModel.TaskPerformanceAnalytics?
@@ -649,7 +696,6 @@ private struct PerformanceTab: View {
     }
 }
 
-// MARK: - TaskPerformanceRowCard - Simple and clean list item
 private struct TaskPerformanceRowCard: View {
     let task: StatisticsViewModel.TaskPerformanceAnalytics
     let onTap: () -> Void
@@ -657,14 +703,12 @@ private struct TaskPerformanceRowCard: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                // Color indicator
                 if let categoryColor = task.categoryColor {
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(hex: categoryColor))
                         .frame(width: 4, height: 32)
                 }
                 
-                // Task info
                 VStack(alignment: .leading, spacing: 2) {
                     Text(task.taskName)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
@@ -678,10 +722,8 @@ private struct TaskPerformanceRowCard: View {
                             .lineLimit(1)
                     }
                 }
-                
                 Spacer()
                 
-                // Metrics badges - Fixed to stay on same line
                 HStack(spacing: 4) {
                     if let avgQuality = task.averageQuality {
                         MetricBadge(
@@ -705,7 +747,6 @@ private struct TaskPerformanceRowCard: View {
                         color: .blue
                     )
                 }
-                
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
@@ -721,7 +762,6 @@ private struct TaskPerformanceRowCard: View {
     }
 }
 
-// MARK: - MetricBadge - Compact metric display
 private struct MetricBadge: View {
     let icon: String
     let value: String
@@ -747,7 +787,6 @@ private struct MetricBadge: View {
     }
 }
 
-// MARK: - Performance Stat Card
 private struct PerformanceStatCard: View {
     let title: String
     let value: String
@@ -779,7 +818,6 @@ private struct PerformanceStatCard: View {
     }
 }
 
-// MARK: - TimeDistributionCard
 private struct TimeDistributionCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var hasAnimated = false
@@ -843,7 +881,6 @@ private struct TimeDistributionCard: View {
     }
 }
 
-// MARK: - TaskCompletionCard 
 private struct TaskCompletionCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var selectedPeriod: CompletionPeriod = .week
@@ -991,7 +1028,6 @@ private struct TaskCompletionCard: View {
     }
 }
 
-// MARK: - CategoryCompletionBreakdown 
 private struct CategoryCompletionBreakdown: View {
     let selectedPeriod: TaskCompletionCard.CompletionPeriod
     @ObservedObject var viewModel: StatisticsViewModel
@@ -1088,7 +1124,6 @@ private struct CompactCategoryItem: View {
     }
 }
 
-// MARK: - OverallStreakCard
 private struct OverallStreakCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
     
@@ -1125,17 +1160,14 @@ private struct OverallStreakCard: View {
     }
 }
 
-// MARK: - EmptyStreaksView
 private struct EmptyStreaksView: View {
     var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("no_streaks_yet".localized).font(.system(.title2, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
 }
 
-// MARK: - EmptyTimeDistributionView
 private struct EmptyTimeDistributionView: View {
     var body: some View { VStack(spacing: 16) { Image(systemName: "chart.pie").font(.system(size: 48)).foregroundStyle(LinearGradient(colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 8) { Text("no_time_data".localized).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_tasks_time_distribution".localized).font(.system(.caption, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(height: 180, alignment: .center) }
 }
 
-// MARK: - CategoryLegendItem
 private struct CategoryLegendItem: View {
     let stat: StatisticsViewModel.CategoryStat
     var body: some View { HStack(spacing: 10) { Circle().fill(Color(hex: stat.color)).frame(width: 12, height: 12); VStack(alignment: .leading, spacing: 1) { Text(stat.name).font(.system(.caption, design: .rounded, weight: .semibold)).lineLimit(1).foregroundColor(.primary); Text(formatTimeValue(stat.hours)).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(.secondary).animation(.smooth(duration: 0.8), value: stat.hours) }; Spacer(minLength: 0) }.padding(.horizontal, 12).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: stat.color).opacity(0.03))) }
@@ -1151,13 +1183,11 @@ private struct CategoryLegendItem: View {
             return "\(displayMinutes)m"
         }
     }}
-// MARK: - TaskStreakCard
 private struct TaskStreakCard: View { 
     let taskStreak: StatisticsViewModel.TaskStreak
     var body: some View { VStack(spacing: 16) { HStack(spacing: 12) { if let categoryColor = taskStreak.categoryColor { Circle().fill(Color(hex: categoryColor)).frame(width: 12, height: 12) }; VStack(alignment: .leading, spacing: 2) { Text(taskStreak.taskName).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary).lineLimit(1); if let categoryName = taskStreak.categoryName { Text(categoryName).font(.system(.caption, design: .rounded, weight: .medium)).foregroundColor(.secondary) } }; Spacer(); VStack(alignment: .trailing, spacing: 2) { Text("\(Int(taskStreak.completionRate * 100))%").font(.system(.title3, design: .rounded, weight: .bold)).foregroundColor(.primary); Text("complete".localized).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }; HStack(spacing: 24) { StatisticsStatItem(title: "current".localized, value: "\(taskStreak.currentStreak)", color: .orange, icon: "flame.fill"); StatisticsStatItem(title: "best".localized, value: "\(taskStreak.bestStreak)", color: .red, icon: "trophy.fill"); StatisticsStatItem(title: "completed".localized, value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)", color: .green, icon: "checkmark.circle.fill"); Spacer() }; if !taskStreak.streakHistory.isEmpty { Chart(taskStreak.streakHistory) { point in LineMark(x: .value("date".localized, point.date), y: .value("streak".localized, point.streakValue)).foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1")).lineStyle(.init(lineWidth: 2, lineCap: .round)).symbol(.circle).symbolSize(40) }.frame(height: 80).chartXAxis(.hidden).chartYAxis(.hidden) } }.padding(20).background(cardBackground) }
 }
 
-// MARK: - TaskPerformanceDetailView
 private struct TaskPerformanceDetailView: View {
     let task: StatisticsViewModel.TaskPerformanceAnalytics
     @Environment(\.dismiss) private var dismiss
@@ -1585,7 +1615,6 @@ private struct TaskPerformanceDetailView: View {
     }
 }
 
-// MARK: - CompletionRowView - Clean completion display
 private struct CompletionRowView: View {
     let completion: StatisticsViewModel.TaskCompletionAnalytics
     
@@ -1661,7 +1690,6 @@ private struct CompletionRowView: View {
     }
 }
 
-// MARK: - TaskDetailMetricCard
 private struct TaskDetailMetricCard: View {
     let title: String
     let value: String
@@ -1697,7 +1725,6 @@ private struct TaskDetailMetricCard: View {
     }
 }
 
-// MARK: - Button Components
 private struct PeriodButton: View {
     let period: TaskCompletionCard.CompletionPeriod
     let isSelected: Bool
@@ -1754,7 +1781,6 @@ private struct TimeRangeButton: View {
     }
 }
 
-// MARK: - EmptyTaskCompletionView
 private struct EmptyTaskCompletionView: View {
     var body: some View {
         VStack(spacing: 16) {
@@ -1782,13 +1808,81 @@ private struct EmptyTaskCompletionView: View {
     }
 }
 
-// MARK: - StatisticsStatItem
+private struct PremiumRequiredTab: View {
+    @State private var showingPremiumPaywall = false
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.purple.opacity(0.1))
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 32))
+                        .foregroundColor(.purple)
+                }
+                
+                VStack(spacing: 8) {
+                    Text("premium_required".localized)
+                        .font(.title2.bold())
+                        .foregroundColor(.primary)
+                    
+                    Text("premium_feature_locked".localized)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            
+            VStack(spacing: 12) {
+                Text("advanced_statistics_desc".localized)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                
+                Button(action: {
+                    showingPremiumPaywall = true
+                }) {
+                    HStack {
+                        Text("upgrade_to_pro".localized)
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        LinearGradient(
+                            colors: [.purple, .pink],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+            }
+            
+            Spacer()
+        }
+        .padding(.top, 60)
+        .sheet(isPresented: $showingPremiumPaywall) {
+            PremiumPaywallView()
+        }
+    }
+}
+
 private struct StatisticsStatItem: View {
     let title: String; let value: String; let color: Color; let icon: String
     var body: some View { VStack(spacing: 6) { HStack(spacing: 4) { Image(systemName: icon).font(.system(.caption2, weight: .medium)).foregroundColor(color); Text(value).font(.system(.callout, design: .rounded, weight: .bold)).foregroundColor(.primary) }; Text(title).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }
 }
 
-// MARK: - Supporting Views
 private var cardBackground: some View {
     RoundedRectangle(cornerRadius: 16)
         .fill(Color(.systemBackground))

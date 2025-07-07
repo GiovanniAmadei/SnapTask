@@ -7,6 +7,7 @@ struct SettingsView: View {
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var donationService = DonationService.shared
     @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
@@ -22,6 +23,7 @@ struct SettingsView: View {
     @State private var showingWelcome = false
     @State private var showingDeleteConfirmation = false
     @State private var isDeleting = false
+    @State private var showingPremiumPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -43,6 +45,63 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                
+                // Premium Section
+                Section("premium_plan".localized) {
+                    Button {
+                        showingPremiumPaywall = true
+                    } label: {
+                        HStack {
+                            Image(systemName: subscriptionManager.isSubscribed ? "crown.fill" : "crown")
+                                .foregroundColor(.purple)
+                                .frame(width: 24)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(subscriptionManager.isSubscribed ? "premium_plan_active".localized : "upgrade_to_pro".localized)
+                                    .foregroundColor(.primary)
+                                    .font(.body)
+                                
+                                if subscriptionManager.isSubscribed {
+                                    if let expirationDate = subscriptionManager.subscriptionExpirationDate {
+                                        Text("subscription_expires".localized + " " + expirationDate.formatted(date: .abbreviated, time: .omitted))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                } else {
+                                    Text("premium_features".localized)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            if !subscriptionManager.isSubscribed {
+                                PremiumBadge(size: .small)
+                            }
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                                .frame(width: 12, height: 12)
+                        }
+                    }
+                    
+                    #if DEBUG
+                    // Testing mode toggle for development
+                    HStack {
+                        Image(systemName: "testtube.2")
+                            .foregroundColor(.orange)
+                            .frame(width: 24)
+                        
+                        Text("Test Premium Restrictions")
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: $subscriptionManager.testingMode)
+                    }
+                    #endif
+                }
                 
                 // Quote Section - iOS style
                 Section("quote_of_the_day".localized) {
@@ -304,6 +363,7 @@ struct SettingsView: View {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
                     await donationService.loadProducts()
+                    await subscriptionManager.loadProducts()
                 }
                 loadNotificationTime()
                 checkNotificationPermissionStatus()
@@ -333,6 +393,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingCalendarIntegrationView) {
                 CalendarIntegrationView()
+            }
+            .sheet(isPresented: $showingPremiumPaywall) {
+                PremiumPaywallView()
             }
             .alert("enable_notifications".localized, isPresented: $showingPermissionAlert) {
                 Button("settings".localized) {
