@@ -249,53 +249,17 @@ private struct FlatChartPoint: Identifiable {
 private struct TaskLegendView: View {
     let tasks: [(id: String, name: String, color: String)]
     @Binding var highlightedTaskId: String?
+    @Environment(\.theme) private var theme
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(tasks, id: \.id) { task in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            if highlightedTaskId == task.id {
-                                highlightedTaskId = nil
-                            } else {
-                                highlightedTaskId = task.id
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(Color(hex: task.color))
-                                .frame(width: 8, height: 8)
-                            
-                            Text(task.name)
-                                .font(.system(.caption, design: .rounded, weight: .medium))
-                                .foregroundColor(
-                                    highlightedTaskId == task.id ? .primary :
-                                    highlightedTaskId == nil ? .primary : .secondary
-                                )
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(
-                                    highlightedTaskId == task.id ?
-                                    Color(hex: task.color).opacity(0.2) :
-                                    Color(.systemGray6)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .strokeBorder(
-                                            highlightedTaskId == task.id ?
-                                            Color(hex: task.color) : Color.clear,
-                                            lineWidth: 1.5
-                                        )
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    TaskLegendButton(
+                        task: task,
+                        highlightedTaskId: $highlightedTaskId,
+                        theme: theme
+                    )
                 }
             }
             .padding(.horizontal, 20)
@@ -303,9 +267,78 @@ private struct TaskLegendView: View {
     }
 }
 
+private struct TaskLegendButton: View {
+    let task: (id: String, name: String, color: String)
+    @Binding var highlightedTaskId: String?
+    let theme: Theme
+    
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                if highlightedTaskId == task.id {
+                    highlightedTaskId = nil
+                } else {
+                    highlightedTaskId = task.id
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color(hex: task.color))
+                    .frame(width: 8, height: 8)
+                
+                Text(task.name)
+                    .font(.system(.caption, design: .rounded, weight: .medium))
+                    .foregroundColor(textColor)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(backgroundView)
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private var textColor: Color {
+        if highlightedTaskId == task.id {
+            return theme.textColor
+        } else if highlightedTaskId == nil {
+            return theme.textColor
+        } else {
+            return theme.secondaryTextColor
+        }
+    }
+    
+    private var backgroundView: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(backgroundColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(borderColor, lineWidth: 1.5)
+            )
+    }
+    
+    private var backgroundColor: Color {
+        if highlightedTaskId == task.id {
+            return Color(hex: task.color).opacity(0.2)
+        } else {
+            return theme.surfaceColor.opacity(0.7)
+        }
+    }
+    
+    private var borderColor: Color {
+        if highlightedTaskId == task.id {
+            return Color(hex: task.color)
+        } else {
+            return Color.clear
+        }
+    }
+}
+
 private struct QualityChart: View {
     let data: [TaskChartData]
     @Binding var highlightedTaskId: String?
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Chart(flattenedQualityData) { point in
@@ -327,15 +360,16 @@ private struct QualityChart: View {
         .frame(height: 200)
         .chartYScale(domain: 0...10)
         .chartForegroundStyleScale(range: data.map { Color(hex: $0.color) })
+        .chartLegend(.hidden)
         .chartXAxis {
             AxisMarks(position: .bottom) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(Color.gray.opacity(0.2))
+                    .foregroundStyle(theme.borderColor.opacity(0.3))
                 AxisValueLabel() {
                     if let dateValue = value.as(Date.self) {
                         Text(formatDateForChart(dateValue))
                             .font(.system(.caption2, design: .rounded, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
@@ -343,18 +377,24 @@ private struct QualityChart: View {
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(Color.gray.opacity(0.2))
+                    .foregroundStyle(theme.borderColor.opacity(0.3))
                 AxisValueLabel() {
                     if let intValue = value.as(Int.self) {
                         Text("\(intValue)")
                             .font(.system(.caption2, design: .rounded, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
         }
-        .chartXAxisLabel("date".localized, position: .bottom)
-        .chartYAxisLabel("quality_rating".localized, position: .leading)
+        .chartXAxisLabel {
+            Text("date".localized)
+                .themedSecondaryText()
+        }
+        .chartYAxisLabel {
+            Text("quality_rating".localized)
+                .themedSecondaryText()
+        }
     }
     
     private var flattenedQualityData: [FlatChartPoint] {
@@ -379,7 +419,7 @@ private struct QualityChart: View {
     
     private func formatDateForChart(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM"
+        formatter.dateFormat = "dd/MM"
         return formatter.string(from: date)
     }
 }
@@ -387,6 +427,7 @@ private struct QualityChart: View {
 private struct DifficultyChart: View {
     let data: [TaskChartData]
     @Binding var highlightedTaskId: String?
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Chart(flattenedDifficultyData) { point in
@@ -408,15 +449,16 @@ private struct DifficultyChart: View {
         .frame(height: 200)
         .chartYScale(domain: 0...10)
         .chartForegroundStyleScale(range: data.map { Color(hex: $0.color) })
+        .chartLegend(.hidden)
         .chartXAxis {
             AxisMarks(position: .bottom) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(Color.gray.opacity(0.2))
+                    .foregroundStyle(theme.borderColor.opacity(0.3))
                 AxisValueLabel() {
                     if let dateValue = value.as(Date.self) {
                         Text(formatDateForChart(dateValue))
                             .font(.system(.caption2, design: .rounded, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
@@ -424,18 +466,24 @@ private struct DifficultyChart: View {
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(Color.gray.opacity(0.2))
+                    .foregroundStyle(theme.borderColor.opacity(0.3))
                 AxisValueLabel() {
                     if let intValue = value.as(Int.self) {
                         Text("\(intValue)")
                             .font(.system(.caption2, design: .rounded, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
         }
-        .chartXAxisLabel("date".localized, position: .bottom)
-        .chartYAxisLabel("difficulty_rating".localized, position: .leading)
+        .chartXAxisLabel {
+            Text("date".localized)
+                .themedSecondaryText()
+        }
+        .chartYAxisLabel {
+            Text("difficulty_rating".localized)
+                .themedSecondaryText()
+        }
     }
     
     private var flattenedDifficultyData: [FlatChartPoint] {
@@ -460,7 +508,7 @@ private struct DifficultyChart: View {
     
     private func formatDateForChart(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM"
+        formatter.dateFormat = "dd/MM"
         return formatter.string(from: date)
     }
 }
@@ -469,6 +517,7 @@ private struct PerformanceTab: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var selectedTaskForSheet: StatisticsViewModel.TaskPerformanceAnalytics?
     @State private var highlightedTaskId: String?
+    @Environment(\.theme) private var theme
     
     var body: some View {
         ScrollView {
@@ -487,7 +536,7 @@ private struct PerformanceTab: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(Color(.systemGroupedBackground))
+        .themedBackground()
         .sheet(item: $selectedTaskForSheet) { task in
             TaskPerformanceDetailView(task: task)
         }
@@ -596,7 +645,7 @@ private struct PerformanceTab: View {
             } else {
                 Text("no_quality_data_available".localized)
                     .font(.system(.subheadline, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .frame(height: 100, alignment: .center)
             }
         }
@@ -627,7 +676,7 @@ private struct PerformanceTab: View {
             } else {
                 Text("no_difficulty_data_available".localized)
                     .font(.system(.subheadline, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .frame(height: 100, alignment: .center)
             }
         }
@@ -686,7 +735,7 @@ private struct PerformanceTab: View {
         VStack(spacing: 16) {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 64))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
             
             Text("no_performance_data".localized)
                 .font(.system(.title2, design: .rounded, weight: .semibold))
@@ -775,6 +824,7 @@ private struct MetricBadge: View {
     let icon: String
     let value: String
     let color: Color
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(spacing: 2) {
@@ -783,7 +833,7 @@ private struct MetricBadge: View {
                 .foregroundColor(color)
             Text(value)
                 .font(.system(.caption2, design: .rounded, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundColor(theme.textColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -800,6 +850,7 @@ private struct PerformanceStatCard: View {
     let title: String
     let value: String
     let color: Color
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 6) {
@@ -807,11 +858,10 @@ private struct PerformanceStatCard: View {
                 .font(.system(.title3, design: .rounded, weight: .bold))
                 .foregroundColor(color)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
             
             Text(title)
                 .font(.system(.caption, design: .rounded, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundColor(theme.secondaryTextColor)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -841,7 +891,6 @@ private struct TimeDistributionCard: View {
                         .themedPrimaryText()
                     Spacer()
                 }
-
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible()),
@@ -851,19 +900,15 @@ private struct TimeDistributionCard: View {
                     ForEach(StatisticsViewModel.TimeRange.allCases, id: \.self) { range in
                         TimeRangeButton(range: range, isSelected: viewModel.selectedTimeRange == range) {
                             hasAnimated = false
-                            withAnimation(.smooth(duration: 0.8)) { 
-                                viewModel.selectedTimeRange = range 
-                            }
+                            withAnimation(.smooth(duration: 0.8)) { viewModel.selectedTimeRange = range }
                         }
                     }
                 }
-                .themedPrimaryText() // Assicura che il testo nei pulsanti usi il colore corretto
             }
-            
-            if viewModel.categoryStats.isEmpty {
-                EmptyTimeDistributionView()
-            } else {
-                VStack(spacing: 12) {
+            VStack(spacing: 12) {
+                if viewModel.categoryStats.isEmpty {
+                    EmptyTimeDistributionView()
+                } else {
                     Chart(viewModel.categoryStats) { stat in
                         SectorMark(angle: .value("hours".localized, stat.hours), innerRadius: .ratio(0.618), angularInset: 1.5)
                             .cornerRadius(3)
@@ -882,11 +927,9 @@ private struct TimeDistributionCard: View {
                             hasAnimated = true
                         }
                     }
-                    
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                        ForEach(viewModel.categoryStats) { stat in 
+                        ForEach(viewModel.categoryStats) { stat in
                             CategoryLegendItem(stat: stat)
-                                .themedPrimaryText() // Assicura che il testo nella legenda usi il colore corretto
                         }
                     }
                 }
@@ -899,7 +942,8 @@ private struct TimeDistributionCard: View {
 
 private struct TaskCompletionCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
-    @State private var selectedPeriod: CompletionPeriod = .week
+    @State private var selectedPeriod: TaskCompletionCard.CompletionPeriod = .week
+    @State private var hasAnimated = false
     @Environment(\.theme) private var theme
     
     enum CompletionPeriod: String, CaseIterable {
@@ -947,64 +991,66 @@ private struct TaskCompletionCard: View {
                 ], spacing: 8) {
                     ForEach(CompletionPeriod.allCases, id: \.self) { period in
                         PeriodButton(period: period, isSelected: selectedPeriod == period) {
+                            hasAnimated = false
                             withAnimation(.smooth(duration: 0.4)) { selectedPeriod = period }
                         }
                     }
                 }
-                .themedPrimaryText() // Assicura che il testo nei pulsanti usi il colore corretto
             }
             VStack(spacing: 12) {
-                VStack(spacing: 12) {
-                    if hasTaskData {
-                        Chart(completionStats) { stat in
-                            BarMark(
-                                x: .value("day".localized, stat.day),
-                                y: .value("completed".localized, Double(stat.completedTasks))
-                            )
-                            .foregroundStyle(theme.accentColor) // Usa il colore di accento del tema
-                            .cornerRadius(4)
-                            
-                            BarMark(
-                                x: .value("day".localized, stat.day),
-                                y: .value("incomplete".localized, Double(max(0, stat.totalTasks - stat.completedTasks))),
-                                stacking: .standard
-                            )
-                            .foregroundStyle(Color.secondary.opacity(0.3))
-                            .cornerRadius(4)
-                        }
-                        .frame(height: 140)
-                        .chartXAxis { AxisMarks(position: .bottom) { _ in AxisValueLabel().font(.caption2) } }
-                        .chartYAxis { AxisMarks(position: .leading) { _ in AxisValueLabel().font(.caption2) } }
-                        .animation(.smooth(duration: 0.8), value: completionStats)
-                        statsLegend
-                    } else {
-                        EmptyTaskCompletionView()
+                if hasTaskData {
+                    Chart(completionStats) { stat in
+                        BarMark(
+                            x: .value("day".localized, stat.day),
+                            y: .value("completed".localized, Double(stat.completedTasks))
+                        )
+                        .foregroundStyle(theme.accentColor)
+                        .cornerRadius(4)
+                        
+                        BarMark(
+                            x: .value("day".localized, stat.day),
+                            y: .value("incomplete".localized, Double(max(0, stat.totalTasks - stat.completedTasks))),
+                            stacking: .standard
+                        )
+                        .foregroundStyle(theme.secondaryTextColor.opacity(0.3))
+                        .cornerRadius(4)
                     }
+                    .frame(height: 140)
+                    .chartXAxis {
+                        AxisMarks(position: .bottom) { _ in
+                            AxisValueLabel().font(.caption2).foregroundStyle(theme.textColor)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { _ in
+                            AxisValueLabel().font(.caption2).foregroundStyle(theme.textColor)
+                        }
+                    }
+                    .animation(.smooth(duration: 0.8), value: completionStats)
+                    
+                    HStack(spacing: 16) {
+                        HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 8, height: 8); Text("completed".localized).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(theme.textColor) }
+                        HStack(spacing: 6) { Rectangle().fill(Color.gray.opacity(0.3)).frame(width: 8, height: 8); Text("total_available".localized).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(theme.textColor) }
+                        Spacer()
+                        let totalCompleted = completionStats.reduce(0) { $0 + $1.completedTasks }
+                        let totalTasks = completionStats.reduce(0) { $0 + $1.totalTasks }
+                        let avgRate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
+                        Text("\(Int(avgRate * 100))%").font(.system(.caption, design: .rounded, weight: .bold)).foregroundColor(theme.textColor)
+                    }
+                } else {
+                    EmptyTaskCompletionView()
                 }
             }
-            CategoryCompletionBreakdown(selectedPeriod: selectedPeriod, viewModel: viewModel)
         }
         .padding(16)
         .background(cardBackground)
     }
-    
-    private var statsLegend: some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 8, height: 8); Text("completed".localized).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(.secondary) }
-            HStack(spacing: 6) { Rectangle().fill(Color.secondary.opacity(0.3)).frame(width: 8, height: 8); Text("total_available".localized).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(.secondary) }
-            Spacer()
-            let totalCompleted = completionStats.reduce(0) { $0 + $1.completedTasks }
-            let totalTasks = completionStats.reduce(0) { $0 + $1.totalTasks }
-            let avgRate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
-            Text("\(Int(avgRate * 100))%").font(.system(.caption, design: .rounded, weight: .bold)).foregroundColor(.primary)
-        }
-    }
-    
+
     private var hasTaskData: Bool {
         let totalTasks = completionStats.reduce(0) { $0 + $1.totalTasks }
         return totalTasks > 0
     }
-    
+
     private var completionStats: [StatisticsViewModel.WeeklyStat] {
         let calendar = Calendar.current
         let today = Date()
@@ -1050,6 +1096,7 @@ private struct TaskCompletionCard: View {
 private struct CategoryCompletionBreakdown: View {
     let selectedPeriod: TaskCompletionCard.CompletionPeriod
     @ObservedObject var viewModel: StatisticsViewModel
+    @Environment(\.theme) private var theme
     
     private var categoryCompletionStats: [(name: String, color: String, completionRate: Double, completed: Int, total: Int)] {
         let categories = CategoryManager.shared.categories
@@ -1090,8 +1137,8 @@ private struct CategoryCompletionBreakdown: View {
                 name: category.name,
                 color: category.color,
                 completionRate: completionRate,
-                completed: totalCompleted,
-                total: totalTasks
+                completed: Int(totalCompleted),
+                total: Int(totalTasks)
             )
         }
     }
@@ -1101,13 +1148,13 @@ private struct CategoryCompletionBreakdown: View {
             HStack {
                 Text("by_category".localized)
                     .font(.system(.caption, design: .rounded, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.textColor)
                 Spacer()
             }
             if categoryCompletionStats.isEmpty {
                 Text("no_data".localized)
                     .font(.system(.caption2, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.secondaryTextColor)
                     .padding(.vertical, 4)
             } else {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
@@ -1122,6 +1169,7 @@ private struct CategoryCompletionBreakdown: View {
 
 private struct CompactCategoryItem: View {
     let stat: (name: String, color: String, completionRate: Double, completed: Int, total: Int)
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(spacing: 6) {
@@ -1130,9 +1178,8 @@ private struct CompactCategoryItem: View {
                 .frame(width: 8, height: 8)
             Text(stat.name)
                 .font(.system(.caption2, design: .rounded, weight: .medium))
+                .foregroundColor(theme.textColor)
                 .lineLimit(1)
-                .foregroundColor(.primary)
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
@@ -1162,7 +1209,7 @@ private struct OverallStreakCard: View {
                         .foregroundColor(.orange)
                     Text("current".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                 }
                 Divider().frame(height: 60)
                 VStack(spacing: 8) {
@@ -1171,7 +1218,7 @@ private struct OverallStreakCard: View {
                         .foregroundColor(.red)
                     Text("best".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                 }
                 Spacer()
             }
@@ -1184,7 +1231,27 @@ private struct OverallStreakCard: View {
 private struct EmptyStreaksView: View {
     @Environment(\.theme) private var theme
     
-    var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("no_streaks_yet".localized).font(.system(.title2, design: .rounded, weight: .semibold)).themedPrimaryText(); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).themedSecondaryText().multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
+    var body: some View { 
+        VStack(spacing: 20) { 
+            Image(systemName: "flame")
+                .font(.system(size: 56))
+                .foregroundColor(theme.secondaryTextColor)
+            VStack(spacing: 10) { 
+                Text("no_streaks_yet".localized)
+                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
+                Text("complete_recurring_tasks_streaks".localized)
+                    .font(.system(.subheadline, design: .rounded))
+                    .themedSecondaryText()
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil) 
+            } 
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 40)
+        .background(cardBackground) 
+    } 
 }
 
 private struct EmptyTimeDistributionView: View {
@@ -1194,11 +1261,7 @@ private struct EmptyTimeDistributionView: View {
         VStack(spacing: 16) {
             Image(systemName: "chart.pie")
                 .font(.system(size: 48))
-                .foregroundStyle(LinearGradient(
-                    colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], 
-                    startPoint: .topLeading, 
-                    endPoint: .bottomTrailing
-                ))
+                .foregroundColor(theme.secondaryTextColor)
             
             VStack(spacing: 8) {
                 Text("no_time_data".localized)
@@ -1229,8 +1292,8 @@ private struct CategoryLegendItem: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(stat.name)
                     .font(.system(.caption, design: .rounded, weight: .semibold))
-                    .lineLimit(1)
                     .themedPrimaryText()
+                    .lineLimit(1)
                 
                 Text(formatTimeValue(stat.hours))
                     .font(.system(.caption2, design: .rounded, weight: .medium))
@@ -1244,11 +1307,11 @@ private struct CategoryLegendItem: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(theme.surfaceColor.opacity(0.7)) // Usa il colore di sfondo del tema
+                .fill(theme.surfaceColor.opacity(0.7))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(theme.borderColor, lineWidth: 0.5) // Aggiungi un bordo sottile
+                .stroke(theme.borderColor, lineWidth: 0.5)
         )
     }
 
@@ -1262,7 +1325,9 @@ private struct CategoryLegendItem: View {
         } else {
             return "\(displayMinutes)m"
         }
-    }}
+    }
+}
+
 private struct TaskStreakCard: View { 
     let taskStreak: StatisticsViewModel.TaskStreak
     @Environment(\.theme) private var theme
@@ -1353,15 +1418,16 @@ private struct TaskStreakCard: View {
             } 
         }
         .padding(20)
-        .themedCard()
+        .background(cardBackground)
     }
 }
 
 private struct TaskPerformanceDetailView: View {
     let task: StatisticsViewModel.TaskPerformanceAnalytics
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var selectedTimeRange: TaskPerformanceDetailView.TaskPerformanceTimeRange = .month
-    
+
     private enum TaskPerformanceTimeRange: String, CaseIterable {
         case week = "Week"
         case month = "Month"
@@ -1457,28 +1523,11 @@ private struct TaskPerformanceDetailView: View {
                 GridItem(.flexible())
             ], spacing: 8) {
                 ForEach(TaskPerformanceDetailView.TaskPerformanceTimeRange.allCases, id: \.self) { range in
-                    Button(action: {
+                    TimeRangeButton(range: .today, isSelected: false) {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             selectedTimeRange = range
                         }
-                    }) {
-                        Text(range.displayName)
-                            .font(.system(.caption, design: .rounded, weight: selectedTimeRange == range ? .semibold : .medium))
-                            .foregroundColor(selectedTimeRange == range ? .accentColor : .primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: 28)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(selectedTimeRange == range ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .strokeBorder(selectedTimeRange == range ? Color.accentColor : Color.clear, lineWidth: 1)
-                                    )
-                            )
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -1563,15 +1612,15 @@ private struct TaskPerformanceDetailView: View {
                     .foregroundColor(.yellow)
                 Text("quality_over_time".localized + " (\(selectedTimeRange.displayName))")
                     .font(.headline)
-                    .themedPrimaryText()
+                    .foregroundColor(theme.textColor)
                 Spacer()
             }
-            
+
             let qualityPoints = filteredCompletions.compactMap { completion -> (Date, Double)? in
                 guard let rating = completion.qualityRating else { return nil }
                 return (completion.date, Double(rating))
             }.sorted { $0.0 < $1.0 }
-            
+
             if !qualityPoints.isEmpty {
                 Chart(Array(qualityPoints.enumerated()), id: \.offset) { index, point in
                     LineMark(
@@ -1580,7 +1629,7 @@ private struct TaskPerformanceDetailView: View {
                     )
                     .foregroundStyle(Color(hex: task.categoryColor ?? "#6366F1"))
                     .lineStyle(.init(lineWidth: 3.0, lineCap: .round))
-                    
+
                     PointMark(
                         x: .value("date".localized, point.0),
                         y: .value("quality".localized, point.1)
@@ -1594,12 +1643,12 @@ private struct TaskPerformanceDetailView: View {
                 .chartXAxis {
                     AxisMarks(position: .bottom) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(Color.gray.opacity(0.2))
+                            .foregroundStyle(theme.borderColor.opacity(0.3))
                         AxisValueLabel() {
                             if let dateValue = value.as(Date.self) {
                                 Text(formatChartDateLabel(dateValue))
                                     .font(.system(.caption2, design: .rounded, weight: .medium))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(theme.textColor)
                             }
                         }
                     }
@@ -1607,12 +1656,12 @@ private struct TaskPerformanceDetailView: View {
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(Color.gray.opacity(0.2))
+                            .foregroundStyle(theme.borderColor.opacity(0.3))
                         AxisValueLabel() {
                             if let intValue = value.as(Int.self) {
                                 Text("\(intValue)")
                                     .font(.system(.caption2, design: .rounded, weight: .medium))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(theme.textColor)
                             }
                         }
                     }
@@ -1623,11 +1672,11 @@ private struct TaskPerformanceDetailView: View {
                 VStack(spacing: 8) {
                     Text("no_quality_ratings_in_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName.lowercased()))
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
+                        .foregroundColor(theme.secondaryTextColor)
+
                     Text("complete_tasks_add_quality_ratings".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .multilineTextAlignment(.center)
                 }
                 .frame(height: 100, alignment: .center)
@@ -1636,7 +1685,7 @@ private struct TaskPerformanceDetailView: View {
         .padding(20)
         .background(cardBackground)
     }
-    
+
     private var difficultyChartSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -1644,15 +1693,15 @@ private struct TaskPerformanceDetailView: View {
                     .foregroundColor(.orange)
                 Text("difficulty_over_time".localized + " (\(selectedTimeRange.displayName))")
                     .font(.headline)
-                    .themedPrimaryText()
+                    .foregroundColor(theme.textColor)
                 Spacer()
             }
-            
+
             let difficultyPoints = filteredCompletions.compactMap { completion -> (Date, Double)? in
                 guard let rating = completion.difficultyRating else { return nil }
                 return (completion.date, Double(rating))
             }.sorted { $0.0 < $1.0 }
-            
+
             if !difficultyPoints.isEmpty {
                 Chart(Array(difficultyPoints.enumerated()), id: \.offset) { index, point in
                     LineMark(
@@ -1661,7 +1710,7 @@ private struct TaskPerformanceDetailView: View {
                     )
                     .foregroundStyle(Color(hex: task.categoryColor ?? "#6366F1"))
                     .lineStyle(.init(lineWidth: 3.0, lineCap: .round))
-                    
+
                     PointMark(
                         x: .value("date".localized, point.0),
                         y: .value("difficulty".localized, point.1)
@@ -1675,12 +1724,12 @@ private struct TaskPerformanceDetailView: View {
                 .chartXAxis {
                     AxisMarks(position: .bottom) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(Color.gray.opacity(0.2))
+                            .foregroundStyle(theme.borderColor.opacity(0.3))
                         AxisValueLabel() {
                             if let dateValue = value.as(Date.self) {
                                 Text(formatChartDateLabel(dateValue))
                                     .font(.system(.caption2, design: .rounded, weight: .medium))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(theme.textColor)
                             }
                         }
                     }
@@ -1688,12 +1737,12 @@ private struct TaskPerformanceDetailView: View {
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(Color.gray.opacity(0.2))
+                            .foregroundStyle(theme.borderColor.opacity(0.3))
                         AxisValueLabel() {
                             if let intValue = value.as(Int.self) {
                                 Text("\(intValue)")
                                     .font(.system(.caption2, design: .rounded, weight: .medium))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(theme.textColor)
                             }
                         }
                     }
@@ -1704,11 +1753,11 @@ private struct TaskPerformanceDetailView: View {
                 VStack(spacing: 8) {
                     Text("no_difficulty_ratings_in_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName.lowercased()))
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
+                        .foregroundColor(theme.secondaryTextColor)
+
                     Text("complete_tasks_add_difficulty_ratings".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .multilineTextAlignment(.center)
                 }
                 .frame(height: 100, alignment: .center)
@@ -1717,7 +1766,7 @@ private struct TaskPerformanceDetailView: View {
         .padding(20)
         .background(cardBackground)
     }
-    
+
     private var completionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -1733,11 +1782,11 @@ private struct TaskPerformanceDetailView: View {
                 VStack(spacing: 8) {
                     Text("no_completions_in_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName.lowercased()))
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
+                        .foregroundColor(theme.secondaryTextColor)
+
                     Text("complete_this_task_start_tracking".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .multilineTextAlignment(.center)
                 }
                 .frame(height: 60, alignment: .center)
@@ -1880,12 +1929,12 @@ private struct TaskDetailMetricCard: View {
                     .foregroundColor(color)
                 Text(value)
                     .font(.system(.caption, design: .rounded, weight: .bold))
-                    .foregroundColor(theme.textColor) // Usa il colore di testo del tema
+                    .foregroundColor(theme.textColor)
                     .lineLimit(1)
             }
             Text(title)
                 .font(.system(.caption2, design: .rounded, weight: .medium))
-                .foregroundColor(theme.secondaryTextColor) // Usa il colore di testo secondario del tema
+                .foregroundColor(theme.secondaryTextColor)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -1940,17 +1989,17 @@ private struct TimeRangeButton: View {
         Button(action: action) {
             Text(range.localizedName)
                 .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
-                .foregroundColor(isSelected ? theme.accentColor : theme.textColor) // Usa i colori del tema
+                .foregroundColor(isSelected ? theme.accentColor : theme.textColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? theme.accentColor.opacity(0.15) : theme.surfaceColor.opacity(0.7)) // Usa i colori del tema
+                        .fill(isSelected ? theme.accentColor.opacity(0.15) : theme.surfaceColor.opacity(0.7))
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(isSelected ? theme.accentColor : Color.clear, lineWidth: 1) // Usa il colore di accento del tema
+                                .strokeBorder(isSelected ? theme.accentColor : Color.clear, lineWidth: 1)
                         )
                 )
         }
@@ -1966,11 +2015,7 @@ private struct EmptyTaskCompletionView: View {
         VStack(spacing: 16) {
             Image(systemName: "chart.bar")
                 .font(.system(size: 48))
-                .foregroundStyle(LinearGradient(
-                    colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], 
-                    startPoint: .topLeading, 
-                    endPoint: .bottomTrailing
-                ))
+                .foregroundColor(theme.secondaryTextColor)
             
             VStack(spacing: 8) {
                 Text("no_completion_data".localized)
@@ -2061,16 +2106,10 @@ private struct PremiumRequiredTab: View {
 
 @MainActor
 private var cardBackground: some View {
-    RoundedRectangle(cornerRadius: 12)  // Usa lo stesso raggio della schermata Premi
+    RoundedRectangle(cornerRadius: 12)
         .fill(ThemeManager.shared.currentTheme.surfaceColor)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(ThemeManager.shared.currentTheme.borderColor, lineWidth: 1)
-        )
-        .shadow(
-            color: ThemeManager.shared.currentTheme.shadowColor,
-            radius: 4,
-            x: 0,
-            y: 2
         )
 }

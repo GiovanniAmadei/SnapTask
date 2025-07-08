@@ -48,7 +48,7 @@ struct SettingsView: View {
                 .listRowSeparator(.hidden)
 
                 // Premium Section
-                Section("premium_plan".localized) {
+                Section {
                     Button {
                         showingPremiumPaywall = true
                     } label: {
@@ -87,6 +87,7 @@ struct SettingsView: View {
                                 .frame(width: 12, height: 12)
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     #if DEBUG
                     // Testing mode toggle for development
@@ -96,22 +97,31 @@ struct SettingsView: View {
                             .frame(width: 24)
                         
                         Text("Test Premium Restrictions")
+                            .themedPrimaryText()
                         
                         Spacer()
                         
                         Toggle("", isOn: $subscriptionManager.testingMode)
-                            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                            .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
                     }
+                    .listRowBackground(theme.surfaceColor)
                     #endif
+                } header: {
+                    Text("premium_plan".localized)
+                        .themedSecondaryText()
                 }
                 
                 // Quote Section - iOS style
-                Section("quote_of_the_day".localized) {
+                Section {
                     IOSQuoteCard()
+                        .listRowBackground(theme.surfaceColor)
+                } header: {
+                    Text("quote_of_the_day".localized)
+                        .themedSecondaryText()
                 }
                 
                 // Daily Quote Notifications Section
-                Section("daily_notifications".localized) {
+                Section {
                     HStack {
                         Image(systemName: "bell.fill")
                             .foregroundColor(.orange)
@@ -123,11 +133,12 @@ struct SettingsView: View {
                         Spacer()
                         
                         Toggle("", isOn: $dailyQuoteNotificationsEnabled)
-                            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                            .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
                             .onChange(of: dailyQuoteNotificationsEnabled) { _, newValue in
                                 handleNotificationToggle(newValue)
                             }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     if dailyQuoteNotificationsEnabled {
                         Button {
@@ -152,7 +163,7 @@ struct SettingsView: View {
                                     .frame(width: 12, height: 12)
                             }
                         }
-                        .themedPrimaryText()
+                        .listRowBackground(theme.surfaceColor)
                         
                         // Show notification permission status
                         if notificationPermissionStatus == .denied {
@@ -175,12 +186,16 @@ struct SettingsView: View {
                                         .foregroundColor(.orange)
                                 }
                             }
+                            .listRowBackground(theme.surfaceColor)
                         }
                     }
+                } header: {
+                    Text("daily_notifications".localized)
+                        .themedSecondaryText()
                 }
                 
                 // Appearance Section
-                Section("appearance".localized) {
+                Section {
                     HStack {
                         Image(systemName: "moon.fill")
                             .foregroundColor(.indigo)
@@ -192,8 +207,9 @@ struct SettingsView: View {
                         Spacer()
                         
                         Toggle("", isOn: $isDarkMode)
-                            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                            .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     NavigationLink {
                         ThemeSelectionView()
@@ -211,14 +227,9 @@ struct SettingsView: View {
                             if !subscriptionManager.hasAccess(to: .customThemes) {
                                 PremiumBadge(size: .small)
                             }
-                            
-                            Image(systemName: "chevron.right")
-                                .themedSecondaryText()
-                                .font(.caption)
-                                .frame(width: 12, height: 12)
                         }
                     }
-                    .themedPrimaryText()
+                    .listRowBackground(theme.surfaceColor)
                     
                     Button {
                         showingLanguagePicker = true
@@ -242,25 +253,27 @@ struct SettingsView: View {
                                 .frame(width: 12, height: 12)
                         }
                     }
-                    .themedPrimaryText()
-                }
-                
-                // Customization Section
-                Section("customization".localized) {
-                    NavigationLink {
-                        CustomizationView(viewModel: viewModel)
-                    } label: {
-                        Label("customization".localized, systemImage: "paintbrush")
-                            .themedPrimaryText()
-                    }
+                    .listRowBackground(theme.surfaceColor)
+                } header: {
+                    Text("appearance".localized)
+                        .themedSecondaryText()
                 }
                 
                 // Synchronization Section
                 Section {
                     NavigationLink(destination: CloudKitSyncSettingsView()) {
-                        Label("icloud_sync".localized, systemImage: "icloud")
-                            .themedPrimaryText()
+                        HStack {
+                            Image(systemName: "icloud")
+                                .foregroundColor(.blue)
+                                .frame(width: 24)
+                            
+                            Text("icloud_sync".localized)
+                                .themedPrimaryText()
+                            
+                            Spacer()
+                        }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     Button {
                         showingCalendarIntegrationView = true
@@ -281,16 +294,18 @@ struct SettingsView: View {
                                 .frame(width: 12, height: 12)
                         }
                     }
-                    .themedPrimaryText()
+                    .listRowBackground(theme.surfaceColor)
                     
                 } header: {
                     Text("synchronization".localized)
+                        .themedSecondaryText()
                 } footer: {
                     Text("manage_data_sync".localized)
+                        .themedSecondaryText()
                 }
                 
                 // Community Section
-                Section("community".localized) {
+                Section {
                     NavigationLink(destination: FeedbackView()) {
                         HStack {
                             Image(systemName: "bubble.left.and.bubble.right.fill")
@@ -299,8 +314,11 @@ struct SettingsView: View {
                             
                             Text("feedback_suggestions".localized)
                                 .themedPrimaryText()
+                            
+                            Spacer()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     NavigationLink(destination: WhatsNewView()) {
                         HStack {
@@ -321,10 +339,36 @@ struct SettingsView: View {
                             }
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
+                } header: {
+                    Text("community".localized)
+                        .themedSecondaryText()
+                }
+
+                // Customization Section
+                Section {
+                    NavigationLink {
+                        CustomizationView(viewModel: viewModel)
+                    } label: {
+                        HStack {
+                            Image(systemName: "paintbrush")
+                                .foregroundColor(.purple)
+                                .frame(width: 24)
+                            
+                            Text("customization".localized)
+                                .themedPrimaryText()
+                            
+                            Spacer()
+                        }
+                    }
+                    .listRowBackground(theme.surfaceColor)
+                } header: {
+                    Text("customization".localized)
+                        .themedSecondaryText()
                 }
                 
                 // Support Section
-                Section("support".localized) {
+                Section {
                     Button {
                         showingDonationSheet = true
                     } label: {
@@ -349,14 +393,31 @@ struct SettingsView: View {
                                 .frame(width: 12, height: 12)
                         }
                     }
-                    .themedPrimaryText()
+                    .listRowBackground(theme.surfaceColor)
                     
                     Button {
                         showingWelcome = true
                     } label: {
-                        Label("review_welcome_message".localized, systemImage: "heart")
-                            .themedPrimaryText()
+                        HStack {
+                            Image(systemName: "heart")
+                                .foregroundColor(.pink)
+                                .frame(width: 24)
+                            
+                            Text("review_welcome_message".localized)
+                                .themedPrimaryText()
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .themedSecondaryText()
+                                .font(.caption)
+                                .frame(width: 12, height: 12)
+                        }
                     }
+                    .listRowBackground(theme.surfaceColor)
+                } header: {
+                    Text("support".localized)
+                        .themedSecondaryText()
                 }
                 
                 // Data Management Section
@@ -389,8 +450,10 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(isDeleting)
+                    .listRowBackground(theme.surfaceColor)
                 } header: {
                     Text("data_management".localized)
+                        .themedSecondaryText()
                 } footer: {
                     Text("delete_all_data_footer".localized)
                         .font(.caption)
@@ -398,6 +461,7 @@ struct SettingsView: View {
                 }
             }
             .themedBackground()
+            .scrollContentBackground(.hidden)
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
@@ -461,8 +525,17 @@ struct SettingsView: View {
         }
     }
     
+    private var settingsRowBackground: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(theme.surfaceColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(theme.borderColor.opacity(0.3), lineWidth: 0.5)
+            )
+    }
+    
     private func handleNotificationToggle(_ newValue: Bool) {
-        print("🔔 Toggle notification: \(newValue)")
+        print(" Toggle notification: \(newValue)")
         if newValue {
             Task {
                 await requestNotificationPermission()
@@ -474,11 +547,11 @@ struct SettingsView: View {
     
     @MainActor
     private func requestNotificationPermission() async {
-        print("🔔 Requesting notification permission...")
+        print(" Requesting notification permission...")
         
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
-            print("🔔 Notification permission result: \(granted)")
+            print(" Notification permission result: \(granted)")
             
             if granted {
                 scheduleDailyQuoteNotification()
@@ -489,7 +562,7 @@ struct SettingsView: View {
             
             checkNotificationPermissionStatus()
         } catch {
-            print("🔔 Notification permission error: \(error)")
+            print(" Notification permission error: \(error)")
             dailyQuoteNotificationsEnabled = false
         }
     }
@@ -498,7 +571,7 @@ struct SettingsView: View {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
                 self.notificationPermissionStatus = settings.authorizationStatus
-                print("🔔 Current notification status: \(settings.authorizationStatus.rawValue)")
+                print(" Current notification status: \(settings.authorizationStatus.rawValue)")
                 
                 // If permissions were denied, disable the toggle
                 if settings.authorizationStatus == .denied && self.dailyQuoteNotificationsEnabled {
@@ -541,16 +614,16 @@ struct SettingsView: View {
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("🔔 Error scheduling notification: \(error)")
+                print(" Error scheduling notification: \(error)")
             } else {
-                print("🔔 Daily quote notification scheduled for \(self.dailyQuoteNotificationTime)")
+                print(" Daily quote notification scheduled for \(self.dailyQuoteNotificationTime)")
             }
         }
     }
     
     private func cancelDailyQuoteNotification() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyQuote"])
-        print("🔔 Daily quote notification cancelled")
+        print(" Daily quote notification cancelled")
     }
     
     private func loadNotificationTime() {
@@ -602,7 +675,7 @@ struct SettingsView: View {
             let timerSessionKeys = allKeys.filter { $0.hasPrefix("timer_session_") }
             for key in timerSessionKeys {
                 userDefaults.removeObject(forKey: key)
-                print("🗑️ Removed timer session: \(key)")
+                print(" Removed timer session: \(key)")
             }
             
             // Clear Pomodoro background state
@@ -630,11 +703,11 @@ struct SettingsView: View {
             // Notify statistics to refresh
             NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
             
-            print("🗑️ All data successfully deleted and reset to defaults")
-            print("🗑️ Cleared timer sessions, Pomodoro state, and focus tracking data")
+            print(" All data successfully deleted and reset to defaults")
+            print(" Cleared timer sessions, Pomodoro state, and focus tracking data")
             
         } catch {
-            print("🗑️ Error during data deletion: \(error)")
+            print(" Error during data deletion: \(error)")
         }
         
         isDeleting = false
