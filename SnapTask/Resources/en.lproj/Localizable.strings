@@ -657,23 +657,24 @@
 "logout_confirmation" = "Are you sure you want to logout?";
 "logout_success" = "Logged out successfully";
 "logout_failed" = "Logout failed";
+// Themes
 "themes" = "Themes";
-"theme_selection" = "Theme Selection";
-"default_theme" = "Default";
-"blue_theme" = "Blue";
-"green_theme" = "Green";
-"purple_theme" = "Purple";
-"orange_theme" = "Orange";
-"red_theme" = "Red";
-"pink_theme" = "Pink";
-"indigo_theme" = "Indigo";
-"teal_theme" = "Teal";
-"yellow_theme" = "Yellow";
-"brown_theme" = "Brown";
-"gray_theme" = "Gray";
-"theme_preview" = "Theme Preview";
-"apply_theme" = "Apply Theme";
 "current_theme" = "Current Theme";
+"free_themes" = "Free Themes";
+"premium_themes" = "Premium Themes";
+"unlock_premium_themes" = "Unlock premium themes by upgrading to Pro";
+"premium" = "Premium";
+
+// Theme Names (localized versions)
+"default_theme" = "Default";
+"forest_theme" = "Forest";
+"sunset_theme" = "Sunset";
+"midnight_theme" = "Midnight";
+"rose_gold_theme" = "Rose Gold";
+"ocean_theme" = "Ocean";
+"emerald_theme" = "Emerald";
+"volcanic_theme" = "Volcanic";
+"lavender_theme" = "Lavender";
 
 // Premium Features
 "unlimited_categories" = "Unlimited Categories";

@@ -4,6 +4,7 @@ struct StatView: View {
     let icon: String
     let value: String
     let label: String
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 4) {
@@ -12,12 +13,13 @@ struct StatView: View {
                 Text(value)
                     .font(.headline)
             }
+            .themedPrimaryText()
             Text(label)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
         .padding(8)
-        .background(Color(.secondarySystemBackground))
+        .background(theme.surfaceColor)
         .cornerRadius(8)
     }
-} 
+}

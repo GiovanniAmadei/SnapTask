@@ -7,6 +7,7 @@ struct StatisticsView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: StatisticsTab = .overview
     @State private var showingPremiumPaywall = false
+    @Environment(\.theme) private var theme
     
     enum StatisticsTab: String, CaseIterable {
         case overview = "overview"
@@ -59,7 +60,7 @@ struct StatisticsView: View {
                     HStack {
                         Text("statistics".localized)
                             .font(.largeTitle.bold())
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                         Spacer()
                     }
                     .padding(.horizontal, 16)
@@ -86,15 +87,15 @@ struct StatisticsView: View {
                                         .minimumScaleFactor(0.8)
                                 }
                                 .foregroundColor(
-                                    selectedTab == tab ? .accentColor :
-                                    (tab.isPremium && !subscriptionManager.hasAccess(to: .advancedStatistics)) ? .gray :
-                                    .secondary
+                                    selectedTab == tab ? theme.accentColor :
+                                    (tab.isPremium && !subscriptionManager.hasAccess(to: .advancedStatistics)) ? theme.secondaryTextColor.opacity(0.5) :
+                                    theme.secondaryTextColor
                                 )
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 60)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(selectedTab == tab ? Color.accentColor.opacity(0.1) : Color.clear)
+                                        .fill(selectedTab == tab ? theme.accentColor.opacity(0.1) : Color.clear)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -129,6 +130,7 @@ struct StatisticsView: View {
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             }
+            .themedBackground()
             .navigationBarHidden(true)
         }
         .sheet(isPresented: $showingPremiumPaywall) {
@@ -501,6 +503,7 @@ private struct PerformanceTab: View {
             HStack {
                 Text("performance_analytics".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -532,6 +535,7 @@ private struct PerformanceTab: View {
             HStack {
                 Text("overview".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -576,6 +580,7 @@ private struct PerformanceTab: View {
                     .foregroundColor(.yellow)
                 Text("quality_progression".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -606,6 +611,7 @@ private struct PerformanceTab: View {
                     .foregroundColor(.orange)
                 Text("difficulty_assessment".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -660,6 +666,7 @@ private struct PerformanceTab: View {
                     .foregroundColor(.blue)
                 Text("tasks_with_performance_data".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -683,10 +690,11 @@ private struct PerformanceTab: View {
             
             Text("no_performance_data".localized)
                 .font(.system(.title2, design: .rounded, weight: .semibold))
+                .themedPrimaryText()
             
             Text("complete_recurring_tasks_performance".localized)
                 .font(.system(.subheadline, design: .rounded))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .multilineTextAlignment(.center)
         }
         .padding(40)
@@ -699,6 +707,7 @@ private struct PerformanceTab: View {
 private struct TaskPerformanceRowCard: View {
     let task: StatisticsViewModel.TaskPerformanceAnalytics
     let onTap: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: onTap) {
@@ -712,13 +721,13 @@ private struct TaskPerformanceRowCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(task.taskName)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                         .lineLimit(1)
                     
                     if let categoryName = task.categoryName {
                         Text(categoryName)
                             .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                             .lineLimit(1)
                     }
                 }
@@ -749,13 +758,13 @@ private struct TaskPerformanceRowCard: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                    .fill(theme.surfaceColor.opacity(0.5))
             )
         }
         .buttonStyle(.plain)
@@ -821,6 +830,7 @@ private struct PerformanceStatCard: View {
 private struct TimeDistributionCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var hasAnimated = false
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 20) {
@@ -828,8 +838,10 @@ private struct TimeDistributionCard: View {
                 HStack {
                     Text("time_distribution".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .themedPrimaryText()
                     Spacer()
                 }
+
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible()),
@@ -845,6 +857,7 @@ private struct TimeDistributionCard: View {
                         }
                     }
                 }
+                .themedPrimaryText() // Assicura che il testo nei pulsanti usi il colore corretto
             }
             
             if viewModel.categoryStats.isEmpty {
@@ -871,7 +884,10 @@ private struct TimeDistributionCard: View {
                     }
                     
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                        ForEach(viewModel.categoryStats) { stat in CategoryLegendItem(stat: stat) }
+                        ForEach(viewModel.categoryStats) { stat in 
+                            CategoryLegendItem(stat: stat)
+                                .themedPrimaryText() // Assicura che il testo nella legenda usi il colore corretto
+                        }
                     }
                 }
             }
@@ -884,6 +900,7 @@ private struct TimeDistributionCard: View {
 private struct TaskCompletionCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @State private var selectedPeriod: CompletionPeriod = .week
+    @Environment(\.theme) private var theme
     
     enum CompletionPeriod: String, CaseIterable {
         case week = "7d"
@@ -920,6 +937,7 @@ private struct TaskCompletionCard: View {
                 HStack {
                     Text("task_completion_rate".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .themedPrimaryText()
                     Spacer()
                 }
                 LazyVGrid(columns: [
@@ -933,6 +951,7 @@ private struct TaskCompletionCard: View {
                         }
                     }
                 }
+                .themedPrimaryText() // Assicura che il testo nei pulsanti usi il colore corretto
             }
             VStack(spacing: 12) {
                 VStack(spacing: 12) {
@@ -942,7 +961,7 @@ private struct TaskCompletionCard: View {
                                 x: .value("day".localized, stat.day),
                                 y: .value("completed".localized, Double(stat.completedTasks))
                             )
-                            .foregroundStyle(Color.green)
+                            .foregroundStyle(theme.accentColor) // Usa il colore di accento del tema
                             .cornerRadius(4)
                             
                             BarMark(
@@ -1126,12 +1145,14 @@ private struct CompactCategoryItem: View {
 
 private struct OverallStreakCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 20) {
             HStack {
                 Text("overall_streak".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             HStack(spacing: 30) {
@@ -1161,16 +1182,75 @@ private struct OverallStreakCard: View {
 }
 
 private struct EmptyStreaksView: View {
-    var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("no_streaks_yet".localized).font(.system(.title2, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
+    @Environment(\.theme) private var theme
+    
+    var body: some View { VStack(spacing: 20) { Image(systemName: "flame").font(.system(size: 56)).foregroundStyle(LinearGradient(colors: [.orange.opacity(0.6), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 10) { Text("no_streaks_yet".localized).font(.system(.title2, design: .rounded, weight: .semibold)).themedPrimaryText(); Text("complete_recurring_tasks_streaks".localized).font(.system(.subheadline, design: .rounded)).themedSecondaryText().multilineTextAlignment(.center).lineLimit(nil) } }.frame(maxWidth: .infinity).padding(.horizontal, 24).padding(.vertical, 40).background(cardBackground) }
 }
 
 private struct EmptyTimeDistributionView: View {
-    var body: some View { VStack(spacing: 16) { Image(systemName: "chart.pie").font(.system(size: 48)).foregroundStyle(LinearGradient(colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)); VStack(spacing: 8) { Text("no_time_data".localized).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary); Text("complete_tasks_time_distribution".localized).font(.system(.caption, design: .rounded)).foregroundColor(.secondary).multilineTextAlignment(.center).lineLimit(nil) } }.frame(height: 180, alignment: .center) }
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "chart.pie")
+                .font(.system(size: 48))
+                .foregroundStyle(LinearGradient(
+                    colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)], 
+                    startPoint: .topLeading, 
+                    endPoint: .bottomTrailing
+                ))
+            
+            VStack(spacing: 8) {
+                Text("no_time_data".localized)
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
+                
+                Text("complete_tasks_time_distribution".localized)
+                    .font(.system(.caption, design: .rounded))
+                    .themedSecondaryText()
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+            }
+        }
+        .frame(height: 180, alignment: .center)
+    }
 }
 
 private struct CategoryLegendItem: View {
     let stat: StatisticsViewModel.CategoryStat
-    var body: some View { HStack(spacing: 10) { Circle().fill(Color(hex: stat.color)).frame(width: 12, height: 12); VStack(alignment: .leading, spacing: 1) { Text(stat.name).font(.system(.caption, design: .rounded, weight: .semibold)).lineLimit(1).foregroundColor(.primary); Text(formatTimeValue(stat.hours)).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(.secondary).animation(.smooth(duration: 0.8), value: stat.hours) }; Spacer(minLength: 0) }.padding(.horizontal, 12).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: stat.color).opacity(0.03))) }
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Color(hex: stat.color))
+                .frame(width: 12, height: 12)
+            
+            VStack(alignment: .leading, spacing: 1) {
+                Text(stat.name)
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .lineLimit(1)
+                    .themedPrimaryText()
+                
+                Text(formatTimeValue(stat.hours))
+                    .font(.system(.caption2, design: .rounded, weight: .medium))
+                    .themedSecondaryText()
+                    .animation(.smooth(duration: 0.8), value: stat.hours)
+            }
+            
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(theme.surfaceColor.opacity(0.7)) // Usa il colore di sfondo del tema
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(theme.borderColor, lineWidth: 0.5) // Aggiungi un bordo sottile
+        )
+    }
 
     private func formatTimeValue(_ hours: Double) -> String {
         let totalMinutes = Int(hours * 60)
@@ -1185,7 +1265,96 @@ private struct CategoryLegendItem: View {
     }}
 private struct TaskStreakCard: View { 
     let taskStreak: StatisticsViewModel.TaskStreak
-    var body: some View { VStack(spacing: 16) { HStack(spacing: 12) { if let categoryColor = taskStreak.categoryColor { Circle().fill(Color(hex: categoryColor)).frame(width: 12, height: 12) }; VStack(alignment: .leading, spacing: 2) { Text(taskStreak.taskName).font(.system(.headline, design: .rounded, weight: .semibold)).foregroundColor(.primary).lineLimit(1); if let categoryName = taskStreak.categoryName { Text(categoryName).font(.system(.caption, design: .rounded, weight: .medium)).foregroundColor(.secondary) } }; Spacer(); VStack(alignment: .trailing, spacing: 2) { Text("\(Int(taskStreak.completionRate * 100))%").font(.system(.title3, design: .rounded, weight: .bold)).foregroundColor(.primary); Text("complete".localized).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }; HStack(spacing: 24) { StatisticsStatItem(title: "current".localized, value: "\(taskStreak.currentStreak)", color: .orange, icon: "flame.fill"); StatisticsStatItem(title: "best".localized, value: "\(taskStreak.bestStreak)", color: .red, icon: "trophy.fill"); StatisticsStatItem(title: "completed".localized, value: "\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)", color: .green, icon: "checkmark.circle.fill"); Spacer() }; if !taskStreak.streakHistory.isEmpty { Chart(taskStreak.streakHistory) { point in LineMark(x: .value("date".localized, point.date), y: .value("streak".localized, point.streakValue)).foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1")).lineStyle(.init(lineWidth: 2, lineCap: .round)).symbol(.circle).symbolSize(40) }.frame(height: 80).chartXAxis(.hidden).chartYAxis(.hidden) } }.padding(20).background(cardBackground) }
+    @Environment(\.theme) private var theme
+    
+    var body: some View { 
+        VStack(spacing: 16) { 
+            HStack(spacing: 12) { 
+                if let categoryColor = taskStreak.categoryColor { 
+                    Circle()
+                        .fill(Color(hex: categoryColor))
+                        .frame(width: 12, height: 12) 
+                }
+                
+                VStack(alignment: .leading, spacing: 2) { 
+                    Text(taskStreak.taskName)
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .themedPrimaryText()
+                        .lineLimit(1)
+                    
+                    if let categoryName = taskStreak.categoryName { 
+                        Text(categoryName)
+                            .font(.system(.caption, design: .rounded, weight: .medium))
+                            .themedSecondaryText() 
+                    } 
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) { 
+                    Text("\(Int(taskStreak.completionRate * 100))%")
+                        .font(.title3.bold())
+                        .themedPrimaryText()
+                    
+                    Text("complete".localized)
+                        .font(.caption2)
+                        .themedSecondaryText() 
+                } 
+            }
+            
+            HStack(spacing: 24) { 
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("current".localized)
+                        .font(.caption)
+                        .themedSecondaryText()
+                    
+                    Text("\(taskStreak.currentStreak)")
+                        .font(.title2.bold())
+                        .foregroundColor(Color.orange)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("best".localized)
+                        .font(.caption)
+                        .themedSecondaryText()
+                    
+                    Text("\(taskStreak.bestStreak)")
+                        .font(.title2.bold())
+                        .foregroundColor(Color.red)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("completed".localized)
+                        .font(.caption)
+                        .themedSecondaryText()
+                    
+                    Text("\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)")
+                        .font(.title2.bold())
+                        .foregroundColor(Color.green)
+                }
+                
+                Spacer() 
+            }
+            
+            if !taskStreak.streakHistory.isEmpty { 
+                Chart(taskStreak.streakHistory) { point in 
+                    LineMark(
+                        x: .value("date".localized, point.date), 
+                        y: .value("streak".localized, point.streakValue)
+                    )
+                    .foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1"))
+                    .lineStyle(.init(lineWidth: 2, lineCap: .round))
+                    .symbol(.circle)
+                    .symbolSize(40) 
+                }
+                .frame(height: 80)
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden) 
+            } 
+        }
+        .padding(20)
+        .themedCard()
+    }
 }
 
 private struct TaskPerformanceDetailView: View {
@@ -1277,6 +1446,7 @@ private struct TaskPerformanceDetailView: View {
             HStack {
                 Text("time_range".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1328,12 +1498,12 @@ private struct TaskPerformanceDetailView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.taskName)
                         .font(.title2.bold())
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     
                     if let categoryName = task.categoryName {
                         Text(categoryName)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
                 Spacer()
@@ -1393,6 +1563,7 @@ private struct TaskPerformanceDetailView: View {
                     .foregroundColor(.yellow)
                 Text("quality_over_time".localized + " (\(selectedTimeRange.displayName))")
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1473,6 +1644,7 @@ private struct TaskPerformanceDetailView: View {
                     .foregroundColor(.orange)
                 Text("difficulty_over_time".localized + " (\(selectedTimeRange.displayName))")
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1553,6 +1725,7 @@ private struct TaskPerformanceDetailView: View {
                     .foregroundColor(.blue)
                 Text("completions_period".localized.replacingOccurrences(of: "{period}", with: selectedTimeRange.displayName))
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1617,15 +1790,17 @@ private struct TaskPerformanceDetailView: View {
 
 private struct CompletionRowView: View {
     let completion: StatisticsViewModel.TaskCompletionAnalytics
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(completion.date.formatted(.dateTime.month().day().year()))
                     .font(.subheadline.bold())
+                    .themedPrimaryText()
                 Text(completion.date.formatted(.dateTime.hour().minute()))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
             
             Spacer()
@@ -1685,7 +1860,7 @@ private struct CompletionRowView: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.tertiarySystemGroupedBackground))
+                .fill(theme.surfaceColor.opacity(0.5))
         )
     }
 }
@@ -1695,6 +1870,7 @@ private struct TaskDetailMetricCard: View {
     let value: String
     let color: Color
     let icon: String
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 4) {
@@ -1704,12 +1880,12 @@ private struct TaskDetailMetricCard: View {
                     .foregroundColor(color)
                 Text(value)
                     .font(.system(.caption, design: .rounded, weight: .bold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.textColor) // Usa il colore di testo del tema
                     .lineLimit(1)
             }
             Text(title)
                 .font(.system(.caption2, design: .rounded, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundColor(theme.secondaryTextColor) // Usa il colore di testo secondario del tema
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -1729,22 +1905,23 @@ private struct PeriodButton: View {
     let period: TaskCompletionCard.CompletionPeriod
     let isSelected: Bool
     let action: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: action) {
             Text(period.displayName)
                 .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
-                .foregroundColor(isSelected ? .accentColor : .primary)
-                .padding(.horizontal, 8)
+                .foregroundColor(isSelected ? theme.accentColor : theme.textColor)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
+                        .fill(isSelected ? theme.accentColor.opacity(0.15) : theme.surfaceColor.opacity(0.7))
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
+                                .strokeBorder(isSelected ? theme.accentColor : Color.clear, lineWidth: 1)
                         )
                 )
         }
@@ -1757,22 +1934,23 @@ private struct TimeRangeButton: View {
     let range: StatisticsViewModel.TimeRange
     let isSelected: Bool
     let action: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: action) {
             Text(range.localizedName)
                 .font(.system(.caption, design: .rounded, weight: isSelected ? .semibold : .medium))
-                .foregroundColor(isSelected ? .accentColor : .primary)
+                .foregroundColor(isSelected ? theme.accentColor : theme.textColor) // Usa i colori del tema
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
+                        .fill(isSelected ? theme.accentColor.opacity(0.15) : theme.surfaceColor.opacity(0.7)) // Usa i colori del tema
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
+                                .strokeBorder(isSelected ? theme.accentColor : Color.clear, lineWidth: 1) // Usa il colore di accento del tema
                         )
                 )
         }
@@ -1782,6 +1960,8 @@ private struct TimeRangeButton: View {
 }
 
 private struct EmptyTaskCompletionView: View {
+    @Environment(\.theme) private var theme
+    
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "chart.bar")
@@ -1795,11 +1975,11 @@ private struct EmptyTaskCompletionView: View {
             VStack(spacing: 8) {
                 Text("no_completion_data".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Text("complete_tasks_completion_rate_trends".localized)
                     .font(.system(.caption, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
             }
@@ -1810,6 +1990,7 @@ private struct EmptyTaskCompletionView: View {
 
 private struct PremiumRequiredTab: View {
     @State private var showingPremiumPaywall = false
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 24) {
@@ -1827,11 +2008,11 @@ private struct PremiumRequiredTab: View {
                 VStack(spacing: 8) {
                     Text("premium_required".localized)
                         .font(.title2.bold())
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     
                     Text("premium_feature_locked".localized)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                         .multilineTextAlignment(.center)
                 }
             }
@@ -1839,7 +2020,7 @@ private struct PremiumRequiredTab: View {
             VStack(spacing: 12) {
                 Text("advanced_statistics_desc".localized)
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                 
@@ -1878,13 +2059,18 @@ private struct PremiumRequiredTab: View {
     }
 }
 
-private struct StatisticsStatItem: View {
-    let title: String; let value: String; let color: Color; let icon: String
-    var body: some View { VStack(spacing: 6) { HStack(spacing: 4) { Image(systemName: icon).font(.system(.caption2, weight: .medium)).foregroundColor(color); Text(value).font(.system(.callout, design: .rounded, weight: .bold)).foregroundColor(.primary) }; Text(title).font(.system(.caption2, design: .rounded)).foregroundColor(.secondary) } }
-}
-
+@MainActor
 private var cardBackground: some View {
-    RoundedRectangle(cornerRadius: 16)
-        .fill(Color(.systemBackground))
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+    RoundedRectangle(cornerRadius: 12)  // Usa lo stesso raggio della schermata Premi
+        .fill(ThemeManager.shared.currentTheme.surfaceColor)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ThemeManager.shared.currentTheme.borderColor, lineWidth: 1)
+        )
+        .shadow(
+            color: ThemeManager.shared.currentTheme.shadowColor,
+            radius: 4,
+            x: 0,
+            y: 2
+        )
 }

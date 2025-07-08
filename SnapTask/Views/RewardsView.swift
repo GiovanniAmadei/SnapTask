@@ -13,6 +13,7 @@ struct RewardsView: View {
     @State private var selectedFilter: RewardFrequency = .daily
     @State private var showingPremiumPaywall = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     private var filteredRewards: [Reward] {
         let allRewards = (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards)
@@ -31,7 +32,7 @@ struct RewardsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground)
+                theme.backgroundColor
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
@@ -40,7 +41,7 @@ struct RewardsView: View {
                         HStack {
                             Text("rewards".localized)
                                 .font(.largeTitle.bold())
-                                .foregroundColor(.primary)
+                                .themedPrimaryText()
                             Spacer()
                         }
                         .padding(.horizontal, 16)
@@ -119,18 +120,18 @@ struct RewardsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("available_points".localized)
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         let totalPoints = viewModel.dailyPoints + viewModel.weeklyPoints + viewModel.monthlyPoints + RewardManager.shared.availablePoints(for: .yearly)
                         
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text("\(totalPoints)")
                                 .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(.primary)
+                                .themedPrimaryText()
                             
                             Text("pts")
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                     
@@ -139,17 +140,17 @@ struct RewardsView: View {
                     VStack(spacing: 4) {
                         ZStack {
                             Circle()
-                                .fill(Color(hex: "5E5CE6").opacity(0.1))
+                                .fill(theme.primaryColor.opacity(0.1))
                                 .frame(width: 32, height: 32)
                             
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(Color(hex: "5E5CE6"))
+                                .themedPrimary()
                         }
                         
                         Text("tap_for_details".localized)
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
                     }
@@ -157,30 +158,27 @@ struct RewardsView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Period breakdown chips
+            // Period breakdown chips - using theme colors
             HStack(spacing: 6) {
-                CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: Color(hex: "FF6B6B"))
-                CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: Color(hex: "4ECDC4"))
-                CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: Color(hex: "45B7D1"))
-                CompactPointsChip(title: "year_short".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: Color(hex: "FFD700"))
+                CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: theme.primaryColor)
+                CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: theme.secondaryColor)
+                CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: theme.accentColor)
+                CompactPointsChip(title: "year_short".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: theme.primaryColor.opacity(0.8))
             }
             
-            // Filter Section
+            // Filter Section - themed
             VStack(spacing: 10) {
                 HStack {
                     Text("filter_by_frequency".localized)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     
                     Spacer()
                     
                     let currentPoints = viewModel.currentPoints(for: selectedFilter)
                     Text("\(currentPoints) " + "pts_available".localized)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(selectedFilter == .daily ? Color(hex: "FF6B6B") : 
-                                       selectedFilter == .weekly ? Color(hex: "4ECDC4") :
-                                       selectedFilter == .monthly ? Color(hex: "45B7D1") : 
-                                       Color(hex: "FFD700"))
+                        .themedSecondaryText()
                 }
                 
                 HStack(spacing: 6) {
@@ -199,20 +197,15 @@ struct RewardsView: View {
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(selectedFilter == frequency ? 
-                                          (frequency == .daily ? Color(hex: "FF6B6B") :
-                                           frequency == .weekly ? Color(hex: "4ECDC4") :
-                                           frequency == .monthly ? Color(hex: "45B7D1") : 
-                                           Color(hex: "FFD700")) : 
-                                          Color(UIColor.secondarySystemGroupedBackground))
+                                    .fill(selectedFilter == frequency ? theme.primaryColor : theme.surfaceColor)
                             )
-                            .foregroundColor(selectedFilter == frequency ? .white : .primary)
+                            .foregroundColor(selectedFilter == frequency ? theme.backgroundColor : theme.textColor)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
                                     .strokeBorder(
                                         selectedFilter == frequency ? 
                                         Color.clear : 
-                                        Color.primary.opacity(0.2), 
+                                        theme.borderColor, 
                                         lineWidth: 1
                                     )
                             )
@@ -224,43 +217,7 @@ struct RewardsView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 18)
-        .background(
-            ZStack {
-                // Base background
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
-                
-                // Gradient overlay
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(hex: "5E5CE6").opacity(0.06),
-                                Color(hex: "9747FF").opacity(0.03),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                
-                // Border
-                RoundedRectangle(cornerRadius: 18)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color(hex: "5E5CE6").opacity(0.2),
-                                Color(hex: "9747FF").opacity(0.1),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-        )
-        .shadow(color: Color(hex: "5E5CE6").opacity(0.08), radius: 8, x: 0, y: 4)
+        .themedCard()
         .padding(.top, 4)
     }
     
@@ -269,7 +226,7 @@ struct RewardsView: View {
             CompactActionCard(
                 title: "points_history".localized,
                 icon: "chart.line.uptrend.xyaxis",
-                color: Color(hex: "00C853")
+                color: theme.primaryColor
             ) {
                 showingPointsHistory = true
             }
@@ -277,7 +234,7 @@ struct RewardsView: View {
             CompactActionCard(
                 title: "redeemed_rewards".localized,
                 icon: "gift.circle",
-                color: Color(hex: "FF6B6B")
+                color: theme.secondaryColor
             ) {
                 showingRedeemedRewards = true
             }
@@ -289,12 +246,13 @@ struct RewardsView: View {
             HStack {
                 Text("available_rewards".localized)
                     .font(.system(size: 20, weight: .semibold))
+                    .themedPrimaryText()
                 
                 Spacer()
                 
                 Text("\(filteredRewards.count) " + "rewards_count".localized)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
             
             if filteredRewards.isEmpty {
@@ -326,28 +284,28 @@ struct RewardsView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color(hex: "5E5CE6").opacity(0.1))
+                    .fill(theme.primaryColor.opacity(0.1))
                     .frame(width: 80, height: 80)
                 
                 Image(systemName: "gift")
                     .font(.system(size: 32))
-                    .foregroundColor(Color(hex: "5E5CE6"))
+                    .themedPrimary()
             }
             
             VStack(spacing: 8) {
                 Text("no_rewards_yet".localized)
                     .font(.system(size: 18, weight: .semibold))
+                    .themedPrimaryText()
                 
                 Text("create_first_reward_motivation".localized)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
             }
         }
         .padding(40)
         .frame(maxWidth: .infinity)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(16)
+        .themedCard()
     }
     
     private var premiumLimitInfo: some View {
@@ -362,13 +320,13 @@ struct RewardsView: View {
             
             Text("Il piano gratuito include fino a 3 premi personalizzati")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
             
             HStack {
                 let totalRewards = viewModel.dailyRewards.count + viewModel.weeklyRewards.count + viewModel.monthlyRewards.count
                 Text("\(totalRewards)/\(SubscriptionManager.maxRewardsForFree)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                 
                 Spacer()
                 
@@ -379,19 +337,12 @@ struct RewardsView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(
-                    LinearGradient(
-                        colors: [.purple, .pink],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .background(theme.gradient)
                 .cornerRadius(8)
             }
         }
         .padding(16)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(12)
+        .themedCard()
     }
 }
 
@@ -400,6 +351,7 @@ private struct AddRewardButton: View {
     let canAdd: Bool
     let onPremiumTapped: () -> Void
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     @State private var isPressed = false
     
     var body: some View {
@@ -422,44 +374,32 @@ private struct AddRewardButton: View {
         }) {
             ZStack {
                 if canAdd {
-                    // Design normale - viola invece di rosa
+                    // Design normale con colori del tema
                     Image(systemName: "plus")
                         .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(.white)
+                        .foregroundColor(theme.backgroundColor)
                         .frame(width: 56, height: 56)
                         .background(
                             ZStack {
                                 Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.purple, Color.purple.opacity(0.8)],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
+                                    .fill(theme.gradient)
                                 Circle()
-                                    .fill(Color.purple.opacity(0.3))
+                                    .fill(theme.primaryColor.opacity(0.3))
                                     .blur(radius: 8)
                                     .scaleEffect(1.2)
                                 
                                 Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.purple, Color.purple.opacity(0.8)],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
+                                    .fill(theme.gradient)
                             }
                             .shadow(
-                                color: Color.purple.opacity(0.3),
+                                color: theme.primaryColor.opacity(0.3),
                                 radius: 8,
                                 x: 0,
                                 y: 4
                             )
                         )
                 } else {
-                    // Design premium - gradient più accattivante
+                    // Design premium
                     VStack(spacing: 2) {
                         HStack(spacing: 2) {
                             Image(systemName: "lock.fill")
@@ -573,6 +513,7 @@ struct PointsMiniCard: View {
     let title: String
     let points: Int
     let color: Color
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 6) {
@@ -582,13 +523,11 @@ struct PointsMiniCard: View {
             
             Text(title)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(14)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .themedCard()
     }
 }
 
@@ -597,6 +536,7 @@ struct CompactActionCard: View {
     let icon: String
     let color: Color
     let action: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: action) {
@@ -607,20 +547,20 @@ struct CompactActionCard: View {
                 
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+                    .fill(theme.surfaceColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .strokeBorder(color.opacity(0.15), lineWidth: 0.5)
                     )
             )
-            .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 0.5)
+            .shadow(color: theme.shadowColor, radius: 1, x: 0, y: 0.5)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -635,6 +575,7 @@ struct RewardCard: View {
     let onDeleteTapped: () -> Void
     
     @StateObject private var categoryManager = CategoryManager.shared
+    @Environment(\.theme) private var theme
     
     private var progress: Double {
         let safeCurrentPoints = max(currentPoints, 0)
@@ -649,14 +590,14 @@ struct RewardCard: View {
            let category = categoryManager.categories.first(where: { $0.id == categoryId }) {
             return Color(hex: category.color)
         }
-        return Color(hex: "5E5CE6")
+        return theme.primaryColor
     }
     
     var body: some View {
         ZStack {
             // Background card
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
+                .fill(theme.surfaceColor)
             
             ZStack {
                 // Base progress layer
@@ -664,7 +605,7 @@ struct RewardCard: View {
                     .fill(
                         LinearGradient(
                             colors: reward.isGeneralReward ? 
-                            [Color(hex: "5E5CE6").opacity(0.15), Color(hex: "9747FF").opacity(0.20)] :
+                            [theme.primaryColor.opacity(0.15), theme.secondaryColor.opacity(0.20)] :
                             [categoryColor.opacity(0.15), categoryColor.opacity(0.20)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -691,7 +632,7 @@ struct RewardCard: View {
                             .fill(LinearGradient(
                                 colors: canRedeem ? 
                                 (reward.isGeneralReward ? 
-                                 [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
+                                 [theme.primaryColor, theme.secondaryColor] :
                                  [categoryColor, categoryColor.opacity(0.8)]) :
                                 [Color.gray.opacity(0.4), Color.gray.opacity(0.5)],
                                 startPoint: .topLeading,
@@ -709,6 +650,7 @@ struct RewardCard: View {
                         HStack {
                             Text(reward.name)
                                 .font(.system(size: 16, weight: .semibold))
+                                .themedPrimaryText()
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                             
@@ -720,13 +662,13 @@ struct RewardCard: View {
                         if let description = reward.description, !description.isEmpty {
                             Text(description)
                                 .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
-                
+
                 // Category tag (if category-specific)
                 if !reward.isGeneralReward, let categoryName = reward.categoryName {
                     HStack {
@@ -763,7 +705,7 @@ struct RewardCard: View {
                             let safePoints = max(actualPoints, 0)
                             Text("\(safePoints)/\(reward.pointsCost) points")
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(canRedeem ? Color(hex: "00C853") : Color(hex: "5E5CE6"))
+                                .foregroundColor(canRedeem ? Color(hex: "00C853") : theme.primaryColor)
                         } else if let categoryId = reward.categoryId {
                             let categoryPoints = RewardManager.shared.availablePointsForCategory(categoryId, frequency: reward.frequency)
                             let safeCategoryPoints = max(categoryPoints, 0)
@@ -779,7 +721,7 @@ struct RewardCard: View {
                             let missingPoints = reward.pointsCost - max(actualAvailablePoints, 0)
                             Text("Need \(missingPoints) more")
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                     
@@ -795,11 +737,7 @@ struct RewardCard: View {
                                     .fill(
                                         canRedeem ?
                                         (reward.isGeneralReward ?
-                                         LinearGradient(
-                                            colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                         ) :
+                                         theme.gradient :
                                          LinearGradient(
                                             colors: [categoryColor, categoryColor.opacity(0.8)],
                                             startPoint: .leading,
@@ -813,7 +751,7 @@ struct RewardCard: View {
                                     )
                             )
                             .foregroundColor(.white)
-                            .shadow(color: canRedeem ? (reward.isGeneralReward ? Color(hex: "5E5CE6").opacity(0.3) : categoryColor.opacity(0.3)) : Color.clear, radius: 2, x: 0, y: 1)
+                            .shadow(color: canRedeem ? (reward.isGeneralReward ? theme.primaryColor.opacity(0.3) : categoryColor.opacity(0.3)) : Color.clear, radius: 2, x: 0, y: 1)
                     }
                     .disabled(!canRedeem)
                 }
@@ -821,7 +759,9 @@ struct RewardCard: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
         }
-        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
+
+        // Context Menu
         .contextMenu {
             Button {
                 onEditTapped()
@@ -841,19 +781,19 @@ struct RewardCard: View {
         HStack(spacing: 3) {
             Image(systemName: reward.isGeneralReward ? "star.fill" : "folder.fill")
                 .font(.system(size: 8))
-                .foregroundColor(reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor)
+                .foregroundColor(reward.isGeneralReward ? theme.primaryColor : categoryColor)
             Text(reward.isGeneralReward ? "general".localized : reward.frequency.displayName)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor)
+                .foregroundColor(reward.isGeneralReward ? theme.primaryColor : categoryColor)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill((reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor).opacity(0.12))
+                .fill((reward.isGeneralReward ? theme.primaryColor : categoryColor).opacity(0.12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder((reward.isGeneralReward ? Color(hex: "5E5CE6") : categoryColor).opacity(0.2), lineWidth: 0.5)
+                        .strokeBorder((reward.isGeneralReward ? theme.primaryColor : categoryColor).opacity(0.2), lineWidth: 0.5)
                 )
         )
     }

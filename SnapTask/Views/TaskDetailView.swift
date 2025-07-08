@@ -8,6 +8,7 @@ struct TaskDetailView: View {
     let targetDate: Date?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     @ObservedObject private var taskManager = TaskManager.shared
     @State private var localTask: TodoTask?
     @State private var showingEditSheet = false
@@ -40,9 +41,10 @@ struct TaskDetailView: View {
                 taskContent(task)
             } else {
                 Text("Task not found")
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
         }
+        .themedBackground()
         .navigationTitle("Task Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -50,7 +52,7 @@ struct TaskDetailView: View {
                 Button("Close") {
                     dismiss()
                 }
-                .foregroundColor(.pink)
+                .themedPrimary()
             }
         }
         .onAppear {
@@ -216,7 +218,7 @@ struct TaskDetailView: View {
     
     private func taskContent(_ task: TodoTask) -> some View {
         ZStack {
-            Color(.systemGroupedBackground)
+            theme.backgroundColor
                 .ignoresSafeArea()
             
             ScrollView {
@@ -238,17 +240,17 @@ struct TaskDetailView: View {
             HStack(spacing: 16) {
                 Image(systemName: task.icon)
                     .font(.system(size: 32))
-                    .foregroundColor(.pink)
+                    .themedPrimary()
                     .frame(width: 60, height: 60)
                     .background(
                         Circle()
-                            .fill(Color.pink.opacity(0.1))
+                            .fill(theme.primaryColor.opacity(0.1))
                     )
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.name)
                         .font(.title2.bold())
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     
                     HStack(spacing: 12) {
                         if let category = task.category {
@@ -277,7 +279,7 @@ struct TaskDetailView: View {
                 .frame(width: 8, height: 8)
             Text(category.name)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
     }
     
@@ -288,21 +290,21 @@ struct TaskDetailView: View {
                 .foregroundColor(Color(hex: task.priority.color))
             Text(task.priority.displayName)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
     }
     
     private var completionStatus: some View {
         Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
             .font(.system(size: 24))
-            .foregroundColor(isCompleted ? .green : .gray)
+            .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
     }
     
     private var headerBackground: some View {
         RoundedRectangle(cornerRadius: 20)
-            .fill(Color(.systemBackground))
+            .fill(theme.surfaceColor)
             .shadow(
-                color: colorScheme == .dark ? .white.opacity(0.1) : .black.opacity(0.08),
+                color: theme.shadowColor,
                 radius: colorScheme == .dark ? 0.5 : 12,
                 x: 0,
                 y: colorScheme == .dark ? 1 : 4
@@ -310,7 +312,7 @@ struct TaskDetailView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
                     .stroke(
-                        colorScheme == .dark ? .white.opacity(0.15) : .clear,
+                        theme.borderColor,
                         lineWidth: colorScheme == .dark ? 1 : 0
                     )
             )
@@ -358,7 +360,7 @@ struct TaskDetailView: View {
         DetailCard(icon: "doc.text", title: "Description", color: .blue) {
             Text(description)
                 .font(.body)
-                .foregroundColor(.primary)
+                .themedPrimaryText()
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -397,11 +399,11 @@ struct TaskDetailView: View {
                 HStack {
                     Text("Start Time")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text(task.startTime.formatted(date: .abbreviated, time: .shortened))
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                 }
                 
                 durationSection(task)
@@ -422,7 +424,7 @@ struct TaskDetailView: View {
                     HStack {
                         Text("Actual Duration")
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         Spacer()
                         
@@ -453,7 +455,7 @@ struct TaskDetailView: View {
                         HStack {
                             Text("vs estimated")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                             Spacer()
                             
                             let difference = actualDuration! - estimatedDuration
@@ -463,7 +465,7 @@ struct TaskDetailView: View {
                             HStack(spacing: 4) {
                                 Text(formatDuration(estimatedDuration))
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                                     .strikethrough()
                                 
                                 Text(isUnder ? "(-\(Int(percentage))%)" : "(+\(Int(percentage))%)")
@@ -479,7 +481,7 @@ struct TaskDetailView: View {
                     HStack {
                         Text("Estimated Duration")
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         Spacer()
                         Text(formatDuration(estimatedDuration))
                             .font(.subheadline)
@@ -508,11 +510,11 @@ struct TaskDetailView: View {
                     HStack {
                         Text("Duration")
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         Spacer()
                         Text("Not set")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                     
                     Button(action: {
@@ -541,29 +543,29 @@ struct TaskDetailView: View {
                 HStack {
                     Text("Pattern")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text(recurrenceDescription(recurrence))
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                 }
                 
                 if let endDate = recurrence.endDate {
                     HStack {
                         Text("Ends")
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         Spacer()
                         Text(endDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                     }
                 }
                 
                 HStack {
                     Text("Current Streak")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill")
@@ -594,11 +596,11 @@ struct TaskDetailView: View {
             
             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 16))
-                .foregroundColor(isCompleted ? .green : .gray)
+                .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
             
             Text(subtask.name)
                 .font(.body)
-                .foregroundColor(.primary)
+                .themedPrimaryText()
                 .strikethrough(isCompleted)
             
             Spacer()
@@ -611,21 +613,21 @@ struct TaskDetailView: View {
                 HStack {
                     Text("Work Duration")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text("\(Int(pomodoroSettings.workDuration / 60)) min")
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                 }
                 
                 HStack {
                     Text("Break Duration")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text("\(Int(pomodoroSettings.breakDuration / 60)) min")
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                 }
                 
                 Button(action: {
@@ -637,7 +639,7 @@ struct TaskDetailView: View {
                         Text("Start Pomodoro")
                             .font(.subheadline.weight(.medium))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(theme.backgroundColor)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                     .background(
@@ -668,7 +670,7 @@ struct TaskDetailView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Points Available")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Text("\(task.rewardPoints) points")
                         .font(.title3.bold())
                         .foregroundColor(.yellow)
@@ -698,9 +700,9 @@ struct TaskDetailView: View {
         VStack(spacing: 0) {
             LinearGradient(
                 colors: [
-                    Color(.systemGroupedBackground).opacity(0),
-                    Color(.systemGroupedBackground).opacity(0.8),
-                    Color(.systemGroupedBackground)
+                    theme.backgroundColor.opacity(0),
+                    theme.backgroundColor.opacity(0.8),
+                    theme.backgroundColor
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -715,7 +717,7 @@ struct TaskDetailView: View {
             .padding(.horizontal)
             .padding(.bottom)
             .padding(.top, 8)
-            .background(Color(.systemGroupedBackground))
+            .background(theme.backgroundColor)
         }
     }
     
@@ -729,7 +731,7 @@ struct TaskDetailView: View {
                 Text("Track")
                     .font(.headline)
             }
-            .foregroundColor(.white)
+            .themedButtonText()
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
@@ -754,7 +756,7 @@ struct TaskDetailView: View {
                 Text(isCompleted ? "Undo" : "Done")
                     .font(.headline)
             }
-            .foregroundColor(.white)
+            .themedButtonText()
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
@@ -779,18 +781,12 @@ struct TaskDetailView: View {
                 Text("Edit")
                     .font(.headline)
             }
-            .foregroundColor(.white)
+            .themedButtonText()
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    colors: [.pink, .pink.opacity(0.8)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .background(theme.gradient)
             .cornerRadius(16)
-            .shadow(color: .pink.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: theme.primaryColor.opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
     
@@ -826,7 +822,7 @@ struct TaskDetailView: View {
                     HStack {
                         Text("Difficulty Rating")
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         Spacer()
                         
@@ -839,7 +835,7 @@ struct TaskDetailView: View {
                         } else if !isCompleted {
                             Text("Rate after completing")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .italic()
                         }
                     }
@@ -860,7 +856,7 @@ struct TaskDetailView: View {
                     HStack {
                         Text("Quality Rating")
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         Spacer()
 
@@ -874,7 +870,7 @@ struct TaskDetailView: View {
                         } else if !isCompleted {
                             Text("Rate after completing")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .italic()
                         }
                     }
@@ -954,6 +950,7 @@ struct DetailCard<Content: View>: View {
     let color: Color
     let content: Content
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     init(icon: String, title: String, color: Color, @ViewBuilder content: () -> Content) {
         self.icon = icon
@@ -970,38 +967,21 @@ struct DetailCard<Content: View>: View {
                     .foregroundColor(color)
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
             }
             
             content
         }
         .padding(20)
         .frame(maxWidth: .infinity)
-        .background(cardBackground)
-    }
-    
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 16)
-            .fill(Color(.systemBackground))
-            .shadow(
-                color: colorScheme == .dark ? .white.opacity(0.1) : .black.opacity(0.08),
-                radius: colorScheme == .dark ? 0.5 : 8,
-                x: 0,
-                y: colorScheme == .dark ? 1 : 2
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        colorScheme == .dark ? .white.opacity(0.15) : .clear,
-                        lineWidth: colorScheme == .dark ? 1 : 0
-                    )
-            )
+        .themedCard()
     }
 }
 
 private struct TaskPerformanceChartView: View {
     let task: TodoTask
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @StateObject private var statisticsViewModel = StatisticsViewModel()
     @State private var taskAnalytics: StatisticsViewModel.TaskPerformanceAnalytics?
     @State private var selectedTimeRange: TaskPerformanceTimeRange = .month
@@ -1103,7 +1083,7 @@ private struct TaskPerformanceChartView: View {
                 }
                 .padding(16)
             }
-            .background(Color(.systemGroupedBackground))
+            .themedBackground()
             .navigationTitle("Performance Charts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1111,6 +1091,7 @@ private struct TaskPerformanceChartView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .themedPrimary()
                 }
             }
             .onAppear {
@@ -1124,6 +1105,7 @@ private struct TaskPerformanceChartView: View {
             HStack {
                 Text("Time Range")
                     .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1141,17 +1123,17 @@ private struct TaskPerformanceChartView: View {
                     }) {
                         Text(range.rawValue)
                             .font(.system(.caption, design: .rounded, weight: selectedTimeRange == range ? .semibold : .medium))
-                            .foregroundColor(selectedTimeRange == range ? .accentColor : .primary)
+                            .foregroundColor(selectedTimeRange == range ? theme.primaryColor : theme.textColor)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 6)
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 28)
                             .background(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .fill(selectedTimeRange == range ? Color.accentColor.opacity(0.15) : Color.gray.opacity(0.1))
+                                    .fill(selectedTimeRange == range ? theme.primaryColor.opacity(0.15) : theme.surfaceColor)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 6)
-                                            .strokeBorder(selectedTimeRange == range ? Color.accentColor : Color.clear, lineWidth: 1)
+                                            .strokeBorder(selectedTimeRange == range ? theme.primaryColor : Color.clear, lineWidth: 1)
                                     )
                             )
                     }
@@ -1160,11 +1142,7 @@ private struct TaskPerformanceChartView: View {
             }
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-        )
+        .themedCard()
     }
     
     private func loadTaskAnalytics() {
@@ -1280,8 +1258,8 @@ private struct TaskPerformanceChartView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 2)
         )
     }
     
@@ -1297,12 +1275,12 @@ private struct TaskPerformanceChartView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(analytics.taskName)
                         .font(.title2.bold())
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     
                     if let categoryName = analytics.categoryName {
                         Text(categoryName)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
                 Spacer()
@@ -1352,8 +1330,8 @@ private struct TaskPerformanceChartView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 2)
         )
     }
     
@@ -1372,6 +1350,7 @@ private struct TaskPerformanceChartView: View {
                     .foregroundColor(.yellow)
                 Text("Quality Over Time (\(selectedTimeRange.rawValue))")
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1444,8 +1423,8 @@ private struct TaskPerformanceChartView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 2)
         )
     }
     
@@ -1456,6 +1435,7 @@ private struct TaskPerformanceChartView: View {
                     .foregroundColor(.orange)
                 Text("Difficulty Over Time (\(selectedTimeRange.rawValue))")
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1528,8 +1508,8 @@ private struct TaskPerformanceChartView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 2)
         )
     }
     
@@ -1568,6 +1548,7 @@ private struct TaskPerformanceChartView: View {
                     .foregroundColor(.blue)
                 Text("Completions (\(selectedTimeRange.rawValue))")
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -1594,8 +1575,8 @@ private struct TaskPerformanceChartView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 2)
         )
     }
     
@@ -1623,29 +1604,78 @@ private struct TaskPerformanceChartView: View {
         .frame(maxWidth: .infinity, alignment: .center)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 2)
         )
     }
 }
 
-// MARK: - CompletionDetailRow - Enhanced completion display
+private struct TaskDetailMetricCard: View {
+    let title: String
+    let value: String
+    let color: Color
+    let icon: String
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(color)
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.title3.bold())
+                    .themedPrimaryText()
+                
+                Text(title)
+                    .font(.caption)
+                    .themedSecondaryText()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+}
+
 private struct CompletionDetailRow: View {
     let completion: StatisticsViewModel.TaskCompletionAnalytics
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(completion.date.formatted(.dateTime.month().day().year()))
-                    .font(.subheadline.bold())
+                    .font(.subheadline.weight(.medium))
+                    .themedPrimaryText()
+                
                 Text(completion.date.formatted(.dateTime.hour().minute()))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
             
             Spacer()
             
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
+                if let duration = completion.actualDuration {
+                    MetricBadge(
+                        icon: "clock.fill",
+                        value: formatDuration(duration),
+                        color: .green
+                    )
+                }
+                
                 if let quality = completion.qualityRating {
                     MetricBadge(
                         icon: "star.fill",
@@ -1661,81 +1691,42 @@ private struct CompletionDetailRow: View {
                         color: .orange
                     )
                 }
-                
-                if let duration = completion.actualDuration {
-                    let minutes = Int(duration) / 60
-                    MetricBadge(
-                        icon: "clock.fill",
-                        value: "\(minutes)m",
-                        color: .blue
-                    )
-                }
             }
         }
-        .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.tertiarySystemGroupedBackground))
+                .fill(theme.surfaceColor.opacity(0.5))
         )
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = Int(duration) % 3600 / 60
+        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
     }
 }
 
-// MARK: - MetricBadge for completion rows
 private struct MetricBadge: View {
     let icon: String
     let value: String
     let color: Color
     
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 10))
                 .foregroundColor(color)
             Text(value)
-                .font(.caption.bold())
+                .font(.caption.weight(.medium))
+                .foregroundColor(color)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(color.opacity(0.1))
-        )
-    }
-}
-
-// MARK: - TaskDetailMetricCard
-private struct TaskDetailMetricCard: View {
-    let title: String
-    let value: String
-    let color: Color
-    let icon: String
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 10))
-                    .foregroundColor(color)
-                Text(value)
-                    .font(.system(.caption, design: .rounded, weight: .bold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-            }
-            Text(title)
-                .font(.system(.caption2, design: .rounded, weight: .medium))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 45)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(color.opacity(0.08))
+                .fill(color.opacity(0.1))
         )
     }
 }

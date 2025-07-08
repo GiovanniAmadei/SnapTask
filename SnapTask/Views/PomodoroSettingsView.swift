@@ -3,6 +3,7 @@ import SwiftUI
 struct PomodoroSettingsView: View {
     @Binding var settings: PomodoroSettings
     @State private var useTimeDuration = false
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Form {
@@ -19,7 +20,7 @@ struct PomodoroSettingsView: View {
                         Text("duration".localized)
                         Spacer()
                         Text("\(Int(settings.workDuration / 60)) " + "min_unit".localized)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
@@ -37,7 +38,7 @@ struct PomodoroSettingsView: View {
                         Text("short_break".localized)
                         Spacer()
                         Text("\(Int(settings.breakDuration / 60)) " + "min_unit".localized)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
                 
@@ -53,7 +54,7 @@ struct PomodoroSettingsView: View {
                         Text("long_break".localized)
                         Spacer()
                         Text("\(Int(settings.longBreakDuration / 60)) " + "min_unit".localized)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
                 
@@ -65,7 +66,7 @@ struct PomodoroSettingsView: View {
                         Text("sessions_until_long_break".localized)
                         Spacer()
                         Text("\(settings.sessionsUntilLongBreak)")
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
@@ -95,10 +96,10 @@ struct PomodoroSettingsView: View {
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("\(Int(settings.totalDuration)) " + "min_unit".localized)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                                 Text("(\(formatDuration(settings.totalDuration * 60)))")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                         }
                     }
@@ -107,7 +108,7 @@ struct PomodoroSettingsView: View {
                         Text("estimated_sessions".localized)
                         Spacer()
                         Text("\(settings.totalSessions)")
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 } else {
                     Stepper(
@@ -125,7 +126,7 @@ struct PomodoroSettingsView: View {
                             Text("total_sessions".localized)
                             Spacer()
                             Text("\(settings.totalSessions)")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                     
@@ -134,10 +135,10 @@ struct PomodoroSettingsView: View {
                         Spacer()
                         VStack(alignment: .trailing) {
                             Text("\(Int(settings.estimatedTotalTime / 60)) " + "min_unit".localized)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                             Text("(\(formatDuration(settings.estimatedTotalTime)))")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                 }
@@ -152,7 +153,7 @@ struct PomodoroSettingsView: View {
                         Text("work_time".localized + ":")
                         Spacer()
                         Text("\(formatDuration(Double(settings.totalSessions) * settings.workDuration))")
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                     
                     HStack {
@@ -160,7 +161,7 @@ struct PomodoroSettingsView: View {
                         Spacer()
                         let breakTime = settings.estimatedTotalTime - (Double(settings.totalSessions) * settings.workDuration)
                         Text("\(formatDuration(breakTime))")
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                     
                     Divider()
@@ -171,13 +172,14 @@ struct PomodoroSettingsView: View {
                         Spacer()
                         Text("\(formatDuration(settings.estimatedTotalTime))")
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                     }
                 }
             } header: {
                 Text("summary".localized)
             }
         }
+        .themedBackground()
         .navigationTitle("pomodoro_settings".localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

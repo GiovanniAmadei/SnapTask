@@ -5,6 +5,7 @@ struct TrackingControlButtons: View {
     let isPaused: Bool
     let onPlayPause: () -> Void
     let onStop: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(spacing: 30) {
@@ -12,7 +13,7 @@ struct TrackingControlButtons: View {
             Button(action: onPlayPause) {
                 Image(systemName: playPauseIcon)
                     .font(.title)
-                    .foregroundColor(.white)
+                    .themedButtonText()
                     .frame(width: 60, height: 60)
                     .background(playPauseColor)
                     .clipShape(Circle())
@@ -23,7 +24,7 @@ struct TrackingControlButtons: View {
             Button(action: onStop) {
                 Image(systemName: "stop.fill")
                     .font(.title)
-                    .foregroundColor(.white)
+                    .themedButtonText()
                     .frame(width: 60, height: 60)
                     .background(Color.red)
                     .clipShape(Circle())
@@ -79,5 +80,5 @@ struct TrackingControlButtons: View {
         )
     }
     .padding()
-    .background(Color.black)
+    .themedBackground()
 }

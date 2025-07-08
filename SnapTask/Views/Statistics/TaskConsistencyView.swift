@@ -21,6 +21,7 @@ struct TaskConsistencyView: View {
     @State private var timeRange: ConsistencyTimeRange = .week
     @State private var selectedTaskId: UUID? = nil
     @State private var penalizeMissedTasks: Bool = true
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -50,7 +51,7 @@ struct TaskConsistencyView: View {
             }
         }
         .padding(.vertical, 16)
-        .background(Color(.systemBackground))
+        .background(theme.surfaceColor)
         .cornerRadius(12)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
@@ -58,15 +59,17 @@ struct TaskConsistencyView: View {
 }
 
 private struct HeaderSection: View {
+    @Environment(\.theme) private var theme
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("task_progress_over_time".localized)
                 .font(.system(.title2, design: .rounded, weight: .semibold))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             // Existing code...
             Text("track_completion_patterns".localized)
                 .font(.system(.subheadline, design: .rounded))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
@@ -75,12 +78,13 @@ private struct HeaderSection: View {
 
 private struct TimeRangeSection: View {
     @Binding var timeRange: ConsistencyTimeRange
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("time_period".localized)
                 .font(.system(.headline, design: .rounded, weight: .semibold))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             // Existing code...
             Picker("time_range".localized, selection: $timeRange) {
                 ForEach(ConsistencyTimeRange.allCases, id: \.self) { range in
@@ -95,6 +99,7 @@ private struct TimeRangeSection: View {
 
 private struct PenaltyToggleSection: View {
     @Binding var penalizeMissedTasks: Bool
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -102,11 +107,11 @@ private struct PenaltyToggleSection: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("penalize_missed_tasks".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     // Existing code...
                     Text("decrease_progress_missed".localized)
                         .font(.system(.caption, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
@@ -121,8 +126,8 @@ private struct PenaltyToggleSection: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.gray.opacity(0.06),
-                                Color.gray.opacity(0.03)
+                                theme.primaryColor.opacity(0.06),
+                                theme.primaryColor.opacity(0.03)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -133,8 +138,8 @@ private struct PenaltyToggleSection: View {
                             .strokeBorder(
                                 LinearGradient(
                                     colors: [
-                                        Color.gray.opacity(0.12),
-                                        Color.gray.opacity(0.05)
+                                        theme.primaryColor.opacity(0.12),
+                                        theme.primaryColor.opacity(0.05)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -151,12 +156,13 @@ private struct PenaltyToggleSection: View {
 private struct TaskLegendSection: View {
     let tasks: [TodoTask]
     @Binding var selectedTaskId: UUID?
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("tasks".localized)
                 .font(.system(.callout, design: .rounded, weight: .medium))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
                 .padding(.horizontal, 16)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
@@ -188,11 +194,13 @@ private struct TaskLegendSection: View {
 }
 
 private struct HelpTextSection: View {
+    @Environment(\.theme) private var theme
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("how_to_read".localized)
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             VStack(alignment: .leading, spacing: 6) {
                 HelpTextRow(
                     color: .blue,
@@ -219,6 +227,7 @@ private struct ModernConsistencyChart: View {
     @Binding var selectedTaskId: UUID?
     let penalizeMissedTasks: Bool
     @ObservedObject var viewModel: StatisticsViewModel
+    @Environment(\.theme) private var theme
     
     private let distinctColors: [Color] = [
         .red, .blue, .green, .purple, .orange, .cyan,
@@ -236,12 +245,12 @@ private struct ModernConsistencyChart: View {
             .chartXAxis {
                 AxisMarks(position: .bottom, values: getXAxisDateValues()) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        .foregroundStyle(Color.gray.opacity(0.2))
+                        .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
                     AxisValueLabel() {
                         if let dateValue = value.as(Date.self) {
                             Text(formatDateLabel(dateValue))
                                 .font(.system(.caption2, design: .rounded, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                 }
@@ -249,12 +258,12 @@ private struct ModernConsistencyChart: View {
             .chartYAxis {
                 AxisMarks(position: .leading) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        .foregroundStyle(Color.gray.opacity(0.2))
+                        .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
                     AxisValueLabel() {
                         if let intValue = value.as(Int.self) {
                             Text("\(intValue)")
                                 .font(.system(.caption2, design: .rounded, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                 }
@@ -285,8 +294,8 @@ private struct ModernConsistencyChart: View {
             .fill(
                 LinearGradient(
                     colors: [
-                        Color.gray.opacity(0.02),
-                        Color.gray.opacity(0.05)
+                        theme.primaryColor.opacity(0.02),
+                        theme.primaryColor.opacity(0.05)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -297,8 +306,8 @@ private struct ModernConsistencyChart: View {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.gray.opacity(0.1),
-                                Color.gray.opacity(0.05)
+                                theme.primaryColor.opacity(0.1),
+                                theme.primaryColor.opacity(0.05)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -482,6 +491,7 @@ private struct CompactLegendItem: View {
     let isSelected: Bool
     let isHighlighted: Bool
     let action: () -> Void
+    @Environment(\.theme) private var theme
     
     private let distinctColors: [Color] = [
         .red, .blue, .green, .purple, .orange, .cyan,
@@ -495,19 +505,19 @@ private struct CompactLegendItem: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(task.name)
                         .font(.system(.caption, design: .rounded, weight: .medium))
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                         .lineLimit(1)
                     if let category = task.category {
                         Text(category.name)
                             .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                             .lineLimit(1)
                     }
                 }
                 if isHighlighted {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(.caption2, weight: .medium))
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(theme.accentColor)
                 }
             }
             .padding(.horizontal, 10)
@@ -537,11 +547,11 @@ private struct CompactLegendItem: View {
     }
     
     private var backgroundFill: Color {
-        isHighlighted ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.05)
+        isHighlighted ? theme.accentColor.opacity(0.1) : theme.primaryColor.opacity(0.05)
     }
     
     private var backgroundBorder: Color {
-        isHighlighted ? Color.accentColor.opacity(0.3) : Color.gray.opacity(0.1)
+        isHighlighted ? theme.accentColor.opacity(0.3) : theme.primaryColor.opacity(0.1)
     }
     
     private var taskColor: Color {
@@ -557,6 +567,7 @@ private struct CompactLegendItem: View {
 private struct HelpTextRow: View {
     let color: Color
     let text: String
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(spacing: 12) {
@@ -565,20 +576,22 @@ private struct HelpTextRow: View {
                 .frame(width: 8, height: 8)
             Text(text)
                 .font(.system(.caption, design: .rounded))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
 struct EmptyConsistencyView: View {
+    @Environment(\.theme) private var theme
+    
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 56))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.secondary.opacity(0.6), .secondary.opacity(0.3)],
+                        colors: [theme.secondaryTextColor.opacity(0.6), theme.secondaryTextColor.opacity(0.3)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -586,10 +599,10 @@ struct EmptyConsistencyView: View {
             VStack(spacing: 10) {
                 Text("no_consistency_data".localized)
                     .font(.system(.title3, design: .rounded, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 Text("complete_recurring_see_progress".localized)
                     .font(.system(.subheadline, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
             }

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     @AppStorage("isDarkMode") private var isDarkMode = false
     @AppStorage("dailyQuoteNotificationsEnabled") private var dailyQuoteNotificationsEnabled = false
     @AppStorage("dailyQuoteNotificationTime") private var dailyQuoteNotificationTime = "09:00"
@@ -35,7 +36,7 @@ struct SettingsView: View {
                     HStack {
                         Text("settings".localized)
                             .font(.largeTitle.bold())
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                         Spacer()
                     }
                     .padding(.horizontal, 0)
@@ -45,7 +46,7 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                
+
                 // Premium Section
                 Section("premium_plan".localized) {
                     Button {
@@ -58,19 +59,19 @@ struct SettingsView: View {
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(subscriptionManager.isSubscribed ? "premium_plan_active".localized : "upgrade_to_pro".localized)
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                     .font(.body)
                                 
                                 if subscriptionManager.isSubscribed {
                                     if let expirationDate = subscriptionManager.subscriptionExpirationDate {
                                         Text("subscription_expires".localized + " " + expirationDate.formatted(date: .abbreviated, time: .omitted))
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                     }
                                 } else {
                                     Text("premium_features".localized)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                 }
                             }
                             
@@ -81,7 +82,7 @@ struct SettingsView: View {
                             }
                             
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .font(.caption)
                                 .frame(width: 12, height: 12)
                         }
@@ -99,6 +100,7 @@ struct SettingsView: View {
                         Spacer()
                         
                         Toggle("", isOn: $subscriptionManager.testingMode)
+                            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                     }
                     #endif
                 }
@@ -116,10 +118,12 @@ struct SettingsView: View {
                             .frame(width: 24)
                         
                         Text("daily_quote_reminder".localized)
+                            .themedPrimaryText()
                         
                         Spacer()
                         
                         Toggle("", isOn: $dailyQuoteNotificationsEnabled)
+                            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                             .onChange(of: dailyQuoteNotificationsEnabled) { _, newValue in
                                 handleNotificationToggle(newValue)
                             }
@@ -135,19 +139,20 @@ struct SettingsView: View {
                                     .frame(width: 24)
                                 
                                 Text("notification_time".localized)
+                                    .themedPrimaryText()
                                 
                                 Spacer()
                                 
                                 Text(dailyQuoteNotificationTime)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                                 
                                 Image(systemName: "chevron.right")
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                                     .font(.caption)
                                     .frame(width: 12, height: 12)
                             }
                         }
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                         
                         // Show notification permission status
                         if notificationPermissionStatus == .denied {
@@ -182,11 +187,38 @@ struct SettingsView: View {
                             .frame(width: 24)
                         
                         Text("dark_mode".localized)
+                            .themedPrimaryText()
                         
                         Spacer()
                         
                         Toggle("", isOn: $isDarkMode)
+                            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                     }
+                    
+                    NavigationLink {
+                        ThemeSelectionView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "paintbrush.fill")
+                                .foregroundColor(.purple)
+                                .frame(width: 24)
+                            
+                            Text("themes".localized)
+                                .themedPrimaryText()
+                            
+                            Spacer()
+                            
+                            if !subscriptionManager.hasAccess(to: .customThemes) {
+                                PremiumBadge(size: .small)
+                            }
+                            
+                            Image(systemName: "chevron.right")
+                                .themedSecondaryText()
+                                .font(.caption)
+                                .frame(width: 12, height: 12)
+                        }
+                    }
+                    .themedPrimaryText()
                     
                     Button {
                         showingLanguagePicker = true
@@ -197,19 +229,20 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             
                             Text("language".localized)
+                                .themedPrimaryText()
                             
                             Spacer()
                             
                             Text(languageManager.currentLanguage.name)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                             
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .font(.caption)
                                 .frame(width: 12, height: 12)
                         }
                     }
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 }
                 
                 // Customization Section
@@ -218,7 +251,7 @@ struct SettingsView: View {
                         CustomizationView(viewModel: viewModel)
                     } label: {
                         Label("customization".localized, systemImage: "paintbrush")
-                            .foregroundColor(.purple)
+                            .themedPrimaryText()
                     }
                 }
                 
@@ -226,6 +259,7 @@ struct SettingsView: View {
                 Section {
                     NavigationLink(destination: CloudKitSyncSettingsView()) {
                         Label("icloud_sync".localized, systemImage: "icloud")
+                            .themedPrimaryText()
                     }
                     
                     Button {
@@ -237,16 +271,17 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             
                             Text("calendar_integration".localized)
+                                .themedPrimaryText()
                             
                             Spacer()
                             
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .font(.caption)
                                 .frame(width: 12, height: 12)
                         }
                     }
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                     
                 } header: {
                     Text("synchronization".localized)
@@ -263,6 +298,7 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             
                             Text("feedback_suggestions".localized)
+                                .themedPrimaryText()
                         }
                     }
                     
@@ -273,6 +309,7 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             
                             Text("whats_cooking".localized)
+                                .themedPrimaryText()
                             
                             Spacer()
                             
@@ -297,6 +334,7 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             
                             Text("support_snaptask".localized)
+                                .themedPrimaryText()
                             
                             Spacer()
                             
@@ -306,18 +344,18 @@ struct SettingsView: View {
                             }
                             
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .font(.caption)
                                 .frame(width: 12, height: 12)
                         }
                     }
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                     
                     Button {
                         showingWelcome = true
                     } label: {
                         Label("review_welcome_message".localized, systemImage: "heart")
-                            .foregroundColor(.pink)
+                            .themedPrimaryText()
                     }
                 }
                 
@@ -338,7 +376,7 @@ struct SettingsView: View {
                                 
                                 Text("delete_all_data_description".localized)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                                     .multilineTextAlignment(.leading)
                             }
                             
@@ -356,9 +394,10 @@ struct SettingsView: View {
                 } footer: {
                     Text("delete_all_data_footer".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
             }
+            .themedBackground()
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
@@ -423,7 +462,7 @@ struct SettingsView: View {
     }
     
     private func handleNotificationToggle(_ newValue: Bool) {
-        print(" Toggle notification: \(newValue)")
+        print("🔔 Toggle notification: \(newValue)")
         if newValue {
             Task {
                 await requestNotificationPermission()
@@ -435,11 +474,11 @@ struct SettingsView: View {
     
     @MainActor
     private func requestNotificationPermission() async {
-        print(" Requesting notification permission...")
+        print("🔔 Requesting notification permission...")
         
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
-            print(" Notification permission result: \(granted)")
+            print("🔔 Notification permission result: \(granted)")
             
             if granted {
                 scheduleDailyQuoteNotification()
@@ -450,7 +489,7 @@ struct SettingsView: View {
             
             checkNotificationPermissionStatus()
         } catch {
-            print(" Notification permission error: \(error)")
+            print("🔔 Notification permission error: \(error)")
             dailyQuoteNotificationsEnabled = false
         }
     }
@@ -459,7 +498,7 @@ struct SettingsView: View {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             DispatchQueue.main.async {
                 self.notificationPermissionStatus = settings.authorizationStatus
-                print(" Current notification status: \(settings.authorizationStatus.rawValue)")
+                print("🔔 Current notification status: \(settings.authorizationStatus.rawValue)")
                 
                 // If permissions were denied, disable the toggle
                 if settings.authorizationStatus == .denied && self.dailyQuoteNotificationsEnabled {
@@ -502,16 +541,16 @@ struct SettingsView: View {
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print(" Error scheduling notification: \(error)")
+                print("🔔 Error scheduling notification: \(error)")
             } else {
-                print("  Daily quote notification scheduled for \(self.dailyQuoteNotificationTime)")
+                print("🔔 Daily quote notification scheduled for \(self.dailyQuoteNotificationTime)")
             }
         }
     }
     
     private func cancelDailyQuoteNotification() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyQuote"])
-        print("  Daily quote notification cancelled")
+        print("🔔 Daily quote notification cancelled")
     }
     
     private func loadNotificationTime() {
@@ -563,7 +602,7 @@ struct SettingsView: View {
             let timerSessionKeys = allKeys.filter { $0.hasPrefix("timer_session_") }
             for key in timerSessionKeys {
                 userDefaults.removeObject(forKey: key)
-                print(" Removed timer session: \(key)")
+                print("🗑️ Removed timer session: \(key)")
             }
             
             // Clear Pomodoro background state
@@ -591,11 +630,11 @@ struct SettingsView: View {
             // Notify statistics to refresh
             NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
             
-            print(" All data successfully deleted and reset to defaults")
-            print(" Cleared timer sessions, Pomodoro state, and focus tracking data")
+            print("🗑️ All data successfully deleted and reset to defaults")
+            print("🗑️ Cleared timer sessions, Pomodoro state, and focus tracking data")
             
         } catch {
-            print(" Error during data deletion: \(error)")
+            print("🗑️ Error during data deletion: \(error)")
         }
         
         isDeleting = false
@@ -604,6 +643,7 @@ struct SettingsView: View {
 
 struct IOSQuoteCard: View {
     @StateObject private var quoteManager = QuoteManager.shared
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -613,7 +653,7 @@ struct IOSQuoteCard: View {
                         .scaleEffect(0.8)
                     Text("loading_inspiration".localized)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 8)
@@ -622,14 +662,14 @@ struct IOSQuoteCard: View {
                     Text(quoteManager.currentQuote.text)
                         .font(.body)
                         .italic()
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                     
                     HStack {
                         Text("— \(quoteManager.currentQuote.author)")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         Spacer()
                         
@@ -640,7 +680,7 @@ struct IOSQuoteCard: View {
                         } label: {
                             Image(systemName: "arrow.clockwise")
                                 .font(.caption)
-                                .foregroundColor(.blue)
+                                .themedPrimary()
                         }
                         .disabled(quoteManager.isLoading)
                         .opacity(quoteManager.isLoading ? 0.6 : 1.0)
@@ -656,6 +696,7 @@ struct TimePickerView: View {
     @Binding var selectedTime: Date
     @Binding var isPresented: Bool
     let onSave: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         NavigationView {
@@ -671,6 +712,7 @@ struct TimePickerView: View {
                 Spacer()
             }
             .padding()
+            .themedBackground()
             .navigationTitle("notification_time".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -678,6 +720,7 @@ struct TimePickerView: View {
                     Button("cancel".localized) {
                         isPresented = false
                     }
+                    .themedSecondaryText()
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -686,6 +729,7 @@ struct TimePickerView: View {
                         isPresented = false
                     }
                     .fontWeight(.semibold)
+                    .themedPrimary()
                 }
             }
         }

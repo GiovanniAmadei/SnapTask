@@ -7,6 +7,7 @@ struct TimelineView: View {
     @State private var selectedDayOffset = 0
     @State private var showingCalendarPicker = false
     @State private var scrollProxy: ScrollViewProxy?
+    @Environment(\.theme) private var theme
     
     var body: some View {
         NavigationStack {
@@ -19,22 +20,22 @@ struct TimelineView: View {
                         showingCalendarPicker: $showingCalendarPicker,
                         scrollProxy: $scrollProxy
                     )
-                    .background(Color(.systemBackground))
+                    .themedSurface()
                     .zIndex(1)
                     
                     // Subtle divider between header and controls
                     Divider()
                         .padding(.horizontal)
-                        .background(Color.gray.opacity(0.2))
+                        .foregroundColor(theme.borderColor)
                     
                     ViewControlBarView(viewModel: viewModel)
-                        .background(Color(.systemBackground))
+                        .themedSurface()
                         .zIndex(1)
                     
                     // Subtle divider between controls and content
                     Divider()
                         .padding(.horizontal)
-                        .background(Color.gray.opacity(0.2))
+                        .foregroundColor(theme.borderColor)
                     
                     if viewModel.viewMode == .timeline {
                         TimelineContentView(viewModel: viewModel)
@@ -48,6 +49,7 @@ struct TimelineView: View {
                     }
                 }
             }
+            .themedBackground()
             .navigationBarHidden(true)
             .sheet(isPresented: $showingNewTask) {
                 TaskFormView(
@@ -75,6 +77,7 @@ struct TimelineView: View {
 struct ViewControlBarView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @StateObject private var cloudKitService = CloudKitService.shared
+    @Environment(\.theme) private var theme
     
     private var syncStatusIcon: String {
         switch cloudKitService.syncStatus {
@@ -94,13 +97,13 @@ struct ViewControlBarView: View {
         case .error:
             return .red
         default:
-            return .secondary
+            return theme.secondaryTextColor
         }
     }
     
     var body: some View {
         HStack(spacing: 12) {
-            // View mode toggle - font leggermente più grande ma sempre compatto
+            // View mode toggle - styled with theme colors
             HStack(spacing: 2) {
                 ForEach(TimelineViewMode.allCases, id: \.self) { mode in
                     Button(action: {
@@ -116,36 +119,36 @@ struct ViewControlBarView: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                         }
-                        .foregroundColor(viewModel.viewMode == mode ? .white : .pink)
+                        .foregroundColor(viewModel.viewMode == mode ? theme.backgroundColor : theme.primaryColor)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 7)
                         .background(
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(viewModel.viewMode == mode ? Color.pink : Color.clear)
+                                .fill(viewModel.viewMode == mode ? theme.primaryColor : Color.clear)
                         )
                     }
                 }
             }
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.pink.opacity(0.08))
+                    .fill(theme.primaryColor.opacity(0.08))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color.pink.opacity(viewModel.viewMode == .list ? 0.6 : 0.25), lineWidth: 1)
+                            .strokeBorder(theme.primaryColor.opacity(viewModel.viewMode == .list ? 0.6 : 0.25), lineWidth: 1)
                     )
             )
             
             Spacer()
             
-            // Organization status - font leggermente più grande
+            // Organization status - themed
             HStack(spacing: 4) {
                 Image(systemName: viewModel.organization.icon)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.secondaryTextColor)
                 
                 Text(viewModel.organizationStatusText)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.secondaryTextColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -153,36 +156,35 @@ struct ViewControlBarView: View {
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.gray.opacity(0.08))
+                    .fill(theme.surfaceColor)
             )
-			
-			
-            // Filter button - icona leggermente più grande
+            
+            // Filter button - themed
             Button(action: {
                 viewModel.showingFilterSheet = true
             }) {
                 Image(systemName: "line.3.horizontal.decrease.circle")
                     .font(.system(size: 19, weight: .medium))
-                    .foregroundColor(.pink)
+                    .foregroundColor(theme.primaryColor)
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
-                            .fill(Color.pink.opacity(0.08))
+                            .fill(theme.primaryColor.opacity(0.08))
                     )
             }
             
-            // Reset button - icona leggermente più grande
+            // Reset button - themed
             if viewModel.organization != .none {
                 Button(action: {
                     viewModel.resetView()
                 }) {
                     Image(systemName: "arrow.clockwise.circle")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .frame(width: 32, height: 32)
                         .background(
                             Circle()
-                                .fill(Color.gray.opacity(0.08))
+                                .fill(theme.surfaceColor)
                         )
                 }
             }
@@ -197,6 +199,7 @@ struct TimelineContentView: View {
     @StateObject private var cloudKitService = CloudKitService.shared
     @State private var scrollProxy: ScrollViewProxy?
     @State private var isRefreshing = false
+    @Environment(\.theme) private var theme
     
     private let hourHeight: CGFloat = 80
     
@@ -251,7 +254,7 @@ struct TimelineContentView: View {
                             HStack {
                                 Text("all_day".localized)
                                     .font(.headline)
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(theme.textColor)
                                 Spacer()
                             }
                             
@@ -261,11 +264,11 @@ struct TimelineContentView: View {
                             }
                         }
                         .padding(.vertical, 12)
-                        .background(Color.blue.opacity(0.05))
+                        .background(theme.primaryColor.opacity(0.05))
                         
                         Divider()
                             .padding(.horizontal)
-                            .background(Color.gray.opacity(0.2))
+                            .foregroundColor(theme.borderColor)
                     }
                     
                     ForEach(Array(timelineRange), id: \.self) { hour in
@@ -340,37 +343,13 @@ struct TimelineContentView: View {
             isRefreshing = false
         }
     }
-    
-    private func scrollToCurrentTime() {
-        guard let proxy = scrollProxy else { return }
-        
-        let calendar = Calendar.current
-        let currentHour = calendar.component(.hour, from: Date())
-        
-        if viewModel.isToday {
-            withAnimation(.easeInOut(duration: 0.8)) {
-                proxy.scrollTo(currentHour, anchor: .center)
-            }
-        } else {
-            let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
-            if let firstTask = tasks.first {
-                let firstTaskHour = calendar.component(.hour, from: firstTask.startTime)
-                withAnimation(.easeInOut(duration: 0.8)) {
-                    proxy.scrollTo(firstTaskHour, anchor: .center)
-                }
-            } else {
-                withAnimation(.easeInOut(duration: 0.8)) {
-                    proxy.scrollTo(12, anchor: .center)
-                }
-            }
-        }
-    }
 }
 
 struct EnhancedTimelineHourRow: View {
     let hour: Int
     let tasks: [TodoTask]
     @ObservedObject var viewModel: TimelineViewModel
+    @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     
     let isCurrentHour: Bool
@@ -402,25 +381,25 @@ struct EnhancedTimelineHourRow: View {
                     Text(hourString)
                         .font(.system(.caption, design: .monospaced))
                         .fontWeight(isCurrentHour ? .bold : .medium)
-                        .foregroundColor(isCurrentHour ? .pink : .secondary)
+                        .foregroundColor(isCurrentHour ? theme.primaryColor : theme.secondaryTextColor)
                     
                     if isCurrentHour {
                         VStack(spacing: 2) {
                             Circle()
-                                .fill(Color.pink)
+                                .fill(theme.primaryColor)
                                 .frame(width: 10, height: 10)
                             
                             if let minute = currentMinute {
                                 Text(String(format: "%02d", minute))
                                     .font(.system(.caption2, design: .monospaced))
-                                    .foregroundColor(.pink)
+                                    .foregroundColor(theme.primaryColor)
                                     .fontWeight(.bold)
                             }
                             
                             Text("NOW")
                                 .font(.system(.caption2, design: .rounded))
                                 .fontWeight(.bold)
-                                .foregroundColor(.pink)
+                                .foregroundColor(theme.primaryColor)
                         }
                         .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isCurrentHour)
                     }
@@ -437,7 +416,7 @@ struct EnhancedTimelineHourRow: View {
                     } else {
                         // Show empty state with next task info
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(isCurrentHour ? Color.pink.opacity(0.08) : Color.gray.opacity(0.03))
+                            .fill(isCurrentHour ? theme.primaryColor.opacity(0.08) : theme.surfaceColor)
                             .frame(height: 50)
                             .overlay(
                                 VStack(spacing: 4) {
@@ -445,17 +424,17 @@ struct EnhancedTimelineHourRow: View {
                                         // Current time indicator line
                                         HStack {
                                             Circle()
-                                                .fill(Color.pink)
+                                                .fill(theme.primaryColor)
                                                 .frame(width: 6, height: 6)
                                             Rectangle()
-                                                .fill(Color.pink.opacity(0.6))
+                                                .fill(theme.primaryColor.opacity(0.6))
                                                 .frame(height: 2)
                                             Spacer()
                                         }
                                     } else if let nextTaskInfo = timeToNextTask {
                                         Text(nextTaskInfo)
                                             .font(.system(.caption, design: .rounded))
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(theme.secondaryTextColor)
                                             .fontWeight(.medium)
                                     }
                                 }
@@ -468,12 +447,12 @@ struct EnhancedTimelineHourRow: View {
                     // Enhanced background for current hour
                     isCurrentHour ?
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.pink.opacity(0.05))
+                        .fill(theme.primaryColor.opacity(0.05))
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1.5)
+                                .strokeBorder(theme.primaryColor.opacity(0.2), lineWidth: 1.5)
                         )
-                        .shadow(color: .pink.opacity(0.1), radius: 4)
+                        .shadow(color: theme.shadowColor, radius: 4)
                     : nil
                 )
             }
@@ -492,8 +471,8 @@ struct EnhancedTimelineHourRow: View {
                                 .fill(
                                     LinearGradient(
                                         colors: [
-                                            isCurrentHour ? Color.pink.opacity(0.6) : Color.gray.opacity(0.3),
-                                            Color.gray.opacity(0.1)
+                                            isCurrentHour ? theme.primaryColor.opacity(0.6) : theme.borderColor,
+                                            theme.borderColor.opacity(0.1)
                                         ],
                                         startPoint: .top,
                                         endPoint: .bottom
@@ -505,7 +484,7 @@ struct EnhancedTimelineHourRow: View {
                             VStack(spacing: 2) {
                                 ForEach(0..<4, id: \.self) { _ in
                                     Circle()
-                                        .fill(Color.gray.opacity(0.3))
+                                        .fill(theme.borderColor)
                                         .frame(width: 2, height: 2)
                                 }
                             }
@@ -514,8 +493,8 @@ struct EnhancedTimelineHourRow: View {
                         Divider()
                             .background(
                                 isCurrentHour ?
-                                Color.pink.opacity(0.4) :
-                                Color.gray.opacity(0.2)
+                                theme.primaryColor.opacity(0.4) :
+                                theme.borderColor
                             )
                     }
                     
@@ -542,6 +521,7 @@ struct EnhancedTimelineTaskView: View {
     let task: TodoTask
     @ObservedObject var viewModel: TimelineViewModel
     @State private var showingPomodoro = false
+    @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
@@ -612,11 +592,11 @@ struct EnhancedTimelineTaskView: View {
             }) {
                 ZStack {
                     Circle()
-                        .fill(isCompleted ? Color.green.opacity(0.2) : Color.gray.opacity(0.1))
+                        .fill(isCompleted ? theme.primaryColor.opacity(0.2) : theme.surfaceColor)
                         .frame(width: 28, height: 28)
                     
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isCompleted ? .green : .gray)
+                        .foregroundColor(isCompleted ? theme.primaryColor : theme.secondaryTextColor)
                         .font(.system(size: 20, weight: .medium))
                 }
             }
@@ -635,7 +615,7 @@ struct EnhancedTimelineTaskView: View {
                     Text(task.name)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(isCompleted ? .secondary : .primary)
+                        .foregroundColor(isCompleted ? theme.secondaryTextColor : theme.textColor)
                     
                     Spacer()
                     
@@ -643,16 +623,16 @@ struct EnhancedTimelineTaskView: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(taskTime)
                             .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(theme.secondaryTextColor)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.gray.opacity(0.1))
+                            .background(theme.surfaceColor)
                             .cornerRadius(4)
                         
                         if let timeInfo = timeUntilTask {
                             Text(timeInfo)
                                 .font(.system(.caption2, design: .rounded))
-                                .foregroundColor(timeInfo == "now" ? .orange : .secondary)
+                                .foregroundColor(timeInfo == "now" ? .orange : theme.secondaryTextColor)
                                 .fontWeight(.medium)
                         }
                     }
@@ -662,7 +642,7 @@ struct EnhancedTimelineTaskView: View {
                 if let description = task.description, !description.isEmpty {
                     Text(description)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .lineLimit(2)
                 }
 
@@ -683,10 +663,10 @@ struct EnhancedTimelineTaskView: View {
                                 Text("Focus")
                                     .font(.system(.caption2, design: .rounded))
                             }
-                            .foregroundColor(.white)
+                            .foregroundColor(theme.primaryColor)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.pink)
+                            .background(theme.primaryColor.opacity(0.15))
                             .cornerRadius(8)
                         }
                         .buttonStyle(BorderlessButtonStyle())
@@ -701,7 +681,7 @@ struct EnhancedTimelineTaskView: View {
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
+                    .fill(theme.surfaceColor)
                 
                 RoundedRectangle(cornerRadius: 12)
                     .fill(categoryGradient)
@@ -721,7 +701,7 @@ struct EnhancedTimelineTaskView: View {
                         )
                 }
             }
-            .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+            .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
         )
         .opacity(isCompleted ? 0.7 : 1.0)
         .sheet(isPresented: $showingPomodoro) {
@@ -735,16 +715,18 @@ struct TimelineHeaderView: View {
     @Binding var selectedDayOffset: Int
     @Binding var showingCalendarPicker: Bool
     @Binding var scrollProxy: ScrollViewProxy?
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 4) {
             HStack {
                 Text(viewModel.monthYearString)
                     .font(.title2.bold())
+                    .themedPrimaryText()
                 Spacer()
                 Button(action: { showingCalendarPicker = true }) {
                     Image(systemName: "calendar")
-                        .foregroundColor(.pink)
+                        .themedPrimary()
                 }
             }
             .padding(.horizontal)
@@ -864,6 +846,7 @@ struct TaskListView: View {
     @State private var showingActiveTimeTrackerSession = false
     @State private var selectedSessionId: UUID?
     @State private var isRefreshing = false
+    @Environment(\.theme) private var theme
     
     var body: some View {
         ZStack {
@@ -872,17 +855,17 @@ struct TaskListView: View {
                 VStack(spacing: 20) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 64))
-                        .foregroundColor(.secondary.opacity(0.6))
+                        .foregroundColor(theme.secondaryTextColor.opacity(0.6))
                     
                     VStack(spacing: 8) {
                         Text("no_tasks_today".localized)
                             .font(.title2)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundColor(theme.textColor)
                         
                         Text("tap_plus_add_first_task".localized)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(theme.secondaryTextColor)
                             .multilineTextAlignment(.center)
                     }
                 }
@@ -1023,6 +1006,7 @@ struct TaskListView: View {
 struct OrganizedTaskSection: View {
     let section: TaskSection
     @ObservedObject var viewModel: TimelineViewModel
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1036,31 +1020,31 @@ struct OrganizedTaskSection: View {
                 if let icon = section.icon {
                     Image(systemName: icon)
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(section.color.map { Color(hex: $0) } ?? .secondary)
+                        .foregroundColor(section.color.map { Color(hex: $0) } ?? theme.secondaryTextColor)
                 }
                 
                 Text(section.title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(theme.textColor)
                 
                 Spacer()
                 
                 Text("\(section.tasks.count)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.secondaryTextColor)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.gray.opacity(0.1))
+                    .background(theme.surfaceColor)
                     .cornerRadius(4)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.05))
+                    .fill(theme.surfaceColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(section.color.map { Color(hex: $0).opacity(0.2) } ?? Color.gray.opacity(0.2), lineWidth: 1)
+                            .strokeBorder(section.color.map { Color(hex: $0).opacity(0.2) } ?? theme.borderColor, lineWidth: 1)
                     )
             )
             
@@ -1121,6 +1105,7 @@ private struct DayCell: View {
     let isSelected: Bool
     let offset: Int
     let action: (Int) -> Void
+    @Environment(\.theme) private var theme
     
     init(date: Date, isSelected: Bool, offset: Int, action: @escaping (Int) -> Void) {
         self.date = date
@@ -1138,31 +1123,25 @@ private struct DayCell: View {
             Text(dayName)
                 .font(.caption2)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : (isToday ? .pink : .secondary))
+                .foregroundColor(isSelected ? theme.backgroundColor : (isToday ? theme.primaryColor : theme.secondaryTextColor))
             
             Text(dayNumber)
                 .font(.callout)
                 .fontWeight(.bold)
-                .foregroundColor(isSelected ? .white : (isToday ? .pink : .primary))
+                .foregroundColor(isSelected ? theme.backgroundColor : (isToday ? theme.primaryColor : theme.textColor))
         }
         .frame(width: 45, height: 60)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(isSelected ?
-                    AnyShapeStyle(
-                        LinearGradient(
-                            colors: [.pink, .pink.opacity(0.8)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    ) :
+                    AnyShapeStyle(theme.gradient) :
                     (isToday ?
-                        AnyShapeStyle(Color.pink.opacity(0.1)) :
-                        AnyShapeStyle(Color.clear)))
+                        AnyShapeStyle(theme.primaryColor.opacity(0.1)) :
+                        AnyShapeStyle(theme.surfaceColor)))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(isSelected ? Color.clear : (isToday ? Color.pink.opacity(0.3) : Color.gray.opacity(0.2)),
+                .strokeBorder(isSelected ? Color.clear : (isToday ? theme.primaryColor.opacity(0.3) : theme.borderColor),
                             lineWidth: 1)
         )
         .onTapGesture {
@@ -1197,11 +1176,10 @@ private struct TimelineTaskCard: View {
     @State private var showingTrackingModeSelection = false
     @State private var showingTimeTracker = false
     @State private var selectedTrackingMode: TrackingMode = .simple
-    
     @State private var isDeleting = false
     @State private var deleteOpacity: Double = 1.0
     @State private var deleteScale: CGFloat = 1.0
-    
+    @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
@@ -1287,11 +1265,10 @@ private struct TimelineTaskCard: View {
 
     var body: some View {
         ZStack {
-            // Background actions layer - sempre dietro la card
+            // Background actions layer
             HStack(spacing: 0) {
                 Spacer()
                 
-                // Track/Edit/Delete buttons background (left swipe) 
                 HStack(spacing: 8) {
                     Button(action: {
                         showingTrackingModeSelection = true
@@ -1299,7 +1276,7 @@ private struct TimelineTaskCard: View {
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.yellow)
+                                .fill(.yellow)
                                 .frame(width: 50, height: 50)
                                 .overlay(
                                     Image(systemName: "play.fill")
@@ -1320,7 +1297,7 @@ private struct TimelineTaskCard: View {
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.orange)
+                                .fill(.orange)
                                 .frame(width: 50, height: 50)
                                 .overlay(
                                     Image(systemName: "pencil")
@@ -1340,7 +1317,7 @@ private struct TimelineTaskCard: View {
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.red)
+                                .fill(.red)
                                 .frame(width: 50, height: 50)
                                 .overlay(
                                     Image(systemName: "trash")
@@ -1358,15 +1335,15 @@ private struct TimelineTaskCard: View {
                 .opacity(dragOffset.magnitude > 40 ? min(1.0, (dragOffset.magnitude - 40.0) / 60.0) : 0.0)
             }
             
-            // Main task card content - overlay sopra i pulsanti
+            // Main task card content
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 8) {
                     Rectangle()
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    task.category.map { Color(hex: $0.color) } ?? .gray,
-                                    task.category.map { Color(hex: $0.color).opacity(0.7) } ?? .gray.opacity(0.7)
+                                    task.category.map { Color(hex: $0.color) } ?? theme.secondaryTextColor,
+                                    task.category.map { Color(hex: $0.color).opacity(0.7) } ?? theme.secondaryTextColor.opacity(0.7)
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
@@ -1380,7 +1357,7 @@ private struct TimelineTaskCard: View {
                         HStack(alignment: .center) {
                             Text(task.name)
                                 .font(.headline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(theme.textColor)
                             
                             if task.recurrence != nil && currentStreak > 0 {
                                 HStack(spacing: 2) {
@@ -1413,7 +1390,7 @@ private struct TimelineTaskCard: View {
                                         }
                                         Image(systemName: "chevron.down")
                                             .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(theme.secondaryTextColor)
                                             .rotationEffect(.degrees(isExpanded ? 180 : 0))
                                             .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: isExpanded)
                                         if task.description != nil {
@@ -1431,7 +1408,7 @@ private struct TimelineTaskCard: View {
                         if let description = task.description {
                             Text(description)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(theme.secondaryTextColor)
                                 .lineLimit(1)
                         }
                     }
@@ -1442,7 +1419,7 @@ private struct TimelineTaskCard: View {
                     if task.hasDuration && task.duration > 0 {
                         Text(task.duration.formatted())
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(theme.secondaryTextColor)
                     }
                     
                     if task.hasSpecificTime {
@@ -1451,10 +1428,10 @@ private struct TimelineTaskCard: View {
                         let minute = calendar.component(.minute, from: task.startTime)
                         Text(String(format: "%02d:%02d", hour, minute))
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(theme.secondaryTextColor)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.gray.opacity(0.1))
+                            .background(theme.surfaceColor)
                             .cornerRadius(4)
                     } else {
                         Text("all_day".localized)
@@ -1477,16 +1454,16 @@ private struct TimelineTaskCard: View {
                         }) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.accentColor.opacity(0.15))
+                                    .fill(theme.accentColor.opacity(0.15))
                                     .frame(width: 36, height: 36)
                                 
                                 Image(systemName: "timer")
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(task.category.map { Color(hex: $0.color) } ?? .accentColor)
+                                    .foregroundColor(task.category.map { Color(hex: $0.color) } ?? theme.accentColor)
                             }
                             .overlay(
                                 Circle()
-                                    .strokeBorder(Color.accentColor.opacity(0.5), lineWidth: 1)
+                                    .strokeBorder(theme.accentColor.opacity(0.5), lineWidth: 1)
                             )
                         }
                         .buttonStyle(BorderlessButtonStyle())
@@ -1499,19 +1476,19 @@ private struct TimelineTaskCard: View {
                     }) {
                         ZStack {
                             Circle()
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 2)
+                                .stroke(theme.borderColor, lineWidth: 2)
                                 .frame(width: 32, height: 32)
                             
                             if !task.subtasks.isEmpty {
                                 Circle()
                                     .trim(from: 0, to: completionProgress)
-                                    .stroke(Color.pink, lineWidth: 3)
+                                    .stroke(theme.primaryColor, lineWidth: 3)
                                     .frame(width: 32, height: 32)
                                     .rotationEffect(.degrees(-90))
                             }
                             
                             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(isCompleted ? .green : .gray)
+                                .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
                                 .font(.title2)
                         }
                     }
@@ -1538,7 +1515,7 @@ private struct TimelineTaskCard: View {
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
+                        .fill(theme.surfaceColor)
                     
                     RoundedRectangle(cornerRadius: 14)
                         .fill(categoryGradient)
@@ -1558,7 +1535,7 @@ private struct TimelineTaskCard: View {
                             )
                     }
                 }
-                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+                .shadow(color: theme.shadowColor, radius: 5, x: 0, y: 2)
             )
             .offset(x: dragOffset)
             .scaleEffect(deleteScale)
@@ -1591,11 +1568,6 @@ private struct TimelineTaskCard: View {
                     }
                 }
         )
-        .onChange(of: viewModel.isSwipeMenuOpen(for: task.id)) { _, isOpen in
-            if !isOpen && dragOffset != 0 {
-                resetSwipe()
-            }
-        }
         .onChange(of: viewModel.isSwipeMenuOpen(for: task.id)) { _, isOpen in
             if !isOpen && dragOffset != 0 {
                 resetSwipe()
@@ -1703,7 +1675,7 @@ private struct TimelineTaskCard: View {
 
 private struct AddTaskButton: View {
     @Binding var isShowingTaskForm: Bool
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     @State private var isPressed = false
     
     var body: some View {
@@ -1721,34 +1693,22 @@ private struct AddTaskButton: View {
         }) {
             Image(systemName: "plus")
                 .font(.system(size: 24, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundColor(theme.backgroundColor)
                 .frame(width: 56, height: 56)
                 .background(
                     ZStack {
                         Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.pink, Color.pink.opacity(0.8)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
+                            .fill(theme.gradient)
                         Circle()
-                            .fill(Color.pink.opacity(0.3))
+                            .fill(theme.primaryColor.opacity(0.3))
                             .blur(radius: 8)
                             .scaleEffect(1.2)
                         
                         Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.pink, Color.pink.opacity(0.8)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
+                            .fill(theme.gradient)
                     }
                     .shadow(
-                        color: Color.pink.opacity(0.3),
+                        color: theme.shadowColor,
                         radius: 8,
                         x: 0,
                         y: 4
@@ -1793,6 +1753,7 @@ struct CompactTimelineTaskView: View {
     let task: TodoTask
     @ObservedObject var viewModel: TimelineViewModel
     @State private var showingPomodoro = false
+    @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
@@ -1818,7 +1779,7 @@ struct CompactTimelineTaskView: View {
                 }
             }) {
                 Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isCompleted ? .green : .gray)
+                    .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
                     .font(.system(size: 18))
             }
             .buttonStyle(BorderlessButtonStyle())
@@ -1834,7 +1795,7 @@ struct CompactTimelineTaskView: View {
                     Text(task.name)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.primary)
+                        .foregroundColor(theme.textColor)
                     
                     Spacer()
                     
@@ -1845,10 +1806,10 @@ struct CompactTimelineTaskView: View {
                     if task.hasSpecificTime {
                         Text(taskTime)
                             .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(theme.secondaryTextColor)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.gray.opacity(0.1))
+                            .background(theme.surfaceColor)
                             .cornerRadius(4)
                     } else {
                         Text("all_day".localized)
@@ -1864,7 +1825,7 @@ struct CompactTimelineTaskView: View {
                 if let description = task.description, !description.isEmpty {
                     Text(description)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .lineLimit(1)
                 }
             }
@@ -1873,8 +1834,8 @@ struct CompactTimelineTaskView: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
-                .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
+                .fill(theme.surfaceColor)
+                .shadow(color: theme.shadowColor, radius: 1, x: 0, y: 1)
         )
         .opacity(isCompleted ? 0.6 : 1.0)
         .sheet(isPresented: $showingPomodoro) {

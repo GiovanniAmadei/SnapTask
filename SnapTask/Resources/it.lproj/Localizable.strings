@@ -598,42 +598,4 @@
 "if_iap_not_working" = "Se le donazioni in-app non funzionano, puoi supportarmi direttamente:";
 "prefer_paypal" = "Preferisci PayPal?";
 "donate_via_paypal" = "Dona tramite PayPal";
-"donations_help_me" = "💝 Le tue donazioni mi aiutano a:";
-"develop_new_features" = "Sviluppare nuove funzionalità";
-"maintain_sync_servers" = "Mantenere i server per la sincronizzazione";
-"continue_free_updates" = "Continuare gli aggiornamenti gratuiti";
-"thanks_previous_support" = "Grazie per il tuo supporto precedente!";
-"last_donation" = "Ultima donazione:";
-"thanks_so_much" = "Grazie di cuore! ❤️";
-"donation_helps_development" = "La tua donazione mi aiuta a continuare lo sviluppo di SnapTask Pro. Apprezzo davvero il tuo supporto!";
-"coffee_for_giovanni" = "Caffè per Giovanni";
-"small_coffee" = "Un piccolo caffè ☕️";
-"pizza_for_giovanni" = "Pizza per Giovanni";
-"pizza_for_dinner" = "Una pizza per cena 🍕";
-"dinner_for_giovanni" = "Cena per Giovanni";
-"nice_dinner" = "Una bella cena 🍽️";
-
-// Update Banner 0.2.2
-"whats_new" = "Cosa c'è di Nuovo";
-"version_update" = "Versione";
-"got_it" = "Capito!";
-"view_all_updates" = "Vedi tutti gli aggiornamenti";
-
-// Version 0.2.2 Features
-"task_quality_rating" = "Valutazione Qualità e Difficoltà Attività";
-"task_quality_rating_desc" = "Valuta la qualità e difficoltà delle attività completate per migliori insights";
-"manual_time_tracking" = "Tracciamento Tempo Manuale";
-"manual_time_tracking_desc" = "Inserisci manualmente il tempo impiegato sulle attività direttamente dai dettagli dell'attività";
-"enhanced_statistics" = "Statistiche Avanzate";
-"enhanced_statistics_desc" = "Traccia i trend di qualità e difficoltà nel tempo con analitiche dettagliate";
-"task_comments" = "Commenti Attività";
-"task_comments_desc" = "Aggiungi commenti e note alle tue attività per un miglior tracciamento";
-"data_reset_option" = "Reset Completo Dati";
-"data_reset_option_desc" = "Opzione per eliminare tutti i dati e ricominciare da capo quando necessario";
-"general_improvements" = "Correzioni Generali Bug";
-"general_improvements_desc" = "Varie correzioni di bug e miglioramenti delle prestazioni basati sui feedback";
-
-// Backup and Restore
-"backup_restore" = "Backup e Ripristino";
-"backup" = "Backup";
-"restore
+"don

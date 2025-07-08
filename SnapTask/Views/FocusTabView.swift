@@ -29,201 +29,208 @@ struct FocusTabView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    VStack(spacing: 16) {
-                        HStack {
-                            Text("focus_mode".localized)
-                                .font(.largeTitle.bold())
-                            Spacer()
-                        }
-                        
-                        // Show timer widgets for all active sessions
-                        if !timeTrackerViewModel.activeSessions.isEmpty || pomodoroViewModel.hasActiveTask {
+            ZStack {
+                Color(.systemGroupedBackground)
+                    .themedBackground()
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        VStack(spacing: 16) {
                             HStack {
+                                Text("focus_mode".localized)
+                                    .font(.largeTitle.bold())
+                                    .themedPrimaryText()
                                 Spacer()
-                                
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        // FIXED: Show only sessions that have been actually started
-                                        ForEach(timeTrackerViewModel.activeSessions.filter { session in
-                                            session.isRunning || session.elapsedTime > 0 || session.isPaused
-                                        }) { session in
-                                            MiniTimerWidget(
-                                                sessionId: session.id,
-                                                viewModel: timeTrackerViewModel,
-                                                onTap: {
-                                                    // FIXED: Verifica che la sessione esista prima di aprire la vista
-                                                    if timeTrackerViewModel.getSession(id: session.id) != nil {
-                                                        selectedSessionId = session.id
-                                                        showingWidgetTimer = true
+                            }
+                            
+                            // Show timer widgets for all active sessions
+                            if !timeTrackerViewModel.activeSessions.isEmpty || pomodoroViewModel.hasActiveTask {
+                                HStack {
+                                    Spacer()
+                                    
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            // FIXED: Show only sessions that have been actually started
+                                            ForEach(timeTrackerViewModel.activeSessions.filter { session in
+                                                session.isRunning || session.elapsedTime > 0 || session.isPaused
+                                            }) { session in
+                                                MiniTimerWidget(
+                                                    sessionId: session.id,
+                                                    viewModel: timeTrackerViewModel,
+                                                    onTap: {
+                                                        // FIXED: Verifica che la sessione esista prima di aprire la vista
+                                                        if timeTrackerViewModel.getSession(id: session.id) != nil {
+                                                            selectedSessionId = session.id
+                                                            showingWidgetTimer = true
+                                                        }
                                                     }
+                                                )
+                                            }
+                                            
+                                            // Show pomodoro if active
+                                            if pomodoroViewModel.hasActiveTask {
+                                                MiniPomodoroWidget(viewModel: pomodoroViewModel) {
+                                                    showingWidgetPomodoro = true
                                                 }
-                                            )
-                                        }
-                                        
-                                        // Show pomodoro if active
-                                        if pomodoroViewModel.hasActiveTask {
-                                            MiniPomodoroWidget(viewModel: pomodoroViewModel) {
-                                                showingWidgetPomodoro = true
                                             }
                                         }
+                                        .padding(.horizontal, 16)
                                     }
-                                    .padding(.horizontal, 16)
+                                    
+                                    Spacer()
                                 }
-                                
-                                Spacer()
                             }
                         }
-                    }
-                    .padding(.top)
-                    
-                    VStack(spacing: 16) {
-                        FocusModeCard(
-                            title: "simple_timer".localized,
-                            description: "freeform_focus_session".localized,
-                            icon: "stopwatch",
-                            color: .yellow,
-                            gradient: [.yellow, .orange]
-                        ) {
-                            selectedTrackingMode = .simple
-                            if timeTrackerViewModel.activeSessions.count >= 2 {
-                                // Show alert or do nothing
-                                return
+                        .padding(.top)
+                        
+                        VStack(spacing: 16) {
+                            FocusModeCard(
+                                title: "simple_timer".localized,
+                                description: "freeform_focus_session".localized,
+                                icon: "stopwatch",
+                                color: .yellow,
+                                gradient: [.yellow, .orange]
+                            ) {
+                                selectedTrackingMode = .simple
+                                if timeTrackerViewModel.activeSessions.count >= 2 {
+                                    // Show alert or do nothing
+                                    return
+                                }
+                                showingTimeTracker = true
                             }
-                            showingTimeTracker = true
+                            
+                            FocusModeCard(
+                                title: "pomodoro_technique".localized,
+                                description: "25min_work_sessions_5min_breaks".localized,
+                                icon: "timer",
+                                color: .red,
+                                gradient: [.red, .pink]
+                            ) {
+                                // Only check for Pomodoro conflicts
+                                checkAndStartPomodoroSession()
+                            }
+                            
+                            FocusModeCard(
+                                title: "coming_soon".localized,
+                                description: "more_focus_methods".localized,
+                                icon: "sparkles",
+                                color: .gray,
+                                gradient: [.gray, .secondary],
+                                action: {
+                                    // No action for now
+                                },
+                                isDisabled: true
+                            )
                         }
                         
-                        FocusModeCard(
-                            title: "pomodoro_technique".localized,
-                            description: "25min_work_sessions_5min_breaks".localized,
-                            icon: "timer",
-                            color: .red,
-                            gradient: [.red, .pink]
-                        ) {
-                            // Only check for Pomodoro conflicts
-                            checkAndStartPomodoroSession()
+                        let activeSessionsCount = timeTrackerViewModel.activeSessions.filter { session in
+                            session.isRunning || session.elapsedTime > 0 || session.isPaused
+                        }.count
+                        
+                        if activeSessionsCount > 0 || pomodoroViewModel.hasActiveTask {
+                            activeSessionsCard
                         }
                         
-                        FocusModeCard(
-                            title: "coming_soon".localized,
-                            description: "more_focus_methods".localized,
-                            icon: "sparkles",
-                            color: .gray,
-                            gradient: [.gray, .secondary],
-                            action: {
-                                // No action for now
-                            },
-                            isDisabled: true
-                        )
+                        todaysStatsCard
+                        
+                        recentSessionsCard
+                        
+                        Spacer()
                     }
-                    
-                    let activeSessionsCount = timeTrackerViewModel.activeSessions.filter { session in
-                        session.isRunning || session.elapsedTime > 0 || session.isPaused
-                    }.count
-                    
-                    if activeSessionsCount > 0 || pomodoroViewModel.hasActiveTask {
-                        activeSessionsCard
-                    }
-                    
-                    todaysStatsCard
-                    
-                    recentSessionsCard
-                    
-                    Spacer()
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
-            }
-            .navigationBarHidden(true)
-            .sheet(isPresented: $showingTimeTracker) {
-                NavigationStack {
-                    TimeTrackerView(
-                        task: nil,
-                        mode: selectedTrackingMode,
-                        taskManager: TaskManager.shared,
-                        presentationStyle: .fullscreen
-                    )
-                }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $showingPomodoro) {
-                NavigationStack {
-                    PomodoroTabView()
-                }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $showingTaskPomodoro) {
-                if let activeTask = pomodoroViewModel.activeTask {
+                .navigationBarHidden(true)
+                .sheet(isPresented: $showingTimeTracker) {
                     NavigationStack {
-                        PomodoroView(task: activeTask, presentationStyle: .fullscreen)
+                        TimeTrackerView(
+                            task: nil,
+                            mode: selectedTrackingMode,
+                            taskManager: TaskManager.shared,
+                            presentationStyle: .fullscreen
+                        )
                     }
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
-            }
-            .sheet(isPresented: $showingWidgetTimer) {
-                if let sessionId = selectedSessionId {
+                .sheet(isPresented: $showingPomodoro) {
                     NavigationStack {
-                        SessionTimeTrackerView(
-                            sessionId: sessionId,
-                            viewModel: timeTrackerViewModel,
-                            presentationStyle: .sheet
-                        )
+                        PomodoroTabView()
                     }
-                    .presentationDetents([.medium])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
-            }
-            .sheet(isPresented: $showingWidgetPomodoro) {
-                if let activeTask = pomodoroViewModel.activeTask {
-                    NavigationStack {
-                        PomodoroView(task: activeTask, presentationStyle: .sheet)
+                .sheet(isPresented: $showingTaskPomodoro) {
+                    if let activeTask = pomodoroViewModel.activeTask {
+                        NavigationStack {
+                            PomodoroView(task: activeTask, presentationStyle: .fullscreen)
+                        }
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.visible)
                     }
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
+                }
+                .sheet(isPresented: $showingWidgetTimer) {
+                    if let sessionId = selectedSessionId {
+                        NavigationStack {
+                            SessionTimeTrackerView(
+                                sessionId: sessionId,
+                                viewModel: timeTrackerViewModel,
+                                presentationStyle: .sheet
+                            )
+                        }
+                        .presentationDetents([.medium])
+                        .presentationDragIndicator(.visible)
+                    }
+                }
+                .sheet(isPresented: $showingWidgetPomodoro) {
+                    if let activeTask = pomodoroViewModel.activeTask {
+                        NavigationStack {
+                            PomodoroView(task: activeTask, presentationStyle: .sheet)
+                        }
+                        .presentationDetents([.medium])
+                        .presentationDragIndicator(.visible)
+                    }
+                }
+                .sheet(isPresented: $showingSessionConflict) {
+                    SessionConflictView(
+                        currentSession: getCurrentSessionName(),
+                        newSession: pendingSessionType?.displayName ?? "",
+                        onReplace: {
+                            handleSessionReplacement()
+                        },
+                        onCancel: {
+                            pendingSessionType = nil
+                        },
+                        onSaveAndReplace: {
+                            handleSaveAndReplace()
+                        },
+                        onDiscardAndReplace: {
+                            handleDiscardAndReplace()
+                        },
+                        onKeepBoth: nil // No keep both for Pomodoro
+                    )
                 }
             }
-            .sheet(isPresented: $showingSessionConflict) {
-                SessionConflictView(
-                    currentSession: getCurrentSessionName(),
-                    newSession: pendingSessionType?.displayName ?? "",
-                    onReplace: {
-                        handleSessionReplacement()
-                    },
-                    onCancel: {
-                        pendingSessionType = nil
-                    },
-                    onSaveAndReplace: {
-                        handleSaveAndReplace()
-                    },
-                    onDiscardAndReplace: {
-                        handleDiscardAndReplace()
-                    },
-                    onKeepBoth: nil // No keep both for Pomodoro
-                )
+            .onReceive(NotificationCenter.default.publisher(for: .openFocusTabTimeTracker)) { _ in
+                showingTimeTracker = true
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openFocusTabTimeTracker)) { _ in
-            showingTimeTracker = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openFocusTabPomodoro)) { notification in
-            if let task = notification.object as? TodoTask {
-                pomodoroViewModel.setActiveTask(task)
-                showingTaskPomodoro = true
-            } else {
-                showingPomodoro = true
+            .onReceive(NotificationCenter.default.publisher(for: .openFocusTabPomodoro)) { notification in
+                if let task = notification.object as? TodoTask {
+                    pomodoroViewModel.setActiveTask(task)
+                    showingTaskPomodoro = true
+                } else {
+                    showingPomodoro = true
+                }
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .expandActiveTimer)) { notification in
-            // Non serve gestire questa notifica perché il MiniTimerWidget usa onTap diretto
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .expandActivePomodoro)) { notification in
-            if let task = notification.object as? TodoTask {
-                showingTaskPomodoro = true
-            } else if pomodoroViewModel.hasActiveTask {
-                showingTaskPomodoro = true
+            .onReceive(NotificationCenter.default.publisher(for: .expandActiveTimer)) { notification in
+                // Non serve gestire questa notifica perché il MiniTimerWidget usa onTap diretto
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .expandActivePomodoro)) { notification in
+                if let task = notification.object as? TodoTask {
+                    showingTaskPomodoro = true
+                } else if pomodoroViewModel.hasActiveTask {
+                    showingTaskPomodoro = true
+                }
             }
         }
     }
@@ -287,6 +294,7 @@ struct FocusTabView: View {
                     .foregroundColor(.blue)
                 Text("active_sessions".localized)
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
                 
                 // FIXED: Count only sessions that have been actually started
@@ -297,7 +305,7 @@ struct FocusTabView: View {
                 if activeSessionsCount > 0 || pomodoroViewModel.hasActiveTask {
                     Text("\(activeSessionsCount) " + "timers".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
             }
             
@@ -314,11 +322,11 @@ struct FocusTabView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("simple_timer".localized)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                 
                                 Text(session.taskName ?? "focus_session".localized)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                             
                             Spacer()
@@ -355,11 +363,11 @@ struct FocusTabView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("pomodoro_timer".localized)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                 
                                 Text(pomodoroViewModel.activeTask?.name ?? "focus_session".localized)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                             
                             Spacer()
@@ -389,11 +397,7 @@ struct FocusTabView: View {
             }
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-        )
+        .themedCard()
     }
     
     private func formatPomodoroTime(_ seconds: TimeInterval) -> String {
@@ -409,6 +413,7 @@ struct FocusTabView: View {
                     .foregroundColor(.green)
                 Text("todays_focus".localized)
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -427,11 +432,7 @@ struct FocusTabView: View {
             }
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-        )
+        .themedCard()
     }
     
     private var recentSessionsCard: some View {
@@ -441,6 +442,7 @@ struct FocusTabView: View {
                     .foregroundColor(.orange)
                 Text("recent_sessions".localized)
                     .font(.headline)
+                    .themedPrimaryText()
                 Spacer()
             }
             
@@ -449,7 +451,7 @@ struct FocusTabView: View {
             if recentSessions.isEmpty {
                 Text("no_sessions_yet".localized)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
@@ -461,11 +463,7 @@ struct FocusTabView: View {
             }
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-        )
+        .themedCard()
     }
     
     private func getTodaysSessions() -> [TrackingSession] {
@@ -499,12 +497,13 @@ struct StatItem: View {
     let title: String
     let value: String
     let color: Color
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
             
             Text(value)
                 .font(.title2.bold())
@@ -515,16 +514,18 @@ struct StatItem: View {
 
 struct SessionRow: View {
     let session: TrackingSession
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.taskName ?? "general_focus".localized)
                     .font(.subheadline.weight(.medium))
+                    .themedPrimaryText()
                 
                 Text(session.startTime.formatted(date: .omitted, time: .shortened))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
             
             Spacer()
@@ -532,11 +533,11 @@ struct SessionRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(formatSessionDuration(session.effectiveWorkTime))
                     .font(.subheadline.weight(.medium))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Text(session.mode.displayName)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
         }
         .padding(.vertical, 4)

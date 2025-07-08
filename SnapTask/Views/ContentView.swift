@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var showingUpdateBanner = false
     @State private var selectedTab = 0
     @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var themeManager = ThemeManager.shared
     @State private var refreshID = UUID()
     
     var body: some View {
@@ -42,6 +43,8 @@ struct ContentView: View {
                     .tag(4)
             }
             .id(refreshID) // Force complete refresh on language change
+            .environment(\.theme, themeManager.currentTheme)
+            .themedBackground()
             
             // Update Banner Overlay
             if showingUpdateBanner {
@@ -72,6 +75,11 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LanguageChanged"))) { _ in
             // Force UI refresh when language changes
             print("🌍 ContentView received language change notification")
+            refreshID = UUID()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .themeChanged)) { _ in
+            // Force UI refresh when theme changes
+            print("🎨 ContentView received theme change notification")
             refreshID = UUID()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ForceShowUpdateBanner"))) { _ in

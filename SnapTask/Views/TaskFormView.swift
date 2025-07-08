@@ -5,6 +5,7 @@ struct TaskFormView: View {
     @StateObject private var viewModel: TaskFormViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     @State private var newSubtaskName = ""
     @State private var showingPomodoroSettings = false
     @State private var showDurationPicker = false
@@ -85,7 +86,7 @@ struct TaskFormView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("task_name".localized)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                 
                                 TextField("enter_task_name".localized, text: $viewModel.name)
                                     .textFieldStyle(PlainTextFieldStyle())
@@ -93,7 +94,7 @@ struct TaskFormView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(Color.gray.opacity(0.1))
+                                            .fill(theme.surfaceColor)
                                     )
                                     .autocorrectionDisabled(true)
                                     .textInputAutocapitalization(.sentences)
@@ -103,7 +104,7 @@ struct TaskFormView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("task_description".localized)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                 
                                 TextField("add_description".localized, text: $viewModel.description, axis: .vertical)
                                     .textFieldStyle(PlainTextFieldStyle())
@@ -112,7 +113,7 @@ struct TaskFormView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(Color.gray.opacity(0.1))
+                                            .fill(theme.surfaceColor)
                                     )
                                     .autocorrectionDisabled(true)
                                     .textInputAutocapitalization(.sentences)
@@ -125,21 +126,21 @@ struct TaskFormView: View {
                                 HStack {
                                     Text("location".localized)
                                         .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .themedPrimaryText()
                                     Spacer()
                                     if let location = viewModel.location {
                                         Text(location.shortDisplayName)
                                             .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                             .lineLimit(1)
                                     } else {
                                         Text("add_location".localized)
                                             .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                     }
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                 }
                             }
                             
@@ -162,10 +163,10 @@ struct TaskFormView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("specific_time".localized)
                                         .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .themedPrimaryText()
                                     Text("set_exact_time".localized)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                 }
                                 Spacer()
                                 ModernToggle(isOn: $viewModel.hasSpecificTime)
@@ -175,7 +176,7 @@ struct TaskFormView: View {
                                 HStack {
                                     Text("start_time".localized)
                                         .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .themedPrimaryText()
                                     Spacer()
                                     DatePicker("", selection: $viewModel.startDate)
                                         .labelsHidden()
@@ -190,10 +191,10 @@ struct TaskFormView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("duration".localized)
                                         .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .themedPrimaryText()
                                     Text("add_duration".localized)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                 }
                                 Spacer()
                                 ModernToggle(isOn: $viewModel.hasDuration)
@@ -203,7 +204,7 @@ struct TaskFormView: View {
                                 HStack {
                                     Text("duration_value".localized)
                                         .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .themedPrimaryText()
                                     
                                     Spacer()
                                     
@@ -212,12 +213,12 @@ struct TaskFormView: View {
                                         let minutes = (Int(viewModel.duration) % 3600) / 60
                                         Text(hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m")
                                             .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 6)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 8)
-                                                    .fill(Color.gray.opacity(0.1))
+                                                    .fill(theme.surfaceColor)
                                             )
                                     }
                                 }
@@ -242,7 +243,7 @@ struct TaskFormView: View {
                                 HStack {
                                     Text("category".localized)
                                         .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .themedPrimaryText()
                                     Spacer()
                                     if let category = viewModel.selectedCategory {
                                         HStack(spacing: 8) {
@@ -251,23 +252,23 @@ struct TaskFormView: View {
                                                 .frame(width: 12, height: 12)
                                             Text(category.name)
                                                 .font(.subheadline)
-                                                .foregroundColor(.secondary)
+                                                .themedSecondaryText()
                                         }
                                     } else {
                                         Text("select_category".localized)
                                             .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                     }
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                 }
                             }
                             
                             HStack {
                                 Text("priority".localized)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                 Spacer()
                                 Menu {
                                     ForEach(Priority.allCases, id: \.self) { priority in
@@ -284,10 +285,10 @@ struct TaskFormView: View {
                                             .foregroundColor(Color(hex: viewModel.selectedPriority.color))
                                         Text(viewModel.selectedPriority.displayName)
                                             .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                         Image(systemName: "chevron.down")
                                             .font(.system(size: 10))
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                     }
                                 }
                             }
@@ -300,7 +301,7 @@ struct TaskFormView: View {
                             HStack {
                                 Text("repeat_task".localized)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                 Spacer()
                                 ModernToggle(isOn: $viewModel.isRecurring)
                             }
@@ -313,21 +314,21 @@ struct TaskFormView: View {
                                         HStack {
                                             Text("frequency".localized)
                                                 .font(.subheadline.weight(.medium))
-                                                .foregroundColor(.primary)
+                                                .themedPrimaryText()
                                             Spacer()
                                             Text(viewModel.recurrenceDisplayText)
                                                 .font(.subheadline)
-                                                .foregroundColor(.secondary)
+                                                .themedSecondaryText()
                                             Image(systemName: "chevron.right")
                                                 .font(.system(size: 12))
-                                                .foregroundColor(.secondary)
+                                                .themedSecondaryText()
                                         }
                                     }
                                     
                                     HStack {
                                         Text("track_in_consistency".localized)
                                             .font(.subheadline.weight(.medium))
-                                            .foregroundColor(.primary)
+                                            .themedPrimaryText()
                                         Spacer()
                                         ModernToggle(isOn: $viewModel.trackInStatistics)
                                     }
@@ -352,7 +353,7 @@ struct TaskFormView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(Color.gray.opacity(0.1))
+                                            .fill(theme.surfaceColor)
                                     )
                                     .focused($focusedField, equals: .subtaskName)
                                 
@@ -364,12 +365,12 @@ struct TaskFormView: View {
                                 }) {
                                     Text("add".localized)
                                         .font(.subheadline.weight(.medium))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(theme.backgroundColor)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
                                         .background(
                                             RoundedRectangle(cornerRadius: 10)
-                                                .fill(Color.pink)
+                                                .fill(theme.primaryColor)
                                         )
                                 }
                                 .disabled(newSubtaskName.isEmpty)
@@ -381,10 +382,10 @@ struct TaskFormView: View {
                                         HStack {
                                             Image(systemName: "circle")
                                                 .font(.system(size: 12))
-                                                .foregroundColor(.secondary)
+                                                .themedSecondaryText()
                                             Text(subtask.name)
                                                 .font(.subheadline)
-                                                .foregroundColor(.primary)
+                                                .themedPrimaryText()
                                             Spacer()
                                         }
                                         .padding(.vertical, 4)
@@ -409,7 +410,7 @@ struct TaskFormView: View {
                             HStack {
                                 Text("earn_reward_points".localized)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundColor(.primary)
+                                    .themedPrimaryText()
                                 Spacer()
                                 ModernToggle(isOn: $viewModel.hasRewardPoints)
                             }
@@ -419,7 +420,7 @@ struct TaskFormView: View {
                                     HStack {
                                         Text("custom_points".localized)
                                             .font(.subheadline.weight(.medium))
-                                            .foregroundColor(.primary)
+                                            .themedPrimaryText()
                                         Spacer()
                                         ModernToggle(isOn: $viewModel.useCustomPoints)
                                     }
@@ -427,7 +428,7 @@ struct TaskFormView: View {
                                     HStack(alignment: .center) {
                                         Text("points".localized)
                                             .font(.subheadline.weight(.medium))
-                                            .foregroundColor(.primary)
+                                            .themedPrimaryText()
                                         Spacer()
                                         
                                         Group {
@@ -442,7 +443,7 @@ struct TaskFormView: View {
                                                         .padding(.vertical, 8)
                                                         .background(
                                                             RoundedRectangle(cornerRadius: 8)
-                                                                .fill(Color.gray.opacity(0.1))
+                                                                .fill(theme.surfaceColor)
                                                         )
                                                         .focused($focusedField, equals: .customPoints)
                                                         .onChange(of: viewModel.customPointsText) { oldValue, newValue in
@@ -457,7 +458,7 @@ struct TaskFormView: View {
                                                     
                                                     Text("(1-999)")
                                                         .font(.caption)
-                                                        .foregroundColor(.secondary)
+                                                        .themedSecondaryText()
                                                 }
                                             } else {
                                                 Picker("points".localized, selection: $viewModel.rewardPoints) {
@@ -485,16 +486,16 @@ struct TaskFormView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("point_guidelines".localized)
                                             .font(.caption.weight(.medium))
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                         Text("• 1-10: " + "quick_tasks_5_15_min".localized)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                         Text("• 15-50: " + "regular_tasks_30_90_min".localized)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                         Text("• 75-200: " + "complex_tasks_2_4_hours".localized)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .themedSecondaryText()
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.top, 4)
@@ -523,18 +524,15 @@ struct TaskFormView: View {
                             Text("save_task".localized)
                                 .font(.headline)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(theme.backgroundColor)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            LinearGradient(
-                                colors: viewModel.isValid ? [.pink, .pink.opacity(0.8)] : [.gray, .gray.opacity(0.8)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
+                            viewModel.isValid ? theme.gradient : 
+                            LinearGradient(colors: [theme.secondaryTextColor, theme.secondaryTextColor.opacity(0.8)], startPoint: .top, endPoint: .bottom)
                         )
                         .cornerRadius(16)
-                        .shadow(color: viewModel.isValid ? .pink.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
+                        .shadow(color: viewModel.isValid ? theme.primaryColor.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
                     }
                     .disabled(!viewModel.isValid)
                     .padding(.horizontal)
@@ -542,7 +540,7 @@ struct TaskFormView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .themedBackground()
             .simultaneousGesture(
                 TapGesture()
                     .onEnded { _ in
@@ -557,7 +555,7 @@ struct TaskFormView: View {
                     Button("cancel".localized) {
                         dismiss()
                     }
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -567,7 +565,7 @@ struct TaskFormView: View {
                         dismiss()
                     }
                     .fontWeight(.semibold)
-                    .foregroundColor(.pink)
+                    .themedPrimary()
                     .disabled(!viewModel.isValid)
                 }
             }
@@ -590,6 +588,7 @@ struct ModernCard<Content: View>: View {
     let icon: String
     let content: Content
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     init(title: String, icon: String, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -602,42 +601,27 @@ struct ModernCard<Content: View>: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 16))
-                    .foregroundColor(.pink)
+                    .themedPrimary()
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
             }
             
             content
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(
-                    color: colorScheme == .dark ? .white.opacity(0.1) : .black.opacity(0.08),
-                    radius: colorScheme == .dark ? 0.5 : 8,
-                    x: 0,
-                    y: colorScheme == .dark ? 1 : 2
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(
-                            colorScheme == .dark ? .white.opacity(0.1) : .clear,
-                            lineWidth: colorScheme == .dark ? 1 : 0
-                        )
-                )
-        )
+        .themedCard()
         .padding(.horizontal)
     }
 }
 
 struct ModernToggle: View {
     @Binding var isOn: Bool
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Toggle("", isOn: $isOn)
-            .toggleStyle(SwitchToggleStyle(tint: .pink))
+            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
             .scaleEffect(0.9)
             .animation(.easeInOut(duration: 0.3), value: isOn)
     }
@@ -647,6 +631,7 @@ struct ModernNavigationRow: View {
     let title: String
     let value: String
     let isSystemImage: Bool
+    @Environment(\.theme) private var theme
     
     init(title: String, value: String, isSystemImage: Bool = false) {
         self.title = title
@@ -658,19 +643,19 @@ struct ModernNavigationRow: View {
         HStack {
             Text(title)
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             Spacer()
             if isSystemImage {
                 Image(systemName: value)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             } else {
                 Text(value)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
             Image(systemName: "chevron.right")
                 .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
     }
 }
