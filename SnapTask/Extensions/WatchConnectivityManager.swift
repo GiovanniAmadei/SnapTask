@@ -129,7 +129,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
 }
 
 extension WatchConnectivityManager: WCSessionDelegate {
-    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async {
             self.isReachable = session.isReachable
             print("📱 WCSession activated with state: \(activationState.rawValue)")
@@ -143,16 +143,16 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
     
-    func sessionDidBecomeInactive(_ session: WCSession) {
+    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
         print("📱 WCSession became inactive")
     }
     
-    func sessionDidDeactivate(_ session: WCSession) {
+    nonisolated func sessionDidDeactivate(_ session: WCSession) {
         print("📱 WCSession deactivated, reactivating...")
         session.activate()
     }
     
-    func sessionReachabilityDidChange(_ session: WCSession) {
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async {
             self.isReachable = session.isReachable
             print("📱 Watch reachability changed: \(session.isReachable)")
@@ -164,21 +164,23 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
     
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         print("📱 Received message from Watch: \(message)")
         
         if let type = message["type"] as? String {
             switch type {
             case "requestTasks":
                 // Watch requested tasks, send them
-                do {
-                    let tasks = TaskManager.shared.tasks
-                    let tasksData = try JSONEncoder().encode(tasks)
-                    replyHandler(["tasks": tasksData])
-                    print("✅ Sent \(tasks.count) tasks to Watch in response to request")
-                } catch {
-                    print("❌ Error encoding tasks for watch: \(error.localizedDescription)")
-                    replyHandler(["error": error.localizedDescription])
+                Task { @MainActor in
+                    do {
+                        let tasks = TaskManager.shared.tasks
+                        let tasksData = try JSONEncoder().encode(tasks)
+                        replyHandler(["tasks": tasksData])
+                        print("✅ Sent \(tasks.count) tasks to Watch in response to request")
+                    } catch {
+                        print("❌ Error encoding tasks for watch: \(error.localizedDescription)")
+                        replyHandler(["error": error.localizedDescription])
+                    }
                 }
                 
             case "taskCompletion":
@@ -190,7 +192,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
                     
                     let date = Date(timeIntervalSince1970: dateValue)
                     
-                    DispatchQueue.main.async {
+                    Task { @MainActor in
                         TaskManager.shared.toggleTaskCompletion(taskId, on: date)
                         print("✅ Updated task completion from Watch")
                     }
@@ -211,11 +213,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
     
-    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
         print("📱 Received application context from Watch: \(applicationContext)")
     }
     
-    func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
+    nonisolated func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
         if let error = error {
             print("❌ File transfer to Watch failed: \(error.localizedDescription)")
         } else {

@@ -10,6 +10,7 @@ struct TaskDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
     @ObservedObject private var taskManager = TaskManager.shared
+    @StateObject private var taskNotificationManager = TaskNotificationManager.shared
     @State private var localTask: TodoTask?
     @State private var showingEditSheet = false
     @State private var showingPomodoro = false
@@ -57,6 +58,7 @@ struct TaskDetailView: View {
         }
         .onAppear {
             loadLocalTask()
+            taskNotificationManager.checkAuthorizationStatus()
         }
         .onChange(of: taskManager.tasks) { _, _ in
             updateLocalTaskFromManager()
@@ -64,7 +66,9 @@ struct TaskDetailView: View {
         .sheet(isPresented: $showingEditSheet) {
             if let task = localTask {
                 TaskFormView(initialTask: task, onSave: { updatedTask in
-                    TaskManager.shared.updateTask(updatedTask)
+                    Task {
+                        await TaskManager.shared.updateTask(updatedTask)
+                    }
                 })
             }
         }
@@ -404,6 +408,44 @@ struct TaskDetailView: View {
                     Text(task.startTime.formatted(date: .abbreviated, time: .shortened))
                         .font(.subheadline)
                         .themedPrimaryText()
+                }
+                
+                // Notification toggle (only if has specific time)
+                if task.hasSpecificTime {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Notification")
+                                .font(.subheadline.weight(.medium))
+                                .themedSecondaryText()
+                            
+                            if !taskNotificationManager.areNotificationsEnabled {
+                                Text("notifications_not_available".localized)
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            } else if taskNotificationManager.authorizationStatus == .denied {
+                                Text("notifications_denied".localized)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            } else {
+                                Text(task.hasNotification ? "notification_enabled".localized : "notification_disabled".localized)
+                                    .font(.caption)
+                                    .themedSecondaryText()
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: Binding(
+                            get: { task.hasNotification },
+                            set: { newValue in
+                                Task {
+                                    await TaskManager.shared.toggleTaskNotification(for: task.id)
+                                }
+                            }
+                        ))
+                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
+                        .disabled(!taskNotificationManager.areNotificationsEnabled || taskNotificationManager.authorizationStatus == .denied)
+                    }
                 }
                 
                 durationSection(task)

@@ -5,6 +5,8 @@ struct ContentView: View {
     @State private var showingWelcome = false
     @State private var showingUpdateBanner = false
     @State private var selectedTab = 0
+    @State private var showingTaskDetail = false
+    @State private var selectedTaskId: UUID?
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var themeManager = ThemeManager.shared
     @State private var refreshID = UUID()
@@ -58,6 +60,13 @@ struct ContentView: View {
                     }
             }
         }
+        .sheet(isPresented: $showingTaskDetail) {
+            if let taskId = selectedTaskId {
+                NavigationStack {
+                    TaskDetailView(taskId: taskId)
+                }
+            }
+        }
         .onAppear {
             print("ContentView onAppear - hasShownWelcome: \(hasShownWelcome)")
             if !hasShownWelcome {
@@ -72,6 +81,13 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .expandActivePomodoro)) { _ in
             selectedTab = 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openTaskDetail)) { notification in
+            if let taskId = notification.object as? UUID {
+                selectedTaskId = taskId
+                selectedTab = 0 // Switch to timeline tab
+                showingTaskDetail = true
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LanguageChanged"))) { _ in
             // Force UI refresh when language changes

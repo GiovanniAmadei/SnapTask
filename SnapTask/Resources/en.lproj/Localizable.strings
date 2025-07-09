@@ -41,6 +41,24 @@
 "priority_name" = "Priority Name";
 "new_priority" = "New Priority";
 
+// Task Notifications
+"task_notifications" = "Task Notifications";
+"task_notifications_description" = "Receive reminders for scheduled tasks";
+"enable_task_notifications" = "Enable Task Notifications";
+"task_notification_title" = "Task Reminder";
+"task_notification_body" = "It's time for: %@";
+"notification_permission_required" = "Notification Permission Required";
+"notification_permission_message" = "To receive task reminders, enable notifications in Settings.";
+"notification_enabled" = "Notification Enabled";
+"notification_disabled" = "Notification Disabled";
+"enable_notification" = "Enable Notification";
+"disable_notification" = "Disable Notification";
+"notification_scheduled" = "Notification Scheduled";
+"notification_cancelled" = "Notification Cancelled";
+"notifications_not_available" = "Notifications Not Available";
+"notifications_denied" = "Notifications Denied";
+"notification_permission_denied_message" = "Notifications have been denied. Enable them in iOS Settings > SnapTask > Notifications.";
+
 // Accessibility Support
 "completed" = "completed";
 "not_completed" = "not completed";
@@ -172,6 +190,18 @@
 "select_category" = "Select Category";
 "select_color" = "Select Color";
 
+// Customization View
+"visual_themes" = "Visual Themes";
+"choose_visual_theme" = "Choose the visual theme for the app";
+"category_gradients_description" = "Show colorful gradients for categories";
+"customize_task_priorities" = "Customize task priorities";
+"customize_timer_colors" = "Customize Pomodoro timer colors";
+"priority_details" = "Priority Details";
+"auto_complete_tasks_footer" = "Automatically complete main tasks when all subtasks are completed";
+"task_completion" = "Task Completion";
+"manage_priorities" = "Manage Priorities";
+"new_priority" = "New Priority";
+
 // Settings
 "language" = "Language";
 "system" = "System";
@@ -198,16 +228,6 @@
 "sync_error" = "Sync Error";
 "last_synced" = "Last synced";
 "try_sign_out_in" = "Try signing out and back into iCloud";
-
-// Customization View
-"manage_categories" = "Manage Categories";
-"category_gradients" = "Category Gradients";
-"category_gradients_description" = "Category gradients add a subtle color effect to task cards based on the category color. Changes will be applied when you return to the timeline.";
-"manage_priorities" = "Manage Priorities";
-"timer_colors" = "Timer Colors";
-"auto_complete_tasks" = "Auto-complete Tasks";
-"auto_complete_tasks_description" = "Automatically complete the task when all subtasks are finished";
-"auto_complete_tasks_footer" = "When enabled, completing all subtasks will automatically complete the main task.";
 
 // Behavior Settings
 "smart_notifications" = "Smart Notifications";
@@ -657,13 +677,12 @@
 "logout_confirmation" = "Are you sure you want to logout?";
 "logout_success" = "Logged out successfully";
 "logout_failed" = "Logout failed";
+
 // Themes
 "themes" = "Themes";
+"themes_and_customization" = "Themes & Customization";
+"customize_visual_appearance" = "Customize the visual appearance, colors, and behavior of the app";
 "current_theme" = "Current Theme";
-"free_themes" = "Free Themes";
-"premium_themes" = "Premium Themes";
-"unlock_premium_themes" = "Unlock premium themes by upgrading to Pro";
-"premium" = "Premium";
 
 // Theme Names (localized versions)
 "default_theme" = "Default";
@@ -715,3 +734,13 @@
 "rewards_limit_reached" = "Rewards Limit Reached";
 "rewards_limit_message" = "You can create up to 3 rewards with the free plan. Upgrade to Pro for unlimited rewards.";
 "premium_badge" = "PRO";
+
+// Dark Mode Theme Warning
+"dark_mode_theme_warning_title" = "Theme with Custom Colors";
+"dark_mode_theme_warning_message" = "This theme overrides system colors and is not compatible with dark mode. To use dark mode, please select a simple theme like 'Default', 'Forest', or 'Sunset'.";
+"switch_to_simple_theme" = "Use Simple Theme";
+"keep_current_theme" = "Keep Current Theme";
+"custom_colors" = "Custom Colors";
+"keep_dark_mode" = "Disable Dark Mode";
+"keep_simple_theme" = "Keep Current Theme";
+"theme_dark_mode_warning_message" = "This theme uses custom colors and is not compatible with dark mode. Do you want to disable dark mode to use this theme?";

@@ -162,7 +162,9 @@ class TimelineViewModel: ObservableObject {
         print("Adding task: \(task.name)")
         print("Start time: \(task.startTime)")
         print("Recurrence: \(String(describing: task.recurrence))")
-        taskManager.addTask(task)
+        Task {
+            await taskManager.addTask(task)
+        }
     }
     
     func toggleTaskCompletion(_ taskId: UUID) {

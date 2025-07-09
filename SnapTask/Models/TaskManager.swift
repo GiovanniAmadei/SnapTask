@@ -20,6 +20,7 @@ class TaskManager: ObservableObject {
     private var saveTaskDebounceTimers: [UUID: Timer] = [:]
 
     private let appGroupUserDefaults = UserDefaults(suiteName: "group.com.snapTask.shared")
+    private let notificationManager = TaskNotificationManager.shared
 
     init() {
         loadTasks()
@@ -34,12 +35,12 @@ class TaskManager: ObservableObject {
             .sink { [weak self] _ in
                 // CloudKit data changed, but we'll let the sync process handle it
                 // to avoid infinite loops
-                print(" CloudKit data changed notification received")
+                print("📡 CloudKit data changed notification received")
             }
             .store(in: &cancellables)
     }
     
-    func addTask(_ task: TodoTask) {
+    func addTask(_ task: TodoTask) async {
         guard !isUpdatingFromSync else { return }
         
         print("Adding task: \(task.name)")
@@ -48,6 +49,9 @@ class TaskManager: ObservableObject {
         // Assicurati che la task abbia una data di modifica aggiornata
         var updatedTask = task
         updatedTask.lastModifiedDate = Date()
+        
+        // Handle notifications if enabled
+        await handleTaskNotification(updatedTask, isNew: true)
         
         tasks.append(updatedTask)
         saveTasks()
@@ -62,10 +66,10 @@ class TaskManager: ObservableObject {
         
         handleTaskCalendarSync(updatedTask, isNew: true)
         
-        print(" Task added: \(updatedTask.name)")
+        print("✅ Task added: \(updatedTask.name)")
     }
     
-    func updateTask(_ updatedTask: TodoTask) {
+    func updateTask(_ updatedTask: TodoTask) async {
         guard !isUpdatingFromSync else { return }
         
         if let index = tasks.firstIndex(where: { $0.id == updatedTask.id }) {
@@ -80,6 +84,9 @@ class TaskManager: ObservableObject {
             if !isUpdatingFromSync {
                 task.lastModifiedDate = Date()
             }
+            
+            // Handle notification changes
+            await handleTaskNotificationUpdate(oldTask: oldTask, newTask: task)
             
             if task.hasRewardPoints && oldTask.rewardPoints != task.rewardPoints {
                 // Per ogni data di completamento, aggiorna i punti
@@ -112,7 +119,7 @@ class TaskManager: ObservableObject {
             
             handleTaskCalendarSync(task, isNew: false)
             
-            print(" Task updated: \(task.name)")
+            print("✅ Task updated: \(task.name)")
         }
     }
     
@@ -132,7 +139,7 @@ class TaskManager: ObservableObject {
         print(" Updated \(newTasks.count) tasks from sync")
     }
     
-    func removeTask(_ task: TodoTask) {
+    func removeTask(_ task: TodoTask) async {
         guard !isUpdatingFromSync else { return }
         
         print("TaskManager iOS: Removing task with ID: \(task.id.uuidString)")
@@ -159,9 +166,7 @@ class TaskManager: ObservableObject {
         // Sincronizza con Apple Watch
         synchronizeWithWatch()
         
-        Task {
-            await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
-        }
+        await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
         
         print(" Task removed: \(task.name)")
     }
@@ -887,6 +892,95 @@ class TaskManager: ObservableObject {
         // Notify statistics to refresh
         NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
     }
+
+    func toggleTaskNotification(for taskId: UUID) async {
+        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+        
+        var task = tasks[index]
+        task.hasNotification.toggle()
+        
+        if task.hasNotification {
+            // Schedule notification
+            if task.recurrence != nil {
+                let identifiers = await notificationManager.scheduleRecurringNotifications(for: task)
+                task.notificationId = identifiers.isEmpty ? nil : identifiers.first
+            } else {
+                let identifier = await notificationManager.scheduleNotification(for: task)
+                task.notificationId = identifier
+            }
+            
+            if task.notificationId != nil {
+                print("✅ Notification scheduled for task: \(task.name)")
+            } else {
+                task.hasNotification = false
+                print("❌ Failed to schedule notification for task: \(task.name)")
+            }
+        } else {
+            // Cancel notification
+            if let notificationId = task.notificationId {
+                notificationManager.cancelNotification(withIdentifier: notificationId)
+                task.notificationId = nil
+                print("🗑️ Notification cancelled for task: \(task.name)")
+            } else {
+                // Cancel all notifications for this task (fallback)
+                notificationManager.cancelAllNotificationsForTask(task.id)
+            }
+        }
+        
+        task.lastModifiedDate = Date()
+        tasks[index] = task
+        
+        saveTasks()
+        notifyTasksUpdated()
+        debouncedSaveTask(task)
+        
+        print(" Task notification toggled: \(task.name)")
+    }
+
+    private func handleTaskNotification(_ task: TodoTask, isNew: Bool) async {
+        guard task.hasNotification && task.hasSpecificTime else { return }
+        
+        if task.recurrence != nil {
+            let identifiers = await notificationManager.scheduleRecurringNotifications(for: task)
+            if let firstId = identifiers.first, !identifiers.isEmpty {
+                // Update task with notification ID
+                if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+                    tasks[index].notificationId = firstId
+                }
+            }
+        } else {
+            let identifier = await notificationManager.scheduleNotification(for: task)
+            if let identifier = identifier {
+                // Update task with notification ID
+                if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+                    tasks[index].notificationId = identifier
+                }
+            }
+        }
+    }
+    
+    private func handleTaskNotificationUpdate(oldTask: TodoTask, newTask: TodoTask) async {
+        // If notification settings haven't changed and time hasn't changed, nothing to do
+        if oldTask.hasNotification == newTask.hasNotification &&
+           oldTask.startTime == newTask.startTime &&
+           oldTask.recurrence == newTask.recurrence &&
+           oldTask.name == newTask.name {
+            return
+        }
+        
+        // Cancel old notifications
+        if let oldNotificationId = oldTask.notificationId {
+            notificationManager.cancelNotification(withIdentifier: oldNotificationId)
+        } else {
+            notificationManager.cancelAllNotificationsForTask(oldTask.id)
+        }
+        
+        // Schedule new notifications if needed
+        if newTask.hasNotification && newTask.hasSpecificTime {
+            await handleTaskNotification(newTask, isNew: false)
+        }
+    }
+
 }
 
 // MARK: - Notification Extensions

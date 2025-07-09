@@ -41,6 +41,24 @@
 "priority_name" = "Nome Priorità";
 "new_priority" = "Nuova Priorità";
 
+// Task Notifications
+"task_notifications" = "Notifiche Attività";
+"task_notifications_description" = "Ricevi promemoria per le attività programmate";
+"enable_task_notifications" = "Abilita Notifiche Attività";
+"task_notification_title" = "Promemoria Attività";
+"task_notification_body" = "È ora di: %@";
+"notification_permission_required" = "Permesso Notifiche Richiesto";
+"notification_permission_message" = "Per ricevere promemoria delle attività, abilita le notifiche nelle Impostazioni.";
+"notification_enabled" = "Notifica Abilitata";
+"notification_disabled" = "Notifica Disabilitata";
+"enable_notification" = "Abilita Notifica";
+"disable_notification" = "Disabilita Notifica";
+"notification_scheduled" = "Notifica Programmata";
+"notification_cancelled" = "Notifica Annullata";
+"notifications_not_available" = "Notifiche Non Disponibili";
+"notifications_denied" = "Notifiche Negate";
+"notification_permission_denied_message" = "Le notifiche sono state negate. Abilitale nelle Impostazioni iOS > SnapTask > Notifiche.";
+
 // Accessibility Support
 "completed" = "completato";
 "not_completed" = "non completato";
@@ -184,6 +202,10 @@
 "customization" = "Personalizzazione";
 "appearance" = "Aspetto";
 "dark_mode" = "Modalità Scura";
+"themes" = "Temi";
+"themes_and_customization" = "Temi e Personalizzazione";
+"customize_visual_appearance" = "Personalizza l'aspetto visivo, i colori e il comportamento dell'app";
+"current_theme" = "Tema Attuale";
 "priorities" = "Priorità";
 "add_priority" = "Aggiungi Priorità";
 "performance" = "Prestazioni";
@@ -598,4 +620,103 @@
 "if_iap_not_working" = "Se le donazioni in-app non funzionano, puoi supportarmi direttamente:";
 "prefer_paypal" = "Preferisci PayPal?";
 "donate_via_paypal" = "Dona tramite PayPal";
-"don
+"donations_help_me" = "💝 Le tue donazioni mi aiutano a:";
+"develop_new_features" = "Sviluppare nuove funzionalità";
+"maintain_sync_servers" = "Mantenere i server di sincronizzazione";
+"continue_free_updates" = "Continuare gli aggiornamenti gratuiti";
+"thanks_previous_support" = "Grazie per il tuo supporto precedente!";
+"last_donation" = "Ultima donazione:";
+"thanks_so_much" = "Grazie di cuore! ❤️";
+"donation_helps_development" = "La tua donazione mi aiuta a continuare a sviluppare SnapTask Pro. Apprezzo davvero il tuo supporto!";
+"coffee_for_giovanni" = "Caffè per Giovanni";
+"small_coffee" = "Un piccolo caffè ☕️";
+"pizza_for_giovanni" = "Pizza per Giovanni";
+"pizza_for_dinner" = "Una pizza per cena 🍕";
+"dinner_for_giovanni" = "Cena per Giovanni";
+"nice_dinner" = "Una bella cena 🍽️";
+
+// Update Banner 0.2.2
+"whats_new" = "Novità";
+"version_update" = "Versione";
+"got_it" = "Capito!";
+"view_all_updates" = "Vedi tutti gli aggiornamenti";
+
+// Version 0.2.2 Features
+"task_quality_rating" = "Valutazione Qualità e Difficoltà Attività";
+"task_quality_rating_desc" = "Valuta la qualità e difficoltà delle attività completate per migliori approfondimenti";
+"manual_time_tracking" = "Tracciamento Tempo Manuale";
+"manual_time_tracking_desc" = "Inserisci manualmente il tempo trascorso sulle attività direttamente dai dettagli dell'attività";
+"enhanced_statistics" = "Statistiche Potenziate";
+"enhanced_statistics_desc" = "Traccia i trend di qualità e difficoltà nel tempo con analitiche dettagliate";
+"task_comments" = "Commenti Attività";
+"task_comments_desc" = "Aggiungi commenti e note alle tue attività per un migliore tracciamento";
+"data_reset_option" = "Reset Completo Dati";
+"data_reset_option_desc" = "Opzione per eliminare tutti i dati e iniziare da capo quando necessario";
+"general_improvements" = "Correzioni Bug Generali";
+"general_improvements_desc" = "Varie correzioni di bug e miglioramenti delle prestazioni basati sui feedback";
+
+// Backup and Restore
+"backup_restore" = "Backup e Ripristino";
+"backup" = "Backup";
+"restore" = "Ripristina";
+"create_backup" = "Crea Backup";
+"restore_backup" = "Ripristina Backup";
+"backup_created" = "Backup Creato";
+"backup_restored" = "Backup Ripristinato";
+"backup_failed" = "Backup Fallito";
+"restore_failed" = "Ripristino Fallito";
+"select_backup_file" = "Seleziona File Backup";
+"backup_description" = "Crea un backup di tutti i tuoi dati";
+"restore_description" = "Ripristina da un backup precedente";
+"backup_warning" = "Questo sovrascriverà i tuoi dati attuali";
+"restore_warning" = "Questo sovrascriverà i tuoi dati attuali con il backup";
+"backup_success_message" = "I tuoi dati sono stati salvati con successo";
+"restore_success_message" = "I tuoi dati sono stati ripristinati con successo";
+"backup_error_message" = "Impossibile creare il backup. Riprova.";
+"restore_error_message" = "Impossibile ripristinare il backup. Riprova.";
+"logout" = "Disconnetti";
+"logout_confirmation" = "Sei sicuro di volerti disconnettere?";
+"logout_success" = "Disconnesso con successo";
+"logout_failed" = "Disconnessione fallita";
+
+// Premium Features
+"unlimited_categories" = "Categorie Illimitate";
+"unlimited_categories_desc" = "Crea tutte le categorie che vuoi per organizzare perfettamente le tue attività";
+"task_evaluation" = "Valutazione Attività";
+"task_evaluation_desc" = "Valuta qualità e difficoltà delle attività per analitiche avanzate";
+"unlimited_rewards" = "Premi Illimitati";
+"unlimited_rewards_desc" = "Crea tutti i premi che vuoi per motivare il completamento";
+"cloud_sync" = "Sincronizzazione Cloud";
+"cloud_sync_desc" = "Sincronizza tutti i tuoi dati su tutti i dispositivi";
+"advanced_statistics" = "Statistiche Avanzate";
+"advanced_statistics_desc" = "Accedi a tutte le sezioni statistiche per analitiche dettagliate";
+
+// Subscription
+"snaptask_pro" = "SnapTask Pro";
+"upgrade_to_pro" = "Passa a Pro";
+"monthly_subscription" = "Abbonamento Mensile";
+"yearly_subscription" = "Abbonamento Annuale";
+"monthly_price" = "€3,99/mese";
+"yearly_price" = "€34,99/anno";
+"yearly_savings" = "Risparmia 27%";
+"subscribe" = "Abbonati";
+"restore_purchases" = "Ripristina Acquisti";
+"subscription_terms" = "Termini Abbonamento";
+"privacy_policy" = "Privacy Policy";
+"terms_of_service" = "Termini di Servizio";
+"manage_subscription" = "Gestisci Abbonamento";
+"cancel_subscription" = "Annulla Abbonamento";
+"subscription_active" = "Abbonamento Attivo";
+"subscription_expires" = "Scade";
+"subscription_expired" = "Abbonamento Scaduto";
+"premium_required" = "Premium Richiesto";
+"premium_feature_locked" = "Questa funzionalità è disponibile solo con SnapTask Pro";
+"premium_upgrade_message" = "Passa a SnapTask Pro per sbloccare tutte le funzionalità premium";
+"premium_plan" = "Piano Premium";
+"premium_plan_active" = "Piano Premium Attivo";
+"premium_features" = "Funzionalità Premium";
+"free_plan_limits" = "Limiti Piano Gratuito";
+"categories_limit_reached" = "Limite Categorie Raggiunto";
+"categories_limit_message" = "Puoi creare fino a 4 categorie con il piano gratuito. Passa a Pro per categorie illimitate.";
+"rewards_limit_reached" = "Limite Premi Raggiunto";
+"rewards_limit_message" = "Puoi creare fino a 3 premi con il piano gratuito. Passa a Pro per premi illimitati.";

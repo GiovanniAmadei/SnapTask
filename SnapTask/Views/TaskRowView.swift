@@ -193,7 +193,9 @@ struct TaskRowView: View {
         .sheet(isPresented: $showingEditSheet) {
             NavigationStack {
                 TaskFormView(initialTask: task, onSave: { updatedTask in
-                    TaskManager.shared.updateTask(updatedTask)
+                    Task {
+                        await TaskManager.shared.updateTask(updatedTask)
+                    }
                 })
             }
         }
@@ -234,7 +236,9 @@ struct TaskRowView: View {
     }
     
     private func deleteTask() {
-        TaskManager.shared.removeTask(task)
+        Task {
+            await TaskManager.shared.removeTask(task)
+        }
     }
     
     private func editTask() {

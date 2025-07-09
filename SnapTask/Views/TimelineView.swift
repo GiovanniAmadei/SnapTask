@@ -1594,10 +1594,10 @@ private struct TimelineTaskCard: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in
-                TaskManager.shared.updateTask(updatedTask)
+                Task {
+                    await TaskManager.shared.updateTask(updatedTask)
+                }
             })
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingPomodoro) {
             NavigationStack {
@@ -1623,8 +1623,6 @@ private struct TimelineTaskCard: View {
                     showingTimeTracker = true
                 }
             }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingTimeTracker) {
             NavigationStack {
@@ -1668,7 +1666,9 @@ private struct TimelineTaskCard: View {
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-            TaskManager.shared.removeTask(task)
+            Task {
+                await TaskManager.shared.removeTask(task)
+            }
         }
     }
 }

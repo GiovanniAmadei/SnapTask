@@ -38,12 +38,6 @@ struct Theme: Identifiable, Codable, Equatable {
         self.secondaryTextColor = secondaryTextColor
     }
     
-    // Indica se questo tema sovrascrive i colori di sistema (non compatibile con dark mode)
-    var overridesSystemColors: Bool {
-        // I temi che usano colori custom per background e testo non sono compatibili con dark mode
-        return id == "midnight" || id == "volcanic" || id == "rose_gold" || id == "ocean" || id == "emerald" || id == "lavender"
-    }
-    
     // Helper properties for easier access
     var gradient: LinearGradient {
         LinearGradient(
@@ -54,7 +48,7 @@ struct Theme: Identifiable, Codable, Equatable {
     }
     
     var cardBackground: Color {
-        // Usa surfaceColor con un'opacità leggermente ridotta per un effetto più morbido
+        // Usa surfaceColor con un'opacità leggermente ridotta per un effetto più morbido
         // simile alla schermata Premi
         surfaceColor.opacity(0.9)
     }
@@ -64,12 +58,7 @@ struct Theme: Identifiable, Codable, Equatable {
     }
     
     var shadowColor: Color {
-        // Migliora la visibilità delle ombre per temi scuri
-        if isDarkBackground {
-            return Color.black.opacity(0.3)
-        } else {
-            return textColor.opacity(0.1)
-        }
+        textColor.opacity(0.1)
     }
     
     // IMPORTANT: Smart text colors for buttons and contrasting elements
@@ -194,13 +183,13 @@ class ThemeManager: ObservableObject {
             id: "midnight",
             name: "midnight_theme".localized,
             isPremium: true,
-            primaryColor: Color(red: 0.5, green: 0.2, blue: 0.8),  // Viola più acceso
+            primaryColor: Color(red: 0.5, green: 0.2, blue: 0.8),  // Viola più acceso
             secondaryColor: Color(red: 0.3, green: 0.2, blue: 0.5),  // Viola scuro
             accentColor: Color(red: 0.8, green: 0.4, blue: 1.0),     // Viola chiaro
             backgroundColor: Color(red: 0.05, green: 0.05, blue: 0.1), // Nero con sfumatura bluastra
             surfaceColor: Color(red: 0.15, green: 0.15, blue: 0.2),  // Grigio scuro con sfumatura bluastra
             textColor: Color.white,                                   // Testo bianco
-            secondaryTextColor: Color(red: 0.9, green: 0.9, blue: 0.95)  // Grigio molto chiaro per migliore leggibilità
+            secondaryTextColor: Color(red: 0.9, green: 0.9, blue: 0.95)  // Grigio molto chiaro per migliore leggibilità
         ),
         
         Theme(

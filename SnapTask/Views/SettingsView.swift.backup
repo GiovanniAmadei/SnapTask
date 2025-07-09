@@ -8,8 +8,6 @@ struct SettingsView: View {
     @StateObject private var donationService = DonationService.shared
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var subscriptionManager = SubscriptionManager.shared
-    @StateObject private var themeManager = ThemeManager.shared
-    @StateObject private var taskNotificationManager = TaskNotificationManager.shared
     
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
@@ -27,8 +25,6 @@ struct SettingsView: View {
     @State private var showingDeleteConfirmation = false
     @State private var isDeleting = false
     @State private var showingPremiumPaywall = false
-    @State private var showingThemeWarning = false
-    @State private var showingTaskNotificationPermissionAlert = false
 
     var body: some View {
         NavigationStack {
@@ -124,9 +120,8 @@ struct SettingsView: View {
                         .themedSecondaryText()
                 }
                 
-                // Notifications Section
+                // Daily Quote Notifications Section
                 Section {
-                    // Daily Quote Notifications
                     HStack {
                         Image(systemName: "bell.fill")
                             .foregroundColor(.orange)
@@ -195,57 +190,8 @@ struct SettingsView: View {
                             .listRowBackground(theme.surfaceColor)
                         }
                     }
-
-                    // Task Notifications
-                    HStack {
-                        Image(systemName: "alarm.fill")
-                            .foregroundColor(.blue)
-                            .frame(width: 24)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("task_notifications".localized)
-                                .themedPrimaryText()
-                                .font(.body)
-                            Text("task_notifications_description".localized)
-                                .font(.caption)
-                                .themedSecondaryText()
-                        }
-                        
-                        Spacer()
-                        
-                        Toggle("", isOn: $taskNotificationManager.areNotificationsEnabled)
-                            .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
-                            .onChange(of: taskNotificationManager.areNotificationsEnabled) { _, newValue in
-                                handleTaskNotificationToggle(newValue)
-                            }
-                    }
-                    .listRowBackground(theme.surfaceColor)
-
-                    // Show task notification permission status
-                    if taskNotificationManager.authorizationStatus == .denied && taskNotificationManager.areNotificationsEnabled {
-                        Button {
-                            showingTaskNotificationPermissionAlert = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.red)
-                                    .frame(width: 24)
-                                
-                                Text("notification_permission_denied_message".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                                
-                                Spacer()
-                                
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption2)
-                                    .foregroundColor(.red)
-                            }
-                        }
-                        .listRowBackground(theme.surfaceColor)
-                    }
                 } header: {
-                    Text("notifications".localized)
+                    Text("daily_notifications".localized)
                         .themedSecondaryText()
                 }
                 
@@ -263,9 +209,6 @@ struct SettingsView: View {
                         
                         Toggle("", isOn: $isDarkMode)
                             .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
-                            .onChange(of: isDarkMode) { _, newValue in
-                                handleDarkModeToggle(newValue)
-                            }
                     }
                     .listRowBackground(theme.surfaceColor)
                     
@@ -503,7 +446,6 @@ struct SettingsView: View {
                 }
                 loadNotificationTime()
                 checkNotificationPermissionStatus()
-                taskNotificationManager.checkAuthorizationStatus()
             }
             .actionSheet(isPresented: $showingLanguagePicker) {
                 ActionSheet(
@@ -542,14 +484,6 @@ struct SettingsView: View {
             } message: {
                 Text("notification_permission_message".localized)
             }
-            .alert("notification_permission_required".localized, isPresented: $showingTaskNotificationPermissionAlert) {
-                Button("open_settings".localized) {
-                    openAppSettings()
-                }
-                Button("cancel".localized, role: .cancel) { }
-            } message: {
-                Text("notification_permission_denied_message".localized)
-            }
             .alert("delete_all_data_confirmation_title".localized, isPresented: $showingDeleteConfirmation) {
                 Button("cancel".localized, role: .cancel) { }
                 Button("delete_all_data_button".localized, role: .destructive) {
@@ -559,19 +493,6 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("delete_all_data_confirmation_message".localized)
-            }
-            .alert("dark_mode_theme_warning_title".localized, isPresented: $showingThemeWarning) {
-                Button("switch_to_simple_theme".localized) {
-                    // Switch to default theme and enable dark mode
-                    themeManager.setTheme(ThemeManager.defaultTheme)
-                    isDarkMode = true
-                }
-                Button("keep_current_theme".localized, role: .cancel) {
-                    // Keep current theme and disable dark mode
-                    isDarkMode = false
-                }
-            } message: {
-                Text("dark_mode_theme_warning_message".localized)
             }
             .fullScreenCover(isPresented: $showingWelcome) {
                 WelcomeView()
@@ -597,26 +518,6 @@ struct SettingsView: View {
             }
         } else {
             cancelDailyQuoteNotification()
-        }
-    }
-    
-    private func handleDarkModeToggle(_ newValue: Bool) {
-        // Se l'utente sta provando ad attivare la modalità scura con un tema che sovrascrive i colori
-        if newValue && themeManager.currentTheme.overridesSystemColors {
-            showingThemeWarning = true
-        }
-    }
-    
-    private func handleTaskNotificationToggle(_ newValue: Bool) {
-        if newValue && taskNotificationManager.authorizationStatus != .authorized {
-            Task {
-                let granted = await taskNotificationManager.requestNotificationPermission()
-                if !granted {
-                    showingTaskNotificationPermissionAlert = true
-                }
-            }
-        } else if !newValue {
-            taskNotificationManager.toggleNotifications()
         }
     }
     
@@ -726,7 +627,7 @@ struct SettingsView: View {
             
             // Remove each task individually to trigger proper cleanup
             for task in allTasks {
-                await taskManager.removeTask(task)
+                taskManager.removeTask(task)
             }
             
             // Clear any remaining data

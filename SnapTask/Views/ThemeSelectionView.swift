@@ -5,8 +5,11 @@ struct ThemeSelectionView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showingPremiumPaywall = false
     @State private var justSelectedThemeId: String?
+    @State private var showingDarkModeWarning = false
+    @State private var pendingTheme: Theme?
     @Environment(\.theme) private var theme
-    
+    @AppStorage("isDarkMode") private var isDarkMode = false
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 24) {
@@ -95,6 +98,22 @@ struct ThemeSelectionView: View {
         .sheet(isPresented: $showingPremiumPaywall) {
             PremiumPaywallView()
         }
+        .alert("dark_mode_theme_warning_title".localized, isPresented: $showingDarkModeWarning) {
+            Button("keep_dark_mode".localized) {
+                // Disable dark mode and apply the theme
+                isDarkMode = false
+                if let theme = pendingTheme {
+                    applyTheme(theme)
+                }
+                pendingTheme = nil
+            }
+            Button("keep_simple_theme".localized, role: .cancel) {
+                // Keep current theme and don't change anything
+                pendingTheme = nil
+            }
+        } message: {
+            Text("theme_dark_mode_warning_message".localized)
+        }
     }
     
     private func selectTheme(_ selectedTheme: Theme) {
@@ -102,24 +121,35 @@ struct ThemeSelectionView: View {
             // Don't do anything if already selected
             guard themeManager.currentTheme.id != selectedTheme.id else { return }
             
-            // Store the selected theme ID for visual feedback
-            justSelectedThemeId = selectedTheme.id
-            
-            // Apply theme with animation and haptic feedback
-            withAnimation(.easeInOut(duration: 0.4)) {
-                themeManager.setTheme(selectedTheme)
+            // Check if we're trying to select a theme with custom colors while dark mode is active
+            if selectedTheme.overridesSystemColors && isDarkMode {
+                pendingTheme = selectedTheme
+                showingDarkModeWarning = true
+                return
             }
             
-            // Provide haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-            impactFeedback.impactOccurred()
-            
-            // Clear the "just selected" state after animation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                justSelectedThemeId = nil
-            }
+            applyTheme(selectedTheme)
         } else {
             showingPremiumPaywall = true
+        }
+    }
+    
+    private func applyTheme(_ selectedTheme: Theme) {
+        // Store the selected theme ID for visual feedback
+        justSelectedThemeId = selectedTheme.id
+        
+        // Apply theme with animation and haptic feedback
+        withAnimation(.easeInOut(duration: 0.4)) {
+            themeManager.setTheme(selectedTheme)
+        }
+        
+        // Provide haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        // Clear the "just selected" state after animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            justSelectedThemeId = nil
         }
     }
 }
@@ -197,6 +227,18 @@ struct ThemeCard: View {
                             Text("premium".localized)
                                 .font(.system(.caption2, design: .rounded, weight: .medium))
                                 .foregroundColor(.purple)
+                        }
+                    }
+                    
+                    if theme.overridesSystemColors {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                            
+                            Text("custom_colors".localized)
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
+                                .foregroundColor(.orange)
                         }
                     }
                 }

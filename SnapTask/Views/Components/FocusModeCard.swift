@@ -9,6 +9,8 @@ struct FocusModeCard: View {
     let isDisabled: Bool
     let action: () -> Void
     
+    @Environment(\.theme) private var theme
+    
     init(title: String, description: String, icon: String, color: Color, gradient: [Color], action: @escaping () -> Void, isDisabled: Bool = false) {
         self.title = title
         self.description = description
@@ -47,11 +49,11 @@ struct FocusModeCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.headline)
-                        .foregroundColor(isDisabled ? .secondary : .primary)
+                        .foregroundColor(isDisabled ? theme.secondaryTextColor : theme.textColor)
                     
                     Text(description)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .multilineTextAlignment(.leading)
                 }
                 
@@ -65,13 +67,13 @@ struct FocusModeCard: View {
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                 }
             }
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.systemBackground))
+                    .fill(theme.surfaceColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .strokeBorder(
@@ -85,7 +87,12 @@ struct FocusModeCard: View {
                                 lineWidth: 1.5
                             )
                     )
-                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+                    .shadow(
+                        color: theme.shadowColor,
+                        radius: 8,
+                        x: 0,
+                        y: 2
+                    )
             )
         }
         .buttonStyle(PlainButtonStyle())

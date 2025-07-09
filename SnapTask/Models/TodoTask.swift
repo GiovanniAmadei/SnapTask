@@ -26,6 +26,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
     // Time tracking properties
     var totalTrackedTime: TimeInterval = 0
     var lastTrackedDate: Date?
+    // Notification properties
+    var hasNotification: Bool = false
+    var notificationId: String?
 
     init(
         id: UUID = UUID(),
@@ -43,7 +46,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
         pomodoroSettings: PomodoroSettings? = nil,
         subtasks: [Subtask] = [],
         hasRewardPoints: Bool = false,
-        rewardPoints: Int = 0
+        rewardPoints: Int = 0,
+        hasNotification: Bool = false,
+        notificationId: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -63,6 +68,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.rewardPoints = rewardPoints
         self.totalTrackedTime = 0
         self.lastTrackedDate = nil
+        self.hasNotification = hasNotification
+        self.notificationId = notificationId
     }
     
     var completionProgress: Double {
@@ -218,6 +225,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.hasRewardPoints == rhs.hasRewardPoints &&
         lhs.rewardPoints == rhs.rewardPoints &&
         lhs.totalTrackedTime == rhs.totalTrackedTime &&
-        lhs.lastTrackedDate == rhs.lastTrackedDate
+        lhs.lastTrackedDate == rhs.lastTrackedDate &&
+        lhs.hasNotification == rhs.hasNotification &&
+        lhs.notificationId == rhs.notificationId
     }
 }

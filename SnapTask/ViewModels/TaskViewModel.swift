@@ -32,8 +32,10 @@ class TaskViewModel: ObservableObject {
             }
         }
         
-        taskManager.updateTask(updatedTask)
+        Task {
+            await taskManager.updateTask(updatedTask)
+        }
         currentStreak = updatedTask.streakForDate(date)
         objectWillChange.send()
     }
-} 
+}

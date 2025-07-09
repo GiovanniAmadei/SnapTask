@@ -41,6 +41,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var selectedCategory: Category?
     @Published var selectedPriority: Priority = .medium
     @Published var subtasks: [Subtask] = []
+    @Published var hasNotification: Bool = false
     @Published var isRecurring: Bool = false
     @Published var recurrenceType: RecurrenceType = .daily
     @Published var selectedDays: Set<Int> = []
@@ -185,7 +186,8 @@ class TaskFormViewModel: ObservableObject {
             pomodoroSettings: nil,
             subtasks: subtasks,
             hasRewardPoints: hasRewardPoints,
-            rewardPoints: rewardPoints
+            rewardPoints: rewardPoints,
+            hasNotification: hasNotification
         )
     }
     
@@ -210,6 +212,7 @@ class TaskFormViewModel: ObservableObject {
         selectedCategory = nil
         selectedPriority = .medium
         subtasks = []
+        hasNotification = false
         isRecurring = false
         recurrenceType = .daily
         selectedDays = []

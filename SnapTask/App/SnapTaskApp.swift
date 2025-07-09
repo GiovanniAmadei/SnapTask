@@ -9,6 +9,7 @@ import BackgroundTasks
 struct SnapTaskApp: App {
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var taskManager = TaskManager.shared
+    @StateObject private var taskNotificationManager = TaskNotificationManager.shared
     @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @StateObject private var cloudKitService = CloudKitService.shared
     @StateObject private var firebaseService = FirebaseService.shared
@@ -57,6 +58,15 @@ struct SnapTaskApp: App {
                     }
                     else if newPhase == .background {
                         scheduleBackgroundAppRefresh()
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .openTaskFromNotification)) { notification in
+                    if let taskId = notification.object as? UUID {
+                        // Handle opening task from notification
+                        NotificationCenter.default.post(
+                            name: .openTaskDetail,
+                            object: taskId
+                        )
                     }
                 }
         }
@@ -163,9 +173,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     // Handle notification when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        // Show pomodoro notifications even when app is in foreground
+        // Show all notifications even when app is in foreground
         if notification.request.identifier.hasPrefix("pomodoro-") {
             completionHandler([.banner, .sound])
+        } else if notification.request.identifier.hasPrefix("task_") {
+            completionHandler([.banner, .sound, .badge])
         } else {
             completionHandler([.alert, .badge, .sound])
         }
@@ -184,6 +196,22 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             // User tapped Pomodoro notification - open the app to the Focus tab
             print("📱 Pomodoro notification tapped: \(identifier)")
             // You could implement navigation to Focus tab here
+        } else if identifier.hasPrefix("task_") {
+            // User tapped task notification - extract task ID and open task details
+            let components = identifier.components(separatedBy: "_")
+            if components.count >= 2,
+               let taskId = UUID(uuidString: components[1]) {
+                
+                print("📱 Task notification tapped for task: \(taskId)")
+                
+                // Post notification to open task details
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(
+                        name: .openTaskFromNotification,
+                        object: taskId
+                    )
+                }
+            }
         }
         
         completionHandler()
@@ -211,4 +239,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         print("❌ Failed to register for remote notifications: \(error)")
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let openTaskDetail = Notification.Name("openTaskDetail")
 }

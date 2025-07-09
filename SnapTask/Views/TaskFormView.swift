@@ -3,6 +3,7 @@ import Combine
 
 struct TaskFormView: View {
     @StateObject private var viewModel: TaskFormViewModel
+    @StateObject private var taskNotificationManager = TaskNotificationManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
@@ -44,6 +45,7 @@ struct TaskFormView: View {
             vm.selectedPriority = initialTask.priority
             vm.icon = initialTask.icon
             vm.subtasks = initialTask.subtasks
+            vm.hasNotification = initialTask.hasNotification
             vm.isRecurring = initialTask.recurrence != nil
             if let recurrence = initialTask.recurrence {
                 vm.hasRecurrenceEndDate = recurrence.endDate != nil
@@ -185,6 +187,53 @@ struct TaskFormView: View {
                                     insertion: .opacity,
                                     removal: .opacity.animation(.easeInOut(duration: 0.3))
                                 ))
+
+                                // Notification toggle (only if has specific time and notifications are enabled globally)
+                                if taskNotificationManager.areNotificationsEnabled {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("enable_notification".localized)
+                                                .font(.subheadline.weight(.medium))
+                                                .themedPrimaryText()
+                                            Text("notification_scheduled".localized)
+                                                .font(.caption)
+                                                .themedSecondaryText()
+                                        }
+                                        Spacer()
+                                        ModernToggle(isOn: $viewModel.hasNotification)
+                                    }
+                                    .transition(.asymmetric(
+                                        insertion: .opacity,
+                                        removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                    ))
+                                } else if viewModel.hasNotification {
+                                    // Show notification disabled warning
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.orange)
+                                            .font(.system(size: 14))
+                                        
+                                        Text("notifications_not_available".localized)
+                                            .font(.caption)
+                                            .themedSecondaryText()
+                                        
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(.orange.opacity(0.1))
+                                    )
+                                    .onAppear {
+                                        // Auto-disable notification if not available
+                                        viewModel.hasNotification = false
+                                    }
+                                    .transition(.asymmetric(
+                                        insertion: .opacity,
+                                        removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                    ))
+                                }
                             }
                             
                             HStack {
@@ -228,11 +277,7 @@ struct TaskFormView: View {
                                 ))
                             }
                         }
-                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasSpecificTime)
-                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasDuration)
                     }
-                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasSpecificTime)
-                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasDuration)
                     
                     // Category & Priority Card
                     ModernCard(title: "category_priority".localized, icon: "folder") {
@@ -339,9 +384,7 @@ struct TaskFormView: View {
                                 ))
                             }
                         }
-                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isRecurring)
                     }
-                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.isRecurring)
                     
                     // Subtasks Card
                     ModernCard(title: "subtasks".localized, icon: "checklist") {
@@ -400,9 +443,7 @@ struct TaskFormView: View {
                                 ))
                             }
                         }
-                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.subtasks.count)
                     }
-                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.subtasks.count)
                     
                     // Rewards Card
                     ModernCard(title: "reward_points".localized, icon: "star") {
@@ -506,17 +547,14 @@ struct TaskFormView: View {
                                 ))
                             }
                         }
-                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasRewardPoints)
-                        .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.useCustomPoints)
                     }
-                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.hasRewardPoints)
-                    .animation(hasAppeared ? .easeInOut(duration: 0.2) : .none, value: viewModel.useCustomPoints)
                     
                     // Save Button
                     Button(action: {
-                        let task = viewModel.createTask()
-                        onSave(task)
-                        dismiss()
+                        Task {
+                            let task = viewModel.createTask()
+                            await saveTask(task)
+                        }
                     }) {
                         HStack {
                             Image(systemName: "checkmark")
@@ -560,9 +598,10 @@ struct TaskFormView: View {
                 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("save".localized) {
-                        let task = viewModel.createTask()
-                        onSave(task)
-                        dismiss()
+                        Task {
+                            let task = viewModel.createTask()
+                            await saveTask(task)
+                        }
                     }
                     .fontWeight(.semibold)
                     .themedPrimary()
@@ -572,12 +611,18 @@ struct TaskFormView: View {
             .sheet(isPresented: $showDurationPicker) {
                 DurationPickerView(duration: $viewModel.duration)
             }
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                hasAppeared = true
+            .onAppear {
+                taskNotificationManager.checkAuthorizationStatus()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    hasAppeared = true
+                }
             }
         }
+    }
+    
+    private func saveTask(_ task: TodoTask) async {
+        onSave(task)
+        dismiss()
     }
 }
 

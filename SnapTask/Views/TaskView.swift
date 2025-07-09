@@ -110,7 +110,9 @@ struct TaskView: View {
             PomodoroView(task: task)
         }
         .onChange(of: task.completions) { oldValue, newValue in
-            taskManager.updateTask(task)
+            Task {
+                await taskManager.updateTask(task)
+            }
         }
     }
     
@@ -136,4 +138,4 @@ struct TaskView: View {
         onToggleSubtask: { _ in }
     )
     .padding()
-} 
+}
