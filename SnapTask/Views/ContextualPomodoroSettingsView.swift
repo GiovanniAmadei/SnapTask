@@ -6,6 +6,7 @@ struct ContextualPomodoroSettingsView: View {
     @State private var localSettings: PomodoroSettings
     @State private var useTimeDuration = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     
     init(context: PomodoroContext) {
         self.context = context
@@ -37,9 +38,11 @@ struct ContextualPomodoroSettingsView: View {
                 Section {
                     Text(contextDescription)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
+                        .listRowBackground(theme.surfaceColor)
                 } header: {
                     Text("about".localized)
+                        .themedSecondaryText()
                 }
                 
                 Section("work_session".localized) {
@@ -53,11 +56,13 @@ struct ContextualPomodoroSettingsView: View {
                     ) {
                         HStack {
                             Text("duration".localized)
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(Int(localSettings.workDuration / 60)) " + "min_unit".localized)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                 }
                 
                 Section("break".localized) {
@@ -71,11 +76,13 @@ struct ContextualPomodoroSettingsView: View {
                     ) {
                         HStack {
                             Text("short_break".localized)
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(Int(localSettings.breakDuration / 60)) " + "min_unit".localized)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     Stepper(
                         value: Binding(
@@ -87,11 +94,13 @@ struct ContextualPomodoroSettingsView: View {
                     ) {
                         HStack {
                             Text("long_break".localized)
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(Int(localSettings.longBreakDuration / 60)) " + "min_unit".localized)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     Stepper(
                         value: $localSettings.sessionsUntilLongBreak,
@@ -99,11 +108,13 @@ struct ContextualPomodoroSettingsView: View {
                     ) {
                         HStack {
                             Text("sessions_until_long_break".localized)
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(localSettings.sessionsUntilLongBreak)")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                 }
                 
                 Section("session_configuration".localized) {
@@ -112,6 +123,7 @@ struct ContextualPomodoroSettingsView: View {
                         Text("total_duration".localized).tag(true)
                     }
                     .pickerStyle(SegmentedPickerStyle())
+                    .listRowBackground(theme.surfaceColor)
                     
                     if useTimeDuration {
                         Stepper(
@@ -128,23 +140,27 @@ struct ContextualPomodoroSettingsView: View {
                         ) {
                             HStack {
                                 Text("total_duration".localized)
+                                    .themedPrimaryText()
                                 Spacer()
                                 VStack(alignment: .trailing) {
                                     Text("\(Int(localSettings.totalDuration)) " + "min_unit".localized)
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                     Text("(\(formatDuration(localSettings.totalDuration * 60)))")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                 }
                             }
                         }
+                        .listRowBackground(theme.surfaceColor)
                         
                         HStack {
                             Text("estimated_sessions".localized)
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(localSettings.totalSessions)")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
+                        .listRowBackground(theme.surfaceColor)
                     } else {
                         Stepper(
                             value: Binding(
@@ -159,23 +175,27 @@ struct ContextualPomodoroSettingsView: View {
                         ) {
                             HStack {
                                 Text("total_sessions".localized)
+                                    .themedPrimaryText()
                                 Spacer()
                                 Text("\(localSettings.totalSessions)")
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                         }
+                        .listRowBackground(theme.surfaceColor)
                         
                         HStack {
                             Text("estimated_duration".localized)
+                                .themedPrimaryText()
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("\(Int(localSettings.estimatedTotalTime / 60)) " + "min_unit".localized)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                                 Text("(\(formatDuration(localSettings.estimatedTotalTime)))")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                         }
+                        .listRowBackground(theme.surfaceColor)
                     }
                 }
                 
@@ -183,20 +203,23 @@ struct ContextualPomodoroSettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("session_breakdown".localized)
                             .font(.subheadline.weight(.medium))
+                            .themedPrimaryText()
                         
                         HStack {
                             Text("work_time".localized + ":")
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(formatDuration(Double(localSettings.totalSessions) * localSettings.workDuration))")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                         
                         HStack {
                             Text("break_time".localized + ":")
+                                .themedPrimaryText()
                             Spacer()
                             let breakTime = localSettings.estimatedTotalTime - (Double(localSettings.totalSessions) * localSettings.workDuration)
                             Text("\(formatDuration(breakTime))")
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                         
                         Divider()
@@ -204,16 +227,21 @@ struct ContextualPomodoroSettingsView: View {
                         HStack {
                             Text("total_time".localized + ":")
                                 .fontWeight(.medium)
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(formatDuration(localSettings.estimatedTotalTime))")
                                 .fontWeight(.medium)
-                                .foregroundColor(.primary)
+                                .themedPrimaryText()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                 } header: {
                     Text("summary".localized)
+                        .themedSecondaryText()
                 }
             }
+            .themedBackground()
+            .scrollContentBackground(.hidden)
             .navigationTitle(contextTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -221,6 +249,7 @@ struct ContextualPomodoroSettingsView: View {
                     Button("cancel".localized) {
                         dismiss()
                     }
+                    .themedSecondaryText()
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -231,6 +260,7 @@ struct ContextualPomodoroSettingsView: View {
                         dismiss()
                     }
                     .fontWeight(.semibold)
+                    .themedPrimary()
                 }
             }
             .onAppear {

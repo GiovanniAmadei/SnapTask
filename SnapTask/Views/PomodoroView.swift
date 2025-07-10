@@ -6,7 +6,7 @@ struct PomodoroView: View {
     let presentationStyle: PresentationStyle
     @StateObject private var viewModel = PomodoroViewModel.shared
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     @State private var showingCompletionSheet = false
     @State private var showingSettings = false
     @State private var completedFocusTime: TimeInterval = 0
@@ -38,6 +38,7 @@ struct PomodoroView: View {
                 fullscreenLayout
             }
         }
+        .themedBackground()
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -46,11 +47,11 @@ struct PomodoroView: View {
                 }) {
                     Image(systemName: "minus")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .themedPrimaryText()
                         .frame(width: 32, height: 32)
                         .background(
                             Circle()
-                                .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1))
+                                .fill(theme.surfaceColor)
                         )
                 }
             }
@@ -63,11 +64,11 @@ struct PomodoroView: View {
                         }) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.blue)
+                                .foregroundColor(theme.accentColor)
                                 .frame(width: 32, height: 32)
                                 .background(
                                     Circle()
-                                        .fill(Color.blue.opacity(0.1))
+                                        .fill(theme.accentColor.opacity(0.1))
                                 )
                         }
                     }
@@ -125,34 +126,34 @@ struct PomodoroView: View {
                 Text(task.name)
                     .font(.system(.body, design: .rounded).weight(.semibold))
                     .lineLimit(1)
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Spacer()
                 
                 HStack(spacing: 4) {
                     Text("session".localized)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
                         .font(.caption2)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
                     Capsule()
-                        .fill(Color(.systemGray6))
+                        .fill(theme.surfaceColor)
                 )
                 
                 Button(action: { showingSettings = true }) {
                     Image(systemName: "gear")
                         .font(.caption.weight(.medium))
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.accentColor)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(Color.blue.opacity(0.1))
+                                .fill(theme.accentColor.opacity(0.1))
                         )
                 }
                 
@@ -160,12 +161,12 @@ struct PomodoroView: View {
                     handleDone()
                 }
                 .font(.caption.weight(.medium))
-                .foregroundColor(.blue)
+                .foregroundColor(theme.accentColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
                     Capsule()
-                        .fill(Color.blue.opacity(0.1))
+                        .fill(theme.accentColor.opacity(0.1))
                 )
             }
             .padding(.horizontal, 16)
@@ -202,7 +203,7 @@ struct PomodoroView: View {
                         
                         Text(viewModel.state == .working ? "focus".localized : "break".localized)
                             .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                     
                     Text(timeString(from: viewModel.timeRemaining))
@@ -220,7 +221,7 @@ struct PomodoroView: View {
                     
                     Text("\(Int(viewModel.progress * 100))%")
                         .font(.system(.caption2, design: .rounded).weight(.medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
             }
             .padding(.vertical, 8)
@@ -229,10 +230,11 @@ struct PomodoroView: View {
                 HStack {
                     Text("progress".localized)
                         .font(.subheadline.weight(.medium))
+                        .themedPrimaryText()
                     Spacer()
                     Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
                 
                 GeometryReader { geometry in
@@ -295,7 +297,7 @@ struct PomodoroView: View {
                                         [focusColor, focusColor.opacity(0.8)] : 
                                         viewModel.state == .onBreak ? 
                                         [breakColor, breakColor.opacity(0.8)] :
-                                        [Color.blue, Color.blue.opacity(0.8)],
+                                        [theme.accentColor, theme.accentColor.opacity(0.8)],
                                     startPoint: .top,
                                     endPoint: .bottom
                                 )
@@ -309,7 +311,7 @@ struct PomodoroView: View {
                     }
                     .shadow(
                         color: (viewModel.state == .working ? focusColor : 
-                               viewModel.state == .onBreak ? breakColor : Color.blue).opacity(0.3), 
+                               viewModel.state == .onBreak ? breakColor : theme.accentColor).opacity(0.3), 
                         radius: 6, x: 0, y: 3
                     )
                 }
@@ -318,7 +320,7 @@ struct PomodoroView: View {
                     ZStack {
                         Circle()
                             .fill(viewModel.state == .working ? focusColor : 
-                                 viewModel.state == .onBreak ? breakColor : Color.gray)
+                                 viewModel.state == .onBreak ? breakColor : theme.borderColor)
                             .frame(width: 44, height: 44)
                         
                         Image(systemName: "forward.fill")
@@ -326,7 +328,7 @@ struct PomodoroView: View {
                             .foregroundColor(.white)
                     }
                     .shadow(color: (viewModel.state == .working ? focusColor : 
-                                   viewModel.state == .onBreak ? breakColor : Color.gray).opacity(0.3), 
+                                   viewModel.state == .onBreak ? breakColor : theme.borderColor).opacity(0.3), 
                            radius: 4, x: 0, y: 2)
                 }
                 .disabled(viewModel.state == .notStarted || viewModel.state == .completed)
@@ -376,34 +378,34 @@ struct PomodoroView: View {
                         Text(task.name)
                             .font(.system(.title3, design: .rounded).weight(.semibold))
                             .lineLimit(1)
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                         
                         Spacer()
                         
                         HStack(spacing: 4) {
                             Text("session".localized)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                             Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
                                 .font(.caption)
-                                .foregroundColor(.primary)
+                                .themedPrimaryText()
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(
                             Capsule()
-                                .fill(Color(.systemGray6))
+                                .fill(theme.surfaceColor)
                         )
                         
                         Button(action: { showingSettings = true }) {
                             Image(systemName: "gear")
                                 .font(.body.weight(.medium))
-                                .foregroundColor(.blue)
+                                .foregroundColor(theme.accentColor)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(
                                     Capsule()
-                                        .fill(Color.blue.opacity(0.1))
+                                        .fill(theme.accentColor.opacity(0.1))
                                 )
                         }
                         
@@ -411,12 +413,12 @@ struct PomodoroView: View {
                             handleDone()
                         }
                         .font(.body.weight(.medium))
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.accentColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
                             Capsule()
-                                .fill(Color.blue.opacity(0.1))
+                                .fill(theme.accentColor.opacity(0.1))
                         )
                     }
                     .padding(.horizontal, 24)
@@ -462,7 +464,7 @@ struct PomodoroView: View {
                                 
                                 Text(viewModel.state == .working ? "focus_time".localized : "break_time".localized)
                                     .font(.system(.subheadline, design: .rounded))
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                             
                             Text(timeString(from: viewModel.timeRemaining))
@@ -480,7 +482,7 @@ struct PomodoroView: View {
                             
                             Text("\(Int(viewModel.progress * 100))%")
                                 .font(.system(.caption, design: .rounded).weight(.medium))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                     .padding(.vertical, 12)
@@ -488,8 +490,8 @@ struct PomodoroView: View {
                 .background(
                     LinearGradient(
                         colors: [
-                            Color(.systemBackground),
-                            Color(.systemGray6).opacity(0.3)
+                            theme.backgroundColor,
+                            theme.surfaceColor.opacity(0.3)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -501,10 +503,11 @@ struct PomodoroView: View {
                 HStack {
                     Text("session_overview".localized)
                         .font(.headline.weight(.semibold))
+                        .themedPrimaryText()
                     Spacer()
                     Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
@@ -532,7 +535,7 @@ struct PomodoroView: View {
                         size: .large,
                         color: viewModel.state == .working ? focusColor : 
                                viewModel.state == .onBreak ? breakColor : 
-                               viewModel.state == .notStarted ? .blue : focusColor,  
+                               viewModel.state == .notStarted ? theme.accentColor : focusColor,  
                         isPulsing: viewModel.state == .working || viewModel.state == .onBreak
                     ) {
                         if viewModel.state == .notStarted || viewModel.state == .paused {
@@ -546,7 +549,7 @@ struct PomodoroView: View {
                         icon: "forward.fill",
                         size: .medium,
                         color: viewModel.state == .working ? focusColor : 
-                               viewModel.state == .onBreak ? breakColor : .primary,
+                               viewModel.state == .onBreak ? breakColor : theme.textColor,
                         isDisabled: viewModel.state == .notStarted || viewModel.state == .completed
                     ) {
                         viewModel.skip()
@@ -558,10 +561,10 @@ struct PomodoroView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         Text("finishes_at".localized + " \(formatTimeOnly(completionTime))")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
@@ -640,12 +643,12 @@ struct PomodoroView: View {
         return HStack(spacing: 0) {
             // Work portion background
             Rectangle()
-                .fill(Color.gray.opacity(0.2))
+                .fill(theme.borderColor.opacity(0.3))
                 .frame(width: width * workPortion, height: 4)
             
             // Break portion background (slightly different opacity)
             Rectangle()
-                .fill(Color.gray.opacity(0.15))
+                .fill(theme.borderColor.opacity(0.2))
                 .frame(width: width * breakPortion, height: 4)
         }
         .clipShape(RoundedRectangle(cornerRadius: 2))
@@ -708,7 +711,7 @@ struct PomodoroView: View {
 struct MiniPomodoroWidget: View {
     @ObservedObject var viewModel: PomodoroViewModel
     let onTap: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     @AppStorage("pomodoroFocusColor") private var focusColorHex = "#4F46E5"
     @AppStorage("pomodoroBreakColor") private var breakColorHex = "#059669"
@@ -728,17 +731,17 @@ struct MiniPomodoroWidget: View {
                     
                     Text(viewModel.state == .working ? "focus".localized : "break".localized)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                         .fixedSize(horizontal: true, vertical: false)
                 }
                 
                 Text(timeString(from: viewModel.timeRemaining))
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Capsule()
-                    .fill(Color.secondary.opacity(0.2))
+                    .fill(theme.borderColor.opacity(0.2))
                     .frame(height: 4)
                     .overlay(
                         GeometryReader { geo in
@@ -747,7 +750,7 @@ struct MiniPomodoroWidget: View {
                                     ForEach(1...viewModel.totalSessions, id: \.self) { _ in
                                         let segmentWidth = geo.size.width / CGFloat(viewModel.totalSessions)
                                         Capsule()
-                                            .fill(Color.gray.opacity(0.3))
+                                            .fill(theme.borderColor.opacity(0.3))
                                             .frame(width: segmentWidth)
                                     }
                                 }
@@ -780,8 +783,8 @@ struct MiniPomodoroWidget: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(colorScheme == .dark ? Color(.systemGray6) : Color.white)
-                    .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+                    .fill(theme.surfaceColor)
+                    .shadow(color: theme.shadowColor, radius: 6, x: 0, y: 3)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -843,12 +846,12 @@ struct MiniPomodoroWidget: View {
         return HStack(spacing: 0) {
             // Work portion background
             Capsule()
-                .fill(Color.gray.opacity(0.3))
+                .fill(theme.borderColor.opacity(0.3))
                 .frame(width: width * workPortion, height: 4)
             
             // Break portion background (slightly different opacity)
             Capsule()
-                .fill(Color.gray.opacity(0.2))
+                .fill(theme.borderColor.opacity(0.2))
                 .frame(width: width * breakPortion, height: 4)
         }
     }

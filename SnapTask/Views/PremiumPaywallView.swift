@@ -8,16 +8,18 @@ struct PremiumPaywallView: View {
     @State private var isProcessingPurchase = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
-    @State private var selectedPlan: String = "yearly" // Default yearly per incentivare risparmio
+    @State private var selectedPlan: String = "yearly"
+    @State private var showingTerms = false
+    @State private var showingPrivacy = false
     
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    // Header compatto
+                VStack(spacing: 20) {
+                    // Premium Header
                     premiumHeader
                     
-                    // Features grid - più compatto
+                    // Features Grid
                     premiumFeatures
                     
                     // Subscription Options
@@ -26,117 +28,161 @@ struct PremiumPaywallView: View {
                     // Purchase Button
                     purchaseButton
                     
-                    // Restore purchases button
-                    restorePurchasesButton
+                    // Alternative actions
+                    alternativeActions
                     
-                    // Development info
-                    #if DEBUG
-                    developmentInfo
-                    #endif
+                    // Legal links
+                    legalLinks
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 20)
+                .padding(.bottom, 30)
             }
-            .navigationTitle("upgrade_to_pro".localized)
+            .navigationTitle("SnapTask Pro")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("close".localized) {
+                    Button("Chiudi") {
                         dismiss()
                     }
                 }
             }
-            .disabled(isProcessingPurchase)
-            .alert("Abbonamento", isPresented: $showingAlert) {
-                Button("OK") { }
-            } message: {
-                Text(alertMessage)
+        }
+        .disabled(isProcessingPurchase)
+        .alert("Abbonamento", isPresented: $showingAlert) {
+            Button("OK") { }
+        } message: {
+            Text(alertMessage)
+        }
+        .onAppear {
+            Task {
+                await subscriptionManager.loadProducts()
             }
         }
     }
     
+    // MARK: - UI Components
+    
     private var premiumHeader: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [.purple, .pink],
+                            colors: [.purple.opacity(0.8), .pink.opacity(0.8)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 50, height: 50)
+                    .frame(width: 60, height: 60)
+                    .shadow(color: .purple.opacity(0.3), radius: 10, x: 0, y: 4)
                 
                 Image(systemName: "crown.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
             }
             
-            VStack(spacing: 2) {
-                Text("SnapTask Pro")
-                    .font(.title3.bold())
+            VStack(spacing: 4) {
+                Text("Sblocca SnapTask Pro")
+                    .font(.title2.bold())
                     .foregroundColor(.primary)
                 
-                Text("Sblocca tutte le funzionalità premium")
-                    .font(.caption)
+                Text("Massimizza la tua produttività")
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
         }
-        .padding(.top, 5)
+        .padding(.top, 10)
     }
     
     private var premiumFeatures: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 8),
-            GridItem(.flexible(), spacing: 8)
-        ], spacing: 8) {
-            ForEach(PremiumFeature.allCases, id: \.self) { feature in
-                PremiumFeatureCard(feature: feature)
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-    }
-    
-    private var subscriptionOptions: some View {
-        VStack(spacing: 8) {
-            Text("Scegli il tuo piano")
-                .font(.subheadline.weight(.medium))
+        VStack(spacing: 12) {
+            Text("Tutto quello che ottieni")
+                .font(.headline.weight(.medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
-            VStack(spacing: 8) {
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
+                ForEach(PremiumFeature.allCases, id: \.self) { feature in
+                    PremiumFeatureCard(feature: feature)
+                }
+            }
+        }
+    }
+    
+    private var subscriptionOptions: some View {
+        VStack(spacing: 12) {
+            Text("Scegli il tuo piano")
+                .font(.headline.weight(.medium))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            VStack(spacing: 10) {
+                // Lifetime Option - Most attractive
                 Button(action: {
-                    selectedPlan = "yearly"
-                    selectedProduct = subscriptionManager.subscriptionProducts.first
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0)) {
+                        selectedPlan = "lifetime"
+                        selectedProduct = subscriptionManager.lifetimeProduct
+                    }
                 }) {
                     SubscriptionPlanCard(
-                        title: "Abbonamento Annuale",
-                        price: "€34,99",
-                        period: "anno",
+                        title: "Accesso a Vita",
+                        price: subscriptionManager.lifetimeProduct?.displayPrice ?? "€49,99",
+                        period: "una tantum",
                         isPopular: true,
-                        isSelected: selectedPlan == "yearly",
-                        savings: "Risparmi €12,89 (27%)"
+                        isSelected: selectedPlan == "lifetime",
+                        savings: "Nessun abbonamento",
+                        pricePerMonth: "€0 al mese dopo l'acquisto",
+                        hasFreeTrial: false,
+                        trialDays: 0,
+                        isLifetime: true
                     )
                 }
                 .buttonStyle(.plain)
                 
+                // Yearly Plan with 3-day trial
                 Button(action: {
-                    selectedPlan = "monthly"
-                    selectedProduct = nil
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0)) {
+                        selectedPlan = "yearly"
+                        selectedProduct = subscriptionManager.yearlyProduct
+                    }
                 }) {
                     SubscriptionPlanCard(
-                        title: "Abbonamento Mensile",
-                        price: "€3,99",
+                        title: "Piano Annuale",
+                        price: subscriptionManager.yearlyProduct?.displayPrice ?? "€24,99",
+                        period: "anno",
+                        isPopular: false,
+                        isSelected: selectedPlan == "yearly",
+                        savings: "Risparmi \(subscriptionManager.yearlySavingsAmount) (\(subscriptionManager.yearlySavingsPercentage)%)",
+                        pricePerMonth: "Solo €2,08 al mese",
+                        hasFreeTrial: !subscriptionManager.hasUsedTrial,
+                        trialDays: 3,
+                        isLifetime: false
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                // Monthly Plan
+                Button(action: {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0)) {
+                        selectedPlan = "monthly"
+                        selectedProduct = subscriptionManager.monthlyProduct
+                    }
+                }) {
+                    SubscriptionPlanCard(
+                        title: "Piano Mensile",
+                        price: subscriptionManager.monthlyProduct?.displayPrice ?? "€3,99",
                         period: "mese",
                         isPopular: false,
                         isSelected: selectedPlan == "monthly",
-                        savings: nil
+                        savings: nil,
+                        pricePerMonth: "Massima flessibilità",
+                        hasFreeTrial: false,
+                        trialDays: 0,
+                        isLifetime: false
                     )
                 }
                 .buttonStyle(.plain)
@@ -156,76 +202,121 @@ struct PremiumPaywallView: View {
                         .tint(.white)
                         .scaleEffect(0.8)
                 } else {
-                    Text(selectedPlan == "yearly" ? "Attiva Piano Annuale" : "Attiva Piano Mensile")
-                        .font(.headline)
-                        .foregroundColor(.white)
+                    VStack(spacing: 2) {
+                        if selectedPlan == "yearly" && !subscriptionManager.hasUsedTrial {
+                            Text("Inizia Prova Gratuita")
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(.white)
+                            
+                            Text("3 giorni gratis, poi \(selectedProduct?.displayPrice ?? "€24,99")")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                        } else if selectedPlan == "lifetime" {
+                            Text("Acquista Accesso a Vita")
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(.white)
+                            
+                            Text("Pagamento unico - Nessun abbonamento")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                        } else {
+                            Text("Sottoscrivi \(selectedPlan == "yearly" ? "Piano Annuale" : "Piano Mensile")")
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(.white)
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 48)
+            .frame(height: 56)
             .background(
                 LinearGradient(
-                    colors: [.purple, .pink],
+                    colors: selectedPlan == "lifetime" ? [.orange, .red] : [.purple, .pink],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
+                .animation(.easeInOut(duration: 0.3), value: selectedPlan)
             )
-            .cornerRadius(12)
+            .cornerRadius(16)
+            .shadow(color: (selectedPlan == "lifetime" ? Color.orange : Color.purple).opacity(0.3), radius: 8, x: 0, y: 4)
+            .animation(.easeInOut(duration: 0.3), value: selectedPlan)
         }
-        .disabled(isProcessingPurchase)
+        .disabled(isProcessingPurchase || selectedProduct == nil)
     }
     
-    private var restorePurchasesButton: some View {
-        Button {
-            Task {
-                await handleRestorePurchases()
+    private var alternativeActions: some View {
+        VStack(spacing: 12) {
+            Button {
+                Task {
+                    await handleRestorePurchases()
+                }
+            } label: {
+                Text("Ripristina Acquisti")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.purple)
             }
-        } label: {
-            Text("Ripristina Acquisti")
-                .font(.caption)
-                .foregroundColor(.purple)
+            .disabled(isProcessingPurchase)
+            
+            Button {
+                subscriptionManager.manageSubscriptions()
+            } label: {
+                Text("Gestisci Abbonamenti")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.purple)
+            }
         }
-        .disabled(isProcessingPurchase)
-        .padding(.top, 4)
     }
     
-    #if DEBUG
-    private var developmentInfo: some View {
-        VStack(spacing: 6) {
-            Text("🧪 Modalità Sviluppo")
-                .font(.caption2.bold())
-                .foregroundColor(.orange)
+    private var legalLinks: some View {
+        HStack(spacing: 20) {
+            Button("Termini di Servizio") {
+                showingTerms = true
+            }
             
-            Text("Gli acquisti sono simulati in TestFlight.")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+            Button("Privacy Policy") {
+                showingPrivacy = true
+            }
         }
-        .padding(8)
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(6)
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .sheet(isPresented: $showingTerms) {
+            TermsOfServiceView()
+        }
+        .sheet(isPresented: $showingPrivacy) {
+            PrivacyPolicyView()
+        }
     }
-    #endif
+    
+    // MARK: - Actions
     
     private func handlePurchase() async {
+        guard let product = selectedProduct else { return }
+        
         isProcessingPurchase = true
         
-        if subscriptionManager.usingMockProducts {
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            alertMessage = "Acquisto simulato completato! Piano: \(selectedPlan == "monthly" ? "Mensile" : "Annuale")"
-            showingAlert = true
-        } else if let product = selectedProduct {
-            let success = await subscriptionManager.purchase(product)
-            if success {
-                alertMessage = "Benvenuto in SnapTask Pro! Tutte le funzionalità sono ora sbloccate."
-                showingAlert = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    dismiss()
-                }
-            } else {
-                alertMessage = "Acquisto non completato. Riprova."
-                showingAlert = true
+        let success = await subscriptionManager.purchase(product)
+        
+        if success {
+            if selectedPlan == "yearly" && !subscriptionManager.hasUsedTrial {
+                subscriptionManager.markTrialAsUsed()
             }
+            
+            if selectedPlan == "lifetime" {
+                alertMessage = "Benvenuto in SnapTask Pro! Hai accesso completo a tutte le funzionalità per sempre."
+            } else {
+                alertMessage = (selectedPlan == "yearly" && subscriptionManager.subscriptionStatus.isInTrial) ? 
+                    "Prova gratuita di 3 giorni attivata! Esplora tutte le funzionalità Pro." :
+                    "Benvenuto in SnapTask Pro! Tutte le funzionalità sono ora sbloccate."
+            }
+            
+            showingAlert = true
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                dismiss()
+            }
+        } else {
+            alertMessage = "Acquisto non completato. Riprova o contatta il supporto."
+            showingAlert = true
         }
         
         isProcessingPurchase = false
@@ -233,11 +324,13 @@ struct PremiumPaywallView: View {
     
     private func handleRestorePurchases() async {
         isProcessingPurchase = true
-        await subscriptionManager.restorePurchases()
         
-        if subscriptionManager.isSubscribed {
+        let success = await subscriptionManager.restorePurchases()
+        
+        if success {
             alertMessage = "Acquisti ripristinati con successo!"
             showingAlert = true
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 dismiss()
             }
@@ -250,50 +343,51 @@ struct PremiumPaywallView: View {
     }
 }
 
+// MARK: - Supporting Views
+
 struct PremiumFeatureCard: View {
     let feature: PremiumFeature
     
     var body: some View {
-        VStack(spacing: 6) {
-            // Icona più piccola
+        VStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .fill(Color.purple.opacity(0.12))
-                    .frame(width: 28, height: 28)
+                    .fill(
+                        LinearGradient(
+                            colors: [.purple.opacity(0.15), .pink.opacity(0.15)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 40, height: 40)
                 
                 Image(systemName: iconForFeature(feature))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.purple)
             }
             
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 Text(feature.localizedName)
-                    .font(.caption2.weight(.medium))
+                    .font(.caption.weight(.medium))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
                 
                 Text(feature.localizedDescription)
-                    .font(.system(size: 9))
+                    .font(.system(size: 10))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            
-            // Checkmark più piccolo
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 12))
-                .foregroundColor(.green)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 85) 
-        .padding(.vertical, 6)
-        .padding(.horizontal, 6)
+        .frame(height: 100)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.tertiarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
         )
     }
     
@@ -322,78 +416,232 @@ struct SubscriptionPlanCard: View {
     let isPopular: Bool
     let isSelected: Bool
     let savings: String?
+    let pricePerMonth: String?
+    let hasFreeTrial: Bool
+    let trialDays: Int
+    let isLifetime: Bool
     
     var body: some View {
         VStack(spacing: 0) {
-            // Popular badge
+            // Popular or Lifetime badge
             if isPopular {
                 HStack {
                     Spacer()
-                    Text("Più Popolare")
+                    Text(isLifetime ? "Migliore Valore" : "Più Popolare")
                         .font(.caption2.bold())
                         .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
                         .background(
                             LinearGradient(
-                                colors: [.purple, .pink],
+                                colors: isLifetime ? [.orange, .red] : [.purple, .pink],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .cornerRadius(8)
+                        .cornerRadius(10)
                     Spacer()
                 }
-                .padding(.bottom, 6)
+                .padding(.bottom, 8)
+            }
+            
+            // Free trial badge (only for yearly plan)
+            if hasFreeTrial && trialDays > 0 {
+                HStack {
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "gift.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.green)
+                        Text("Prova Gratuita \(trialDays) Giorni")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.green.opacity(0.15))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                    Spacer()
+                }
+                .padding(.bottom, 8)
             }
             
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.subheadline.weight(.medium))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
                     
-                    Text("/ \(period)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    if let pricePerMonth = pricePerMonth {
+                        Text(pricePerMonth)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else if isLifetime {
+                        Text("Pagamento unico")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Fatturazione mensile")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     
                     if let savings = savings {
                         Text(savings)
-                            .font(.caption2.weight(.medium))
-                            .foregroundColor(.green)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(isLifetime ? Color.orange : Color.green)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
                             .background(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.green.opacity(0.12))
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill((isLifetime ? Color.orange : Color.green).opacity(0.15))
                             )
                     }
                 }
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .trailing, spacing: 4) {
                     Text(price)
-                        .font(.title3.bold())
-                        .foregroundColor(.purple)
+                        .font(.title2.bold())
+                        .foregroundColor(isLifetime ? Color.orange : Color.purple)
+                    
+                    if !isLifetime {
+                        Text("/ \(period)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 16))
+                            .font(.system(size: 20))
                             .foregroundColor(.green)
+                            .scaleEffect(isSelected ? 1.2 : 1.0)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6, blendDuration: 0), value: isSelected)
                     }
                 }
             }
         }
-        .padding(12)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.tertiarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemBackground))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected ? Color.purple : Color.clear, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            isSelected ? 
+                                LinearGradient(
+                                    colors: isLifetime ? [.orange, .red] : [.purple, .pink], 
+                                    startPoint: .leading, 
+                                    endPoint: .trailing
+                                ) :
+                                LinearGradient(colors: [.gray.opacity(0.3)], startPoint: .leading, endPoint: .trailing),
+                            lineWidth: isSelected ? 2 : 1
+                        )
+                        .animation(.easeInOut(duration: 0.2), value: isSelected)
                 )
+                .shadow(
+                    color: isSelected ? 
+                        (isLifetime ? Color.orange.opacity(0.15) : Color.purple.opacity(0.15)) : 
+                        Color.black.opacity(0.05), 
+                    radius: isSelected ? 12 : 4, 
+                    x: 0, 
+                    y: isSelected ? 6 : 2
+                )
+                .animation(.easeInOut(duration: 0.2), value: isSelected)
         )
+        .scaleEffect(isSelected ? 1.02 : 1.0)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8, blendDuration: 0), value: isSelected)
+    }
+}
+
+// MARK: - Legal Views
+
+struct TermsOfServiceView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Termini di Servizio")
+                        .font(.title.bold())
+                    
+                    Text("""
+                    Benvenuto in SnapTask Pro. Utilizzando i nostri servizi, accetti i seguenti termini:
+                    
+                    1. **Abbonamento**: L'abbonamento a SnapTask Pro è ricorrente e si rinnova automaticamente.
+                    
+                    2. **Prova Gratuita**: La prova gratuita di 3 giorni è disponibile per i nuovi utenti.
+                    
+                    3. **Cancellazione**: Puoi cancellare l'abbonamento in qualsiasi momento dalle impostazioni del tuo account Apple.
+                    
+                    4. **Rimborsi**: I rimborsi sono gestiti secondo le politiche di Apple App Store.
+                    
+                    5. **Modifiche**: Ci riserviamo il diritto di modificare questi termini con preavviso.
+                    """)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+            }
+            .navigationTitle("Termini")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Chiudi") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct PrivacyPolicyView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Privacy Policy")
+                        .font(.title.bold())
+                    
+                    Text("""
+                    La tua privacy è importante per noi. Questa policy spiega come gestiamo i tuoi dati:
+                    
+                    1. **Dati Raccolti**: Raccogliamo solo i dati necessari per fornire il servizio.
+                    
+                    2. **Utilizzo**: I dati sono utilizzati per migliorare l'esperienza dell'app e fornire supporto.
+                    
+                    3. **Condivisione**: Non condividiamo i tuoi dati personali con terze parti.
+                    
+                    4. **Sicurezza**: Utilizziamo crittografia e misure di sicurezza per proteggere i tuoi dati.
+                    
+                    5. **Diritti**: Hai il diritto di accedere, modificare o eliminare i tuoi dati.
+                    """)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+            }
+            .navigationTitle("Privacy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Chiudi") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

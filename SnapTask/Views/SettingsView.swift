@@ -1,6 +1,7 @@
 import SwiftUI
 import StoreKit
 import UserNotifications
+import MessageUI
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel()
@@ -29,28 +30,11 @@ struct SettingsView: View {
     @State private var showingPremiumPaywall = false
     @State private var showingThemeWarning = false
     @State private var showingTaskNotificationPermissionAlert = false
+    @State private var showingEmailNotAvailableAlert = false
 
     var body: some View {
         NavigationStack {
             List {
-                // Header integrato nella List
-                Section {
-                    EmptyView()
-                } header: {
-                    HStack {
-                        Text("settings".localized)
-                            .font(.largeTitle.bold())
-                            .themedPrimaryText()
-                        Spacer()
-                    }
-                    .padding(.horizontal, 0)
-                    .padding(.top, 8)
-                    .listRowInsets(EdgeInsets())
-                    .textCase(nil)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
                 // Premium Section
                 Section {
                     Button {
@@ -114,7 +98,7 @@ struct SettingsView: View {
                     Text("premium_plan".localized)
                         .themedSecondaryText()
                 }
-                
+
                 // Quote Section - iOS style
                 Section {
                     IOSQuoteCard()
@@ -330,9 +314,7 @@ struct SettingsView: View {
                     }
                     .listRowBackground(theme.surfaceColor)
                     
-                    Button {
-                        showingCalendarIntegrationView = true
-                    } label: {
+                    NavigationLink(destination: CalendarIntegrationView()) {
                         HStack {
                             Image(systemName: "calendar")
                                 .foregroundColor(.green)
@@ -342,11 +324,6 @@ struct SettingsView: View {
                                 .themedPrimaryText()
                             
                             Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .themedSecondaryText()
-                                .font(.caption)
-                                .frame(width: 12, height: 12)
                         }
                     }
                     .listRowBackground(theme.surfaceColor)
@@ -358,7 +335,7 @@ struct SettingsView: View {
                     Text("manage_data_sync".localized)
                         .themedSecondaryText()
                 }
-                
+
                 // Community Section
                 Section {
                     NavigationLink(destination: FeedbackView()) {
@@ -403,22 +380,17 @@ struct SettingsView: View {
                 // Support Section
                 Section {
                     Button {
-                        showingDonationSheet = true
+                        openEmailClient()
                     } label: {
                         HStack {
-                            Image(systemName: "heart.fill")
-                                .foregroundColor(.pink)
+                            Image(systemName: "envelope.fill")
+                                .foregroundColor(.blue)
                                 .frame(width: 24)
                             
-                            Text("support_snaptask".localized)
+                            Text("contact_support".localized)
                                 .themedPrimaryText()
                             
                             Spacer()
-                            
-                            if donationService.hasEverDonated {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                            }
                             
                             Image(systemName: "chevron.right")
                                 .themedSecondaryText()
@@ -498,7 +470,6 @@ struct SettingsView: View {
             .onAppear {
                 Task {
                     await quoteManager.checkAndUpdateQuote()
-                    await donationService.loadProducts()
                     await subscriptionManager.loadProducts()
                 }
                 loadNotificationTime()
@@ -528,9 +499,6 @@ struct SettingsView: View {
                     scheduleDailyQuoteNotification()
                 }
             }
-            .sheet(isPresented: $showingCalendarIntegrationView) {
-                CalendarIntegrationView()
-            }
             .sheet(isPresented: $showingPremiumPaywall) {
                 PremiumPaywallView()
             }
@@ -549,6 +517,11 @@ struct SettingsView: View {
                 Button("cancel".localized, role: .cancel) { }
             } message: {
                 Text("notification_permission_denied_message".localized)
+            }
+            .alert("email_client_not_available".localized, isPresented: $showingEmailNotAvailableAlert) {
+                Button("ok".localized, role: .cancel) { }
+            } message: {
+                Text("email_client_not_available_message".localized)
             }
             .alert("delete_all_data_confirmation_title".localized, isPresented: $showingDeleteConfirmation) {
                 Button("cancel".localized, role: .cancel) { }
@@ -576,7 +549,9 @@ struct SettingsView: View {
             .fullScreenCover(isPresented: $showingWelcome) {
                 WelcomeView()
             }
-            .navigationBarHidden(true)
+            .navigationBarTitle("settings".localized)
+            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(false)
         }
     }
     
@@ -786,6 +761,28 @@ struct SettingsView: View {
         }
         
         isDeleting = false
+    }
+    
+    private func openEmailClient() {
+        let email = "giovannisebastianoamadei@gmail.com"
+        let subject = "SnapTask - " + "contact_support".localized
+        let body = ""
+        
+        // Create mailto URL
+        let mailtoString = "mailto:\(email)?subject=\(subject)&body=\(body)"
+        
+        // Encode the string for URL
+        guard let mailtoURL = URL(string: mailtoString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "") else {
+            showingEmailNotAvailableAlert = true
+            return
+        }
+        
+        // Check if device can open mail
+        if UIApplication.shared.canOpenURL(mailtoURL) {
+            UIApplication.shared.open(mailtoURL)
+        } else {
+            showingEmailNotAvailableAlert = true
+        }
     }
 }
 

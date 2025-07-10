@@ -5,6 +5,7 @@ import CoreLocation
 struct LocationPickerView: View {
     @Binding var selectedLocation: TaskLocation?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @StateObject private var viewModel = LocationPickerViewModel()
     @State private var searchText = ""
     
@@ -15,13 +16,16 @@ struct LocationPickerView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Search Location")
                         .font(.headline)
+                        .themedPrimaryText()
                         .padding(.horizontal)
                     
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         TextField("Search for a place...", text: $searchText)
                             .textFieldStyle(PlainTextFieldStyle())
+                            .themedPrimaryText()
+                            .accentColor(theme.primaryColor)
                             .onSubmit {
                                 viewModel.searchLocations(query: searchText)
                             }
@@ -32,14 +36,18 @@ struct LocationPickerView: View {
                                 viewModel.clearSearchResults()
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                         }
                     }
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.gray.opacity(0.1))
+                            .fill(theme.backgroundColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(theme.borderColor, lineWidth: 1)
+                            )
                     )
                     .padding(.horizontal)
                     
@@ -48,9 +56,10 @@ struct LocationPickerView: View {
                         HStack {
                             ProgressView()
                                 .scaleEffect(0.8)
+                                .accentColor(theme.primaryColor)
                             Text("Searching...")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                         .padding(.horizontal)
                     } else if !viewModel.searchResults.isEmpty {
@@ -67,6 +76,7 @@ struct LocationPickerView: View {
                                     VStack(alignment: .leading, spacing: 12) {
                                         Text("Selected Location")
                                             .font(.headline)
+                                            .themedPrimaryText()
                                             .padding(.horizontal)
                                         
                                         LocationMapView(location: selectedLoc, height: 120, allowsInteraction: false)
@@ -80,7 +90,7 @@ struct LocationPickerView: View {
                     } else if !searchText.isEmpty && !viewModel.isSearching {
                         Text("No results found")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                             .padding(.horizontal)
                     }
                 }
@@ -109,6 +119,7 @@ struct LocationPickerView: View {
                     .padding()
                 }
             }
+            .themedBackground()
             .navigationTitle("Select Location")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -116,6 +127,7 @@ struct LocationPickerView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .themedSecondaryText()
                 }
             }
             .onChange(of: searchText) { _, newValue in
@@ -132,6 +144,7 @@ struct LocationPickerView: View {
 struct LocationResultRow: View {
     let location: TaskLocation
     let onTap: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: onTap) {
@@ -139,13 +152,13 @@ struct LocationResultRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(location.name)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                         .multilineTextAlignment(.leading)
                     
                     if let address = location.address {
                         Text(address)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                             .multilineTextAlignment(.leading)
                     }
                 }
@@ -153,14 +166,18 @@ struct LocationResultRow: View {
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .font(.system(size: 12))
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    .fill(theme.surfaceColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(theme.borderColor, lineWidth: 1)
+                    )
+                    .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
             )
         }
         .buttonStyle(BorderlessButtonStyle())

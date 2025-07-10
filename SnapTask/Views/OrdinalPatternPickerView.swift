@@ -3,6 +3,7 @@ import SwiftUI
 struct OrdinalPatternPickerView: View {
     @Binding var selectedPatterns: Set<Recurrence.OrdinalPattern>
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     
     private let ordinals = [
         (1, "first".localized),
@@ -30,7 +31,7 @@ struct OrdinalPatternPickerView: View {
                     VStack(spacing: 12) {
                         Text("select_patterns_description".localized)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                             .padding(.top, 8)
@@ -40,6 +41,7 @@ struct OrdinalPatternPickerView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(ordinal.1)
                                 .font(.headline)
+                                .themedPrimaryText()
                                 .padding(.horizontal)
                             
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
@@ -56,12 +58,12 @@ struct OrdinalPatternPickerView: View {
                                     }) {
                                         HStack {
                                             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(isSelected ? .pink : .gray)
+                                                .foregroundColor(isSelected ? theme.primaryColor : theme.secondaryTextColor)
                                                 .font(.system(size: 16))
                                             
                                             Text(weekday.1)
                                                 .font(.subheadline)
-                                                .foregroundColor(.primary)
+                                                .themedPrimaryText()
                                             
                                             Spacer()
                                         }
@@ -69,10 +71,13 @@ struct OrdinalPatternPickerView: View {
                                         .padding(.vertical, 8)
                                         .background(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .fill(isSelected ? Color.pink.opacity(0.1) : Color(.systemGray6))
+                                                .fill(isSelected ? theme.primaryColor.opacity(0.1) : theme.surfaceColor)
                                                 .overlay(
                                                     RoundedRectangle(cornerRadius: 8)
-                                                        .strokeBorder(isSelected ? Color.pink.opacity(0.3) : Color.clear, lineWidth: 1)
+                                                        .strokeBorder(
+                                                            isSelected ? theme.primaryColor.opacity(0.3) : theme.borderColor, 
+                                                            lineWidth: isSelected ? 2 : 1
+                                                        )
                                                 )
                                         )
                                     }
@@ -84,13 +89,18 @@ struct OrdinalPatternPickerView: View {
                         .padding(.vertical, 12)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                                .fill(theme.backgroundColor)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                                )
+                                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
                         )
                     }
                 }
                 .padding()
             }
+            .themedBackground()
             .navigationTitle("monthly_patterns".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -107,7 +117,7 @@ struct OrdinalPatternPickerView: View {
                         dismiss()
                     }
                     .fontWeight(.medium)
-                    .foregroundColor(.pink)
+                    .themedPrimary()
                 }
             }
         }

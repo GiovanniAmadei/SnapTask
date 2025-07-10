@@ -5,6 +5,7 @@ struct CalendarIntegrationView: View {
     @StateObject private var integrationManager = CalendarIntegrationManager.shared
     @StateObject private var appleService = AppleCalendarService.shared
     @StateObject private var googleService = GoogleCalendarService.shared
+    @StateObject private var themeManager = ThemeManager.shared
     
     @State private var showingCalendarPicker = false
     @State private var showingGoogleAuth = false
@@ -14,51 +15,51 @@ struct CalendarIntegrationView: View {
     @State private var showingSettingsAlert = false
     
     var body: some View {
-        NavigationView {
-            Form {
-                enabledSection
-                
-                if integrationManager.settings.isEnabled {
-                    providerSection
-                    calendarSelectionSection
-                    syncOptionsSection
-                    statusSection
+        Form {
+            enabledSection
+            
+            if integrationManager.settings.isEnabled {
+                providerSection
+                calendarSelectionSection
+                syncOptionsSection
+                statusSection
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(themeManager.currentTheme.backgroundColor)
+        .navigationTitle("calendar_integration".localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("error".localized, isPresented: .constant(errorMessage != nil)) {
+            Button("ok".localized) { errorMessage = nil }
+        } message: {
+            if let error = errorMessage {
+                Text(error)
+            }
+        }
+        .alert("enable_calendar_access".localized, isPresented: $showingPermissionAlert) {
+            Button("allow".localized) {
+                Task {
+                    await selectProvider(.apple)
                 }
             }
-            .navigationTitle("calendar_integration".localized)
-            .navigationBarTitleDisplayMode(.large)
-            .alert("error".localized, isPresented: .constant(errorMessage != nil)) {
-                Button("ok".localized) { errorMessage = nil }
-            } message: {
-                if let error = errorMessage {
-                    Text(error)
-                }
+            Button("cancel".localized, role: .cancel) { }
+        } message: {
+            Text("calendar_access_message".localized)
+        }
+        .alert("calendar_access_required".localized, isPresented: $showingSettingsAlert) {
+            Button("open_settings".localized) {
+                appleService.openCalendarSettings()
             }
-            .alert("enable_calendar_access".localized, isPresented: $showingPermissionAlert) {
-                Button("allow".localized) {
-                    Task {
-                        await selectProvider(.apple)
-                    }
-                }
-                Button("cancel".localized, role: .cancel) { }
-            } message: {
-                Text("calendar_access_message".localized)
-            }
-            .alert("calendar_access_required".localized, isPresented: $showingSettingsAlert) {
-                Button("open_settings".localized) {
-                    appleService.openCalendarSettings()
-                }
-                Button("cancel".localized, role: .cancel) { }
-            } message: {
-                Text("calendar_access_required_message".localized)
-            }
-            .sheet(isPresented: $showingCalendarPicker) {
-                CalendarSelectionView()
-            }
-            .onAppear {
-                appleService.checkAuthorizationStatus()
-                googleService.checkAuthenticationStatus()
-            }
+            Button("cancel".localized, role: .cancel) { }
+        } message: {
+            Text("calendar_access_required_message".localized)
+        }
+        .sheet(isPresented: $showingCalendarPicker) {
+            CalendarSelectionView()
+        }
+        .onAppear {
+            appleService.checkAuthorizationStatus()
+            googleService.checkAuthenticationStatus()
         }
     }
     
@@ -72,59 +73,66 @@ struct CalendarIntegrationView: View {
                     integrationManager.updateSettings(settings)
                 }
             ))
+            .tint(themeManager.currentTheme.accentColor)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
         } header: {
             Text("integration".localized)
+                .themedPrimaryText()
         } footer: {
             Text("sync_tasks_calendar_automatically".localized)
+                .themedSecondaryText()
         }
     }
     
     private var providerSection: some View {
-        Section("calendar_provider".localized) {
+        Section(header: Text("calendar_provider".localized).themedPrimaryText()) {
             ForEach(CalendarProvider.allCases, id: \.self) { provider in
                 HStack {
                     Image(systemName: provider.iconName)
-                        .foregroundColor(provider == .apple ? .blue : .red)
+                        .foregroundColor(provider == .apple ? themeManager.currentTheme.primaryColor : themeManager.currentTheme.secondaryColor)
                         .frame(width: 20)
                     
                     Text(provider.displayName)
+                        .themedPrimaryText()
                     
                     Spacer()
                     
                     if integrationManager.settings.provider == provider {
                         Image(systemName: "checkmark")
-                            .foregroundColor(.blue)
+                            .themedAccent()
                     }
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
                     selectProvider(provider)
                 }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
             }
         }
     }
     
     private var calendarSelectionSection: some View {
-        Section("calendar_selection".localized) {
+        Section(header: Text("calendar_selection".localized).themedPrimaryText()) {
             Button(action: {
                 showingCalendarPicker = true
             }) {
                 HStack {
                     Text("selected_calendar".localized)
+                        .themedPrimaryText()
                     Spacer()
                     Text(integrationManager.settings.selectedCalendarName ?? "none".localized)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Image(systemName: "chevron.right")
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                         .font(.caption)
                 }
             }
-            .foregroundColor(.primary)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
         }
     }
     
     private var syncOptionsSection: some View {
-        Section("sync_options".localized) {
+        Section(header: Text("sync_options".localized).themedPrimaryText()) {
             Toggle("auto_sync_task_creation".localized, isOn: Binding(
                 get: { integrationManager.settings.autoSyncOnTaskCreate },
                 set: { newValue in
@@ -133,6 +141,8 @@ struct CalendarIntegrationView: View {
                     integrationManager.updateSettings(settings)
                 }
             ))
+            .tint(themeManager.currentTheme.accentColor)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
             
             Toggle("auto_sync_task_updates".localized, isOn: Binding(
                 get: { integrationManager.settings.autoSyncOnTaskUpdate },
@@ -142,6 +152,8 @@ struct CalendarIntegrationView: View {
                     integrationManager.updateSettings(settings)
                 }
             ))
+            .tint(themeManager.currentTheme.accentColor)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
             
             Toggle("sync_completed_tasks".localized, isOn: Binding(
                 get: { integrationManager.settings.autoSyncOnTaskComplete },
@@ -151,6 +163,8 @@ struct CalendarIntegrationView: View {
                     integrationManager.updateSettings(settings)
                 }
             ))
+            .tint(themeManager.currentTheme.accentColor)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
             
             Toggle("sync_recurring_tasks".localized, isOn: Binding(
                 get: { integrationManager.settings.syncRecurringTasks },
@@ -160,35 +174,45 @@ struct CalendarIntegrationView: View {
                     integrationManager.updateSettings(settings)
                 }
             ))
+            .tint(themeManager.currentTheme.accentColor)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
         }
     }
     
     private var statusSection: some View {
-        Section("status".localized) {
+        Section(header: Text("status".localized).themedPrimaryText()) {
             HStack {
                 Text("provider_status".localized)
+                    .themedPrimaryText()
                 Spacer()
                 statusIndicator
             }
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
             
             HStack {
                 Text("sync_status".localized)
+                    .themedPrimaryText()
                 Spacer()
                 Text(integrationManager.syncStatus.displayText)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
             
             HStack {
                 Text("synced_events".localized)
+                    .themedPrimaryText()
                 Spacer()
                 Text("\(integrationManager.getSyncedTasksCount())")
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
             
             Button("sync_all_tasks_now".localized) {
                 syncAllTasks()
             }
             .disabled(isLoading || integrationManager.settings.selectedCalendarId == nil)
+            .themedAccent()
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
             
             if integrationManager.getSyncedTasksCount() > 0 {
                 Button("delete_all_synced_tasks".localized) {
@@ -196,15 +220,18 @@ struct CalendarIntegrationView: View {
                 }
                 .disabled(isLoading)
                 .foregroundColor(.red)
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
             }
             
             if isLoading {
                 HStack {
                     ProgressView()
                         .scaleEffect(0.8)
+                        .tint(themeManager.currentTheme.accentColor)
                     Text("syncing".localized)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
             }
         }
     }
@@ -215,18 +242,18 @@ struct CalendarIntegrationView: View {
             case .apple:
                 HStack {
                     Circle()
-                        .fill(appleService.authorizationStatus == .authorized ? .green : .red)
+                        .fill(appleService.authorizationStatus == .authorized ? themeManager.currentTheme.accentColor : .red)
                         .frame(width: 8, height: 8)
                     Text(appleService.authorizationStatus == .authorized ? "connected".localized : "not_connected".localized)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
             case .google:
                 HStack {
                     Circle()
-                        .fill(googleService.isAuthenticated ? .green : .red)
+                        .fill(googleService.isAuthenticated ? themeManager.currentTheme.accentColor : .red)
                         .frame(width: 8, height: 8)
                     Text(googleService.isAuthenticated ? "connected".localized : "not_connected".localized)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
             }
         }
@@ -298,6 +325,7 @@ struct CalendarSelectionView: View {
     @StateObject private var integrationManager = CalendarIntegrationManager.shared
     @StateObject private var appleService = AppleCalendarService.shared
     @StateObject private var googleService = GoogleCalendarService.shared
+    @StateObject private var themeManager = ThemeManager.shared
     
     var body: some View {
         NavigationView {
@@ -309,6 +337,8 @@ struct CalendarSelectionView: View {
                     googleCalendarList
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(themeManager.currentTheme.backgroundColor)
             .navigationTitle("select_calendar".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -316,6 +346,7 @@ struct CalendarSelectionView: View {
                     Button("done".localized) {
                         dismiss()
                     }
+                    .themedAccent()
                 }
             }
         }
@@ -332,24 +363,28 @@ struct CalendarSelectionView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(calendar.title)
                             .font(.body)
+                            .themedPrimaryText()
                         Text(calendar.source.title)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                     
                     Spacer()
                     
                     if integrationManager.settings.selectedCalendarId == calendar.calendarIdentifier {
                         Image(systemName: "checkmark")
-                            .foregroundColor(.blue)
+                            .themedAccent()
                     }
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
                     selectAppleCalendar(calendar)
                 }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(themeManager.currentTheme.backgroundColor)
     }
     
     private var googleCalendarList: some View {
@@ -363,10 +398,11 @@ struct CalendarSelectionView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(calendar.summary)
                             .font(.body)
+                            .themedPrimaryText()
                         if let description = calendar.description {
                             Text(description)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                     
@@ -374,15 +410,18 @@ struct CalendarSelectionView: View {
                     
                     if integrationManager.settings.selectedCalendarId == calendar.id {
                         Image(systemName: "checkmark")
-                            .foregroundColor(.blue)
+                            .themedAccent()
                     }
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
                     selectGoogleCalendar(calendar)
                 }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(themeManager.currentTheme.backgroundColor)
     }
     
     private func selectAppleCalendar(_ calendar: EKCalendar) {

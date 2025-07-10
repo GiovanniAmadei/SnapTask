@@ -2,9 +2,9 @@ import SwiftUI
 
 struct CategoryPointsBreakdownView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @StateObject private var categoryManager = CategoryManager.shared
     @StateObject private var rewardManager = RewardManager.shared
-    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         NavigationStack {
@@ -19,7 +19,7 @@ struct CategoryPointsBreakdownView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 32)
             }
-            .background(Color(UIColor.systemGroupedBackground))
+            .themedBackground()
             .navigationTitle("points_overview".localized)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -28,7 +28,7 @@ struct CategoryPointsBreakdownView: View {
                         dismiss()
                     }
                     .fontWeight(.semibold)
-                    .foregroundColor(.pink)
+                    .themedPrimary()
                 }
             }
         }
@@ -39,24 +39,22 @@ struct CategoryPointsBreakdownView: View {
             VStack(spacing: 12) {
                 Text("total_available_points".localized)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                 
-                let totalPoints = rewardManager.availablePoints(for: .daily) + 
-                                rewardManager.availablePoints(for: .weekly) + 
-                                rewardManager.availablePoints(for: .monthly) + 
-                                rewardManager.availablePoints(for: .yearly)
+                // FIXED: Use total points instead of summing overlapping periods
+                let totalPoints = rewardManager.totalPoints()
                 
                 Text("\(totalPoints)")
                     .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(.primary)
-                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    .themedPrimaryText()
+                    .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
             }
             
             if !categoryManager.categories.isEmpty && !topCategoriesByPoints.isEmpty {
                 VStack(spacing: 10) {
                     Text("top_categories".localized)
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     
                     HStack(spacing: 8) {
                         ForEach(Array(topCategoriesByPoints.prefix(4)), id: \.id) { category in
@@ -69,7 +67,7 @@ struct CategoryPointsBreakdownView: View {
                                     
                                     Text(category.name)
                                         .font(.system(size: 10, weight: .medium))
-                                        .foregroundColor(.secondary)
+                                        .themedSecondaryText()
                                         .lineLimit(1)
                                     
                                     Text("\(totalCategoryPoints)")
@@ -97,30 +95,20 @@ struct CategoryPointsBreakdownView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
+                .fill(theme.surfaceColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    Color(hex: "5E5CE6").opacity(0.15),
-                                    Color.clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
+                        .strokeBorder(theme.primaryColor.opacity(0.15), lineWidth: 1)
                 )
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+        .shadow(color: theme.shadowColor, radius: 6, x: 0, y: 3)
     }
     
     private var periodBreakdownSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("points_by_period".localized)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             
             HStack(spacing: 12) {
                 PeriodPointsCard(
@@ -156,8 +144,12 @@ struct CategoryPointsBreakdownView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
+                .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
         )
     }
     
@@ -165,21 +157,21 @@ struct CategoryPointsBreakdownView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("points_by_category".localized)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             
             if categoryManager.categories.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "folder")
                         .font(.system(size: 32))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     
                     Text("no_categories_available".localized)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     
                     Text("create_categories_organize_rewards".localized)
                         .font(.system(size: 14))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -199,8 +191,12 @@ struct CategoryPointsBreakdownView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
+                .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
         )
     }
     
@@ -213,10 +209,7 @@ struct CategoryPointsBreakdownView: View {
     }
     
     private func getTotalPointsForCategory(_ categoryId: UUID) -> Int {
-        return rewardManager.availablePointsForCategory(categoryId, frequency: .daily) +
-               rewardManager.availablePointsForCategory(categoryId, frequency: .weekly) +
-               rewardManager.availablePointsForCategory(categoryId, frequency: .monthly) +
-               rewardManager.availablePointsForCategory(categoryId, frequency: .yearly)
+        return rewardManager.totalPointsForCategory(categoryId)
     }
 }
 
@@ -225,6 +218,7 @@ struct PeriodPointsCard: View {
     let points: Int
     let color: Color
     let icon: String
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(spacing: 8) {
@@ -238,7 +232,7 @@ struct PeriodPointsCard: View {
             
             Text(title)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -256,16 +250,14 @@ struct PeriodPointsCard: View {
 struct ImprovedCategoryPointsCard: View {
     let category: Category
     @StateObject private var rewardManager = RewardManager.shared
+    @Environment(\.theme) private var theme
     
     private var categoryColor: Color {
         Color(hex: category.color)
     }
     
     private var totalPoints: Int {
-        rewardManager.availablePointsForCategory(category.id, frequency: .daily) +
-        rewardManager.availablePointsForCategory(category.id, frequency: .weekly) +
-        rewardManager.availablePointsForCategory(category.id, frequency: .monthly) +
-        rewardManager.availablePointsForCategory(category.id, frequency: .yearly)
+        rewardManager.totalPointsForCategory(category.id)
     }
     
     var body: some View {
@@ -278,7 +270,7 @@ struct ImprovedCategoryPointsCard: View {
                 
                 Text(category.name)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                     .lineLimit(1)
                 
                 Spacer()
@@ -292,7 +284,7 @@ struct ImprovedCategoryPointsCard: View {
                 HStack {
                     Text("daily".localized)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text("\(rewardManager.availablePointsForCategory(category.id, frequency: .daily))")
                         .font(.system(size: 12, weight: .semibold))
@@ -302,7 +294,7 @@ struct ImprovedCategoryPointsCard: View {
                 HStack {
                     Text("weekly".localized)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text("\(rewardManager.availablePointsForCategory(category.id, frequency: .weekly))")
                         .font(.system(size: 12, weight: .semibold))
@@ -312,7 +304,7 @@ struct ImprovedCategoryPointsCard: View {
                 HStack {
                     Text("monthly".localized)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text("\(rewardManager.availablePointsForCategory(category.id, frequency: .monthly))")
                         .font(.system(size: 12, weight: .semibold))
@@ -322,7 +314,7 @@ struct ImprovedCategoryPointsCard: View {
                 HStack {
                     Text("yearly".localized)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     Spacer()
                     Text("\(rewardManager.availablePointsForCategory(category.id, frequency: .yearly))")
                         .font(.system(size: 12, weight: .semibold))

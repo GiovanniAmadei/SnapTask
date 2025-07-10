@@ -471,20 +471,20 @@ class TaskManager: ObservableObject {
             var task = tasks[index]
             let startOfDay = Calendar.current.startOfDay(for: date)
             
-            // DEBUG: Log current state
-            print(" Toggling task completion for '\(task.name)' on \(startOfDay)")
-            print(" Task ID: \(taskId.uuidString.prefix(8))")
-            print(" Current completion: \(task.completions[startOfDay]?.isCompleted ?? false)")
-            print(" Total completions: \(task.completions.count)")
+            print("🔄 Toggling task completion for '\(task.name)' on \(startOfDay)")
+            print("📍 Task ID: \(taskId.uuidString.prefix(8))")
             
-            // Get current completion status
             let currentCompletion = task.completions[startOfDay]
             let wasCompleted = currentCompletion?.isCompleted ?? false
             let isCompleting = !wasCompleted
             
-            print(" Was completed: \(wasCompleted), Is completing: \(isCompleting)")
+            print("📊 Was completed: \(wasCompleted), Is completing: \(isCompleting)")
             
-            // Update completion - ALWAYS create new completion to avoid reference issues
+            let pointsAlreadyAwarded = task.completionDates.contains(startOfDay)
+            
+            print("📊 Was completed: \(wasCompleted), Is completing: \(isCompleting)")
+            print("🎯 Points already awarded: \(pointsAlreadyAwarded)")
+            
             var completion = TaskCompletion(
                 isCompleted: isCompleting,
                 completedSubtasks: currentCompletion?.completedSubtasks ?? [],
@@ -494,70 +494,63 @@ class TaskManager: ObservableObject {
                 completionDate: currentCompletion?.completionDate
             )
             
-            // If completing the main task, mark all subtasks as completed
             if isCompleting && !task.subtasks.isEmpty {
                 completion.completedSubtasks = Set(task.subtasks.map { $0.id })
-                // Update subtask models
                 for i in 0..<task.subtasks.count {
                     task.subtasks[i].isCompleted = true
                 }
-                print(" Marked all \(task.subtasks.count) subtasks as completed")
+                print("✅ Marked all \(task.subtasks.count) subtasks as completed")
             } else if !isCompleting {
-                // If uncompleting, clear all subtask completions
                 completion.completedSubtasks.removeAll()
-                // Update subtask models
                 for i in 0..<task.subtasks.count {
                     task.subtasks[i].isCompleted = false
                 }
-                print(" Unmarked all subtasks")
+                print("❌ Unmarked all subtasks")
             }
             
             task.completions[startOfDay] = completion
             
-            // Update completionDates
             if completion.isCompleted {
                 if !task.completionDates.contains(startOfDay) {
                     task.completionDates.append(startOfDay)
-                    print(" Added completion date: \(startOfDay)")
+                    print("📅 Added completion date: \(startOfDay)")
                 }
             } else {
                 task.completionDates.removeAll { $0 == startOfDay }
-                print(" Removed completion date: \(startOfDay)")
+                print("📅 Removed completion date: \(startOfDay)")
             }
             
-            // Tasks with subtasks get points handled in toggleSubtask
             if task.hasRewardPoints && task.subtasks.isEmpty {
-                if isCompleting {
+                if isCompleting && !pointsAlreadyAwarded {
                     RewardManager.shared.addPoints(task.rewardPoints, on: date)
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print(" Added \(task.rewardPoints) points for completing task without subtasks")
-                } else if wasCompleted {
+                    print("🎯 Added \(task.rewardPoints) points for completing task without subtasks")
+                } else if !isCompleting && pointsAlreadyAwarded {
                     RewardManager.shared.addPoints(-task.rewardPoints, on: date)
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(-task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print(" Removed \(task.rewardPoints) points for uncompleting task without subtasks")
+                    print("🎯 Removed \(task.rewardPoints) points for uncompleting task without subtasks")
+                } else {
+                    print("🎯 No points change needed (completing: \(isCompleting), already awarded: \(pointsAlreadyAwarded))")
                 }
             }
             
-            // Update modification date
             task.lastModifiedDate = Date()
             tasks[index] = task
             
-            print(" New completion: \(completion.isCompleted)")
-            print(" Completions count: \(task.completions.count)")
+            print("✅ New completion: \(completion.isCompleted)")
+            print("📋 Completions count: \(task.completions.count)")
+            print("📅 Completion dates: \(task.completionDates.count)")
             
-            // Save and sync immediately
             saveTasks()
             notifyTasksUpdated()
             objectWillChange.send()
             
-            // Debounced CloudKit sync
             debouncedSaveTask(task)
             
-            // Sync with Apple Watch
             synchronizeWithWatch()
             
             if calendarIntegrationManager.settings.autoSyncOnTaskComplete {
@@ -566,7 +559,7 @@ class TaskManager: ObservableObject {
                 }
             }
             
-            print(" Task completion toggled: \(task.name)")
+            print("🔄 Task completion toggled: \(task.name)")
         }
     }
     
@@ -577,15 +570,13 @@ class TaskManager: ObservableObject {
         var task = tasks[taskIndex]
         let startOfDay = Calendar.current.startOfDay(for: date)
         
-        // DEBUG: Log current state
-        print(" Toggling subtask for \(task.name) on \(startOfDay)")
+        print("🔄 Toggling subtask for \(task.name) on \(startOfDay)")
         
         var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
         
-        // Determine if we're completing or uncompleting the subtask
         let wasCompleted = completion.completedSubtasks.contains(subtaskId)
         
-        print(" Subtask was completed: \(wasCompleted)")
+        print("📊 Subtask was completed: \(wasCompleted)")
         
         if wasCompleted {
             completion.completedSubtasks.remove(subtaskId)
@@ -595,7 +586,6 @@ class TaskManager: ObservableObject {
         
         task.completions[startOfDay] = completion
         
-        // Update subtask completion state in the task model
         if let subtaskIndex = task.subtasks.firstIndex(where: { $0.id == subtaskId }) {
             task.subtasks[subtaskIndex].isCompleted = !wasCompleted
         }
@@ -611,58 +601,59 @@ class TaskManager: ObservableObject {
                 subtask.id == subtaskId ? wasCompleted : completion.completedSubtasks.contains(subtask.id)
             }
             
-            // Handle reward points
+            let pointsAlreadyAwarded = task.completionDates.contains(startOfDay)
+            
+            print("📊 All subtasks completed: \(allSubtasksCompleted), Was all completed: \(wasAllCompleted)")
+            print("🎯 Points already awarded: \(pointsAlreadyAwarded)")
+            
             if task.hasRewardPoints {
-                if allSubtasksCompleted && !wasAllCompleted {
+                if allSubtasksCompleted && !wasAllCompleted && !pointsAlreadyAwarded {
                     RewardManager.shared.addPoints(task.rewardPoints, on: date)
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print(" Added \(task.rewardPoints) points - all subtasks completed")
-                } else if !allSubtasksCompleted && wasAllCompleted {
+                    print("🎯 Added \(task.rewardPoints) points - all subtasks completed")
+                } else if !allSubtasksCompleted && wasAllCompleted && pointsAlreadyAwarded {
                     RewardManager.shared.addPoints(-task.rewardPoints, on: date)
                     if let categoryId = task.category?.id {
                         RewardManager.shared.addPointsToCategory(-task.rewardPoints, categoryId: categoryId, categoryName: task.category?.name, on: date)
                     }
-                    print(" Removed \(task.rewardPoints) points - not all subtasks completed")
+                    print("🎯 Removed \(task.rewardPoints) points - not all subtasks completed")
+                } else {
+                    print("🎯 No points change needed (all completed: \(allSubtasksCompleted), was all completed: \(wasAllCompleted), already awarded: \(pointsAlreadyAwarded))")
                 }
             }
             
             if shouldAutoComplete {
                 if allSubtasksCompleted && !wasAllCompleted {
-                    // All subtasks completed -> mark task as completed
                     completion.isCompleted = true
                     task.completions[startOfDay] = completion
                     if !task.completionDates.contains(startOfDay) {
                         task.completionDates.append(startOfDay)
                     }
-                    print(" Auto-completed task - all subtasks done")
+                    print("✅ Auto-completed task - all subtasks done")
                 } else if !allSubtasksCompleted && wasAllCompleted {
-                    // Not all subtasks completed -> mark task as uncompleted
                     completion.isCompleted = false
                     task.completions[startOfDay] = completion
                     task.completionDates.removeAll { $0 == startOfDay }
-                    print(" Auto-uncompleted task - not all subtasks done")
+                    print("❌ Auto-uncompleted task - not all subtasks done")
                 }
             }
         }
         
-        // Update modification date
         task.lastModifiedDate = Date()
         tasks[taskIndex] = task
         
-        print(" Subtask now completed: \(!wasCompleted)")
-        print(" Completed subtasks: \(completion.completedSubtasks.count)")
+        print("✅ Subtask now completed: \(!wasCompleted)")
+        print("📋 Completed subtasks: \(completion.completedSubtasks.count)")
+        print("📅 Completion dates: \(task.completionDates.count)")
         
-        // Save and sync immediately
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Debounced CloudKit sync
         debouncedSaveTask(task)
         
-        // Sync with Apple Watch
         synchronizeWithWatch()
         
         if calendarIntegrationManager.settings.autoSyncOnTaskComplete {
@@ -671,14 +662,12 @@ class TaskManager: ObservableObject {
             }
         }
         
-        print(" Subtask toggled: \(task.name)")
+        print("🔄 Subtask toggled: \(task.name)")
     }
-    
+
     private func debouncedSaveTask(_ task: TodoTask) {
-        // Cancel existing timer for this task
         saveTaskDebounceTimers[task.id]?.invalidate()
         
-        // Start new timer
         saveTaskDebounceTimers[task.id] = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
             CloudKitService.shared.saveTask(task)
             self?.saveTaskDebounceTimers.removeValue(forKey: task.id)
@@ -686,7 +675,6 @@ class TaskManager: ObservableObject {
     }
     
     func syncWithCloudKit() {
-        // Trigger CloudKit sync
         CloudKitService.shared.syncNow()
     }
     
@@ -695,11 +683,9 @@ class TaskManager: ObservableObject {
             let data = try JSONEncoder().encode(tasks)
             UserDefaults.standard.set(data, forKey: tasksKey)
             
-            // Force immediate save to shared UserDefaults
             appGroupUserDefaults?.set(data, forKey: tasksKey)
-            appGroupUserDefaults?.synchronize() // Force sync
+            appGroupUserDefaults?.synchronize()
             
-            // UPDATE: Force widget refresh
             WidgetCenter.shared.reloadAllTimelines()
             
             print(" App: Saved \(tasks.count) tasks to both UserDefaults")
@@ -715,7 +701,6 @@ class TaskManager: ObservableObject {
             let data = try JSONEncoder().encode(trackingSessions)
             UserDefaults.standard.set(data, forKey: trackingSessionsKey)
             
-            // Also save to shared UserDefaults
             appGroupUserDefaults?.set(data, forKey: trackingSessionsKey)
             appGroupUserDefaults?.synchronize()
             
@@ -761,12 +746,8 @@ class TaskManager: ObservableObject {
             var task = tasks[i]
             var wasModified = false
             
-            // If we find any completions without performance data but the task has legacy data,
-            // we should clear the legacy data to avoid confusion
             for (date, completion) in task.completions {
                 if completion.isCompleted && completion.actualDuration == nil && completion.difficultyRating == nil && completion.qualityRating == nil {
-                    // This completion doesn't have performance data, which is expected for per-completion data
-                    // The old global data should not be used
                     wasModified = true
                 }
             }
@@ -790,7 +771,6 @@ class TaskManager: ObservableObject {
         NotificationCenter.default.post(name: Notification.Name("tasksDidUpdate"), object: nil)
     }
     
-    // Function to synchronize tasks with Apple Watch
     private func synchronizeWithWatch() {
         let connectivityManager = WatchConnectivityManager.shared
         connectivityManager.updateWatchContext()
@@ -799,10 +779,8 @@ class TaskManager: ObservableObject {
     func startRegularSync() {
         guard CloudKitService.shared.isCloudKitEnabled else { return }
         
-        // Initial sync
         CloudKitService.shared.syncNow()
         
-        // Setup periodic sync every 30 seconds
         Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
             if CloudKitService.shared.isCloudKitEnabled {
                 CloudKitService.shared.syncNow()
@@ -810,7 +788,6 @@ class TaskManager: ObservableObject {
         }
     }
     
-    // MARK: - Calendar Integration
     func syncTaskToCalendar(_ task: TodoTask) {
         guard calendarIntegrationManager.settings.isEnabled else { return }
         
@@ -831,7 +808,6 @@ class TaskManager: ObservableObject {
         }
     }
     
-    // For debugging purposes only
     func resetUserDefaults() {
         UserDefaults.standard.removeObject(forKey: tasksKey)
         UserDefaults.standard.removeObject(forKey: trackingSessionsKey)
@@ -841,32 +817,26 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Sincronizza con CloudKit in modo sicuro
         CloudKitService.shared.syncNow()
         
-        // Sincronizza con Apple Watch
         synchronizeWithWatch()
     }
     
     private func removeTaskFromStatistics(_ taskId: UUID) {
         print(" [STATS CLEANUP] Removing all time tracking data for task \(taskId.uuidString.prefix(8))")
         
-        // Load existing time tracking data
         let trackingKey = "timeTracking"
         var timeTrackingData = UserDefaults.standard.dictionary(forKey: trackingKey) as? [String: [String: Double]] ?? [:]
         
         let taskKey = "task_\(taskId.uuidString)"
         var entriesRemoved = 0
         
-        // Remove task entries from all dates
         for (dateKey, var dayData) in timeTrackingData {
             if dayData.keys.contains(taskKey) {
                 dayData.removeValue(forKey: taskKey)
                 entriesRemoved += 1
                 
-                // Update the day data
                 if dayData.isEmpty {
-                    // Remove the entire day if no more entries
                     timeTrackingData.removeValue(forKey: dateKey)
                     print(" [STATS CLEANUP] Removed empty date entry: \(dateKey)")
                 } else {
@@ -875,7 +845,6 @@ class TaskManager: ObservableObject {
             }
         }
         
-        // Remove task metadata
         var taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
         if taskMetadata.keys.contains(taskKey) {
             taskMetadata.removeValue(forKey: taskKey)
@@ -883,13 +852,11 @@ class TaskManager: ObservableObject {
             print(" [STATS CLEANUP] Removed task metadata for \(taskKey)")
         }
         
-        // Save updated data
         UserDefaults.standard.set(timeTrackingData, forKey: trackingKey)
         UserDefaults.standard.synchronize()
         
         print(" [STATS CLEANUP] Removed \(entriesRemoved) time tracking entries for deleted task")
         
-        // Notify statistics to refresh
         NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
     }
 
@@ -900,7 +867,6 @@ class TaskManager: ObservableObject {
         task.hasNotification.toggle()
         
         if task.hasNotification {
-            // Schedule notification
             if task.recurrence != nil {
                 let identifiers = await notificationManager.scheduleRecurringNotifications(for: task)
                 task.notificationId = identifiers.isEmpty ? nil : identifiers.first
@@ -916,13 +882,11 @@ class TaskManager: ObservableObject {
                 print("❌ Failed to schedule notification for task: \(task.name)")
             }
         } else {
-            // Cancel notification
             if let notificationId = task.notificationId {
                 notificationManager.cancelNotification(withIdentifier: notificationId)
                 task.notificationId = nil
                 print("🗑️ Notification cancelled for task: \(task.name)")
             } else {
-                // Cancel all notifications for this task (fallback)
                 notificationManager.cancelAllNotificationsForTask(task.id)
             }
         }
@@ -943,7 +907,6 @@ class TaskManager: ObservableObject {
         if task.recurrence != nil {
             let identifiers = await notificationManager.scheduleRecurringNotifications(for: task)
             if let firstId = identifiers.first, !identifiers.isEmpty {
-                // Update task with notification ID
                 if let index = tasks.firstIndex(where: { $0.id == task.id }) {
                     tasks[index].notificationId = firstId
                 }
@@ -951,7 +914,6 @@ class TaskManager: ObservableObject {
         } else {
             let identifier = await notificationManager.scheduleNotification(for: task)
             if let identifier = identifier {
-                // Update task with notification ID
                 if let index = tasks.firstIndex(where: { $0.id == task.id }) {
                     tasks[index].notificationId = identifier
                 }
@@ -960,7 +922,6 @@ class TaskManager: ObservableObject {
     }
     
     private func handleTaskNotificationUpdate(oldTask: TodoTask, newTask: TodoTask) async {
-        // If notification settings haven't changed and time hasn't changed, nothing to do
         if oldTask.hasNotification == newTask.hasNotification &&
            oldTask.startTime == newTask.startTime &&
            oldTask.recurrence == newTask.recurrence &&
@@ -968,14 +929,12 @@ class TaskManager: ObservableObject {
             return
         }
         
-        // Cancel old notifications
         if let oldNotificationId = oldTask.notificationId {
             notificationManager.cancelNotification(withIdentifier: oldNotificationId)
         } else {
             notificationManager.cancelAllNotificationsForTask(oldTask.id)
         }
         
-        // Schedule new notifications if needed
         if newTask.hasNotification && newTask.hasSpecificTime {
             await handleTaskNotification(newTask, isNew: false)
         }
@@ -983,7 +942,6 @@ class TaskManager: ObservableObject {
 
 }
 
-// MARK: - Notification Extensions
 extension Notification.Name {
     static let tasksDidUpdate = Notification.Name("tasksDidUpdate")
 }

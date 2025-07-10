@@ -3,7 +3,7 @@ import SwiftUI
 struct TimeTrackerView: View {
     @ObservedObject private var viewModel: TimeTrackerViewModel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     let task: TodoTask?
     let mode: TrackingMode
@@ -32,43 +32,15 @@ struct TimeTrackerView: View {
         presentationStyle == .sheet
     }
     
-    private var backgroundColors: [Color] {
-        if colorScheme == .dark {
-            return [
-                Color(hex: "1a1a1a"),
-                Color(hex: "2d2d2d"),
-                Color(hex: "1a1a1a")
-            ]
-        } else {
-            return [
-                Color(hex: "f8f9fa"),
-                Color(hex: "e9ecef"),
-                Color(hex: "f8f9fa")
-            ]
-        }
-    }
-    
-    private var textColor: Color {
-        colorScheme == .dark ? .white : .black
-    }
-    
-    private var secondaryTextColor: Color {
-        colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.7)
-    }
-    
-    private var glowColor: Color {
-        colorScheme == .dark ? Color(hex: "5E5CE6").opacity(0.3) : Color(hex: "5E5CE6").opacity(0.1)
-    }
-    
-    private var trackColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1)
-    }
-    
     var body: some View {
         ZStack {
             if !isCompactMode {
                 LinearGradient(
-                    colors: backgroundColors,
+                    colors: [
+                        theme.backgroundColor,
+                        theme.surfaceColor,
+                        theme.backgroundColor
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -81,6 +53,7 @@ struct TimeTrackerView: View {
                 fullscreenLayout
             }
         }
+        .themedBackground()
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -89,11 +62,11 @@ struct TimeTrackerView: View {
                 }) {
                     Image(systemName: "minus")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .themedPrimaryText()
                         .frame(width: 32, height: 32)
                         .background(
                             Circle()
-                                .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1))
+                                .fill(theme.surfaceColor)
                         )
                 }
             }
@@ -106,11 +79,11 @@ struct TimeTrackerView: View {
                         }) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.blue)
+                                .foregroundColor(theme.accentColor)
                                 .frame(width: 32, height: 32)
                                 .background(
                                     Circle()
-                                        .fill(Color.blue.opacity(0.1))
+                                        .fill(theme.accentColor.opacity(0.1))
                                 )
                         }
                     }
@@ -168,12 +141,12 @@ struct TimeTrackerView: View {
                 if let task = task {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(Color(hex: "5E5CE6"))
+                            .fill(theme.accentColor)
                             .frame(width: 8, height: 8)
                         
                         Text(task.name)
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                             .lineLimit(1)
                         
                         Spacer()
@@ -181,26 +154,26 @@ struct TimeTrackerView: View {
                     
                     Text("Focus Session")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 } else {
                     Text("Timer Session")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                 }
             }
             .padding(.top, 8)
             
             ZStack {
                 Circle()
-                    .stroke(trackColor, lineWidth: 4)
+                    .stroke(theme.borderColor, lineWidth: 4)
                     .frame(width: 120, height: 120)
                 
                 Circle()
                     .stroke(
                         LinearGradient(
                             colors: session?.isRunning == true ? 
-                            [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
-                            [trackColor, trackColor],
+                            [theme.accentColor, theme.primaryColor] :
+                            [theme.borderColor, theme.borderColor],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -212,7 +185,7 @@ struct TimeTrackerView: View {
                 VStack(spacing: 4) {
                     Text(formattedElapsedTime)
                         .font(.system(size: 18, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     
                     if session?.isPaused == true {
                         Text("PAUSED")
@@ -232,7 +205,7 @@ struct TimeTrackerView: View {
                  (session?.isPaused == true ? "Tap play to resume" : "Session in progress") : 
                  "Ready to start tracking")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .multilineTextAlignment(.center)
             
             Spacer()
@@ -281,7 +254,7 @@ struct TimeTrackerView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color(hex: "5E5CE6"), Color(hex: "5E5CE6").opacity(0.8)],
+                                    colors: [theme.accentColor, theme.accentColor.opacity(0.8)],
                                     startPoint: .top,
                                     endPoint: .bottom
                                 )
@@ -292,7 +265,7 @@ struct TimeTrackerView: View {
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.white)
                     }
-                    .shadow(color: Color(hex: "5E5CE6").opacity(0.3), radius: 6, x: 0, y: 3)
+                    .shadow(color: theme.accentColor.opacity(0.3), radius: 6, x: 0, y: 3)
                 }
                 
                 if isCompactMode {
@@ -329,21 +302,21 @@ struct TimeTrackerView: View {
                         HStack(spacing: 8) {
                             Image(systemName: task.icon)
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(Color(hex: "5E5CE6"))
+                                .foregroundColor(theme.accentColor)
                             
                             Text(task.name)
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(textColor)
+                                .themedPrimaryText()
                         }
                         
                         Text("Focus Session")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(secondaryTextColor)
+                            .themedSecondaryText()
                     }
                 } else {
                     Text("Timer Session")
                         .font(.system(size: 24, weight: .semibold, design: .rounded))
-                        .foregroundColor(textColor)
+                        .themedPrimaryText()
                 }
             }
             .padding(.top, 20)
@@ -354,8 +327,8 @@ struct TimeTrackerView: View {
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    glowColor,
-                                    glowColor.opacity(0.5),
+                                    theme.accentColor.opacity(0.1),
+                                    theme.accentColor.opacity(0.05),
                                     Color.clear
                                 ],
                                 center: .center,
@@ -368,15 +341,15 @@ struct TimeTrackerView: View {
                         .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: session?.isRunning)
                     
                     Circle()
-                        .stroke(trackColor, lineWidth: 8)
+                        .stroke(theme.borderColor, lineWidth: 8)
                         .frame(width: 200, height: 200)
                     
                     Circle()
                         .stroke(
                             LinearGradient(
                                 colors: session?.isRunning == true ? 
-                                [Color(hex: "5E5CE6"), Color(hex: "9747FF")] :
-                                [trackColor, trackColor],
+                                [theme.accentColor, theme.primaryColor] :
+                                [theme.borderColor, theme.borderColor],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -388,8 +361,8 @@ struct TimeTrackerView: View {
                     VStack(spacing: 8) {
                         Text(formattedElapsedTime)
                             .font(.system(size: 36, weight: .medium, design: .monospaced))
-                            .foregroundColor(textColor)
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 2, x: 0, y: 1)
+                            .themedPrimaryText()
+                            .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
                         
                         if session?.isPaused == true {
                             HStack(spacing: 4) {
@@ -418,11 +391,11 @@ struct TimeTrackerView: View {
                 if session?.isRunning == true {
                     Text(session?.isPaused == true ? "Tap play to resume" : "Session in progress")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(secondaryTextColor)
+                        .themedSecondaryText()
                 } else {
                     Text("Ready to start tracking")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(secondaryTextColor)
+                        .themedSecondaryText()
                 }
             }
             

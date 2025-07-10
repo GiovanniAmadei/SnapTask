@@ -3,93 +3,175 @@ import SwiftUI
 struct TimelineOrganizationView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(\.theme) private var theme
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Organization Options
-                List {
-                    Section("organization_mode_title".localized) {
-                        ForEach(TimelineOrganization.allCases, id: \.self) { organization in
-                            HStack {
-                                Image(systemName: organization.icon)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.pink)
-                                    .frame(width: 24)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(organization.displayName)
-                                        .font(.body)
-                                    
-                                    if organization != .none {
-                                        Text(organizationDescription(for: organization))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Organization Mode Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("organization_mode_title".localized)
+                                .font(.system(size: 18, weight: .semibold))
+                                .themedPrimaryText()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            VStack(spacing: 8) {
+                                ForEach(TimelineOrganization.allCases, id: \.self) { organization in
+                                    Button(action: {
+                                        viewModel.organization = organization
+                                    }) {
+                                        HStack {
+                                            Image(systemName: organization.icon)
+                                                .font(.system(size: 16))
+                                                .foregroundColor(theme.primaryColor)
+                                                .frame(width: 24)
+                                            
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(organization.displayName)
+                                                    .font(.body)
+                                                    .themedPrimaryText()
+                                                
+                                                if organization != .none {
+                                                    Text(organizationDescription(for: organization))
+                                                        .font(.caption)
+                                                        .themedSecondaryText()
+                                                }
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            if viewModel.organization == organization {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundColor(theme.primaryColor)
+                                            }
+                                        }
+                                        .padding()
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(viewModel.organization == organization ? theme.primaryColor.opacity(0.1) : theme.surfaceColor)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .strokeBorder(
+                                                            viewModel.organization == organization ? theme.primaryColor : theme.borderColor,
+                                                            lineWidth: viewModel.organization == organization ? 2 : 1
+                                                        )
+                                                )
+                                        )
                                     }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                
-                                Spacer()
-                                
-                                if viewModel.organization == organization {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.pink)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.organization = organization
                             }
                         }
-                    }
-                    
-                    // Time Sort Order (only when organizing by time)
-                    if viewModel.organization == .time {
-                        Section("time_sort_order_title".localized) {
-                            ForEach(TimeSortOrder.allCases, id: \.self) { sortOrder in
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(theme.backgroundColor)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                                )
+                        )
+                        .padding(.horizontal, 16)
+                        
+                        // Time Sort Order (only when organizing by time)
+                        if viewModel.organization == .time {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("time_sort_order_title".localized)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .themedPrimaryText()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                VStack(spacing: 8) {
+                                    ForEach(TimeSortOrder.allCases, id: \.self) { sortOrder in
+                                        Button(action: {
+                                            viewModel.timeSortOrder = sortOrder
+                                        }) {
+                                            HStack {
+                                                Image(systemName: sortOrder == .ascending ? "arrow.up" : "arrow.down")
+                                                    .font(.system(size: 14))
+                                                    .themedSecondaryText()
+                                                    .frame(width: 24)
+                                                
+                                                Text(sortOrder.displayName)
+                                                    .font(.body)
+                                                    .themedPrimaryText()
+                                                
+                                                Spacer()
+                                                
+                                                if viewModel.timeSortOrder == sortOrder {
+                                                    Image(systemName: "checkmark")
+                                                        .foregroundColor(theme.primaryColor)
+                                                }
+                                            }
+                                            .padding()
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(viewModel.timeSortOrder == sortOrder ? theme.primaryColor.opacity(0.1) : theme.surfaceColor)
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .strokeBorder(
+                                                                viewModel.timeSortOrder == sortOrder ? theme.primaryColor : theme.borderColor,
+                                                                lineWidth: viewModel.timeSortOrder == sortOrder ? 2 : 1
+                                                            )
+                                                    )
+                                            )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(theme.backgroundColor)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .strokeBorder(theme.borderColor, lineWidth: 1)
+                                    )
+                            )
+                            .padding(.horizontal, 16)
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .top)),
+                                removal: .opacity.combined(with: .move(edge: .top))
+                            ))
+                        }
+                        
+                        // Action Buttons
+                        VStack(spacing: 12) {
+                            Button(action: {
+                                viewModel.resetView()
+                            }) {
                                 HStack {
-                                    Image(systemName: sortOrder == .ascending ? "arrow.up" : "arrow.down")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.secondary)
-                                        .frame(width: 24)
-                                    
-                                    Text(sortOrder.displayName)
-                                        .font(.body)
-                                    
-                                    Spacer()
-                                    
-                                    if viewModel.timeSortOrder == sortOrder {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.pink)
-                                    }
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("reset_to_default".localized)
                                 }
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.timeSortOrder = sortOrder
-                                }
+                                .font(.headline)
+                                .foregroundColor(theme.primaryColor)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(theme.primaryColor.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .strokeBorder(theme.primaryColor.opacity(0.3), lineWidth: 1)
+                                        )
+                                )
                             }
+                            .buttonStyle(PlainButtonStyle())
                         }
+                        .padding(.horizontal, 16)
                     }
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
                 }
-                
-                // Action Buttons
-                VStack(spacing: 12) {
-                    Button(action: {
-                        viewModel.resetView()
-                    }) {
-                        HStack {
-                            Image(systemName: "arrow.clockwise")
-                            Text("reset_to_default".localized)
-                        }
-                        .font(.headline)
-                        .foregroundColor(.pink)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.pink.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-                }
-                .padding()
             }
+            .themedBackground()
             .navigationTitle("organize_tasks".localized)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
@@ -98,6 +180,7 @@ struct TimelineOrganizationView: View {
                     Button("cancel".localized) {
                         dismiss()
                     }
+                    .themedSecondaryText()
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -105,6 +188,7 @@ struct TimelineOrganizationView: View {
                         dismiss()
                     }
                     .fontWeight(.semibold)
+                    .themedPrimary()
                 }
             }
         }

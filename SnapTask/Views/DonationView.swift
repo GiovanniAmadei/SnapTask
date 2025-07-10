@@ -4,6 +4,7 @@ import StoreKit
 struct DonationView: View {
     @StateObject private var donationService = DonationService.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var showingThankYou = false
     @State private var selectedProduct: DonationProduct?
     
@@ -26,9 +27,11 @@ struct DonationView: View {
                         Button("close".localized) {
                             dismiss()
                         }
+                        .themedSecondaryText()
                     }
                 }
             }
+            .themedBackground()
             .padding(.bottom, 20)
         }
         .alert("thanks_so_much".localized, isPresented: $showingThankYou) {
@@ -60,10 +63,11 @@ struct DonationView: View {
             VStack(spacing: 6) {
                 Text("support_snaptask_pro".localized)
                     .font(.title3.bold())
+                    .themedPrimaryText()
                 
                 Text("help_continue_development".localized)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
             }
@@ -76,26 +80,28 @@ struct DonationView: View {
             VStack(spacing: 10) {
                 HStack {
                     Image(systemName: "info.circle.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.accentColor)
                     Text("beta_mode".localized)
                         .font(.headline.weight(.semibold))
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.accentColor)
                 }
                 
                 Text("testflight_notice".localized)
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                     .multilineTextAlignment(.center)
                 
                 Text("after_appstore_release".localized)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color.blue.opacity(0.1))
-            .cornerRadius(14)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(theme.accentColor.opacity(0.1))
+            )
             
             paypalAlternativeCard
         }
@@ -106,11 +112,11 @@ struct DonationView: View {
         VStack(spacing: 12) {
             Text("paypal_alternative".localized)
                 .font(.title3.bold())
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             
             Text("support_now_paypal".localized)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .multilineTextAlignment(.center)
             
             Button(action: {
@@ -142,7 +148,7 @@ struct DonationView: View {
                 .padding()
                 .background(
                     LinearGradient(
-                        colors: [Color.blue, Color.indigo],
+                        colors: [theme.accentColor, theme.primaryColor],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -153,15 +159,19 @@ struct DonationView: View {
             
             Text("opens_paypal_browser".localized)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
     }
     
     @ViewBuilder
     private var donationContentSection: some View {
         if donationService.isLoading {
-            ProgressView("loading_donation_options".localized)
-                .padding(.vertical, 40)
+            VStack(spacing: 16) {
+                ProgressView("loading_donation_options".localized)
+                    .accentColor(theme.accentColor)
+                    .themedSecondaryText()
+            }
+            .padding(.vertical, 40)
         } else if donationService.donationProducts.isEmpty {
             emptyDonationProductsSection
         } else {
@@ -177,11 +187,12 @@ struct DonationView: View {
             
             Text("cannot_load_donation_options".localized)
                 .font(.headline)
+                .themedPrimaryText()
                 .multilineTextAlignment(.center)
             
             Text("check_internet_retry".localized)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .multilineTextAlignment(.center)
             
             Button("retry".localized) {
@@ -190,6 +201,7 @@ struct DonationView: View {
                 }
             }
             .buttonStyle(.bordered)
+            .tint(theme.accentColor)
             
             Divider()
                 .padding(.vertical, 12)
@@ -203,11 +215,11 @@ struct DonationView: View {
         VStack(spacing: 12) {
             Text("paypal_alternative_title".localized)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             
             Text("if_iap_not_working".localized)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .multilineTextAlignment(.center)
             
             Button(action: {
@@ -239,7 +251,7 @@ struct DonationView: View {
                 .padding()
                 .background(
                     LinearGradient(
-                        colors: [Color.blue, Color.indigo],
+                        colors: [theme.accentColor, theme.primaryColor],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -285,7 +297,7 @@ struct DonationView: View {
             VStack(spacing: 12) {
                 Text("prefer_paypal".localized)
                     .font(.subheadline.weight(.medium))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Button(action: {
                     if let url = URL(string: "https://paypal.me/ampe") {
@@ -295,28 +307,30 @@ struct DonationView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "creditcard")
                             .font(.title3)
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.accentColor)
                         
                         Text("donate_via_paypal".localized)
                             .font(.body.weight(.medium))
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.accentColor)
                         
                         Spacer()
                         
                         Image(systemName: "arrow.up.right")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.accentColor)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(theme.accentColor.opacity(0.1))
+                    )
                 }
                 .buttonStyle(PlainButtonStyle())
                 
                 Text("paypal.me/ampe")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
             }
             .padding(.horizontal)
         }
@@ -326,29 +340,36 @@ struct DonationView: View {
         VStack(spacing: 8) {
             Text("donations_help_me".localized)
                 .font(.caption.weight(.semibold))
-                .foregroundColor(.primary)
+                .themedPrimaryText()
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("•")
+                        .themedSecondaryText()
                     Text("develop_new_features".localized)
+                        .themedSecondaryText()
                 }
                 HStack {
                     Text("•")
+                        .themedSecondaryText()
                     Text("maintain_sync_servers".localized)
+                        .themedSecondaryText()
                 }
                 HStack {
                     Text("•")
+                        .themedSecondaryText()
                     Text("continue_free_updates".localized)
+                        .themedSecondaryText()
                 }
             }
             .font(.caption2)
-            .foregroundColor(.secondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surfaceColor)
+        )
         .padding(.horizontal)
     }
     
@@ -361,13 +382,13 @@ struct DonationView: View {
                         .foregroundColor(.green)
                     Text("thanks_previous_support".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
                 
                 if let lastDonation = donationService.lastDonationDate {
                     Text("\("last_donation".localized): \(lastDonation, style: .date)")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
             }
             .padding()

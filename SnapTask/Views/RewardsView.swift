@@ -122,7 +122,8 @@ struct RewardsView: View {
                             .font(.system(size: 13, weight: .medium))
                             .themedSecondaryText()
                         
-                        let totalPoints = viewModel.dailyPoints + viewModel.weeklyPoints + viewModel.monthlyPoints + RewardManager.shared.availablePoints(for: .yearly)
+                        // FIXED: Use total points instead of summing overlapping periods
+                        let totalPoints = RewardManager.shared.totalPoints()
                         
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text("\(totalPoints)")
@@ -265,7 +266,15 @@ struct RewardsView: View {
                             canRedeem: viewModel.canRedeemReward(reward),
                             currentPoints: viewModel.currentPoints(for: reward.frequency),
                             onRedeemTapped: {
-                                viewModel.redeemReward(reward)
+                                // Check if we can actually redeem (fixed logic)
+                                if viewModel.canRedeemReward(reward) {
+                                    // Haptic feedback
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                    impactFeedback.impactOccurred()
+                                    
+                                    // Redeem reward
+                                    viewModel.redeemReward(reward)
+                                }
                             },
                             onEditTapped: {
                                 selectedReward = reward
@@ -485,6 +494,7 @@ struct CompactPointsChip: View {
     let title: String
     let points: Int
     let color: Color
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(spacing: 4) {
@@ -498,7 +508,7 @@ struct CompactPointsChip: View {
             
             Text(title)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
@@ -576,6 +586,8 @@ struct RewardCard: View {
     
     @StateObject private var categoryManager = CategoryManager.shared
     @Environment(\.theme) private var theme
+    @State private var isAnimating = false
+    @State private var successAnimation = false
     
     private var progress: Double {
         let safeCurrentPoints = max(currentPoints, 0)
@@ -591,6 +603,36 @@ struct RewardCard: View {
             return Color(hex: category.color)
         }
         return theme.primaryColor
+    }
+    
+    private var redemptionInfo: (hasBeenRedeemed: Bool, redemptionCount: Int) {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        let relevantRedemptions = reward.redemptions.filter { redemptionDate in
+            switch reward.frequency {
+            case .daily:
+                return calendar.isDate(redemptionDate, inSameDayAs: now)
+            case .weekly:
+                let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now))!
+                let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)!
+                return redemptionDate >= weekStart && redemptionDate < weekEnd
+            case .monthly:
+                let components = calendar.dateComponents([.year, .month], from: now)
+                let monthStart = calendar.date(from: components)!
+                let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart)!
+                return redemptionDate >= monthStart && redemptionDate < monthEnd
+            case .yearly:
+                let components = calendar.dateComponents([.year], from: now)
+                let yearStart = calendar.date(from: components)!
+                let yearEnd = calendar.date(byAdding: .year, value: 1, to: yearStart)!
+                return redemptionDate >= yearStart && redemptionDate < yearEnd
+            case .oneTime:
+                return true
+            }
+        }
+        
+        return (hasBeenRedeemed: !relevantRedemptions.isEmpty, redemptionCount: relevantRedemptions.count)
     }
     
     var body: some View {
@@ -620,6 +662,29 @@ struct RewardCard: View {
                             }
                         }
                     )
+            }
+            
+            // Success animation overlay
+            if successAnimation {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.green.opacity(0.3))
+                    .overlay(
+                        VStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                                .background(
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 40, height: 40)
+                                )
+                            
+                            Text("riscattato!".localized)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                    )
+                    .transition(.opacity)
             }
             
             // Card content with improved layout
@@ -656,7 +721,16 @@ struct RewardCard: View {
                             
                             Spacer()
                             
-                            rewardTypeTag
+                            HStack(spacing: 4) {
+                                rewardTypeTag
+                                
+                                // Redemption counter (only if redeemed multiple times)
+                                if redemptionInfo.redemptionCount > 1 {
+                                    redemptionCounterTag
+                                } else if redemptionInfo.hasBeenRedeemed {
+                                    redemptionIndicator
+                                }
+                            }
                         }
                         
                         if let description = reward.description, !description.isEmpty {
@@ -727,7 +801,30 @@ struct RewardCard: View {
                     
                     Spacer()
                     
-                    Button(action: onRedeemTapped) {
+                    Button(action: {
+                        // Animation sequence
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            isAnimating = true
+                        }
+                        
+                        // Show success animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.easeInOut(duration: 0.4)) {
+                                successAnimation = true
+                            }
+                        }
+                        
+                        // Call redeem action
+                        onRedeemTapped()
+                        
+                        // Hide success animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                successAnimation = false
+                                isAnimating = false
+                            }
+                        }
+                    }) {
                         Text("redeem".localized)
                             .font(.system(size: 12, weight: .semibold))
                             .padding(.horizontal, 16)
@@ -754,10 +851,12 @@ struct RewardCard: View {
                             .shadow(color: canRedeem ? (reward.isGeneralReward ? theme.primaryColor.opacity(0.3) : categoryColor.opacity(0.3)) : Color.clear, radius: 2, x: 0, y: 1)
                     }
                     .disabled(!canRedeem)
+                    .scaleEffect(isAnimating ? 0.95 : 1.0)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
+            .opacity(successAnimation ? 0.3 : 1.0)
         }
         .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
 
@@ -775,6 +874,50 @@ struct RewardCard: View {
                 Label("delete".localized, systemImage: "trash")
             }
         }
+    }
+    
+    private var redemptionIndicator: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(.green)
+            
+            Text("riscattato".localized)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(.green)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.green.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.green.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+    }
+    
+    private var redemptionCounterTag: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(.green)
+            
+            Text("\(redemptionInfo.redemptionCount)x")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.green)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical,3)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.green.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.green.opacity(0.3), lineWidth: 0.5)
+                )
+        )
     }
     
     private var rewardTypeTag: some View {
@@ -796,6 +939,125 @@ struct RewardCard: View {
                         .strokeBorder((reward.isGeneralReward ? theme.primaryColor : categoryColor).opacity(0.2), lineWidth: 0.5)
                 )
         )
+    }
+}
+
+struct RedeemAnimationView: View {
+    @State private var particles: [ParticleModel] = []
+    @State private var showSuccessIcon = false
+    @State private var successScale: CGFloat = 0.1
+    @State private var successOpacity: Double = 0.0
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.1)
+            
+            // Particles
+            ForEach(particles) { particle in
+                ParticleView(particle: particle)
+            }
+            
+            // Success icon
+            if showSuccessIcon {
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(theme.gradient)
+                            .frame(width: 80, height: 80)
+                            .shadow(color: theme.primaryColor.opacity(0.4), radius: 20)
+                        
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .scaleEffect(successScale)
+                    .opacity(successOpacity)
+                    
+                    Text("reward_redeemed".localized)
+                        .font(.system(size: 18, weight: .semibold))
+                        .themedPrimaryText()
+                        .opacity(successOpacity)
+                }
+            }
+        }
+        .onAppear {
+            createParticles()
+            
+            // Show success icon with animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                showSuccessIcon = true
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                    successScale = 1.0
+                    successOpacity = 1.0
+                }
+            }
+            
+            // Fade out success icon
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    successOpacity = 0.0
+                }
+            }
+        }
+    }
+    
+    private func createParticles() {
+        let screenWidth = UIScreen.main.bounds.width
+        let screenHeight = UIScreen.main.bounds.height
+        let centerX = screenWidth / 2
+        let centerY = screenHeight / 2
+        
+        // Create 20 particles
+        for i in 0..<20 {
+            let angle = Double(i) * (360.0 / 20.0) * .pi / 180.0
+            let distance = Double.random(in: 100...200)
+            
+            let particle = ParticleModel(
+                id: UUID(),
+                x: centerX + CGFloat(cos(angle) * distance),
+                y: centerY + CGFloat(sin(angle) * distance),
+                color: [theme.primaryColor, theme.secondaryColor, theme.accentColor, .yellow, .orange].randomElement() ?? theme.primaryColor,
+                size: CGFloat.random(in: 4...8),
+                opacity: 1.0,
+                rotation: Double.random(in: 0...360)
+            )
+            
+            particles.append(particle)
+        }
+        
+        // Animate particles
+        withAnimation(.easeOut(duration: 1.5)) {
+            for i in 0..<particles.count {
+                particles[i].opacity = 0.0
+                particles[i].y += CGFloat.random(in: 100...200)
+                particles[i].rotation += Double.random(in: 180...360)
+            }
+        }
+    }
+}
+
+struct ParticleModel: Identifiable {
+    let id: UUID
+    var x: CGFloat
+    var y: CGFloat
+    var color: Color
+    var size: CGFloat
+    var opacity: Double
+    var rotation: Double
+}
+
+struct ParticleView: View {
+    let particle: ParticleModel
+    
+    var body: some View {
+        Circle()
+            .fill(particle.color)
+            .frame(width: particle.size, height: particle.size)
+            .opacity(particle.opacity)
+            .rotationEffect(.degrees(particle.rotation))
+            .position(x: particle.x, y: particle.y)
     }
 }
 

@@ -36,6 +36,7 @@ enum HistoryTimeFilter: String, CaseIterable {
 
 struct TaskPointsHistoryView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @StateObject private var taskManager = TaskManager.shared
     @StateObject private var rewardManager = RewardManager.shared
     @State private var selectedFilter: HistoryTimeFilter = .week
@@ -120,7 +121,7 @@ struct TaskPointsHistoryView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .background(Color(UIColor.systemGroupedBackground))
+            .themedBackground()
             .navigationTitle("points_history".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -134,6 +135,7 @@ struct TaskPointsHistoryView: View {
                                 }
                             }
                         }
+                        .themedPrimary()
                     }
                 }
                 
@@ -149,6 +151,7 @@ struct TaskPointsHistoryView: View {
                         Button("done".localized) {
                             dismiss()
                         }
+                        .themedPrimary()
                     }
                 }
             }
@@ -181,17 +184,21 @@ struct TaskPointsHistoryView: View {
                         VStack(spacing: 6) {
                             ZStack {
                                 Circle()
-                                    .fill(selectedFilter == filter ? filter.color : Color.gray.opacity(0.1))
+                                    .fill(selectedFilter == filter ? filter.color : theme.surfaceColor)
                                     .frame(width: 36, height: 36)
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(selectedFilter == filter ? Color.clear : theme.borderColor, lineWidth: 1)
+                                    )
                                 
                                 Image(systemName: filter.icon)
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(selectedFilter == filter ? .white : .secondary)
+                                    .foregroundColor(selectedFilter == filter ? .white : theme.secondaryTextColor)
                             }
                             
                             Text(filter.localizedName)
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(selectedFilter == filter ? filter.color : .secondary)
+                                .foregroundColor(selectedFilter == filter ? filter.color : theme.secondaryTextColor)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -200,9 +207,15 @@ struct TaskPointsHistoryView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(theme.surfaceColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(theme.borderColor, lineWidth: 1)
+                    )
+            )
+            .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -215,7 +228,7 @@ struct TaskPointsHistoryView: View {
             HStack {
                 Text("stats_for".localized + " \(selectedFilter.localizedName)")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Spacer()
                 
@@ -225,21 +238,21 @@ struct TaskPointsHistoryView: View {
             }
             
             HStack(spacing: 16) {
-                StatCard(
+                TaskHistoryStatCard(
                     title: "tasks".localized,
                     value: "\(stats.totalTasks)",
                     icon: "list.bullet",
                     color: selectedFilter.color
                 )
                 
-                StatCard(
+                TaskHistoryStatCard(
                     title: "completions".localized,
                     value: "\(stats.totalCompletions)",
                     icon: "checkmark.circle.fill",
                     color: selectedFilter.color
                 )
                 
-                StatCard(
+                TaskHistoryStatCard(
                     title: "avg_day".localized,
                     value: String(format: "%.1f", stats.averagePerDay),
                     icon: "clock.fill",
@@ -275,10 +288,11 @@ struct TaskPointsHistoryView: View {
             VStack(spacing: 8) {
                 Text("no_points_this".localized + " \(selectedFilter.localizedName)")
                     .font(.system(size: 18, weight: .semibold))
+                    .themedPrimaryText()
                 
                 Text("complete_tasks_points_enabled".localized)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -301,6 +315,40 @@ struct TaskPointsHistoryView: View {
         case .year:
             return calendar.isDate(date, equalTo: now, toGranularity: .year)
         }
+    }
+}
+
+struct TaskHistoryStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .themedSecondaryText()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(color.opacity(0.2), lineWidth: 1)
+                )
+        )
     }
 }
 

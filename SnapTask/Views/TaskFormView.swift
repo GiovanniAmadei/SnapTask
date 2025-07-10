@@ -96,11 +96,23 @@ struct TaskFormView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(theme.surfaceColor)
+                                            .fill(theme.backgroundColor)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .strokeBorder(
+                                                        focusedField == .taskName ? 
+                                                        theme.primaryColor : 
+                                                        theme.borderColor, 
+                                                        lineWidth: focusedField == .taskName ? 2 : 1
+                                                    )
+                                            )
                                     )
+                                    .themedPrimaryText()
+                                    .accentColor(theme.primaryColor)
                                     .autocorrectionDisabled(true)
                                     .textInputAutocapitalization(.sentences)
                                     .focused($focusedField, equals: .taskName)
+                                    .animation(.easeInOut(duration: 0.2), value: focusedField)
                             }
                             
                             VStack(alignment: .leading, spacing: 8) {
@@ -115,11 +127,23 @@ struct TaskFormView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(theme.surfaceColor)
+                                            .fill(theme.backgroundColor)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .strokeBorder(
+                                                        focusedField == .taskDescription ? 
+                                                        theme.primaryColor : 
+                                                        theme.borderColor, 
+                                                        lineWidth: focusedField == .taskDescription ? 2 : 1
+                                                    )
+                                            )
                                     )
+                                    .themedPrimaryText()
+                                    .accentColor(theme.primaryColor)
                                     .autocorrectionDisabled(true)
                                     .textInputAutocapitalization(.sentences)
                                     .focused($focusedField, equals: .taskDescription)
+                                    .animation(.easeInOut(duration: 0.2), value: focusedField)
                             }
                             
                             NavigationLink {
@@ -396,9 +420,21 @@ struct TaskFormView: View {
                                     .padding(.vertical, 12)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(theme.surfaceColor)
+                                            .fill(theme.backgroundColor)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .strokeBorder(
+                                                        focusedField == .subtaskName ? 
+                                                        theme.primaryColor : 
+                                                        theme.borderColor, 
+                                                        lineWidth: focusedField == .subtaskName ? 2 : 1
+                                                    )
+                                            )
                                     )
+                                    .themedPrimaryText()
+                                    .accentColor(theme.primaryColor)
                                     .focused($focusedField, equals: .subtaskName)
+                                    .animation(.easeInOut(duration: 0.2), value: focusedField)
                                 
                                 Button(action: {
                                     if !newSubtaskName.isEmpty {
@@ -474,33 +510,43 @@ struct TaskFormView: View {
                                         
                                         Group {
                                             if viewModel.useCustomPoints {
-                                                HStack {
-                                                    TextField("points".localized, text: $viewModel.customPointsText)
-                                                        .keyboardType(.numberPad)
-                                                        .textFieldStyle(PlainTextFieldStyle())
-                                                        .multilineTextAlignment(.center)
-                                                        .frame(width: 60)
-                                                        .padding(.horizontal, 12)
-                                                        .padding(.vertical, 8)
-                                                        .background(
-                                                            RoundedRectangle(cornerRadius: 8)
-                                                                .fill(theme.surfaceColor)
-                                                        )
-                                                        .focused($focusedField, equals: .customPoints)
-                                                        .onChange(of: viewModel.customPointsText) { oldValue, newValue in
-                                                            let filtered = String(newValue.filter { $0.isNumber })
-                                                            if filtered != newValue {
-                                                                viewModel.customPointsText = filtered
-                                                            }
-                                                            if let points = Int(filtered), points >= 1, points <= 999 {
-                                                                viewModel.rewardPoints = points
-                                                            }
+                                                TextField("points".localized, text: $viewModel.customPointsText)
+                                                    .keyboardType(.numberPad)
+                                                    .textFieldStyle(PlainTextFieldStyle())
+                                                    .multilineTextAlignment(.center)
+                                                    .frame(width: 60)
+                                                    .padding(.horizontal, 12)
+                                                    .padding(.vertical, 8)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(theme.backgroundColor)
+                                                            .overlay(
+                                                                RoundedRectangle(cornerRadius: 8)
+                                                                    .strokeBorder(
+                                                                        focusedField == .customPoints ? 
+                                                                        theme.primaryColor : 
+                                                                        theme.borderColor, 
+                                                                        lineWidth: focusedField == .customPoints ? 2 : 1
+                                                                    )
+                                                            )
+                                                    )
+                                                    .themedPrimaryText()
+                                                    .accentColor(theme.primaryColor)
+                                                    .focused($focusedField, equals: .customPoints)
+                                                    .animation(.easeInOut(duration: 0.2), value: focusedField)
+                                                    .onChange(of: viewModel.customPointsText) { oldValue, newValue in
+                                                        let filtered = String(newValue.filter { $0.isNumber })
+                                                        if filtered != newValue {
+                                                            viewModel.customPointsText = filtered
                                                         }
-                                                    
-                                                    Text("(1-999)")
-                                                        .font(.caption)
-                                                        .themedSecondaryText()
-                                                }
+                                                        if let points = Int(filtered), points >= 1, points <= 999 {
+                                                            viewModel.rewardPoints = points
+                                                        }
+                                                    }
+                                                
+                                                Text("(1-999)")
+                                                    .font(.caption)
+                                                    .themedSecondaryText()
                                             } else {
                                                 Picker("points".localized, selection: $viewModel.rewardPoints) {
                                                     ForEach([1, 2, 3, 5, 8, 10], id: \.self) { points in
@@ -577,6 +623,7 @@ struct TaskFormView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 32)
                 }
+                .padding(.top, 8)
             }
             .themedBackground()
             .simultaneousGesture(

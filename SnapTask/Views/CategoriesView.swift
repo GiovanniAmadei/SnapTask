@@ -42,6 +42,7 @@ struct CategoriesView: View {
             }
         }
         .navigationTitle("categories".localized)
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingNewCategorySheet) {
             NavigationStack {
                 CategoryFormView { category in

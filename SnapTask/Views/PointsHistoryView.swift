@@ -4,6 +4,7 @@ struct PointsHistoryView: View {
     @StateObject private var taskManager = TaskManager.shared
     @StateObject private var rewardManager = RewardManager.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var showingResetAlert = false
     @State private var selectedTasks = Set<UUID>()
     @State private var isEditMode = false
@@ -129,7 +130,7 @@ struct PointsHistoryView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .background(Color(UIColor.systemGroupedBackground))
+            .themedBackground()
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(true)
@@ -144,6 +145,7 @@ struct PointsHistoryView: View {
                                 }
                             }
                         }
+                        .themedPrimary()
                     }
                 }
                 
@@ -163,12 +165,14 @@ struct PointsHistoryView: View {
                                 }
                             } label: {
                                 Image(systemName: "ellipsis.circle")
+                                    .themedPrimary()
                             }
                         }
                         
                         Button("done".localized) {
                             dismiss()
                         }
+                        .themedPrimary()
                     }
                 }
             }
@@ -203,18 +207,18 @@ struct PointsHistoryView: View {
             HStack {
                 Text("points_history".localized)
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Spacer()
                 
                 Text("\(filteredPointsEarningTasks.count) \(filteredPointsEarningTasks.count == 1 ? "entry".localized : "entries".localized)")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(UIColor.tertiarySystemGroupedBackground))
+                            .fill(theme.surfaceColor)
                     )
             }
             
@@ -239,9 +243,15 @@ struct PointsHistoryView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
+        )
+        .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }
@@ -300,10 +310,11 @@ struct PointsHistoryView: View {
             VStack(spacing: 8) {
                 Text("no_points_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName))
                     .font(.system(size: 18, weight: .semibold))
+                    .themedPrimaryText()
                 
                 Text("complete_tasks_points_enabled".localized)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -317,18 +328,19 @@ struct TimeFilterChip: View {
     let filter: PointsHistoryView.TimeFilter
     let isSelected: Bool
     let onTap: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: onTap) {
             Text(compactTitle)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : theme.textColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? filter.color : Color(UIColor.tertiarySystemGroupedBackground))
+                        .fill(isSelected ? filter.color : theme.surfaceColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(
@@ -361,6 +373,7 @@ struct TaskPointsCard: View {
     let isSelected: Bool
     let isEditMode: Bool
     let onSelectionChanged: (Bool) -> Void
+    @Environment(\.theme) private var theme
     
     private var totalPointsEarned: Int {
         completionDates.count * task.rewardPoints
@@ -375,12 +388,12 @@ struct TaskPointsCard: View {
                 }) {
                     ZStack {
                         Circle()
-                            .strokeBorder(isSelected ? Color(hex: "5E5CE6") : Color.gray.opacity(0.3), lineWidth: 2)
+                            .strokeBorder(isSelected ? theme.primaryColor : theme.secondaryTextColor.opacity(0.3), lineWidth: 2)
                             .frame(width: 24, height: 24)
                         
                         if isSelected {
                             Circle()
-                                .fill(Color(hex: "5E5CE6"))
+                                .fill(theme.primaryColor)
                                 .frame(width: 16, height: 16)
                             
                             Image(systemName: "checkmark")
@@ -397,7 +410,7 @@ struct TaskPointsCard: View {
                     ZStack {
                         Circle()
                             .fill(LinearGradient(
-                                colors: [Color(hex: "5E5CE6"), Color(hex: "9747FF")],
+                                colors: [theme.primaryColor, theme.secondaryColor],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ))
@@ -411,10 +424,11 @@ struct TaskPointsCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(task.name)
                             .font(.system(size: 16, weight: .semibold))
+                            .themedPrimaryText()
                         
                         Text("\(task.rewardPoints) " + "points_per_completion".localized)
                             .font(.system(size: 13))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                     
                     Spacer()
@@ -426,7 +440,7 @@ struct TaskPointsCard: View {
                         
                         Text("\(completionDates.count) " + "times".localized)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
                 
@@ -434,7 +448,7 @@ struct TaskPointsCard: View {
                     HStack {
                         Text("recent_completions".localized)
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         Spacer()
                     }
@@ -445,8 +459,8 @@ struct TaskPointsCard: View {
                                 .font(.system(size: 11))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color(hex: "5E5CE6").opacity(0.1))
-                                .foregroundColor(Color(hex: "5E5CE6"))
+                                .background(theme.primaryColor.opacity(0.1))
+                                .foregroundColor(theme.primaryColor)
                                 .cornerRadius(8)
                         }
                         
@@ -455,8 +469,8 @@ struct TaskPointsCard: View {
                                 .font(.system(size: 11))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.gray.opacity(0.1))
-                                .foregroundColor(.secondary)
+                                .background(theme.secondaryTextColor.opacity(0.1))
+                                .themedSecondaryText()
                                 .cornerRadius(8)
                         }
                     }
@@ -466,18 +480,18 @@ struct TaskPointsCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
+                .fill(theme.surfaceColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .strokeBorder(
-                            isSelected ? Color(hex: "5E5CE6").opacity(0.5) : Color.clear,
-                            lineWidth: 2
+                            isSelected ? theme.primaryColor.opacity(0.5) : theme.borderColor,
+                            lineWidth: isSelected ? 2 : 1
                         )
                 )
         )
         .scaleEffect(isSelected ? 0.98 : 1.0)
         .animation(.spring(response: 0.3), value: isSelected)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
         .onTapGesture {
             if isEditMode {
                 onSelectionChanged(!isSelected)

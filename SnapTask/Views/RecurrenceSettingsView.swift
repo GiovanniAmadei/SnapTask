@@ -3,6 +3,7 @@ import SwiftUI
 struct RecurrenceSettingsView: View {
     @Binding var isDailyRecurrence: Bool
     @Binding var selectedDays: Set<Int>
+    @Environment(\.theme) private var theme
     
     private let weekdays = [
         (1, "monday".localized),
@@ -18,6 +19,9 @@ struct RecurrenceSettingsView: View {
         Form {
             Section {
                 Toggle("daily".localized, isOn: $isDailyRecurrence)
+                    .themedPrimaryText()
+                    .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                    .listRowBackground(theme.surfaceColor)
                 
                 if !isDailyRecurrence {
                     ForEach(weekdays, id: \.0) { day in
@@ -31,10 +35,15 @@ struct RecurrenceSettingsView: View {
                                 }
                             }
                         ))
+                        .themedPrimaryText()
+                        .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                        .listRowBackground(theme.surfaceColor)
                     }
                 }
             }
         }
+        .themedBackground()
+        .scrollContentBackground(.hidden)
         .navigationTitle("repeat_settings".localized)
         .navigationBarTitleDisplayMode(.inline)
     }

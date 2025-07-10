@@ -3,6 +3,7 @@ import SwiftUI
 struct RedeemedRewardsView: View {
     @StateObject private var rewardManager = RewardManager.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var selectedTimeFilter: TimeFilter = .all
     
     enum TimeFilter: String, CaseIterable {
@@ -82,7 +83,7 @@ struct RedeemedRewardsView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .background(Color(UIColor.systemGroupedBackground))
+            .themedBackground()
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(true)
@@ -91,6 +92,7 @@ struct RedeemedRewardsView: View {
                     Button("done".localized) {
                         dismiss()
                     }
+                    .themedPrimary()
                 }
             }
         }
@@ -102,18 +104,18 @@ struct RedeemedRewardsView: View {
             HStack {
                 Text("redeemed_rewards".localized)
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Spacer()
                 
                 Text("\(filteredRedeemedRewards.count) \(filteredRedeemedRewards.count == 1 ? "reward".localized : "rewards".localized)")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(UIColor.tertiarySystemGroupedBackground))
+                            .fill(theme.surfaceColor)
                     )
             }
             
@@ -138,9 +140,15 @@ struct RedeemedRewardsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
+        )
+        .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }
@@ -160,10 +168,11 @@ struct RedeemedRewardsView: View {
             VStack(spacing: 8) {
                 Text("no_rewards_redeemed_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName))
                     .font(.system(size: 18, weight: .semibold))
+                    .themedPrimaryText()
                 
                 Text("start_earning_redeem_first".localized)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -176,6 +185,7 @@ struct RedeemedRewardsView: View {
 struct RedeemedRewardCard: View {
     let reward: Reward
     let redemptionDates: [Date]
+    @Environment(\.theme) private var theme
     
     private var totalPointsSpent: Int {
         redemptionDates.count * reward.pointsCost
@@ -205,22 +215,23 @@ struct RedeemedRewardCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(reward.name)
                         .font(.system(size: 16, weight: .semibold))
+                        .themedPrimaryText()
                     
                     if let description = reward.description {
                         Text(description)
                             .font(.system(size: 13))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                             .lineLimit(1)
                     }
                     
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         Text(reward.frequency.displayName)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
                 
@@ -233,7 +244,7 @@ struct RedeemedRewardCard: View {
                     
                     Text("\(redemptionDates.count) " + "times".localized)
                         .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
             }
             
@@ -241,11 +252,11 @@ struct RedeemedRewardCard: View {
                 HStack {
                     Text("last_redeemed".localized)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                     
                     Text(DateFormatter.fullDate.string(from: lastRedeemed))
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(hex: "5E5CE6"))
+                        .foregroundColor(theme.primaryColor)
                     
                     Spacer()
                 }
@@ -268,17 +279,23 @@ struct RedeemedRewardCard: View {
                             .font(.system(size: 10))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(Color.gray.opacity(0.1))
-                            .foregroundColor(.secondary)
+                            .background(theme.secondaryTextColor.opacity(0.1))
+                            .themedSecondaryText()
                             .cornerRadius(6)
                     }
                 }
             }
         }
         .padding(16)
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
+        )
+        .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
     }
 }
 
@@ -286,18 +303,19 @@ struct RedeemedTimeFilterChip: View {
     let filter: RedeemedRewardsView.TimeFilter
     let isSelected: Bool
     let onTap: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: onTap) {
             Text(compactTitle)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : theme.textColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? filter.color : Color(UIColor.tertiarySystemGroupedBackground))
+                        .fill(isSelected ? filter.color : theme.surfaceColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(

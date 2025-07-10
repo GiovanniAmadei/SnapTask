@@ -12,5 +12,9 @@
 	</array>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>SnapTask needs notification access to send alerts when your focus sessions complete and provide live timer updates.</string>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>

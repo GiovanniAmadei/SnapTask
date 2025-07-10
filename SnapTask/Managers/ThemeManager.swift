@@ -100,6 +100,11 @@ struct Theme: Identifiable, Codable, Equatable {
         return luminance < 0.5
     }
     
+    // Public property to determine if the theme has a dark background
+    var isDarkTheme: Bool {
+        return isDarkBackground
+    }
+    
     private var isDarkBackground: Bool {
         let uiColor = UIColor(backgroundColor)
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
@@ -108,7 +113,6 @@ struct Theme: Identifiable, Codable, Equatable {
         return luminance < 0.5
     }
     
-    // Additional semantic colors
     var warningColor: Color {
         .orange
     }
@@ -302,11 +306,35 @@ class ThemeManager: ObservableObject {
         return Self.allThemes.filter { $0.isPremium }
     }
     
+    // Public property to determine if the current theme has a dark background
+    var isDarkTheme: Bool {
+        // Solo i temi premium sovrascrivono la dark mode
+        if currentTheme.overridesSystemColors {
+            return currentTheme.isDarkTheme
+        } else {
+            // Per i temi base, usa la dark mode di sistema
+            return UIScreen.main.traitCollection.userInterfaceStyle == .dark
+        }
+    }
+    
     // MARK: - Private Methods
     private func applyTheme() {
         // Update global tint color
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
             windowScene.windows.first?.tintColor = UIColor(currentTheme.accentColor)
+        }
+        
+        // Configure status bar style based on theme
+        // Solo i temi premium sovrascrivono la status bar
+        if currentTheme.overridesSystemColors {
+            if currentTheme.isDarkTheme {
+                UIApplication.shared.statusBarStyle = .lightContent
+            } else {
+                UIApplication.shared.statusBarStyle = .darkContent
+            }
+        } else {
+            // Per i temi base, usa lo stile di sistema
+            UIApplication.shared.statusBarStyle = .default
         }
         
         // Configure tab bar appearance

@@ -10,7 +10,7 @@ struct FeedbackView: View {
     @State private var feedbackToDelete: FeedbackItem?
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     var body: some View {
         NavigationStack {
@@ -19,6 +19,7 @@ struct FeedbackView: View {
                 
                 feedbackListSection
             }
+            .themedBackground()
             .navigationTitle("community_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -66,7 +67,7 @@ struct FeedbackView: View {
                     .font(.system(size: 24))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.blue, .purple],
+                            colors: [theme.accentColor, theme.primaryColor],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -75,6 +76,7 @@ struct FeedbackView: View {
                 Text("community_feedback_title".localized)
                     .font(.title3)
                     .fontWeight(.bold)
+                    .themedPrimaryText()
             }
             .padding(.top, 12)
             
@@ -84,9 +86,13 @@ struct FeedbackView: View {
         .padding(.bottom, 16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Material.thin)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
                 .shadow(
-                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                    color: theme.shadowColor,
                     radius: 8,
                     x: 0,
                     y: 4
@@ -102,21 +108,23 @@ struct FeedbackView: View {
             // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .font(.title3)
                 
                 TextField("search_feedback_placeholder".localized, text: $searchText)
                     .textFieldStyle(PlainTextFieldStyle())
+                    .themedPrimaryText()
+                    .accentColor(theme.accentColor)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    .fill(theme.backgroundColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(theme.borderColor, lineWidth: 1)
+                    )
             )
             
             // Category Filter
@@ -183,15 +191,15 @@ struct FeedbackView: View {
         VStack(spacing: 16) {
             Image(systemName: "tray")
                 .font(.system(size: 48))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
             
             Text("no_feedback_found_title".localized)
                 .font(.headline)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
             
             Text("be_the_first_to_share_ideas".localized)
                 .font(.subheadline)
-                .foregroundColor(.secondary.opacity(0.7))
+                .themedSecondaryText()
         }
         .padding(.top, 40)
     }
@@ -213,14 +221,14 @@ struct FeedbackView: View {
                     .frame(width: 32, height: 32)
                     .background(
                         LinearGradient(
-                            colors: [.blue, .purple],
+                            colors: [theme.accentColor, theme.primaryColor],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .clipShape(Circle())
                     .shadow(
-                        color: .blue.opacity(0.3),
+                        color: theme.accentColor.opacity(0.3),
                         radius: 4,
                         x: 0,
                         y: 2
@@ -259,7 +267,7 @@ struct CategoryFilterChip: View {
     let category: FeedbackCategory?
     let isSelected: Bool
     let action: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: action) {
@@ -271,7 +279,7 @@ struct CategoryFilterChip: View {
                 } else {
                     Image(systemName: "list.bullet")
                         .font(.caption)
-                        .foregroundColor(isSelected ? .white : .secondary)
+                        .foregroundColor(isSelected ? .white : theme.secondaryTextColor)
                 }
                 
                 Text(category?.displayName ?? "All")
@@ -284,22 +292,22 @@ struct CategoryFilterChip: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
                         isSelected
-                            ? (category != nil ? Color(hex: category!.color) : Color.blue)
-                            : Color(.systemGray6)
+                            ? (category != nil ? Color(hex: category!.color) : theme.accentColor)
+                            : theme.backgroundColor
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
                                 isSelected
                                     ? Color.clear
-                                    : Color.secondary.opacity(0.3),
+                                    : theme.borderColor,
                                 lineWidth: 1
                             )
                     )
             )
-            .foregroundColor(isSelected ? .white : .primary)
+            .foregroundColor(isSelected ? .white : theme.textColor)
             .shadow(
-                color: isSelected ? (category != nil ? Color(hex: category!.color).opacity(0.3) : Color.blue.opacity(0.3)) : Color.clear,
+                color: isSelected ? (category != nil ? Color(hex: category!.color).opacity(0.3) : theme.accentColor.opacity(0.3)) : Color.clear,
                 radius: isSelected ? 4 : 0,
                 x: 0,
                 y: isSelected ? 2 : 0
@@ -317,7 +325,7 @@ struct FeedbackCardView: View {
     let onToggleExpansion: () -> Void
     let onVote: () -> Void
     let onDelete: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -336,7 +344,7 @@ struct FeedbackCardView: View {
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(hex: item.category.color).opacity(colorScheme == .dark ? 0.3 : 0.15))
+                        .fill(Color(hex: item.category.color).opacity(0.15))
                 )
                 .foregroundColor(Color(hex: item.category.color))
                 
@@ -382,12 +390,12 @@ struct FeedbackCardView: View {
                     Text(item.title)
                         .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                         .multilineTextAlignment(.leading)
                     
                     Text(item.description)
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                         .lineLimit(isExpanded ? nil : 3)
                         .multilineTextAlignment(.leading)
                         .animation(.easeInOut(duration: 0.3), value: isExpanded)
@@ -396,11 +404,11 @@ struct FeedbackCardView: View {
                         HStack {
                             Text("Tap to read more")
                                 .font(.caption)
-                                .foregroundColor(.blue)
+                                .foregroundColor(theme.accentColor)
                             
                             Image(systemName: "chevron.down")
                                 .font(.caption2)
-                                .foregroundColor(.blue)
+                                .foregroundColor(theme.accentColor)
                         }
                     }
                 }
@@ -412,7 +420,7 @@ struct FeedbackCardView: View {
                     Text("Replies")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                     
                     ForEach(item.replies) { reply in
                         ReplyCardView(reply: reply)
@@ -429,23 +437,23 @@ struct FeedbackCardView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "person.circle.fill")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                             
                             Text("by \(authorName)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                             
                             // Add "You" indicator for user's own feedback
                             if item.isAuthoredByCurrentUser {
                                 Text("(You)")
                                     .font(.caption2)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(theme.accentColor)
                                     .fontWeight(.semibold)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(
                                         RoundedRectangle(cornerRadius: 6)
-                                            .fill(Color.blue.opacity(0.1))
+                                            .fill(theme.accentColor.opacity(0.1))
                                     )
                             }
                         }
@@ -454,11 +462,11 @@ struct FeedbackCardView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption2)
-                            .foregroundColor(.secondary.opacity(0.7))
+                            .themedSecondaryText()
                         
                         Text(item.creationDate, style: .relative)
                             .font(.caption)
-                            .foregroundColor(.secondary.opacity(0.7))
+                            .themedSecondaryText()
                     }
                 }
                 
@@ -469,17 +477,17 @@ struct FeedbackCardView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "bubble.left")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.accentColor)
                         
                         Text("\(item.replies.count)")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.accentColor)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.blue.opacity(0.1))
+                            .fill(theme.accentColor.opacity(0.1))
                     )
                 }
                 
@@ -488,24 +496,24 @@ struct FeedbackCardView: View {
                     HStack(spacing: 8) {
                         Image(systemName: item.hasVoted ? "heart.fill" : "heart")
                             .font(.subheadline)
-                            .foregroundColor(item.hasVoted ? .red : .secondary)
+                            .foregroundColor(item.hasVoted ? .red : theme.secondaryTextColor)
                         
                         Text("\(item.votes)")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(item.hasVoted ? Color.red.opacity(0.1) : Color(.systemGray6))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(
-                                item.hasVoted ? Color.red.opacity(0.3) : Color.secondary.opacity(0.2),
-                                lineWidth: 1
+                            .fill(item.hasVoted ? Color.red.opacity(0.1) : theme.backgroundColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .strokeBorder(
+                                        item.hasVoted ? Color.red.opacity(0.3) : theme.borderColor,
+                                        lineWidth: 1
+                                    )
                             )
                     )
                 }
@@ -517,9 +525,13 @@ struct FeedbackCardView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Material.thin)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
                 .shadow(
-                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
+                    color: theme.shadowColor,
                     radius: 12,
                     x: 0,
                     y: 6
@@ -530,7 +542,7 @@ struct FeedbackCardView: View {
 
 struct ReplyCardView: View {
     let reply: FeedbackReply
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -538,12 +550,12 @@ struct ReplyCardView: View {
             if reply.isFromDeveloper {
                 Image(systemName: "person.badge.shield.checkmark.fill")
                     .font(.caption)
-                    .foregroundColor(.blue)
+                    .foregroundColor(theme.accentColor)
                     .frame(width: 20, height: 20)
             } else {
                 Image(systemName: "person.circle.fill")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .frame(width: 20, height: 20)
             }
             
@@ -553,12 +565,12 @@ struct ReplyCardView: View {
                     Text(reply.authorName ?? "Anonymous")
                         .font(.caption)
                         .fontWeight(reply.isFromDeveloper ? .bold : .semibold)
-                        .foregroundColor(reply.isFromDeveloper ? .blue : .primary)
+                        .foregroundColor(reply.isFromDeveloper ? theme.accentColor : theme.textColor)
                     
                     if reply.isFromDeveloper {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.caption2)
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.accentColor)
                     }
                     
                     Spacer()
@@ -566,31 +578,31 @@ struct ReplyCardView: View {
                     if !reply.isFromDeveloper {
                         Text(formatTimeAgo(reply.creationDate))
                             .font(.caption2)
-                            .foregroundColor(.secondary.opacity(0.7))
+                            .themedSecondaryText()
                     } else if reply.isFromDeveloper && hasValidDeveloperDate(reply.creationDate) {
                         Text(formatTimeAgo(reply.creationDate))
                             .font(.caption2)
-                            .foregroundColor(.secondary.opacity(0.7))
+                            .themedSecondaryText()
                     }
                 }
                 
                 // Reply content
                 Text(reply.content)
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(reply.isFromDeveloper ? Color.blue.opacity(0.05) : Color(.systemGray6).opacity(0.5))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    reply.isFromDeveloper ? Color.blue.opacity(0.2) : Color.clear,
-                    lineWidth: 1
+                .fill(reply.isFromDeveloper ? theme.accentColor.opacity(0.05) : theme.backgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(
+                            reply.isFromDeveloper ? theme.accentColor.opacity(0.2) : theme.borderColor,
+                            lineWidth: 1
+                        )
                 )
         )
     }

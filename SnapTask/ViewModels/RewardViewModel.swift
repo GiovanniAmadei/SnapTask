@@ -64,7 +64,12 @@ class RewardViewModel: ObservableObject {
     }
     
     func canRedeemReward(_ reward: Reward) -> Bool {
-        return !reward.hasBeenRedeemed() && reward.canRedeem(availablePoints: currentPoints(for: reward.frequency))
+        // Check if we have enough points (allow multiple redemptions)
+        let availablePoints = reward.isGeneralReward ? 
+            RewardManager.shared.availablePoints(for: reward.frequency) :
+            RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
+        
+        return reward.canRedeem(availablePoints: availablePoints)
     }
     
     func currentPoints(for frequency: RewardFrequency) -> Int {

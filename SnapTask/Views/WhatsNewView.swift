@@ -2,85 +2,87 @@ import SwiftUI
 
 struct WhatsNewView: View {
     @StateObject private var updateNewsService = UpdateNewsService.shared
+    @Environment(\.theme) private var theme
     @State private var selectedTab = 0
     
-        private var tabs: [String] {
+    private var tabs: [String] {
         ["recent_tab".localized, "coming_soon_tab".localized, "roadmap_tab".localized]
     }
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Custom Tab Picker
-                HStack(spacing: 0) {
-                    ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                selectedTab = index
-                            }
-                        } label: {
-                            VStack(spacing: 8) {
-                                Text(tab)
-                                    .font(.system(size: 16, weight: selectedTab == index ? .semibold : .medium))
-                                    .foregroundColor(selectedTab == index ? .blue : .secondary)
-                                
-                                Rectangle()
-                                    .fill(selectedTab == index ? .blue : .clear)
-                                    .frame(height: 2)
-                            }
+        VStack(spacing: 0) {
+            // Custom Tab Picker
+            HStack(spacing: 0) {
+                ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            selectedTab = index
                         }
-                        .frame(maxWidth: .infinity)
+                    } label: {
+                        VStack(spacing: 8) {
+                            Text(tab)
+                                .font(.system(size: 16, weight: selectedTab == index ? .semibold : .medium))
+                                .foregroundColor(selectedTab == index ? theme.accentColor : theme.secondaryTextColor)
+                            
+                            Rectangle()
+                                .fill(selectedTab == index ? theme.accentColor : .clear)
+                                .frame(height: 2)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                
-                // Content
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        if updateNewsService.isLoading && updateNewsService.newsItems.isEmpty {
-                            ForEach(0..<3, id: \.self) { _ in
-                                NewsItemSkeleton()
-                            }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+            
+            // Content
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    if updateNewsService.isLoading && updateNewsService.newsItems.isEmpty {
+                        ForEach(0..<3, id: \.self) { _ in
+                            NewsItemSkeleton()
+                        }
+                    } else {
+                        if selectedTab == 0 {
+                            RecentUpdatesWithVersionsView(newsItems: updateNewsService.newsItems)
                         } else {
-                            if selectedTab == 0 {
-                                RecentUpdatesWithVersionsView(newsItems: updateNewsService.newsItems)
+                            let newsItems = getNewsForSelectedTab()
+                            
+                            if newsItems.isEmpty {
+                                EmptyNewsState(tabIndex: selectedTab)
                             } else {
-                                let newsItems = getNewsForSelectedTab()
-                                
-                                if newsItems.isEmpty {
-                                    EmptyNewsState(tabIndex: selectedTab)
-                                } else {
-                                    ForEach(newsItems) { news in
-                                        NewsItemCard(news: news)
-                                    }
+                                ForEach(newsItems) { news in
+                                    NewsItemCard(news: news)
                                 }
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
                 }
-                .refreshable {
-                    await updateNewsService.fetchNews()
-                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
-            .navigationTitle("whats_cooking_title".localized)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if updateNewsService.isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Button {
-                            Task {
-                                await updateNewsService.fetchNews()
-                            }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .foregroundColor(.blue)
+            .refreshable {
+                await updateNewsService.fetchNews()
+            }
+        }
+        .themedBackground()
+        .navigationTitle("whats_cooking_title".localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if updateNewsService.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .accentColor(theme.accentColor)
+                } else {
+                    Button {
+                        Task {
+                            await updateNewsService.fetchNews()
                         }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .themedPrimary()
                     }
                 }
             }
@@ -157,7 +159,7 @@ struct RecentUpdatesWithVersionsView: View {
 
 struct NewsItemCard: View {
     let news: UpdateNews
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -175,7 +177,7 @@ struct NewsItemCard: View {
                     HStack {
                         Text(news.title)
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                             .lineLimit(2)
                         
                         Spacer()
@@ -201,12 +203,12 @@ struct NewsItemCard: View {
                         if let version = news.version {
                             Text("v\(version)")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(
                                     Capsule()
-                                        .fill(Color.gray.opacity(0.15))
+                                        .fill(theme.surfaceColor)
                                 )
                         }
                         
@@ -215,7 +217,7 @@ struct NewsItemCard: View {
                         if let date = news.date {
                             Text(RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date()))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                 }
@@ -223,26 +225,26 @@ struct NewsItemCard: View {
             
             Text(news.description)
                 .font(.system(size: 15))
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.regularMaterial)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(
+                            news.isHighlighted ? Color.yellow.opacity(0.4) : theme.borderColor,
+                            lineWidth: news.isHighlighted ? 2 : 1
+                        )
+                )
                 .shadow(
-                    color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.06),
+                    color: theme.shadowColor,
                     radius: 8,
                     x: 0,
                     y: 2
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    news.isHighlighted ? Color.yellow.opacity(0.4) : Color.clear,
-                    lineWidth: 2
                 )
         )
     }
@@ -250,33 +252,34 @@ struct NewsItemCard: View {
 
 struct NewsItemSkeleton: View {
     @State private var isAnimating = false
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(theme.secondaryTextColor.opacity(0.3))
                     .frame(width: 36, height: 36)
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(theme.secondaryTextColor.opacity(0.3))
                         .frame(height: 18)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     HStack(spacing: 8) {
                         Rectangle()
-                            .fill(Color.gray.opacity(0.3))
+                            .fill(theme.secondaryTextColor.opacity(0.3))
                             .frame(width: 80, height: 12)
                         
                         Rectangle()
-                            .fill(Color.gray.opacity(0.3))
+                            .fill(theme.secondaryTextColor.opacity(0.3))
                             .frame(width: 60, height: 12)
                         
                         Spacer()
                         
                         Rectangle()
-                            .fill(Color.gray.opacity(0.3))
+                            .fill(theme.secondaryTextColor.opacity(0.3))
                             .frame(width: 70, height: 12)
                     }
                 }
@@ -284,11 +287,11 @@ struct NewsItemSkeleton: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(theme.secondaryTextColor.opacity(0.3))
                     .frame(height: 14)
                 
                 Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(theme.secondaryTextColor.opacity(0.3))
                     .frame(height: 14)
                     .frame(maxWidth: .infinity * 0.8, alignment: .leading)
             }
@@ -296,7 +299,7 @@ struct NewsItemSkeleton: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.regularMaterial)
+                .fill(theme.surfaceColor)
         )
         .opacity(isAnimating ? 0.6 : 1.0)
         .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isAnimating)
@@ -308,6 +311,7 @@ struct NewsItemSkeleton: View {
 
 struct EmptyNewsState: View {
     let tabIndex: Int
+    @Environment(\.theme) private var theme
     
     private var emptyStateInfo: (icon: String, title: String, subtitle: String) {
         switch tabIndex {
@@ -326,16 +330,16 @@ struct EmptyNewsState: View {
         VStack(spacing: 16) {
             Image(systemName: emptyStateInfo.icon)
                 .font(.system(size: 48))
-                .foregroundColor(.secondary.opacity(0.6))
+                .themedSecondaryText()
             
             VStack(spacing: 8) {
                 Text(emptyStateInfo.title)
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .themedPrimaryText()
                 
                 Text(emptyStateInfo.subtitle)
                     .font(.system(size: 16))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .multilineTextAlignment(.center)
             }
         }
@@ -348,7 +352,7 @@ struct VersionSection: View {
     let version: String
     let updates: [UpdateNews]
     @State private var isExpanded = true
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -361,12 +365,12 @@ struct VersionSection: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Version \(version)")
                             .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                         
                         if let latestUpdate = updates.first, let date = latestUpdate.date {
                             Text(RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date()))
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                     }
                     
@@ -375,15 +379,15 @@ struct VersionSection: View {
                     HStack(spacing: 4) {
                         Text("\(updates.count)")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.blue)
+                            .foregroundColor(theme.accentColor)
                         
                         Text(updates.count == 1 ? "update" : "updates")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                         
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.secondary)
+                            .themedSecondaryText()
                     }
                 }
             }
@@ -392,9 +396,13 @@ struct VersionSection: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.regularMaterial)
+                    .fill(theme.surfaceColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(theme.borderColor, lineWidth: 1)
+                    )
                     .shadow(
-                        color: colorScheme == .dark ? .white.opacity(0.03) : .black.opacity(0.04),
+                        color: theme.shadowColor,
                         radius: 4,
                         x: 0,
                         y: 1
@@ -434,7 +442,7 @@ struct VersionSection: View {
 
 struct CompactNewsCard: View {
     let news: UpdateNews
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -452,7 +460,7 @@ struct CompactNewsCard: View {
                 HStack {
                     Text(news.title)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .themedPrimaryText()
                         .lineLimit(2)
                     
                     Spacer()
@@ -466,7 +474,7 @@ struct CompactNewsCard: View {
                 
                 Text(news.description)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .themedSecondaryText()
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -474,13 +482,13 @@ struct CompactNewsCard: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray6).opacity(0.6))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(
-                    news.isHighlighted ? Color.yellow.opacity(0.3) : Color.clear,
-                    lineWidth: 1
+                .fill(theme.backgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(
+                            news.isHighlighted ? Color.yellow.opacity(0.3) : theme.borderColor,
+                            lineWidth: news.isHighlighted ? 2 : 1
+                        )
                 )
         )
     }

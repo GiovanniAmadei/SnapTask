@@ -18,11 +18,13 @@ struct PomodoroSettingsView: View {
                 ) {
                     HStack {
                         Text("duration".localized)
+                            .themedPrimaryText()
                         Spacer()
                         Text("\(Int(settings.workDuration / 60)) " + "min_unit".localized)
                             .themedSecondaryText()
                     }
                 }
+                .listRowBackground(theme.surfaceColor)
             }
             
             Section("break".localized) {
@@ -36,11 +38,13 @@ struct PomodoroSettingsView: View {
                 ) {
                     HStack {
                         Text("short_break".localized)
+                            .themedPrimaryText()
                         Spacer()
                         Text("\(Int(settings.breakDuration / 60)) " + "min_unit".localized)
                             .themedSecondaryText()
                     }
                 }
+                .listRowBackground(theme.surfaceColor)
                 
                 Stepper(
                     value: Binding(
@@ -52,11 +56,13 @@ struct PomodoroSettingsView: View {
                 ) {
                     HStack {
                         Text("long_break".localized)
+                            .themedPrimaryText()
                         Spacer()
                         Text("\(Int(settings.longBreakDuration / 60)) " + "min_unit".localized)
                             .themedSecondaryText()
                     }
                 }
+                .listRowBackground(theme.surfaceColor)
                 
                 Stepper(
                     value: $settings.sessionsUntilLongBreak,
@@ -64,11 +70,13 @@ struct PomodoroSettingsView: View {
                 ) {
                     HStack {
                         Text("sessions_until_long_break".localized)
+                            .themedPrimaryText()
                         Spacer()
                         Text("\(settings.sessionsUntilLongBreak)")
                             .themedSecondaryText()
                     }
                 }
+                .listRowBackground(theme.surfaceColor)
             }
             
             Section("session_configuration".localized) {
@@ -77,6 +85,7 @@ struct PomodoroSettingsView: View {
                     Text("total_duration".localized).tag(true)
                 }
                 .pickerStyle(SegmentedPickerStyle())
+                .listRowBackground(theme.surfaceColor)
                 
                 if useTimeDuration {
                     Stepper(
@@ -93,6 +102,7 @@ struct PomodoroSettingsView: View {
                     ) {
                         HStack {
                             Text("total_duration".localized)
+                                .themedPrimaryText()
                             Spacer()
                             VStack(alignment: .trailing) {
                                 Text("\(Int(settings.totalDuration)) " + "min_unit".localized)
@@ -103,13 +113,16 @@ struct PomodoroSettingsView: View {
                             }
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     HStack {
                         Text("estimated_sessions".localized)
+                            .themedPrimaryText()
                         Spacer()
                         Text("\(settings.totalSessions)")
                             .themedSecondaryText()
                     }
+                    .listRowBackground(theme.surfaceColor)
                 } else {
                     Stepper(
                         value: Binding(
@@ -124,14 +137,17 @@ struct PomodoroSettingsView: View {
                     ) {
                         HStack {
                             Text("total_sessions".localized)
+                                .themedPrimaryText()
                             Spacer()
                             Text("\(settings.totalSessions)")
                                 .themedSecondaryText()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                     
                     HStack {
                         Text("estimated_duration".localized)
+                            .themedPrimaryText()
                         Spacer()
                         VStack(alignment: .trailing) {
                             Text("\(Int(settings.estimatedTotalTime / 60)) " + "min_unit".localized)
@@ -141,6 +157,7 @@ struct PomodoroSettingsView: View {
                                 .themedSecondaryText()
                         }
                     }
+                    .listRowBackground(theme.surfaceColor)
                 }
             }
             
@@ -148,9 +165,11 @@ struct PomodoroSettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("session_breakdown".localized)
                         .font(.subheadline.weight(.medium))
+                        .themedPrimaryText()
                     
                     HStack {
                         Text("work_time".localized + ":")
+                            .themedPrimaryText()
                         Spacer()
                         Text("\(formatDuration(Double(settings.totalSessions) * settings.workDuration))")
                             .themedSecondaryText()
@@ -158,6 +177,7 @@ struct PomodoroSettingsView: View {
                     
                     HStack {
                         Text("break_time".localized + ":")
+                            .themedPrimaryText()
                         Spacer()
                         let breakTime = settings.estimatedTotalTime - (Double(settings.totalSessions) * settings.workDuration)
                         Text("\(formatDuration(breakTime))")
@@ -169,17 +189,21 @@ struct PomodoroSettingsView: View {
                     HStack {
                         Text("total_time".localized + ":")
                             .fontWeight(.medium)
+                            .themedPrimaryText()
                         Spacer()
                         Text("\(formatDuration(settings.estimatedTotalTime))")
                             .fontWeight(.medium)
                             .themedPrimaryText()
                     }
                 }
+                .listRowBackground(theme.surfaceColor)
             } header: {
                 Text("summary".localized)
+                    .themedSecondaryText()
             }
         }
         .themedBackground()
+        .scrollContentBackground(.hidden)
         .navigationTitle("pomodoro_settings".localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

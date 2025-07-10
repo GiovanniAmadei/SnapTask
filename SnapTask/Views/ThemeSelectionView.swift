@@ -218,7 +218,8 @@ struct ThemeCard: View {
                         .themedPrimaryText()
                         .lineLimit(1)
                     
-                    if theme.isPremium {
+                    // Only show premium badge for premium themes AND user doesn't have access
+                    if theme.isPremium && !canUse {
                         HStack(spacing: 4) {
                             Image(systemName: "crown.fill")
                                 .font(.caption2)

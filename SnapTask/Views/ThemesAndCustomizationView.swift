@@ -21,10 +21,6 @@ struct ThemesAndCustomizationView: View {
                             .themedPrimaryText()
                         
                         Spacer()
-                        
-                        if !subscriptionManager.hasAccess(to: .customThemes) {
-                            PremiumBadge(size: .small)
-                        }
                     }
                 }
                 .listRowBackground(theme.surfaceColor)
@@ -159,7 +155,7 @@ struct ThemesAndCustomizationView: View {
         .themedBackground()
         .scrollContentBackground(.hidden)
         .navigationTitle("themes_and_customization".localized)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -204,7 +200,7 @@ struct PrioritiesView: View {
         .themedBackground()
         .scrollContentBackground(.hidden)
         .navigationTitle("priorities".localized)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingNewPrioritySheet) {
             NavigationStack {
                 PriorityFormView { priority in

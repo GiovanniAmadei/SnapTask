@@ -1,0 +1,161 @@
+{
+  "identifier" : "F0B8E7D7",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "49,99 €",
+      "familyShareable" : false,
+      "internalID" : "6451234570",
+      "localizations" : [
+        {
+          "description" : "Accesso completo a tutte le funzionalità premium di SnapTask per sempre",
+          "displayName" : "SnapTask Pro Lifetime",
+          "locale" : "it"
+        },
+        {
+          "description" : "Complete access to all premium features of SnapTask forever",
+          "displayName" : "SnapTask Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.giovanniamadei.SnapTaskProAlpha.lifetime",
+      "referenceName" : "Lifetime Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6451234567",
+    "_developerTeamID" : "ABCD123456",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 748645392.21194005,
+    "_locale" : "it_IT",
+    "_storefront" : "ITA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21234567",
+      "localizations" : [
+
+      ],
+      "name" : "SnapTask Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "3,99 €",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6451234568",
+          "localizations" : [
+            {
+              "description" : "Sblocca tutte le funzionalità premium di SnapTask per un mese",
+              "displayName" : "SnapTask Pro Monthly",
+              "locale" : "it"
+            },
+            {
+              "description" : "Unlock all premium features of SnapTask for one month",
+              "displayName" : "SnapTask Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.giovanniamadei.SnapTaskProAlpha.subscription.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Monthly Pro",
+          "subscriptionGroupID" : "21234567",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24,99 €",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6451234569",
+          "introductoryOffer" : {
+            "internalID" : "70234568",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "Sblocca tutte le funzionalità premium di SnapTask per un anno. Risparmia il 48%! Prova gratuita di 3 giorni.",
+              "displayName" : "SnapTask Pro Yearly",
+              "locale" : "it"
+            },
+            {
+              "description" : "Unlock all premium features of SnapTask for one year. Save 48%! 3-day free trial.",
+              "displayName" : "SnapTask Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.giovanniamadei.SnapTaskProAlpha.subscription.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Yearly Pro",
+          "subscriptionGroupID" : "21234567",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

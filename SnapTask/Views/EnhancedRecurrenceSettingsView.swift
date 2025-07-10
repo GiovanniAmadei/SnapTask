@@ -3,6 +3,7 @@ import SwiftUI
 struct EnhancedRecurrenceSettingsView: View {
     @ObservedObject var viewModel: TaskFormViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var showingOrdinalPicker = false
     
     var body: some View {
@@ -11,6 +12,7 @@ struct EnhancedRecurrenceSettingsView: View {
                 VStack(spacing: 12) {
                     Text("recurrence_type".localized)
                         .font(.headline)
+                        .themedPrimaryText()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                     
@@ -31,10 +33,10 @@ struct EnhancedRecurrenceSettingsView: View {
                     .padding(4)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.pink.opacity(0.1))
+                            .fill(theme.primaryColor.opacity(0.1))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1)
+                                    .strokeBorder(theme.primaryColor.opacity(0.2), lineWidth: 1)
                             )
                     )
                     .padding(.horizontal)
@@ -65,6 +67,7 @@ struct EnhancedRecurrenceSettingsView: View {
                     }
                 }
             }
+            .themedBackground()
             .navigationTitle("recurrence_settings".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -73,7 +76,7 @@ struct EnhancedRecurrenceSettingsView: View {
                         dismiss()
                     }
                     .fontWeight(.medium)
-                    .foregroundColor(.pink)
+                    .themedPrimary()
                 }
             }
             .sheet(isPresented: $showingOrdinalPicker) {
@@ -87,6 +90,7 @@ struct RecurrenceTypeButton: View {
     let type: RecurrenceType
     let selectedType: RecurrenceType
     let action: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: {
@@ -96,7 +100,7 @@ struct RecurrenceTypeButton: View {
         }) {
             Text(type.localizedString)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(selectedType == type ? .white : .pink)
+                .foregroundColor(selectedType == type ? theme.backgroundColor : theme.primaryColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
@@ -104,7 +108,7 @@ struct RecurrenceTypeButton: View {
                 .minimumScaleFactor(0.8)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(selectedType == type ? Color.pink : Color.clear)
+                        .fill(selectedType == type ? theme.primaryColor : Color.clear)
                 )
         }
         .buttonStyle(BorderlessButtonStyle())
@@ -112,14 +116,17 @@ struct RecurrenceTypeButton: View {
 }
 
 struct DailyRecurrenceView: View {
+    @Environment(\.theme) private var theme
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("daily_recurrence".localized)
                 .font(.headline)
+                .themedPrimaryText()
                 .padding(.horizontal)
             
             Text("task_repeat_every_day".localized)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .font(.subheadline)
                 .padding(.horizontal)
         }
@@ -127,7 +134,11 @@ struct DailyRecurrenceView: View {
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
         )
         .padding(.horizontal)
     }
@@ -135,11 +146,13 @@ struct DailyRecurrenceView: View {
 
 struct WeeklyRecurrenceView: View {
     @ObservedObject var viewModel: TaskFormViewModel
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("weekly_recurrence".localized)
                 .font(.headline)
+                .themedPrimaryText()
                 .padding(.horizontal)
             
             VStack(spacing: 12) {
@@ -155,7 +168,11 @@ struct WeeklyRecurrenceView: View {
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
         )
         .padding(.horizontal)
     }
@@ -164,11 +181,13 @@ struct WeeklyRecurrenceView: View {
 struct WeekdayRow: View {
     let weekday: (Int, String)
     @ObservedObject var viewModel: TaskFormViewModel
+    @Environment(\.theme) private var theme
     
     var body: some View {
         HStack {
             Text(weekday.1)
                 .font(.subheadline)
+                .themedPrimaryText()
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             if viewModel.selectedDays.contains(weekday.0) {
@@ -181,6 +200,7 @@ struct WeekdayRow: View {
                     }
                 ), displayedComponents: .hourAndMinute)
                 .labelsHidden()
+                .accentColor(theme.primaryColor)
                 .frame(width: 80)
             }
             
@@ -194,7 +214,7 @@ struct WeekdayRow: View {
                     }
                 }
             ))
-            .toggleStyle(SwitchToggleStyle(tint: .pink))
+            .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
             .frame(width: 50)
         }
         .padding(.horizontal)
@@ -204,11 +224,13 @@ struct WeekdayRow: View {
 struct MonthlyRecurrenceView: View {
     @ObservedObject var viewModel: TaskFormViewModel
     @Binding var showingOrdinalPicker: Bool
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("monthly_recurrence".localized)
                 .font(.headline)
+                .themedPrimaryText()
                 .padding(.horizontal)
             
             HStack(spacing: 4) {
@@ -222,10 +244,10 @@ struct MonthlyRecurrenceView: View {
             .padding(4)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.pink.opacity(0.1))
+                    .fill(theme.primaryColor.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1)
+                            .strokeBorder(theme.primaryColor.opacity(0.2), lineWidth: 1)
                     )
             )
             .padding(.horizontal)
@@ -239,7 +261,11 @@ struct MonthlyRecurrenceView: View {
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
         )
         .padding(.horizontal)
     }
@@ -249,6 +275,7 @@ struct MonthlyTypeButton: View {
     let type: MonthlySelectionType
     let selectedType: MonthlySelectionType
     let action: () -> Void
+    @Environment(\.theme) private var theme
     
     var body: some View {
         Button(action: {
@@ -258,7 +285,7 @@ struct MonthlyTypeButton: View {
         }) {
             Text(type.localizedString)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(selectedType == type ? .white : .pink)
+                .foregroundColor(selectedType == type ? theme.backgroundColor : theme.primaryColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
@@ -266,7 +293,7 @@ struct MonthlyTypeButton: View {
                 .minimumScaleFactor(0.9)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(selectedType == type ? Color.pink : Color.clear)
+                        .fill(selectedType == type ? theme.primaryColor : Color.clear)
                 )
         }
         .buttonStyle(BorderlessButtonStyle())
@@ -275,12 +302,13 @@ struct MonthlyTypeButton: View {
 
 struct MonthlyDaysView: View {
     @ObservedObject var viewModel: TaskFormViewModel
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("select_days_of_month".localized)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .padding(.horizontal)
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
@@ -294,11 +322,15 @@ struct MonthlyDaysView: View {
                     }) {
                         Text("\(day)")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(viewModel.selectedMonthlyDays.contains(day) ? .white : .primary)
+                            .foregroundColor(viewModel.selectedMonthlyDays.contains(day) ? theme.backgroundColor : theme.textColor)
                             .frame(width: 32, height: 32)
                             .background(
                                 Circle()
-                                    .fill(viewModel.selectedMonthlyDays.contains(day) ? Color.pink : Color.gray.opacity(0.1))
+                                    .fill(viewModel.selectedMonthlyDays.contains(day) ? theme.primaryColor : theme.surfaceColor)
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(theme.borderColor, lineWidth: viewModel.selectedMonthlyDays.contains(day) ? 0 : 1)
+                                    )
                             )
                     }
                     .buttonStyle(BorderlessButtonStyle())
@@ -312,12 +344,13 @@ struct MonthlyDaysView: View {
 struct MonthlyPatternsView: View {
     @ObservedObject var viewModel: TaskFormViewModel
     @Binding var showingOrdinalPicker: Bool
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("select_patterns_ordinal".localized)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .padding(.horizontal)
             
             Button(action: {
@@ -327,16 +360,16 @@ struct MonthlyPatternsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("monthly_patterns".localized)
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .themedPrimaryText()
                         
                         if viewModel.selectedOrdinalPatterns.isEmpty {
                             Text("none_selected".localized)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         } else {
                             Text(viewModel.selectedOrdinalPatterns.map { $0.displayText }.joined(separator: ", "))
                                 .font(.caption)
-                                .foregroundColor(.pink)
+                                .foregroundColor(theme.primaryColor)
                                 .lineLimit(2)
                         }
                     }
@@ -345,15 +378,15 @@ struct MonthlyPatternsView: View {
                     
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14))
-                        .foregroundColor(.secondary)
+                        .themedSecondaryText()
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(.systemGray6))
+                        .fill(theme.backgroundColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(Color.pink.opacity(0.2), lineWidth: 1)
+                                .strokeBorder(theme.borderColor, lineWidth: 1)
                         )
                 )
             }
@@ -365,37 +398,45 @@ struct MonthlyPatternsView: View {
 
 struct YearlyRecurrenceView: View {
     @ObservedObject var viewModel: TaskFormViewModel
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("yearly_recurrence".localized)
                 .font(.headline)
+                .themedPrimaryText()
                 .padding(.horizontal)
             
             Text("select_day_of_year".localized)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .themedSecondaryText()
                 .padding(.horizontal)
             
             HStack {
                 Text("repeat_on".localized)
                     .font(.subheadline)
+                    .themedPrimaryText()
                 Spacer()
                 DatePicker("", selection: $viewModel.yearlyDate, displayedComponents: [.date])
                     .labelsHidden()
+                    .accentColor(theme.primaryColor)
             }
             .padding(.horizontal)
             
             Text("task_repeat_yearly_on".localized + " \(formattedYearlyDate)")
                 .font(.caption)
-                .foregroundColor(.pink)
+                .foregroundColor(theme.primaryColor)
                 .padding(.horizontal)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
         )
         .padding(.horizontal)
     }
@@ -409,20 +450,23 @@ struct YearlyRecurrenceView: View {
 
 struct EndDateSection: View {
     @ObservedObject var viewModel: TaskFormViewModel
+    @Environment(\.theme) private var theme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("end_date".localized)
                 .font(.headline)
+                .themedPrimaryText()
                 .padding(.horizontal)
             
             VStack(spacing: 12) {
                 HStack {
                     Text("set_end_date".localized)
                         .font(.subheadline)
+                        .themedPrimaryText()
                     Spacer()
                     Toggle("", isOn: $viewModel.hasRecurrenceEndDate)
-                        .toggleStyle(SwitchToggleStyle(tint: .pink))
+                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
                 }
                 .padding(.horizontal)
                 
@@ -430,9 +474,11 @@ struct EndDateSection: View {
                     HStack {
                         Text("end_date".localized)
                             .font(.subheadline)
+                            .themedPrimaryText()
                         Spacer()
                         DatePicker("", selection: $viewModel.recurrenceEndDate, displayedComponents: .date)
                             .labelsHidden()
+                            .accentColor(theme.primaryColor)
                     }
                     .padding(.horizontal)
                 }
@@ -441,7 +487,11 @@ struct EndDateSection: View {
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                )
         )
         .padding(.horizontal)
     }

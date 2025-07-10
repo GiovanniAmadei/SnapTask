@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var currentStep = 0
     @State private var showingContent = false
     
@@ -48,9 +49,9 @@ struct WelcomeView: View {
             // Background gradient
             LinearGradient(
                 colors: [
-                    Color.blue.opacity(0.1),
-                    Color.purple.opacity(0.1),
-                    Color.pink.opacity(0.1)
+                    theme.backgroundColor.opacity(0.1),
+                    theme.primaryColor.opacity(0.1),
+                    theme.secondaryColor.opacity(0.1)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -62,7 +63,7 @@ struct WelcomeView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<steps.count, id: \.self) { index in
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(index <= currentStep ? steps[currentStep].color : Color.gray.opacity(0.3))
+                            .fill(index <= currentStep ? steps[currentStep].color : theme.borderColor)
                             .frame(height: 4)
                             .animation(.easeInOut(duration: 0.3), value: currentStep)
                     }
@@ -85,7 +86,7 @@ struct WelcomeView: View {
                         VStack(spacing: 16) {
                             Text(steps[currentStep].title)
                                 .font(.title.bold())
-                                .foregroundColor(.primary)
+                                .themedPrimaryText()
                                 .multilineTextAlignment(.center)
                             
                             Text(steps[currentStep].subtitle)
@@ -95,7 +96,7 @@ struct WelcomeView: View {
                             
                             Text(steps[currentStep].description)
                                 .font(.body)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                                 .multilineTextAlignment(.center)
                                 .lineLimit(nil)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -172,7 +173,7 @@ struct WelcomeView: View {
                             } label: {
                                 Text("back".localized)
                                     .font(.body.weight(.medium))
-                                    .foregroundColor(.secondary)
+                                    .themedSecondaryText()
                             }
                         } else {
                             // Spazio vuoto per mantenere l'altezza costante
@@ -190,7 +191,7 @@ struct WelcomeView: View {
                         } label: {
                             Text("skip_intro".localized)
                                 .font(.footnote)
-                                .foregroundColor(.secondary)
+                                .themedSecondaryText()
                         }
                         .padding(.top, 8)
                     }

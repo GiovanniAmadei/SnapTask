@@ -30,7 +30,12 @@ struct SnapTaskApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .preferredColorScheme(isDarkMode ? .dark : .light)
+                .preferredColorScheme(
+                    // Solo i temi premium sovrascrivono la dark mode
+                    ThemeManager.shared.currentTheme.overridesSystemColors ? 
+                    (ThemeManager.shared.isDarkTheme ? .dark : .light) : 
+                    (isDarkMode ? .dark : .light)
+                )
                 .onAppear {
                     setupNotifications()
                     Task {
