@@ -122,11 +122,11 @@ struct RewardsView: View {
                             .font(.system(size: 13, weight: .medium))
                             .themedSecondaryText()
                         
-                        // FIXED: Use total points instead of summing overlapping periods
-                        let totalPoints = RewardManager.shared.totalPoints()
+                        // FIXED: Show points based on selected filter instead of total points
+                        let filteredPoints = viewModel.currentPoints(for: selectedFilter)
                         
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(totalPoints)")
+                            Text("\(filteredPoints)")
                                 .font(.system(size: 32, weight: .bold))
                                 .themedPrimaryText()
                             
