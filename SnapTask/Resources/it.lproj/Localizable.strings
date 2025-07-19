@@ -3,4 +3,68 @@
 "riscattato!" = "Riscattato!";
 "riscattato" = "Riscattato";
 
-// ... existing code ...
+// Time Scope Strings
+"time_scope" = "Ambito Temporale";
+"task_happens_today" = "Attività per oggi";
+"task_happens_this_week" = "Obiettivo per questa settimana";
+"task_happens_this_month" = "Obiettivo per questo mese";
+"task_happens_this_year" = "Obiettivo per quest'anno";
+"long_term_goal" = "Obiettivo a lungo termine";
+"long_term_goals" = "Obiettivi a Lungo Termine";
+"no_tasks" = "Nessuna attività";
+"no_tasks_today" = "Nessuna attività oggi";
+"no_tasks_this_week" = "Nessun obiettivo questa settimana";
+"no_tasks_this_month" = "Nessun obiettivo questo mese";
+"no_tasks_this_year" = "Nessun obiettivo quest'anno";
+"no_tasks_long_term" = "Nessun obiettivo a lungo termine";
+"completed" = "completate";
+"today" = "Oggi";
+"obiettivi_settimanali" = "Obiettivi settimanali";
+"obiettivi_mensili" = "Obiettivi mensili";
+"obiettivi_annuali" = "Obiettivi annuali";
+"obiettivi_lungo_termine" = "Obiettivi a lungo termine";
+"time_period" = "Periodo di tempo";
+"optional_specific_time" = "Imposta un'ora specifica (opzionale)";
+
+// New Onboarding Strings
+"onboarding_title_1" = "Benvenuto in SnapTask";
+"onboarding_subtitle_1" = "La tua produttività, finalmente organizzata";
+"onboarding_description_1" = "Crea task altamente personalizzabili, organizza i tuoi obiettivi per tempo (oggi, settimana, mese, anno, lungo termine) e trasforma ogni attività in un successo concreto.";
+
+"onboarding_title_2" = "Timer Pomodoro Professionale";
+"onboarding_subtitle_2" = "Concentrazione senza distrazioni";
+"onboarding_description_2" = "Timer Pomodoro con sessioni personalizzabili, statistiche dettagliate del tempo speso e tracking automatico delle tue performance di concentrazione.";
+
+"onboarding_title_3" = "Sistema di Ricompense Motivante";
+"onboarding_subtitle_3" = "Trasforma la produttività in un gioco";
+"onboarding_description_3" = "Guadagna punti completando task e riscatta ricompense personalizzate. Un sistema che ti mantiene motivato e ti premia per ogni obiettivo raggiunto.";
+
+"onboarding_title_4" = "Statistiche che Ti Guidano";
+"onboarding_subtitle_4" = "Scopri i tuoi pattern di successo";
+"onboarding_description_4" = "Analizza le tue performance con grafici dettagliati, scopri quando sei più produttivo e ottimizza il tuo tempo per risultati migliori.";
+
+"onboarding_title_5" = "Sempre Sincronizzato";
+"onboarding_subtitle_5" = "I tuoi dati ovunque tu sia";
+"onboarding_description_5" = "Sincronizzazione automatica con iCloud. I tuoi task, statistiche e ricompense sempre aggiornati su iPhone, iPad e Mac.";
+
+// Onboarding Actions
+"onboarding_continue" = "Continua";
+"onboarding_skip" = "Salta";
+"onboarding_get_started" = "Inizia ora";
+"onboarding_try_premium" = "Prova Premium";
+"onboarding_start_free" = "Inizia Gratis";
+"onboarding_unlock_potential" = "Sblocca il Tuo Potenziale";
+
+// Premium Features
+"unlimited_categories" = "Categorie Illimitate";
+"unlimited_categories_desc" = "Crea tutte le categorie che vuoi per organizzare perfettamente le tue attività";
+"task_evaluation" = "Valutazione Attività";
+"task_evaluation_desc" = "Valuta qualità e difficoltà delle attività per analitiche avanzate";
+"unlimited_rewards" = "Premi Illimitati";
+"unlimited_rewards_desc" = "Crea tutti i premi che vuoi per motivare il completamento";
+"cloud_sync" = "Sincronizzazione Cloud";
+"cloud_sync_desc" = "Sincronizza tutti i tuoi dati su tutti i dispositivi";
+"advanced_statistics" = "Statistiche Avanzate";
+"advanced_statistics_desc" = "Accedi a tutte le sezioni statistiche per analitiche dettagliate";
+"custom_themes" = "Temi Personalizzati";
+"custom_themes_desc" = "Personalizza l'aspetto dell'app con temi esclusivi";

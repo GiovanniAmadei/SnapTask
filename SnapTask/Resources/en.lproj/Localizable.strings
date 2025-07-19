@@ -92,8 +92,8 @@
 "welcome_description_4" = "SnapTask is and will always remain free. If you like what I'm building and want to help me continue this project, consider supporting it. Your contribution will allow me to dedicate more time to improving the app and adding new features.";
 
 "welcome_title_5" = "Let's start together!";
-"welcomeSubtitle_5" = "Ready to be more productive?";
-"welcome_description_5" = "Thanks again for being part of this journey. As a solo developer, your support means everything to me. I hope SnapTask Pro becomes your ideal companion for organizing your day and achieving your goals.";
+"welcome_subtitle_5" = "Ready to be productive";
+"welcome_description_5" = "I'm excited to see how SnapTask will help you become more organized and productive. If you have any questions or suggestions, don't hesitate to contact me through the Feedback section. Thank you for being part of this journey!";
 
 // Task related
 "task" = "Task";
@@ -135,6 +135,38 @@
 "recurrence_settings" = "Recurrence Settings";
 "repeat_settings" = "Repeat Settings";
 "select_days" = "Select Days";
+// Recurrence adaptation
+"adapted_to_scope" = "Adapted to selected scope";
+"no_recurrence_long_term" = "No recurrence for long-term goals";
+
+// Contextual recurrence types
+"every_day" = "Every day";
+"every_2_days" = "Every 2 days";
+"every_3_days" = "Every 3 days";
+"every_weekday" = "Every weekday";
+"every_weekend" = "Every weekend";
+"every_week" = "Every week";
+"every_2_weeks" = "Every 2 weeks";
+"every_3_weeks" = "Every 3 weeks";
+"every_month" = "Every month";
+"every_2_months" = "Every 2 months";
+"every_3_months" = "Every 3 months";
+"every_6_months" = "Every 6 months";
+"every_year" = "Every year";
+"every_2_years" = "Every 2 years";
+"every_3_years" = "Every 3 years";
+
+// Contextual recurrence descriptions
+"recurrence_for" = "Recurrence for";
+"contextual_to_scope" = "Contextual to scope";
+"choose_how_often_daily_task" = "Choose how often to repeat this daily task";
+"choose_how_often_weekly_goal" = "Choose how often to repeat this weekly goal";
+"choose_how_often_monthly_goal" = "Choose how often to repeat this monthly goal";
+"choose_how_often_yearly_goal" = "Choose how often to repeat this yearly goal";
+"long_term_goals_no_recurrence" = "Long-term goals don't have recurrence";
+"recurrence_options" = "Recurrence Options";
+"optional_specific_time" = "Set specific time (optional)";
+"optional_specific_time" = "Set specific time (optional)";
 
 // Statistics and Consistency
 "time_spent" = "Time Spent";
@@ -451,6 +483,35 @@
 "empty_news_roadmap_message" = "Our roadmap is being planned. We'll share our exciting future plans here!";
 "unknown_version" = "Unknown Version";
 
+// New Onboarding Strings
+"onboarding_title_1" = "Welcome to SnapTask";
+"onboarding_subtitle_1" = "Your productivity, finally organized";
+"onboarding_description_1" = "Create highly customizable tasks, organize your goals by time (today, week, month, year, long-term) and transform every activity into concrete success.";
+
+"onboarding_title_2" = "Professional Pomodoro Timer";
+"onboarding_subtitle_2" = "Focus without distractions";
+"onboarding_description_2" = "Pomodoro timer with customizable sessions, detailed time spent statistics and automatic tracking of your focus performance.";
+
+"onboarding_title_3" = "Motivating Reward System";
+"onboarding_subtitle_3" = "Turn productivity into a game";
+"onboarding_description_3" = "Earn points by completing tasks and redeem personalized rewards. A system that keeps you motivated and rewards you for every goal achieved.";
+
+"onboarding_title_4" = "Statistics That Guide You";
+"onboarding_subtitle_4" = "Discover your success patterns";
+"onboarding_description_4" = "Analyze your performance with detailed charts, discover when you're most productive and optimize your time for better results.";
+
+"onboarding_title_5" = "Always Synchronized";
+"onboarding_subtitle_5" = "Your data wherever you are";
+"onboarding_description_5" = "Automatic synchronization with iCloud. Your tasks, statistics and rewards always updated on iPhone, iPad and Mac.";
+
+// Onboarding Actions
+"onboarding_continue" = "Continue";
+"onboarding_skip" = "Skip";
+"onboarding_get_started" = "Get Started";
+"onboarding_try_premium" = "Try Premium";
+"onboarding_start_free" = "Start Free";
+"onboarding_unlock_potential" = "Unlock Your Potential";
+
 // Feedback View
 "community_title" = "Community";
 "community_feedback_title" = "Community Feedback";
@@ -608,7 +669,7 @@
 "beta_mode" = "Beta Mode";
 "testflight_notice" = "We're still in TestFlight, so in-app donations are only simulated.";
 "after_appstore_release" = "After App Store release they will work normally.";
-"paypal_alternative" = "💳 PayPal Alternative";
+"paypal_alternative" = "PayPal Alternative";
 "support_now_paypal" = "You can support me right now via PayPal:";
 "donate_with_paypal" = "Donate with PayPal";
 "opens_paypal_browser" = "Opens PayPal in browser";
@@ -619,20 +680,20 @@
 "if_iap_not_working" = "If in-app donations are not working, you can support me directly:";
 "prefer_paypal" = "Prefer PayPal?";
 "donate_via_paypal" = "Donate via PayPal";
-"donations_help_me" = "💝 Your donations help me to:";
+"donations_help_me" = "Your donations help me to:";
 "develop_new_features" = "Develop new features";
 "maintain_sync_servers" = "Maintain sync servers";
 "continue_free_updates" = "Continue free updates";
 "thanks_previous_support" = "Thanks for your previous support!";
 "last_donation" = "Last donation:";
-"thanks_so_much" = "Thank you so much! ❤️";
+"thanks_so_much" = "Thank you so much! ";
 "donation_helps_development" = "Your donation helps me continue developing SnapTask Pro. I really appreciate your support!";
 "coffee_for_giovanni" = "Coffee for Giovanni";
-"small_coffee" = "A small coffee ☕️";
+"small_coffee" = "A small coffee ";
 "pizza_for_giovanni" = "Pizza for Giovanni";
-"pizza_for_dinner" = "A pizza for dinner 🍕";
+"pizza_for_dinner" = "A pizza for dinner ";
 "dinner_for_giovanni" = "Dinner for Giovanni";
-"nice_dinner" = "A nice dinner 🍽️";
+"nice_dinner" = "A nice dinner ";
 
 // Update Banner 0.2.2
 "whats_new" = "What's New";

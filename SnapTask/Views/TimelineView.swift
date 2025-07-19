@@ -54,6 +54,7 @@ struct TimelineView: View {
             .sheet(isPresented: $showingNewTask) {
                 TaskFormView(
                     initialDate: viewModel.selectedDate,
+                    initialTimeScope: viewModel.selectedTimeScope,
                     onSave: { task in
                         viewModel.addTask(task)
                     }
@@ -118,6 +119,7 @@ struct ViewControlBarView: View {
                                 .font(.system(size: 11, weight: .semibold))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
+                                .multilineTextAlignment(.leading)
                         }
                         .foregroundColor(viewModel.viewMode == mode ? theme.backgroundColor : theme.primaryColor)
                         .padding(.horizontal, 9)
@@ -718,25 +720,142 @@ struct TimelineHeaderView: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Text(viewModel.monthYearString)
-                    .font(.title2.bold())
-                    .themedPrimaryText()
-                Spacer()
-                Button(action: { showingCalendarPicker = true }) {
-                    Image(systemName: "calendar")
-                        .themedPrimary()
+        VStack(spacing: 0) {
+            // Fixed height header - sempre la stessa altezza
+            VStack(spacing: 8) {
+                HStack(alignment: .center) {
+                    // Period text - flexible but not compressed
+                    Text(viewModel.currentPeriodString)
+                        .font(.title2.bold())
+                        .themedPrimaryText()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .layoutPriority(1)
+                    
+                    Spacer(minLength: 8)
+                    
+                    // Navigation controls and menu - flexible layout
+                    HStack(spacing: 8) {
+                        // Navigation arrows (when needed)
+                        if viewModel.selectedTimeScope != .today && viewModel.selectedTimeScope != .longTerm {
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.navigateToPrevious()
+                                }
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .themedPrimary()
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(theme.primaryColor.opacity(0.1))
+                                    )
+                            }
+                            .disabled(!viewModel.canNavigatePrevious)
+                            
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.navigateToNext()
+                                }
+                            }) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .themedPrimary()
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(theme.primaryColor.opacity(0.1))
+                                    )
+                            }
+                            .disabled(!viewModel.canNavigateNext)
+                        }
+                        
+                        Menu {
+                            ForEach(TaskTimeScope.allCases, id: \.self) { scope in
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        viewModel.selectedTimeScope = scope
+                                    }
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: scope.icon)
+                                            .foregroundColor(Color(scope.color))
+                                            .font(.system(size: 14, weight: .medium))
+                                        
+                                        Text(scope.rawValue)
+                                            .font(.subheadline.weight(.medium))
+                                        
+                                        Spacer()
+                                        
+                                        // Checkmark per opzione selezionata
+                                        if viewModel.selectedTimeScope == scope {
+                                            Image(systemName: "checkmark")
+                                                .foregroundColor(.blue)
+                                                .font(.system(size: 12, weight: .semibold))
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: viewModel.selectedTimeScope.icon)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(Color(viewModel.selectedTimeScope.color))
+                                
+                                Text(viewModel.selectedTimeScope.rawValue)
+                                    .font(.subheadline.weight(.semibold))
+                                    .themedPrimaryText()
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .themedSecondaryText()
+                            }
+                            .padding(.leading, 0)
+                            .padding(.trailing, 4)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(theme.surfaceColor)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .strokeBorder(theme.borderColor, lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize(horizontal: true, vertical: false)
+                        
+                        // Calendar button (only for today)
+                        if viewModel.selectedTimeScope == .today {
+                            Button(action: { showingCalendarPicker = true }) {
+                                Image(systemName: "calendar")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .themedPrimary()
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(theme.primaryColor.opacity(0.1))
+                                    )
+                            }
+                        }
+                    }
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal)
-            .padding(.top, 8)
+            .frame(height: 60)
             
-            DateSelectorView(
-                viewModel: viewModel,
-                selectedDayOffset: $selectedDayOffset,
-                scrollProxy: $scrollProxy
-            )
+            // Date selector only for 'today' scope
+            if viewModel.selectedTimeScope == .today {
+                DateSelectorView(
+                    viewModel: viewModel,
+                    selectedDayOffset: $selectedDayOffset,
+                    scrollProxy: $scrollProxy
+                )
+                .padding(.top, 4)
+            }
         }
     }
 }
@@ -858,7 +977,7 @@ struct TaskListView: View {
                         .foregroundColor(theme.secondaryTextColor.opacity(0.6))
                     
                     VStack(spacing: 8) {
-                        Text("no_tasks_today".localized)
+                        Text(viewModel.progressText)
                             .font(.title2)
                             .fontWeight(.semibold)
                             .foregroundColor(theme.textColor)
@@ -950,7 +1069,10 @@ struct TaskListView: View {
                     .padding(.bottom, timeTrackerViewModel.hasActiveSession || pomodoroViewModel.hasActiveTask ? 10 : 0)
                     .zIndex(1)
                     
-                    AddTaskButton(isShowingTaskForm: $showingNewTask)
+                    AddTaskButton(
+                        isShowingTaskForm: $showingNewTask,
+                        timeScope: viewModel.selectedTimeScope
+                    )
                 }
                 .padding(.bottom, 16)
             }
@@ -1404,6 +1526,7 @@ private struct TimelineTaskCard: View {
                                 .buttonStyle(BorderlessButtonStyle())
                             }
                         }
+                        .padding(.leading, 8)
                         
                         if let description = task.description {
                             Text(description)
@@ -1416,31 +1539,27 @@ private struct TimelineTaskCard: View {
                     
                     Spacer()
                     
-                    if task.hasDuration && task.duration > 0 {
-                        Text(task.duration.formatted())
-                            .font(.caption)
-                            .foregroundColor(theme.secondaryTextColor)
-                    }
-                    
-                    if task.hasSpecificTime {
-                        let calendar = Calendar.current
-                        let hour = calendar.component(.hour, from: task.startTime)
-                        let minute = calendar.component(.minute, from: task.startTime)
-                        Text(String(format: "%02d:%02d", hour, minute))
-                            .font(.caption2)
-                            .foregroundColor(theme.secondaryTextColor)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(theme.surfaceColor)
-                            .cornerRadius(4)
-                    } else {
-                        Text("all_day".localized)
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(4)
+                    if task.timeScope == .today {
+                        if task.hasSpecificTime {
+                            let calendar = Calendar.current
+                            let hour = calendar.component(.hour, from: task.startTime)
+                            let minute = calendar.component(.minute, from: task.startTime)
+                            Text(String(format: "%02d:%02d", hour, minute))
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(theme.secondaryTextColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(theme.surfaceColor)
+                                .cornerRadius(4)
+                        } else {
+                            Text("all_day".localized)
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(4)
+                        }
                     }
                     
                     Image(systemName: task.priority.icon)
@@ -1576,7 +1695,13 @@ private struct TimelineTaskCard: View {
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.6)
                 .onEnded { _ in
-                    if dragOffset == 0 {
+                    if dragOffset != 0 {
+                        resetSwipe()
+                    } else if !task.subtasks.isEmpty {
+                        withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
+                            isExpanded.toggle()
+                        }
+                    } else {
                         showingDetailView = true
                     }
                 }
@@ -1600,11 +1725,7 @@ private struct TimelineTaskCard: View {
             })
         }
         .sheet(isPresented: $showingPomodoro) {
-            NavigationStack {
-                PomodoroView(task: task, presentationStyle: .sheet)
-            }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
+            PomodoroView(task: task)
         }
         .sheet(isPresented: $showingDetailView) {
             NavigationStack {
@@ -1675,6 +1796,7 @@ private struct TimelineTaskCard: View {
 
 private struct AddTaskButton: View {
     @Binding var isShowingTaskForm: Bool
+    var timeScope: TaskTimeScope = .today
     @Environment(\.theme) private var theme
     @State private var isPressed = false
     
@@ -1778,9 +1900,15 @@ struct CompactTimelineTaskView: View {
                     viewModel.toggleTaskCompletion(task.id)
                 }
             }) {
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
-                    .font(.system(size: 18))
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? theme.primaryColor.opacity(0.2) : theme.surfaceColor)
+                        .frame(width: 28, height: 28)
+                    
+                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isCompleted ? theme.primaryColor : theme.secondaryTextColor)
+                        .font(.system(size: 20, weight: .medium))
+                }
             }
             .buttonStyle(BorderlessButtonStyle())
             
@@ -1798,29 +1926,55 @@ struct CompactTimelineTaskView: View {
                         .foregroundColor(theme.textColor)
                     
                     Spacer()
-                    
+                    // Only show time indicator for today scope
+                    if task.timeScope == .today {
+                        if task.hasSpecificTime {
+                            Text(taskTime)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(theme.secondaryTextColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(theme.surfaceColor)
+                                .cornerRadius(4)
+                        } else {
+                            Text("all_day".localized)
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                    }
                     Image(systemName: task.priority.icon)
                         .foregroundColor(Color(hex: task.priority.color))
                         .font(.system(size: 12))
                     
-                    if task.hasSpecificTime {
-                        Text(taskTime)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(theme.secondaryTextColor)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(theme.surfaceColor)
-                            .cornerRadius(4)
-                    } else {
-                        Text("all_day".localized)
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(4)
+                    if task.pomodoroSettings != nil {
+                        Button(action: {
+                            PomodoroViewModel.shared.setActiveTask(task)
+                            showingPomodoro = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(theme.accentColor.opacity(0.15))
+                                    .frame(width: 36, height: 36)
+                                
+                                Image(systemName: "timer")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(task.category.map { Color(hex: $0.color) } ?? theme.accentColor)
+                            }
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(theme.accentColor.opacity(0.5), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
                     }
+                    
+                    Spacer()
                 }
+                .padding(.leading, 8)
                 
                 if let description = task.description, !description.isEmpty {
                     Text(description)

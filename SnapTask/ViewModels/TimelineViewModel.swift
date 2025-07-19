@@ -74,6 +74,12 @@ class TimelineViewModel: ObservableObject {
     @Published var showingFilterSheet = false
     @Published var showingTimelineView = false
     
+    // MARK: - TimeScope Properties
+    @Published var selectedTimeScope: TaskTimeScope = .today
+    @Published var currentWeek: Date = Date()
+    @Published var currentMonth: Date = Date()
+    @Published var currentYear: Date = Date()
+    
     @Published var openSwipeTaskId: UUID? = nil
     
     private let tasksKey = "saved_tasks"
@@ -81,8 +87,42 @@ class TimelineViewModel: ObservableObject {
     
     @Published private(set) var monthYearString: String = ""
     
+    var currentPeriodString: String {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        
+        switch selectedTimeScope {
+        case .today:
+            if calendar.isDateInToday(selectedDate) {
+                return "Oggi"
+            } else {
+                formatter.dateStyle = .medium
+                return formatter.string(from: selectedDate)
+            }
+        case .week:
+            let weekEnd = calendar.date(byAdding: .day, value: 6, to: currentWeek)!
+            formatter.dateFormat = "dd/MM"
+            let startString = formatter.string(from: currentWeek)
+            let endString = formatter.string(from: weekEnd)
+            return "Sett. \(startString) - \(endString)"
+        case .month:
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: currentMonth)
+        case .year:
+            formatter.dateFormat = "yyyy"
+            return formatter.string(from: currentYear)
+        case .longTerm:
+            return "Obiettivi L. Termine"
+        }
+    }
+    
+    var scopeSubtitle: String {
+        return "" // Nessun subtitle per mantenere tutto su una riga
+    }
+    
     init() {
         updateMonthYearString()
+        initializePeriods()
         
         // Observe TaskManager changes
         NotificationCenter.default.publisher(for: .tasksDidUpdate)
@@ -92,8 +132,9 @@ class TimelineViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Observe selected date changes
+        // Observe selected date and scope changes
         $selectedDate
+            .combineLatest($selectedTimeScope)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateMonthYearString()
@@ -105,62 +146,200 @@ class TimelineViewModel: ObservableObject {
         refreshTasks()
     }
     
-    private func refreshTasks() {
+    private func initializePeriods() {
         let calendar = Calendar.current
-        _ = calendar.startOfDay(for: selectedDate)
-        
-        tasks = taskManager.tasks.filter { task in
-            // Include tasks specifically for this day
-            if calendar.isDate(task.startTime, inSameDayAs: selectedDate) {
-                return true
-            }
-            
-            // Include recurring tasks
-            if let recurrence = task.recurrence {
-                // Check if task has started
-                if selectedDate < calendar.startOfDay(for: task.startTime) {
-                    return false
+        currentWeek = calendar.startOfWeek(for: Date())
+        currentMonth = calendar.startOfMonth(for: Date())
+        currentYear = calendar.startOfYear(for: Date())
+    }
+    
+    private func refreshTasks() {
+        tasks = filteredTasksForScope()
+            .sorted { task1, task2 in
+                // First, sort by start time
+                if task1.startTime != task2.startTime {
+                    return task1.startTime < task2.startTime
                 }
-                
-                // Check end date if it exists
-                if let endDate = recurrence.endDate, selectedDate > endDate {
-                    return false
-                }
-                
-                // Check recurrence pattern
-                switch recurrence.type {
-                case .daily:
-                    return true
-                case .weekly(let days):
-                    let weekday = calendar.component(.weekday, from: selectedDate)
-                    return days.contains(weekday)
-                case .monthly(let days):
-                    let day = calendar.component(.day, from: selectedDate)
-                    return days.contains(day)
-                case .monthlyOrdinal(let patterns):
-                    return recurrence.shouldOccurOn(date: selectedDate)
-                case .yearly:
-                    return recurrence.shouldOccurOn(date: selectedDate)
-                }
+                // Then by creation date - older tasks first (new tasks go to bottom)
+                return task1.creationDate < task2.creationDate
             }
-            
-            return false
-        }
-        .sorted { task1, task2 in
-            // First, sort by start time
-            if task1.startTime != task2.startTime {
-                return task1.startTime < task2.startTime
-            }
-            // Then by creation date - older tasks first (new tasks go to bottom)
-            return task1.creationDate < task2.creationDate
-        }
         
         objectWillChange.send()
     }
     
+    // MARK: - TimeScope Filtering
+    
+    private func filteredTasksForScope() -> [TodoTask] {
+        let allTasks = taskManager.tasks
+        
+        switch selectedTimeScope {
+        case .today:
+            return tasksForDay(selectedDate, from: allTasks)
+        case .week:
+            return tasksForWeek(currentWeek, from: allTasks)
+        case .month:
+            return tasksForMonth(currentMonth, from: allTasks)
+        case .year:
+            return tasksForYear(currentYear, from: allTasks)
+        case .longTerm:
+            return longTermTasks(from: allTasks)
+        }
+    }
+    
+    private func tasksForDay(_ date: Date, from tasks: [TodoTask]) -> [TodoTask] {
+        let calendar = Calendar.current
+        return tasks.filter { task in
+            // Tasks with .today scope for this specific date
+            if task.timeScope == .today {
+                return calendar.isDate(task.startTime, inSameDayAs: date) || task.shouldShow(for: date, scope: .today)
+            }
+            return false
+        }
+    }
+    
+    private func tasksForWeek(_ weekStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
+        return tasks.filter { task in
+            if task.timeScope == .week {
+                return task.shouldShow(for: weekStart, scope: .week)
+            }
+            return false
+        }
+    }
+    
+    private func tasksForMonth(_ monthStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
+        return tasks.filter { task in
+            if task.timeScope == .month {
+                return task.shouldShow(for: monthStart, scope: .month)
+            }
+            return false
+        }
+    }
+    
+    private func tasksForYear(_ yearStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
+        return tasks.filter { task in
+            if task.timeScope == .year {
+                return task.shouldShow(for: yearStart, scope: .year)
+            }
+            return false
+        }
+    }
+    
+    private func longTermTasks(from tasks: [TodoTask]) -> [TodoTask] {
+        return tasks.filter { task in
+            task.timeScope == .longTerm
+        }
+    }
+    
+    // MARK: - Navigation Methods
+    
+    func navigateToPrevious() {
+        let calendar = Calendar.current
+        
+        switch selectedTimeScope {
+        case .today:
+            selectedDate = calendar.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+        case .week:
+            currentWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: currentWeek) ?? currentWeek
+        case .month:
+            currentMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
+        case .year:
+            currentYear = calendar.date(byAdding: .year, value: -1, to: currentYear) ?? currentYear
+        case .longTerm:
+            break // No navigation for long term
+        }
+    }
+    
+    func navigateToNext() {
+        let calendar = Calendar.current
+        
+        switch selectedTimeScope {
+        case .today:
+            selectedDate = calendar.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+        case .week:
+            currentWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeek) ?? currentWeek
+        case .month:
+            currentMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
+        case .year:
+            currentYear = calendar.date(byAdding: .year, value: 1, to: currentYear) ?? currentYear
+        case .longTerm:
+            break // No navigation for long term
+        }
+    }
+    
+    func navigateToToday() {
+        let calendar = Calendar.current
+        let today = Date()
+        
+        switch selectedTimeScope {
+        case .today:
+            selectedDate = today
+        case .week:
+            currentWeek = calendar.startOfWeek(for: today)
+        case .month:
+            currentMonth = calendar.startOfMonth(for: today)
+        case .year:
+            currentYear = calendar.startOfYear(for: today)
+        case .longTerm:
+            break // No navigation for long term
+        }
+    }
+    
+    // MARK: - Display Properties
+    
+    var canNavigatePrevious: Bool {
+        // Can always navigate previous (no limits for now)
+        return selectedTimeScope != .longTerm
+    }
+    
+    var canNavigateNext: Bool {
+        // Can always navigate next (no limits for now)
+        return selectedTimeScope != .longTerm
+    }
+    
+    var progressText: String {
+        if tasks.isEmpty {
+            switch selectedTimeScope {
+            case .today:
+                return "no_tasks_today".localized
+            case .week:
+                return "no_tasks_this_week".localized
+            case .month:
+                return "no_tasks_this_month".localized
+            case .year:
+                return "no_tasks_this_year".localized
+            case .longTerm:
+                return "no_tasks_long_term".localized
+            }
+        }
+        
+        // Only show progress for today scope, for other scopes just show the task count
+        switch selectedTimeScope {
+        case .today:
+            let completedTasks = tasks.filter { task in
+                let completion = getCompletion(for: task.id, on: selectedDate)
+                return completion?.isCompleted ?? false
+            }
+            let total = tasks.count
+            let completed = completedTasks.count
+            return "\(completed)/\(total) " + "completed".localized
+            
+        case .week, .month, .year, .longTerm:
+            // For non-daily scopes, don't show completion count, just show task count
+            let taskCount = tasks.count
+            if taskCount == 1 {
+                return "1 " + "task".localized
+            } else {
+                return "\(taskCount) " + "tasks".localized
+            }
+        }
+    }
+    
     func addTask(_ task: TodoTask) {
         print("Adding task: \(task.name)")
+        print("TimeScope: \(task.timeScope)")
         print("Start time: \(task.startTime)")
+        print("Scope start: \(String(describing: task.scopeStartDate))")
+        print("Scope end: \(String(describing: task.scopeEndDate))")
         print("Recurrence: \(String(describing: task.recurrence))")
         Task {
             await taskManager.addTask(task)
@@ -168,16 +347,64 @@ class TimelineViewModel: ObservableObject {
     }
     
     func toggleTaskCompletion(_ taskId: UUID) {
-        TaskManager.shared.toggleTaskCompletion(taskId, on: selectedDate)
+        let targetDate: Date
+        let calendar = Calendar.current
+        
+        switch selectedTimeScope {
+        case .today:
+            targetDate = selectedDate
+        case .week:
+            targetDate = currentWeek
+        case .month:
+            targetDate = currentMonth
+        case .year:
+            targetDate = currentYear
+        case .longTerm:
+            targetDate = Date() // Use current date for long-term tasks
+        }
+        
+        TaskManager.shared.toggleTaskCompletion(taskId, on: targetDate)
     }
     
     func toggleSubtask(taskId: UUID, subtaskId: UUID) {
-        TaskManager.shared.toggleSubtask(taskId: taskId, subtaskId: subtaskId, on: selectedDate)
+        let targetDate: Date
+        let calendar = Calendar.current
+        
+        switch selectedTimeScope {
+        case .today:
+            targetDate = selectedDate
+        case .week:
+            targetDate = currentWeek
+        case .month:
+            targetDate = currentMonth
+        case .year:
+            targetDate = currentYear
+        case .longTerm:
+            targetDate = Date() // Use current date for long-term tasks
+        }
+        
+        TaskManager.shared.toggleSubtask(taskId: taskId, subtaskId: subtaskId, on: targetDate)
     }
     
     func getCompletion(for taskId: UUID, on date: Date) -> TaskCompletion? {
         if let task = tasks.first(where: { $0.id == taskId }) {
-            return task.completions[date.startOfDay]
+            let calendar = Calendar.current
+            let targetDate: Date
+            
+            switch selectedTimeScope {
+            case .today:
+                targetDate = calendar.startOfDay(for: date)
+            case .week:
+                targetDate = calendar.startOfDay(for: currentWeek)
+            case .month:
+                targetDate = calendar.startOfDay(for: currentMonth)
+            case .year:
+                targetDate = calendar.startOfDay(for: currentYear)
+            case .longTerm:
+                targetDate = calendar.startOfDay(for: task.startTime)
+            }
+            
+            return task.completions[targetDate]
         }
         return nil
     }
@@ -201,48 +428,16 @@ class TimelineViewModel: ObservableObject {
     }
     
     func organizedTasksForSelectedDate() -> OrganizedTasks {
-        let calendar = Calendar.current
-        let selectedStartOfDay = calendar.startOfDay(for: selectedDate)
+        // Use already filtered tasks for the current scope
+        let scopedTasks = tasks
         
-        let filteredTasks = tasks.filter { task in
-            // For non-recurring tasks
-            if task.recurrence == nil {
-                return calendar.isDate(task.startTime, inSameDayAs: selectedDate)
-            }
-            
-            // For recurring tasks
-            guard let recurrence = task.recurrence else { return false }
-            let taskStartOfDay = calendar.startOfDay(for: task.startTime)
-            
-            // Only show tasks that have started
-            if selectedStartOfDay < taskStartOfDay {
-                return false
-            }
-            
-            // Check recurrence pattern
-            switch recurrence.type {
-            case .daily:
-                return true
-            case .weekly(let days):
-                let weekday = calendar.component(.weekday, from: selectedDate)
-                return days.contains(weekday)
-            case .monthly(let days):
-                let day = calendar.component(.day, from: selectedDate)
-                return days.contains(day)
-            case .monthlyOrdinal(let patterns):
-                return recurrence.shouldOccurOn(date: selectedDate)
-            case .yearly:
-                return recurrence.shouldOccurOn(date: selectedDate)
-            }
-        }
-        
-        // Organize tasks based on organization mode
         switch organization {
         case .none:
-            return OrganizedTasks.single(filteredTasks.sorted { $0.startTime < $1.startTime })
+            return OrganizedTasks.single(scopedTasks.sorted { $0.startTime < $1.startTime })
             
         case .time:
-            let sortedTasks = filteredTasks.sorted { task1, task2 in
+            let sortedTasks = scopedTasks.sorted { task1, task2 in
+                let calendar = Calendar.current
                 let time1 = calendar.component(.hour, from: task1.startTime) * 60 + calendar.component(.minute, from: task1.startTime)
                 let time2 = calendar.component(.hour, from: task2.startTime) * 60 + calendar.component(.minute, from: task2.startTime)
                 return timeSortOrder == .ascending ? time1 < time2 : time1 > time2
@@ -250,11 +445,16 @@ class TimelineViewModel: ObservableObject {
             return OrganizedTasks.single(sortedTasks)
             
         case .category:
-            return organizeByCategory(filteredTasks)
+            return organizeByCategory(scopedTasks)
             
         case .priority:
-            return organizeByPriority(filteredTasks)
+            return organizeByPriority(scopedTasks)
         }
+    }
+    
+    func tasksForSelectedDate() -> [TodoTask] {
+        // Simply return the already filtered tasks for the current scope
+        return tasks
     }
     
     private func organizeByCategory(_ tasks: [TodoTask]) -> OrganizedTasks {
@@ -292,15 +492,6 @@ class TimelineViewModel: ObservableObject {
         }
         
         return OrganizedTasks.sections(sections)
-    }
-    
-    func tasksForSelectedDate() -> [TodoTask] {
-        switch organizedTasksForSelectedDate() {
-        case .single(let tasks):
-            return tasks
-        case .sections(let sections):
-            return sections.flatMap { $0.tasks }
-        }
     }
     
     var availableCategories: [Category] {
@@ -372,21 +563,16 @@ class TimelineViewModel: ObservableObject {
         let dateStartOfDay = calendar.startOfDay(for: date)
         
         return tasks.filter { task in
-            // For non-recurring tasks
             if task.recurrence == nil {
                 return calendar.isDate(task.startTime, inSameDayAs: date)
             }
-            
-            // For recurring tasks
             guard let recurrence = task.recurrence else { return false }
             let taskStartOfDay = calendar.startOfDay(for: task.startTime)
             
-            // Only show tasks that have started
             if dateStartOfDay < taskStartOfDay {
                 return false
             }
             
-            // Check recurrence pattern without end date limitation
             switch recurrence.type {
             case .daily:
                 return true
@@ -411,33 +597,26 @@ class TimelineViewModel: ObservableObject {
         _ = calendar.startOfDay(for: now)
         
         return tasks.filter { task in
-            // Get completion status for today
             let completion = getCompletion(for: task.id, on: now)
             let isCompleted = completion?.isCompleted ?? false
             
-            // Skip if task is completed
             if isCompleted {
                 return false
             }
             
-            // Check if task is due today or overdue
             if calendar.isDateInToday(task.startTime) || task.startTime < now {
                 return true
             }
             
-            // Check recurring tasks
             if let recurrence = task.recurrence {
-                // Check if task has started
                 if now < calendar.startOfDay(for: task.startTime) {
                     return false
                 }
                 
-                // Check end date if it exists
                 if let endDate = recurrence.endDate, now > endDate {
                     return false
                 }
                 
-                // Check recurrence pattern
                 switch recurrence.type {
                 case .daily:
                     return true
@@ -526,4 +705,16 @@ struct TaskSection: Identifiable {
     let color: String?
     let icon: String?
     let tasks: [TodoTask]
+}
+
+extension Calendar {
+    func startOfMonth(for date: Date) -> Date {
+        let components = dateComponents([.year, .month], from: date)
+        return self.date(from: components) ?? date
+    }
+    
+    func startOfYear(for date: Date) -> Date {
+        let components = dateComponents([.year], from: date)
+        return self.date(from: components) ?? date
+    }
 }

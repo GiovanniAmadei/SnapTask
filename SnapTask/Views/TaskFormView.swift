@@ -30,6 +30,15 @@ struct TaskFormView: View {
         self.onSave = onSave
     }
     
+    init(initialDate: Date, initialTimeScope: TaskTimeScope, onSave: @escaping (TodoTask) -> Void) {
+        self._viewModel = StateObject(wrappedValue: {
+            let vm = TaskFormViewModel(initialDate: initialDate)
+            vm.selectedTimeScope = initialTimeScope
+            return vm
+        }())
+        self.onSave = onSave
+    }
+    
     init(initialTask: TodoTask, onSave: @escaping (TodoTask) -> Void) {
         self._viewModel = StateObject(wrappedValue: {
             let vm = TaskFormViewModel(initialDate: initialTask.startTime)
@@ -46,6 +55,26 @@ struct TaskFormView: View {
             vm.icon = initialTask.icon
             vm.subtasks = initialTask.subtasks
             vm.hasNotification = initialTask.hasNotification
+            vm.selectedTimeScope = initialTask.timeScope
+            
+            // Set specific period dates based on existing task
+            if let scopeStart = initialTask.scopeStartDate {
+                let calendar = Calendar.current
+                switch initialTask.timeScope {
+                case .week:
+                    vm.selectedWeekDate = scopeStart
+                case .month:
+                    vm.selectedMonth = calendar.component(.month, from: scopeStart)
+                    vm.selectedYear = calendar.component(.year, from: scopeStart)
+                    vm.selectedMonthDate = scopeStart
+                case .year:
+                    vm.selectedYear = calendar.component(.year, from: scopeStart)
+                    vm.selectedYearDate = scopeStart
+                default:
+                    break
+                }
+            }
+            
             vm.isRecurring = initialTask.recurrence != nil
             if let recurrence = initialTask.recurrence {
                 vm.hasRecurrenceEndDate = recurrence.endDate != nil
@@ -185,79 +214,246 @@ struct TaskFormView: View {
                     // Time Card
                     ModernCard(title: "time".localized, icon: "clock") {
                         VStack(spacing: 16) {
+                            // TimeScope Selection
                             HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("specific_time".localized)
-                                        .font(.subheadline.weight(.medium))
-                                        .themedPrimaryText()
-                                    Text("set_exact_time".localized)
-                                        .font(.caption)
-                                        .themedSecondaryText()
-                                }
+                                Text("time_scope".localized)
+                                    .font(.subheadline.weight(.medium))
+                                    .themedPrimaryText()
                                 Spacer()
-                                ModernToggle(isOn: $viewModel.hasSpecificTime)
+                                Menu {
+                                    ForEach(TaskTimeScope.allCases, id: \.self) { scope in
+                                        Button(action: {
+                                            viewModel.selectedTimeScope = scope
+                                        }) {
+                                            Label(scope.rawValue, systemImage: scope.icon)
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: viewModel.selectedTimeScope.icon)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(Color(viewModel.selectedTimeScope.color))
+                                        Text(viewModel.selectedTimeScope.rawValue)
+                                            .font(.subheadline)
+                                            .themedSecondaryText()
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 10))
+                                            .themedSecondaryText()
+                                    }
+                                }
                             }
                             
-                            if viewModel.hasSpecificTime {
+                            // Date/Time Selection (for all scopes, but with different defaults)
+                            if viewModel.selectedTimeScope == .today {
                                 HStack {
-                                    Text("start_time".localized)
-                                        .font(.subheadline.weight(.medium))
-                                        .themedPrimaryText()
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("specific_time".localized)
+                                            .font(.subheadline.weight(.medium))
+                                            .themedPrimaryText()
+                                        Text("set_exact_time".localized)
+                                            .font(.caption)
+                                            .themedSecondaryText()
+                                    }
                                     Spacer()
-                                    DatePicker("", selection: $viewModel.startDate)
-                                        .labelsHidden()
+                                    ModernToggle(isOn: $viewModel.hasSpecificTime)
+                                }
+                                
+                                if viewModel.hasSpecificTime {
+                                    HStack {
+                                        Text("start_time".localized)
+                                            .font(.subheadline.weight(.medium))
+                                            .themedPrimaryText()
+                                        Spacer()
+                                        DatePicker("", selection: $viewModel.startDate)
+                                            .labelsHidden()
+                                    }
+                                    .transition(.asymmetric(
+                                        insertion: .opacity,
+                                        removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                    ))
+
+                                    // Notification toggle (only if has specific time and notifications are enabled globally)
+                                    if taskNotificationManager.areNotificationsEnabled {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("enable_notification".localized)
+                                                    .font(.subheadline.weight(.medium))
+                                                    .themedPrimaryText()
+                                                Text("notification_scheduled".localized)
+                                                    .font(.caption)
+                                                    .themedSecondaryText()
+                                            }
+                                            Spacer()
+                                            ModernToggle(isOn: $viewModel.hasNotification)
+                                        }
+                                        .transition(.asymmetric(
+                                            insertion: .opacity,
+                                            removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                        ))
+                                    } else if viewModel.hasNotification {
+                                        // Show notification disabled warning
+                                        HStack {
+                                            Image(systemName: "exclamationmark.triangle.fill")
+                                                .foregroundColor(.orange)
+                                                .font(.system(size: 14))
+                                            
+                                            Text("notifications_not_available".localized)
+                                                .font(.caption)
+                                                .themedSecondaryText()
+                                            
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(.orange.opacity(0.1))
+                                        )
+                                        .onAppear {
+                                            // Auto-disable notification if not available
+                                            viewModel.hasNotification = false
+                                        }
+                                        .transition(.asymmetric(
+                                            insertion: .opacity,
+                                            removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                        ))
+                                    }
+                                }
+                            } else {
+                                // For other time scopes, show period selector
+                                VStack(spacing: 12) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("selected_period".localized)
+                                                .font(.subheadline.weight(.medium))
+                                                .themedPrimaryText()
+                                            Text(viewModel.selectedPeriodDisplayText)
+                                                .font(.caption)
+                                                .themedSecondaryText()
+                                        }
+                                        Spacer()
+                                        Image(systemName: viewModel.selectedTimeScope.icon)
+                                            .font(.system(size: 16))
+                                            .foregroundColor(Color(viewModel.selectedTimeScope.color))
+                                    }
+                                    
+                                    // Period picker based on scope
+                                    switch viewModel.selectedTimeScope {
+                                    case .week:
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("select_week".localized)
+                                                .font(.caption.weight(.medium))
+                                                .themedSecondaryText()
+                                            
+                                            // Week picker - shows week range
+                                            DatePicker(
+                                                "",
+                                                selection: $viewModel.selectedWeekDate,
+                                                in: Date()...,
+                                                displayedComponents: [.date]
+                                            )
+                                            .datePickerStyle(.compact)
+                                            .labelsHidden()
+                                            
+                                            // Show selected week range
+                                            Text("week_range".localized + ": " + viewModel.selectedWeekRangeText)
+                                                .font(.caption2)
+                                                .themedSecondaryText()
+                                                .padding(.top, 4)
+                                        }
+                                        
+                                    case .month:
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("select_month".localized)
+                                                .font(.caption.weight(.medium))
+                                                .themedSecondaryText()
+                                            
+                                            // Month/Year picker only
+                                            HStack {
+                                                // Month picker
+                                                Picker("month".localized, selection: $viewModel.selectedMonth) {
+                                                    ForEach(1...12, id: \.self) { month in
+                                                        Text(Calendar.current.monthSymbols[month - 1])
+                                                            .tag(month)
+                                                    }
+                                                }
+                                                .pickerStyle(.wheel)
+                                                .frame(height: 120)
+                                                
+                                                // Year picker
+                                                Picker("year".localized, selection: $viewModel.selectedYear) {
+                                                    ForEach(viewModel.availableYears, id: \.self) { year in
+                                                        Text(String(year))
+                                                            .tag(year)
+                                                    }
+                                                }
+                                                .pickerStyle(.wheel)
+                                                .frame(height: 120)
+                                            }
+                                        }
+                                        
+                                    case .year:
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("select_year".localized)
+                                                .font(.caption.weight(.medium))
+                                                .themedSecondaryText()
+                                            
+                                            // Year only picker
+                                            Picker("year".localized, selection: $viewModel.selectedYear) {
+                                                ForEach(viewModel.availableYears, id: \.self) { year in
+                                                    Text(String(year))
+                                                        .tag(year)
+                                                }
+                                            }
+                                            .pickerStyle(.wheel)
+                                            .frame(height: 120)
+                                            .labelsHidden()
+                                        }
+                                        
+                                    case .longTerm:
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("long_term_info".localized)
+                                                .font(.caption)
+                                                .themedSecondaryText()
+                                        }
+                                        
+                                    default:
+                                        EmptyView()
+                                    }
+                                    
+                                    // Optional: Allow specific time for other scopes
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("specific_time".localized)
+                                                .font(.subheadline.weight(.medium))
+                                                .themedPrimaryText()
+                                            Text("optional_specific_time".localized)
+                                                .font(.caption)
+                                                .themedSecondaryText()
+                                        }
+                                        Spacer()
+                                        ModernToggle(isOn: $viewModel.hasSpecificTime)
+                                    }
+                                    
+                                    if viewModel.hasSpecificTime {
+                                        HStack {
+                                            Text("start_time".localized)
+                                                .font(.subheadline.weight(.medium))
+                                                .themedPrimaryText()
+                                            Spacer()
+                                            DatePicker("", selection: $viewModel.startDate)
+                                                .labelsHidden()
+                                        }
+                                        .transition(.asymmetric(
+                                            insertion: .opacity,
+                                            removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                        ))
+                                    }
                                 }
                                 .transition(.asymmetric(
                                     insertion: .opacity,
                                     removal: .opacity.animation(.easeInOut(duration: 0.3))
                                 ))
-
-                                // Notification toggle (only if has specific time and notifications are enabled globally)
-                                if taskNotificationManager.areNotificationsEnabled {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("enable_notification".localized)
-                                                .font(.subheadline.weight(.medium))
-                                                .themedPrimaryText()
-                                            Text("notification_scheduled".localized)
-                                                .font(.caption)
-                                                .themedSecondaryText()
-                                        }
-                                        Spacer()
-                                        ModernToggle(isOn: $viewModel.hasNotification)
-                                    }
-                                    .transition(.asymmetric(
-                                        insertion: .opacity,
-                                        removal: .opacity.animation(.easeInOut(duration: 0.3))
-                                    ))
-                                } else if viewModel.hasNotification {
-                                    // Show notification disabled warning
-                                    HStack {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundColor(.orange)
-                                            .font(.system(size: 14))
-                                        
-                                        Text("notifications_not_available".localized)
-                                            .font(.caption)
-                                            .themedSecondaryText()
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(.orange.opacity(0.1))
-                                    )
-                                    .onAppear {
-                                        // Auto-disable notification if not available
-                                        viewModel.hasNotification = false
-                                    }
-                                    .transition(.asymmetric(
-                                        insertion: .opacity,
-                                        removal: .opacity.animation(.easeInOut(duration: 0.3))
-                                    ))
-                                }
                             }
                             
                             HStack {
@@ -365,51 +561,60 @@ struct TaskFormView: View {
                     }
                     
                     // Recurrence Card
-                    ModernCard(title: "recurrence".localized, icon: "repeat") {
-                        VStack(spacing: 16) {
-                            HStack {
-                                Text("repeat_task".localized)
-                                    .font(.subheadline.weight(.medium))
-                                    .themedPrimaryText()
-                                Spacer()
-                                ModernToggle(isOn: $viewModel.isRecurring)
-                            }
-                            
-                            if viewModel.isRecurring {
-                                VStack(spacing: 16) {
-                                    NavigationLink {
-                                        EnhancedRecurrenceSettingsView(viewModel: viewModel)
-                                    } label: {
+                    if viewModel.shouldShowRecurrenceOption {
+                        ModernCard(title: "recurrence".localized, icon: "repeat") {
+                            VStack(spacing: 16) {
+                                HStack {
+                                    Text("repeat_task".localized)
+                                        .font(.subheadline.weight(.medium))
+                                        .themedPrimaryText()
+                                    Spacer()
+                                    ModernToggle(isOn: $viewModel.isRecurring)
+                                }
+                                
+                                if viewModel.isRecurring {
+                                    VStack(spacing: 16) {
+                                        NavigationLink {
+                                            ContextualRecurrenceSettingsView(viewModel: viewModel)
+                                        } label: {
+                                            HStack {
+                                                Text("frequency".localized)
+                                                    .font(.subheadline.weight(.medium))
+                                                    .themedPrimaryText()
+                                                Spacer()
+                                                VStack(alignment: .trailing, spacing: 4) {
+                                                    Text(viewModel.recurrenceDisplayText)
+                                                        .font(.subheadline)
+                                                        .themedSecondaryText()
+                                                    // Show hint about contextual options
+                                                    Text("contextual_to_scope".localized)
+                                                        .font(.caption)
+                                                        .themedSecondaryText()
+                                                        .opacity(0.7)
+                                                }
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 12))
+                                                    .themedSecondaryText()
+                                            }
+                                        }
+                                        
                                         HStack {
-                                            Text("frequency".localized)
+                                            Text("track_in_consistency".localized)
                                                 .font(.subheadline.weight(.medium))
                                                 .themedPrimaryText()
                                             Spacer()
-                                            Text(viewModel.recurrenceDisplayText)
-                                                .font(.subheadline)
-                                                .themedSecondaryText()
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 12))
-                                                .themedSecondaryText()
+                                            ModernToggle(isOn: $viewModel.trackInStatistics)
                                         }
                                     }
-                                    
-                                    HStack {
-                                        Text("track_in_consistency".localized)
-                                            .font(.subheadline.weight(.medium))
-                                            .themedPrimaryText()
-                                        Spacer()
-                                        ModernToggle(isOn: $viewModel.trackInStatistics)
-                                    }
+                                    .transition(.asymmetric(
+                                        insertion: .opacity,
+                                        removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                    ))
                                 }
-                                .transition(.asymmetric(
-                                    insertion: .opacity,
-                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
-                                ))
                             }
                         }
                     }
-                    
+
                     // Subtasks Card
                     ModernCard(title: "subtasks".localized, icon: "checklist") {
                         VStack(spacing: 16) {

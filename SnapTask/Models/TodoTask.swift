@@ -1,6 +1,35 @@
 import Foundation
 import Combine
 
+// MARK: - TaskTimeScope Enum
+enum TaskTimeScope: String, CaseIterable, Codable {
+    case today = "Oggi"
+    case week = "Settimana"
+    case month = "Mese"
+    case year = "Anno"
+    case longTerm = "L. Termine"
+    
+    var icon: String {
+        switch self {
+        case .today: return "star.fill"
+        case .week: return "target"
+        case .month: return "calendar"
+        case .year: return "trophy.fill"
+        case .longTerm: return "sparkles"
+        }
+    }
+    
+    var color: String {
+        switch self {
+        case .today: return "blue"
+        case .week: return "green"
+        case .month: return "orange"
+        case .year: return "purple"
+        case .longTerm: return "pink"
+        }
+    }
+}
+
 struct TodoTask: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
@@ -29,6 +58,10 @@ struct TodoTask: Identifiable, Codable, Equatable {
     // Notification properties
     var hasNotification: Bool = false
     var notificationId: String?
+    
+    var timeScope: TaskTimeScope = .today
+    var scopeStartDate: Date? = nil
+    var scopeEndDate: Date? = nil
 
     init(
         id: UUID = UUID(),
@@ -48,7 +81,10 @@ struct TodoTask: Identifiable, Codable, Equatable {
         hasRewardPoints: Bool = false,
         rewardPoints: Int = 0,
         hasNotification: Bool = false,
-        notificationId: String? = nil
+        notificationId: String? = nil,
+        timeScope: TaskTimeScope = .today,
+        scopeStartDate: Date? = nil,
+        scopeEndDate: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -70,6 +106,73 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.lastTrackedDate = nil
         self.hasNotification = hasNotification
         self.notificationId = notificationId
+        self.timeScope = timeScope
+        self.scopeStartDate = scopeStartDate
+        self.scopeEndDate = scopeEndDate
+    }
+    
+    var displayPeriod: String {
+        let formatter = DateFormatter()
+        let calendar = Calendar.current
+        
+        switch timeScope {
+        case .today:
+            formatter.dateStyle = .medium
+            return formatter.string(from: startTime)
+        case .week:
+            if let start = scopeStartDate {
+                let weekStart = calendar.startOfWeek(for: start)
+                let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+                formatter.dateStyle = .short
+                return "\(formatter.string(from: weekStart)) - \(formatter.string(from: weekEnd))"
+            }
+            return "Questa settimana"
+        case .month:
+            if let start = scopeStartDate {
+                formatter.dateFormat = "MMMM yyyy"
+                return formatter.string(from: start)
+            }
+            return "Questo mese"
+        case .year:
+            if let start = scopeStartDate {
+                formatter.dateFormat = "yyyy"
+                return formatter.string(from: start)
+            }
+            return "Quest'anno"
+        case .longTerm:
+            return "Obiettivo a lungo termine"
+        }
+    }
+    
+    func shouldShow(for date: Date, scope: TaskTimeScope) -> Bool {
+        guard timeScope == scope else { return false }
+        
+        let calendar = Calendar.current
+        
+        switch scope {
+        case .today:
+            return calendar.isDate(startTime, inSameDayAs: date)
+        case .week:
+            if let scopeStart = scopeStartDate {
+                let weekStart = calendar.startOfWeek(for: scopeStart)
+                let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+                let targetWeekStart = calendar.startOfWeek(for: date)
+                return calendar.isDate(weekStart, inSameDayAs: targetWeekStart)
+            }
+            return calendar.isDate(startTime, inSameDayAs: date)
+        case .month:
+            if let scopeStart = scopeStartDate {
+                return calendar.isDate(scopeStart, equalTo: date, toGranularity: .month)
+            }
+            return calendar.isDate(startTime, equalTo: date, toGranularity: .month)
+        case .year:
+            if let scopeStart = scopeStartDate {
+                return calendar.isDate(scopeStart, equalTo: date, toGranularity: .year)
+            }
+            return calendar.isDate(startTime, equalTo: date, toGranularity: .year)
+        case .longTerm:
+            return true // Always show long-term tasks
+        }
     }
     
     var completionProgress: Double {
@@ -84,7 +187,6 @@ struct TodoTask: Identifiable, Codable, Equatable {
         return Double(subtasks.filter(\.isCompleted).count) / Double(subtasks.count)
     }
     
-    // Computed property for formatted tracked time
     var formattedTrackedTime: String {
         let hours = Int(totalTrackedTime) / 3600
         let minutes = Int(totalTrackedTime) % 3600 / 60
@@ -96,7 +198,6 @@ struct TodoTask: Identifiable, Codable, Equatable {
         }
     }
     
-    // Check if task has been tracked recently
     var hasRecentTracking: Bool {
         guard let lastTracked = lastTrackedDate else { return false }
         return Calendar.current.isDate(lastTracked, inSameDayAs: Date())
@@ -193,7 +294,6 @@ struct TodoTask: Identifiable, Codable, Equatable {
         return completions[targetDate]?.qualityRating
     }
     
-    // Check if task has historical rating data
     var hasHistoricalRatings: Bool {
         let ratingsCount = completions.values.reduce(0) { count, completion in
             let hasQuality = completion.qualityRating != nil
@@ -202,8 +302,6 @@ struct TodoTask: Identifiable, Codable, Equatable {
         }
         return ratingsCount >= 2 // At least 2 completions with ratings
     }
-    
-    // These have been removed to force explicit date usage
     
     static func == (lhs: TodoTask, rhs: TodoTask) -> Bool {
         lhs.id == rhs.id &&
@@ -227,6 +325,28 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.totalTrackedTime == rhs.totalTrackedTime &&
         lhs.lastTrackedDate == rhs.lastTrackedDate &&
         lhs.hasNotification == rhs.hasNotification &&
-        lhs.notificationId == rhs.notificationId
+        lhs.notificationId == rhs.notificationId &&
+        lhs.timeScope == rhs.timeScope &&
+        lhs.scopeStartDate == rhs.scopeStartDate &&
+        lhs.scopeEndDate == rhs.scopeEndDate
+    }
+}
+
+// MARK: - Calendar Extensions
+extension Calendar {
+    func startOfWeek(for date: Date) -> Date {
+        let components = dateComponents([.calendar, .yearForWeekOfYear, .weekOfYear], from: date)
+        return self.date(from: components) ?? date
+    }
+}
+
+// MARK: - Codable Support for TodoTask
+extension TodoTask {
+    private enum CodingKeys: String, CodingKey {
+        case id, name, description, location, startTime, hasSpecificTime, duration, hasDuration
+        case category, priority, icon, recurrence, pomodoroSettings, completions, subtasks
+        case completionDates, creationDate, lastModifiedDate, hasRewardPoints, rewardPoints
+        case totalTrackedTime, lastTrackedDate, hasNotification, notificationId
+        case timeScope, scopeStartDate, scopeEndDate
     }
 }

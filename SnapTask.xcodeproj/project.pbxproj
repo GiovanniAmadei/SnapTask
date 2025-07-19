@@ -903,7 +903,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SnapTask/Info.plist;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
-				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Pro Alpha";
+				INFOPLIST_KEY_CFBundleDisplayName = SnapTask;
 				INFOPLIST_KEY_CFBundleLocalizations = "en it";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "SnapTask needs write access to your calendar to create and update calendar events for your tasks";
@@ -939,7 +939,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SnapTask/Info.plist;
 				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
-				INFOPLIST_KEY_CFBundleDisplayName = "SnapTask Pro Alpha";
+				INFOPLIST_KEY_CFBundleDisplayName = SnapTask;
 				INFOPLIST_KEY_CFBundleLocalizations = "en it";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "SnapTask needs write access to your calendar to create and update calendar events for your tasks";

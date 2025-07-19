@@ -3,98 +3,116 @@ import SwiftUI
 struct WelcomeView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var currentStep = 0
     @State private var showingContent = false
+    @State private var showingPaywall = false
     
-    private let steps = [
-        WelcomeStep(
-            icon: "heart.fill",
-            title: "welcome_title_1".localized,
-            subtitle: "welcome_subtitle_1".localized,
-            description: "welcome_description_1".localized,
-            color: .pink
-        ),
-        WelcomeStep(
-            icon: "sparkles",
-            title: "welcome_title_2".localized,
-            subtitle: "welcome_subtitle_2".localized,
-            description: "welcome_description_2".localized,
+    private let onboardingSteps = [
+        OnboardingStep(
+            icon: "checkmark.circle.fill",
+            title: "onboarding_title_1".localized,
+            subtitle: "onboarding_subtitle_1".localized,
+            description: "onboarding_description_1".localized,
             color: .blue
         ),
-        WelcomeStep(
-            icon: "bubble.left.and.bubble.right",
-            title: "welcome_title_3".localized,
-            subtitle: "welcome_subtitle_3".localized,
-            description: "welcome_description_3".localized,
-            color: .orange
+        OnboardingStep(
+            icon: "timer",
+            title: "onboarding_title_2".localized,
+            subtitle: "onboarding_subtitle_2".localized,
+            description: "onboarding_description_2".localized,
+            color: .red
         ),
-        WelcomeStep(
+        OnboardingStep(
             icon: "gift.fill",
-            title: "welcome_title_4".localized,
-            subtitle: "welcome_subtitle_4".localized,
-            description: "welcome_description_4".localized,
+            title: "onboarding_title_3".localized,
+            subtitle: "onboarding_subtitle_3".localized,
+            description: "onboarding_description_3".localized,
             color: .purple
         ),
-        WelcomeStep(
-            icon: "rocket.fill",
-            title: "welcome_title_5".localized,
-            subtitle: "welcome_subtitle_5".localized,
-            description: "welcome_description_5".localized,
+        OnboardingStep(
+            icon: "chart.line.uptrend.xyaxis",
+            title: "onboarding_title_4".localized,
+            subtitle: "onboarding_subtitle_4".localized,
+            description: "onboarding_description_4".localized,
             color: .green
+        ),
+        OnboardingStep(
+            icon: "icloud.fill",
+            title: "onboarding_title_5".localized,
+            subtitle: "onboarding_subtitle_5".localized,
+            description: "onboarding_description_5".localized,
+            color: .orange
         )
     ]
     
     var body: some View {
         ZStack {
-            // Background gradient
             LinearGradient(
                 colors: [
-                    theme.backgroundColor.opacity(0.1),
-                    theme.primaryColor.opacity(0.1),
-                    theme.secondaryColor.opacity(0.1)
+                    theme.backgroundColor.opacity(0.05),
+                    onboardingSteps[currentStep].color.opacity(0.1),
+                    theme.backgroundColor.opacity(0.05)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+            .animation(.easeInOut(duration: 0.8), value: currentStep)
             
             VStack(spacing: 0) {
-                // Progress bar
-                HStack(spacing: 8) {
-                    ForEach(0..<steps.count, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(index <= currentStep ? steps[currentStep].color : theme.borderColor)
-                            .frame(height: 4)
-                            .animation(.easeInOut(duration: 0.3), value: currentStep)
+                HStack(spacing: 6) {
+                    ForEach(0..<onboardingSteps.count, id: \.self) { index in
+                        Circle()
+                            .fill(index <= currentStep ? onboardingSteps[currentStep].color : theme.borderColor)
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(index == currentStep ? 1.3 : 1.0)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: currentStep)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
+                .padding(.top, 60)
                 
                 Spacer()
                 
-                // Main content
                 if showingContent {
-                    VStack(spacing: 32) {
-                        // Icon
-                        Image(systemName: steps[currentStep].icon)
-                            .font(.system(size: 64, weight: .light))
-                            .foregroundColor(steps[currentStep].color)
-                            .transition(.opacity)
+                    VStack(spacing: 40) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        colors: [
+                                            onboardingSteps[currentStep].color.opacity(0.15),
+                                            onboardingSteps[currentStep].color.opacity(0.05)
+                                        ],
+                                        center: .center,
+                                        startRadius: 0,
+                                        endRadius: 80
+                                    )
+                                )
+                                .frame(width: 120, height: 120)
+                                .scaleEffect(showingContent ? 1.0 : 0.8)
+                                .animation(.spring(response: 0.8, dampingFraction: 0.6), value: showingContent)
+                            
+                            Image(systemName: onboardingSteps[currentStep].icon)
+                                .font(.system(size: 48, weight: .medium))
+                                .foregroundColor(onboardingSteps[currentStep].color)
+                                .scaleEffect(showingContent ? 1.0 : 0.5)
+                                .animation(.spring(response: 0.8, dampingFraction: 0.6).delay(0.2), value: showingContent)
+                        }
+                        .transition(.opacity.combined(with: .scale))
                         
-                        // Text content
-                        VStack(spacing: 16) {
-                            Text(steps[currentStep].title)
+                        VStack(spacing: 20) {
+                            Text(onboardingSteps[currentStep].title)
                                 .font(.title.bold())
                                 .themedPrimaryText()
                                 .multilineTextAlignment(.center)
                             
-                            Text(steps[currentStep].subtitle)
-                                .font(.title3.weight(.medium))
-                                .foregroundColor(steps[currentStep].color)
+                            Text(onboardingSteps[currentStep].subtitle)
+                                .font(.title2.weight(.semibold))
+                                .foregroundColor(onboardingSteps[currentStep].color)
                                 .multilineTextAlignment(.center)
                             
-                            Text(steps[currentStep].description)
+                            Text(onboardingSteps[currentStep].description)
                                 .font(.body)
                                 .themedSecondaryText()
                                 .multilineTextAlignment(.center)
@@ -102,113 +120,144 @@ struct WelcomeView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(.horizontal, 32)
-                        .transition(.opacity)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
                     }
                     .id(currentStep)
                 }
                 
                 Spacer()
                 
-                // Action buttons
-                VStack(spacing: 16) {
-                    if currentStep < steps.count - 1 {
+                VStack(spacing: 20) {
+                    if currentStep < onboardingSteps.count - 1 {
                         Button {
-                            withAnimation(.easeInOut(duration: 0.3)) {
+                            withAnimation(.easeInOut(duration: 0.4)) {
                                 currentStep += 1
                             }
                         } label: {
                             HStack {
-                                Text("continue".localized)
-                                    .font(.headline)
+                                Text("onboarding_continue".localized)
+                                    .font(.headline.weight(.semibold))
                                     .foregroundColor(.white)
                                 
                                 Image(systemName: "arrow.right")
-                                    .font(.headline)
+                                    .font(.headline.weight(.semibold))
                                     .foregroundColor(.white)
                             }
                             .frame(maxWidth: .infinity)
-                            .frame(height: 54)
+                            .frame(height: 56)
                             .background(
                                 LinearGradient(
-                                    colors: [steps[currentStep].color, steps[currentStep].color.opacity(0.8)],
+                                    colors: [
+                                        onboardingSteps[currentStep].color,
+                                        onboardingSteps[currentStep].color.opacity(0.8)
+                                    ],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                             .cornerRadius(16)
+                            .shadow(color: onboardingSteps[currentStep].color.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
+                        .scaleEffect(showingContent ? 1.0 : 0.9)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4), value: showingContent)
                     } else {
                         Button {
-                            UserDefaults.standard.set(true, forKey: "hasShownWelcome")
-                            dismiss()
+                            showingPaywall = true
                         } label: {
                             HStack {
-                                Text("start_using_app".localized)
-                                    .font(.headline)
+                                Image(systemName: "crown.fill")
+                                    .font(.headline.weight(.semibold))
                                     .foregroundColor(.white)
                                 
-                                Image(systemName: "checkmark")
-                                    .font(.headline)
+                                Text("onboarding_unlock_potential".localized)
+                                    .font(.headline.weight(.semibold))
                                     .foregroundColor(.white)
                             }
                             .frame(maxWidth: .infinity)
-                            .frame(height: 54)
+                            .frame(height: 56)
                             .background(
                                 LinearGradient(
-                                    colors: [Color.green, Color.green.opacity(0.8)],
+                                    colors: [.purple, .pink],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                             .cornerRadius(16)
+                            .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
+                        .scaleEffect(showingContent ? 1.0 : 0.9)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4), value: showingContent)
                     }
                     
-                    Group {
+                    HStack {
                         if currentStep > 0 {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.3)) {
                                     currentStep -= 1
                                 }
                             } label: {
-                                Text("back".localized)
-                                    .font(.body.weight(.medium))
-                                    .themedSecondaryText()
+                                HStack {
+                                    Image(systemName: "chevron.left")
+                                        .font(.subheadline.weight(.medium))
+                                    Text("Indietro")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundColor(theme.secondaryTextColor)
                             }
-                        } else {
-                            // Spazio vuoto per mantenere l'altezza costante
-                            Text("")
-                                .font(.body.weight(.medium))
-                                .opacity(0)
+                        }
+                        
+                        Spacer()
+                        
+                        if currentStep < onboardingSteps.count - 1 {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.4)) {
+                                    currentStep = onboardingSteps.count - 1
+                                }
+                            } label: {
+                                Text("onboarding_skip".localized)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(theme.secondaryTextColor)
+                            }
                         }
                     }
-                    
-                    // Skip button
-                    if currentStep < steps.count - 1 {
-                        Button {
-                            UserDefaults.standard.set(true, forKey: "hasShownWelcome")
-                            dismiss()
-                        } label: {
-                            Text("skip_intro".localized)
-                                .font(.footnote)
-                                .themedSecondaryText()
-                        }
-                        .padding(.top, 8)
-                    }
+                    .padding(.horizontal, 8)
+                    .opacity(showingContent ? 1.0 : 0.0)
+                    .animation(.easeInOut(duration: 0.4).delay(0.6), value: showingContent)
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                .padding(.bottom, 50)
             }
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.6).delay(0.2)) {
+            withAnimation(.easeInOut(duration: 0.8).delay(0.3)) {
                 showingContent = true
             }
         }
+        .onChange(of: currentStep) { oldValue, newValue in
+            if newValue == onboardingSteps.count - 1 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showingPaywall = true
+                }
+            }
+        }
+        .sheet(isPresented: $showingPaywall) {
+            PremiumPaywallView()
+                .onDisappear {
+                    completeOnboarding()
+                }
+        }
+        .task {
+            await subscriptionManager.loadProducts()
+        }
+    }
+    
+    private func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: "hasShownWelcome")
+        dismiss()
     }
 }
 
-struct WelcomeStep {
+struct OnboardingStep {
     let icon: String
     let title: String
     let subtitle: String
