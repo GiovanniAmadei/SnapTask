@@ -310,7 +310,12 @@ class TaskFormViewModel: ObservableObject {
             scopeEndDate = nil
         case .week:
             let weekStart = Calendar.current.startOfWeek(for: selectedWeekDate)
-            taskStartTime = weekStart
+            // Use specific time if set, otherwise use week start
+            taskStartTime = hasSpecificTime ? 
+                Calendar.current.date(bySettingHour: Calendar.current.component(.hour, from: startDate), 
+                                    minute: Calendar.current.component(.minute, from: startDate), 
+                                    second: 0, 
+                                    of: weekStart) ?? weekStart : weekStart
             scopeStartDate = weekStart
             scopeEndDate = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)
         case .month:
@@ -320,7 +325,12 @@ class TaskFormViewModel: ObservableObject {
             components.month = selectedMonth
             components.day = 1
             let monthStart = calendar.date(from: components) ?? Date()
-            taskStartTime = monthStart
+            // Use specific time if set, otherwise use month start
+            taskStartTime = hasSpecificTime ? 
+                calendar.date(bySettingHour: calendar.component(.hour, from: startDate), 
+                            minute: calendar.component(.minute, from: startDate), 
+                            second: 0, 
+                            of: monthStart) ?? monthStart : monthStart
             scopeStartDate = monthStart
             let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart)
             scopeEndDate = calendar.date(byAdding: .day, value: -1, to: monthEnd!)
@@ -331,7 +341,12 @@ class TaskFormViewModel: ObservableObject {
             components.month = 1
             components.day = 1
             let yearStart = calendar.date(from: components) ?? Date()
-            taskStartTime = yearStart
+            // Use specific time if set, otherwise use year start
+            taskStartTime = hasSpecificTime ? 
+                calendar.date(bySettingHour: calendar.component(.hour, from: startDate), 
+                            minute: calendar.component(.minute, from: startDate), 
+                            second: 0, 
+                            of: yearStart) ?? yearStart : yearStart
             scopeStartDate = yearStart
             var endComponents = DateComponents()
             endComponents.year = selectedYear
@@ -339,7 +354,7 @@ class TaskFormViewModel: ObservableObject {
             endComponents.day = 31
             scopeEndDate = calendar.date(from: endComponents)
         case .longTerm:
-            taskStartTime = Calendar.current.startOfDay(for: startDate)
+            taskStartTime = hasSpecificTime ? startDate : Calendar.current.startOfDay(for: startDate)
             scopeStartDate = nil
             scopeEndDate = nil
         }
@@ -352,7 +367,7 @@ class TaskFormViewModel: ObservableObject {
             description: description.isEmpty ? nil : description,
             location: location,
             startTime: taskStartTime,
-            hasSpecificTime: hasSpecificTime && selectedTimeScope == .today,
+            hasSpecificTime: hasSpecificTime,
             duration: duration,
             hasDuration: hasDuration,
             category: selectedCategory,
@@ -363,7 +378,7 @@ class TaskFormViewModel: ObservableObject {
             subtasks: subtasks,
             hasRewardPoints: hasRewardPoints,
             rewardPoints: rewardPoints,
-            hasNotification: hasNotification && selectedTimeScope == .today,
+            hasNotification: hasNotification,
             timeScope: selectedTimeScope,
             scopeStartDate: scopeStartDate,
             scopeEndDate: scopeEndDate

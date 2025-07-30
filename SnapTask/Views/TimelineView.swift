@@ -528,9 +528,9 @@ struct EnhancedTimelineTaskView: View {
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
     private var isCompleted: Bool {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
-        if let completion = task.completions[startOfDay] {
+        
+        let completionDate = task.completionKey(for: viewModel.selectedDate)
+        if let completion = task.completions[completionDate] {
             return completion.isCompleted
         }
         return false
@@ -784,7 +784,7 @@ struct TimelineHeaderView: View {
                                             .font(.system(size: 14, weight: .medium))
                                         
                                         Text(scope.rawValue)
-                                            .font(.subheadline.weight(.medium))
+                                            .font(.subheadline)
                                         
                                         Spacer()
                                         
@@ -969,7 +969,7 @@ struct TaskListView: View {
     
     var body: some View {
         ZStack {
-            if viewModel.tasksForSelectedDate().isEmpty {
+            if viewModel.tasks.isEmpty {
                 // Empty state
                 VStack(spacing: 20) {
                     Image(systemName: "calendar.badge.plus")
@@ -1027,7 +1027,7 @@ struct TaskListView: View {
                     .padding(.horizontal, 4)
                     .padding(.bottom, 100)
                     .padding(.top, 8)
-                    .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasksForSelectedDate().map { $0.id })
+                    .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
                 }
                 .refreshable {
                     await performCloudKitSync()
@@ -1306,9 +1306,9 @@ private struct TimelineTaskCard: View {
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
     private var isCompleted: Bool {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
-        if let completion = task.completions[startOfDay] {
+        
+        let completionDate = task.completionKey(for: viewModel.selectedDate)
+        if let completion = task.completions[completionDate] {
             return completion.isCompleted
         }
         return false
@@ -1316,17 +1316,17 @@ private struct TimelineTaskCard: View {
 
     private var completionProgress: Double {
         guard !task.subtasks.isEmpty else { return isCompleted ? 1.0 : 0.0 }
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
-        let completion = task.completions[startOfDay]
+        
+        let completionDate = task.completionKey(for: viewModel.selectedDate)
+        let completion = task.completions[completionDate]
         let completedCount = completion?.completedSubtasks.count ?? 0
         return Double(completedCount) / Double(task.subtasks.count)
     }
 
     private var completedSubtasks: Set<UUID> {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
-        return task.completions[startOfDay]?.completedSubtasks ?? []
+        
+        let completionDate = task.completionKey(for: viewModel.selectedDate)
+        return task.completions[completionDate]?.completedSubtasks ?? []
     }
 
     private var currentStreak: Int {
@@ -1879,9 +1879,9 @@ struct CompactTimelineTaskView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: viewModel.selectedDate)
-        if let completion = task.completions[startOfDay] {
+        
+        let completionDate = task.completionKey(for: viewModel.selectedDate)
+        if let completion = task.completions[completionDate] {
             return completion.isCompleted
         }
         return false

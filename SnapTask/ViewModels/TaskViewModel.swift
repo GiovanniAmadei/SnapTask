@@ -13,22 +13,22 @@ class TaskViewModel: ObservableObject {
     
     func toggleCompletion(for task: TodoTask, on date: Date) {
         var updatedTask = task
-        let startOfDay = date.startOfDay
+        let completionDate = updatedTask.completionKey(for: date)
         
-        if let completion = updatedTask.completions[startOfDay]?.isCompleted {
-            updatedTask.completions[startOfDay]?.isCompleted = !completion
+        if let completion = updatedTask.completions[completionDate]?.isCompleted {
+            updatedTask.completions[completionDate]?.isCompleted = !completion
             
             if !completion {
-                if !updatedTask.completionDates.contains(startOfDay) {
-                    updatedTask.completionDates.append(startOfDay)
+                if !updatedTask.completionDates.contains(completionDate) {
+                    updatedTask.completionDates.append(completionDate)
                 }
             } else {
-                updatedTask.completionDates.removeAll { $0 == startOfDay }
+                updatedTask.completionDates.removeAll { $0 == completionDate }
             }
         } else {
-            updatedTask.completions[startOfDay] = TaskCompletion(isCompleted: true)
-            if !updatedTask.completionDates.contains(startOfDay) {
-                updatedTask.completionDates.append(startOfDay)
+            updatedTask.completions[completionDate] = TaskCompletion(isCompleted: true)
+            if !updatedTask.completionDates.contains(completionDate) {
+                updatedTask.completionDates.append(completionDate)
             }
         }
         

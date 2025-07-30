@@ -276,12 +276,12 @@ class TaskManager: ObservableObject {
         
         if let index = tasks.firstIndex(where: { $0.id == taskId }) {
             var task = tasks[index]
-            let calendar = Calendar.current
-            let targetDate = calendar.startOfDay(for: date)
+            let targetDate = task.completionKey(for: date)
             
             print(" [DEBUG] ==========================================")
             print(" [DEBUG] Updating task rating for '\(task.name)' on \(targetDate)")
             print(" [DEBUG] Task ID: \(taskId.uuidString.prefix(8))")
+            print(" [DEBUG] Task timeScope: \(task.timeScope.rawValue)")
             print(" [DEBUG] Total completions in task: \(task.completions.count)")
             
             // Log all existing completions
@@ -469,18 +469,19 @@ class TaskManager: ObservableObject {
         
         if let index = tasks.firstIndex(where: { $0.id == taskId }) {
             var task = tasks[index]
-            let startOfDay = Calendar.current.startOfDay(for: date)
+            let completionDate = task.completionKey(for: date)
             
-            print("🔄 Toggling task completion for '\(task.name)' on \(startOfDay)")
+            print("🔄 Toggling task completion for '\(task.name)' on \(completionDate)")
             print("📍 Task ID: \(taskId.uuidString.prefix(8))")
+            print("📅 Task timeScope: \(task.timeScope.rawValue)")
             
-            let currentCompletion = task.completions[startOfDay]
+            let currentCompletion = task.completions[completionDate]
             let wasCompleted = currentCompletion?.isCompleted ?? false
             let isCompleting = !wasCompleted
             
             print("📊 Was completed: \(wasCompleted), Is completing: \(isCompleting)")
             
-            let pointsAlreadyAwarded = task.completionDates.contains(startOfDay)
+            let pointsAlreadyAwarded = task.completionDates.contains(completionDate)
             
             print("📊 Was completed: \(wasCompleted), Is completing: \(isCompleting)")
             print("🎯 Points already awarded: \(pointsAlreadyAwarded)")
@@ -508,16 +509,16 @@ class TaskManager: ObservableObject {
                 print("❌ Unmarked all subtasks")
             }
             
-            task.completions[startOfDay] = completion
+            task.completions[completionDate] = completion
             
             if completion.isCompleted {
-                if !task.completionDates.contains(startOfDay) {
-                    task.completionDates.append(startOfDay)
-                    print("📅 Added completion date: \(startOfDay)")
+                if !task.completionDates.contains(completionDate) {
+                    task.completionDates.append(completionDate)
+                    print("📅 Added completion date: \(completionDate)")
                 }
             } else {
-                task.completionDates.removeAll { $0 == startOfDay }
-                print("📅 Removed completion date: \(startOfDay)")
+                task.completionDates.removeAll { $0 == completionDate }
+                print("📅 Removed completion date: \(completionDate)")
             }
             
             if task.hasRewardPoints && task.subtasks.isEmpty {
@@ -568,11 +569,12 @@ class TaskManager: ObservableObject {
         guard let taskIndex = tasks.firstIndex(where: { $0.id == taskId }) else { return }
         
         var task = tasks[taskIndex]
-        let startOfDay = Calendar.current.startOfDay(for: date)
+        let completionDate = task.completionKey(for: date)
         
-        print("🔄 Toggling subtask for \(task.name) on \(startOfDay)")
+        print("🔄 Toggling subtask for \(task.name) on \(completionDate)")
+        print("📅 Task timeScope: \(task.timeScope.rawValue)")
         
-        var completion = task.completions[startOfDay] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
+        var completion = task.completions[completionDate] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
         
         let wasCompleted = completion.completedSubtasks.contains(subtaskId)
         
@@ -584,7 +586,7 @@ class TaskManager: ObservableObject {
             completion.completedSubtasks.insert(subtaskId)
         }
         
-        task.completions[startOfDay] = completion
+        task.completions[completionDate] = completion
         
         if let subtaskIndex = task.subtasks.firstIndex(where: { $0.id == subtaskId }) {
             task.subtasks[subtaskIndex].isCompleted = !wasCompleted
@@ -601,7 +603,7 @@ class TaskManager: ObservableObject {
                 subtask.id == subtaskId ? wasCompleted : completion.completedSubtasks.contains(subtask.id)
             }
             
-            let pointsAlreadyAwarded = task.completionDates.contains(startOfDay)
+            let pointsAlreadyAwarded = task.completionDates.contains(completionDate)
             
             print("📊 All subtasks completed: \(allSubtasksCompleted), Was all completed: \(wasAllCompleted)")
             print("🎯 Points already awarded: \(pointsAlreadyAwarded)")
@@ -627,15 +629,15 @@ class TaskManager: ObservableObject {
             if shouldAutoComplete {
                 if allSubtasksCompleted && !wasAllCompleted {
                     completion.isCompleted = true
-                    task.completions[startOfDay] = completion
-                    if !task.completionDates.contains(startOfDay) {
-                        task.completionDates.append(startOfDay)
+                    task.completions[completionDate] = completion
+                    if !task.completionDates.contains(completionDate) {
+                        task.completionDates.append(completionDate)
                     }
                     print("✅ Auto-completed task - all subtasks done")
                 } else if !allSubtasksCompleted && wasAllCompleted {
                     completion.isCompleted = false
-                    task.completions[startOfDay] = completion
-                    task.completionDates.removeAll { $0 == startOfDay }
+                    task.completions[completionDate] = completion
+                    task.completionDates.removeAll { $0 == completionDate }
                     print("❌ Auto-uncompleted task - not all subtasks done")
                 }
             }

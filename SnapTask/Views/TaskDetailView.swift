@@ -25,8 +25,12 @@ struct TaskDetailView: View {
         return calendar.startOfDay(for: fixedDate)
     }
     
+    private var completionKey: Date {
+        return localTask?.completionKey(for: fixedDate) ?? effectiveDate
+    }
+    
     private var isCompleted: Bool {
-        return localTask?.completions[effectiveDate]?.isCompleted == true
+        return localTask?.completions[completionKey]?.isCompleted == true
     }
     
     init(taskId: UUID, targetDate: Date? = nil) {
@@ -112,7 +116,7 @@ struct TaskDetailView: View {
                 DurationPickerView(
                     duration: Binding(
                         get: { 
-                            return task.completions[effectiveDate]?.actualDuration ?? 0 
+                            return task.completions[completionKey]?.actualDuration ?? 0 
                         },
                         set: { newDuration in
                             updateLocalTaskRating(actualDuration: newDuration, updateDuration: true)
@@ -147,7 +151,7 @@ struct TaskDetailView: View {
         guard var task = localTask else { return }
         
         // Get or create completion for this specific date
-        var completion = task.completions[effectiveDate] ?? TaskCompletion(
+        var completion = task.completions[completionKey] ?? TaskCompletion(
             isCompleted: false,
             completedSubtasks: [],
             actualDuration: nil,
@@ -180,7 +184,7 @@ struct TaskDetailView: View {
         }
         
         // Update the completion in the local task
-        task.completions[effectiveDate] = completion
+        task.completions[completionKey] = completion
         task.lastModifiedDate = Date()
         
         // Save to local state immediately
@@ -191,7 +195,7 @@ struct TaskDetailView: View {
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
                 actualDuration: actualDuration, 
-                for: effectiveDate
+                for: fixedDate
             )
         }
         
@@ -199,7 +203,7 @@ struct TaskDetailView: View {
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
                 difficultyRating: difficultyRating, 
-                for: effectiveDate
+                for: fixedDate
             )
         }
         
@@ -207,7 +211,7 @@ struct TaskDetailView: View {
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
                 qualityRating: qualityRating, 
-                for: effectiveDate
+                for: fixedDate
             )
         }
         
@@ -215,7 +219,7 @@ struct TaskDetailView: View {
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
                 notes: notes, 
-                for: effectiveDate
+                for: fixedDate
             )
         }
     }
@@ -360,6 +364,56 @@ struct TaskDetailView: View {
         .padding(.bottom, 120)
     }
     
+    private func scheduleCard(_ task: TodoTask) -> some View {
+        DetailCard(icon: "clock", title: "Schedule", color: Color.orange) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Prima riga: mostra sempre il periodo/scope della task
+                HStack {
+                    Text("Period")
+                        .font(.subheadline.weight(.medium))
+                        .themedSecondaryText()
+                    Spacer()
+                    Text(task.displayPeriod)
+                        .font(.subheadline)
+                        .themedPrimaryText()
+                }
+                
+                // Seconda riga: mostra il tempo specifico se disponibile
+                if task.hasSpecificTime {
+                    HStack {
+                        Text("Start Time")
+                            .font(.subheadline.weight(.medium))
+                            .themedSecondaryText()
+                        Spacer()
+                        Text(task.startTime.formatted(date: .omitted, time: .shortened))
+                            .font(.subheadline)
+                            .themedPrimaryText()
+                    }
+                }
+                
+                // Notification status (read-only display)
+                if task.hasNotification {
+                    HStack {
+                        Text("Notification")
+                            .font(.subheadline.weight(.medium))
+                            .themedSecondaryText()
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                            Text("Enabled")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+                
+                durationSection(task)
+            }
+        }
+    }
+    
     private func descriptionCard(_ description: String) -> some View {
         DetailCard(icon: "doc.text", title: "Description", color: .blue) {
             Text(description)
@@ -397,66 +451,10 @@ struct TaskDetailView: View {
         }
     }
     
-    private func scheduleCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "clock", title: "Schedule", color: Color.orange) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Start Time")
-                        .font(.subheadline.weight(.medium))
-                        .themedSecondaryText()
-                    Spacer()
-                    Text(task.startTime.formatted(date: .abbreviated, time: .shortened))
-                        .font(.subheadline)
-                        .themedPrimaryText()
-                }
-                
-                // Notification toggle (only if has specific time)
-                if task.hasSpecificTime {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Notification")
-                                .font(.subheadline.weight(.medium))
-                                .themedSecondaryText()
-                            
-                            if !taskNotificationManager.areNotificationsEnabled {
-                                Text("notifications_not_available".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                            } else if taskNotificationManager.authorizationStatus == .denied {
-                                Text("notifications_denied".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                            } else {
-                                Text(task.hasNotification ? "notification_enabled".localized : "notification_disabled".localized)
-                                    .font(.caption)
-                                    .themedSecondaryText()
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        Toggle("", isOn: Binding(
-                            get: { task.hasNotification },
-                            set: { newValue in
-                                Task {
-                                    await TaskManager.shared.toggleTaskNotification(for: task.id)
-                                }
-                            }
-                        ))
-                        .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-                        .disabled(!taskNotificationManager.areNotificationsEnabled || taskNotificationManager.authorizationStatus == .denied)
-                    }
-                }
-                
-                durationSection(task)
-            }
-        }
-    }
-    
     private func durationSection(_ task: TodoTask) -> some View {
-        let hasActualDuration = task.completions[effectiveDate]?.actualDuration != nil
+        let hasActualDuration = task.completions[completionKey]?.actualDuration != nil
         let hasEstimatedDuration = task.hasDuration
-        let actualDuration = task.completions[effectiveDate]?.actualDuration
+        let actualDuration = task.completions[completionKey]?.actualDuration
         let estimatedDuration = task.duration
         
         return Group {
@@ -634,7 +632,7 @@ struct TaskDetailView: View {
     
     private func subtaskRow(_ task: TodoTask, _ subtask: Subtask) -> some View {
         HStack {
-            let isCompleted = task.completions[effectiveDate]?.completedSubtasks.contains(subtask.id) == true
+            let isCompleted = task.completions[completionKey]?.completedSubtasks.contains(subtask.id) == true
             
             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 16))
@@ -729,7 +727,7 @@ struct TaskDetailView: View {
         DetailCard(icon: "note.text", title: "Notes", color: .purple) {
             TaskNotesSection(
                 notes: Binding(
-                    get: { task.completions[effectiveDate]?.notes ?? "" },
+                    get: { task.completions[completionKey]?.notes ?? "" },
                     set: { newValue in
                         updateLocalTaskRating(notes: newValue, updateNotes: true)
                     }
@@ -790,7 +788,7 @@ struct TaskDetailView: View {
     
     private func completeButton(_ task: TodoTask) -> some View {
         Button(action: {
-            TaskManager.shared.toggleTaskCompletion(task.id, on: effectiveDate)
+            TaskManager.shared.toggleTaskCompletion(task.id, on: fixedDate)
         }) {
             HStack(spacing: 8) {
                 Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
@@ -868,7 +866,7 @@ struct TaskDetailView: View {
                         
                         Spacer()
                         
-                        if let difficultyRating = task.completions[effectiveDate]?.difficultyRating, difficultyRating > 0 {
+                        if let difficultyRating = task.completions[completionKey]?.difficultyRating, difficultyRating > 0 {
                             Button("Clear") {
                                 updateLocalTaskRating(difficultyRating: 0, updateDifficulty: true)
                             }
@@ -884,7 +882,7 @@ struct TaskDetailView: View {
                     
                     DifficultyRatingView(
                         rating: Binding(
-                            get: { task.completions[effectiveDate]?.difficultyRating ?? 0 },
+                            get: { task.completions[completionKey]?.difficultyRating ?? 0 },
                             set: { newValue in
                                 updateLocalTaskRating(difficultyRating: newValue == 0 ? nil : newValue, updateDifficulty: true)
                             }
@@ -903,7 +901,7 @@ struct TaskDetailView: View {
                         Spacer()
 
                         
-                        if let qualityRating = task.completions[effectiveDate]?.qualityRating, qualityRating > 0 {
+                        if let qualityRating = task.completions[completionKey]?.qualityRating, qualityRating > 0 {
                             Button("Clear") {
                                 updateLocalTaskRating(qualityRating: 0, updateQuality: true)
                             }
@@ -919,7 +917,7 @@ struct TaskDetailView: View {
                     
                     QualityRatingView(
                         rating: Binding(
-                            get: { task.completions[effectiveDate]?.qualityRating ?? 0 },
+                            get: { task.completions[completionKey]?.qualityRating ?? 0 },
                             set: { newValue in
                                 updateLocalTaskRating(qualityRating: newValue, updateQuality: true)
                             }

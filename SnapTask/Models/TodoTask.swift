@@ -153,22 +153,25 @@ struct TodoTask: Identifiable, Codable, Equatable {
         case .today:
             return calendar.isDate(startTime, inSameDayAs: date)
         case .week:
-            if let scopeStart = scopeStartDate {
-                let weekStart = calendar.startOfWeek(for: scopeStart)
-                let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
-                let targetWeekStart = calendar.startOfWeek(for: date)
-                return calendar.isDate(weekStart, inSameDayAs: targetWeekStart)
+            if let scopeStart = scopeStartDate, let scopeEnd = scopeEndDate {
+                // Check if the date falls within the specific week range of this task
+                return date >= scopeStart && date <= scopeEnd
             }
+            // Fallback: check if it's the same day (shouldn't happen for week tasks)
             return calendar.isDate(startTime, inSameDayAs: date)
         case .month:
-            if let scopeStart = scopeStartDate {
-                return calendar.isDate(scopeStart, equalTo: date, toGranularity: .month)
+            if let scopeStart = scopeStartDate, let scopeEnd = scopeEndDate {
+                // Check if the date falls within the specific month range of this task
+                return date >= scopeStart && date <= scopeEnd
             }
+            // Fallback: check same month/year
             return calendar.isDate(startTime, equalTo: date, toGranularity: .month)
         case .year:
-            if let scopeStart = scopeStartDate {
-                return calendar.isDate(scopeStart, equalTo: date, toGranularity: .year)
+            if let scopeStart = scopeStartDate, let scopeEnd = scopeEndDate {
+                // Check if the date falls within the specific year range of this task
+                return date >= scopeStart && date <= scopeEnd
             }
+            // Fallback: check same year
             return calendar.isDate(startTime, equalTo: date, toGranularity: .year)
         case .longTerm:
             return true // Always show long-term tasks
@@ -329,6 +332,34 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.timeScope == rhs.timeScope &&
         lhs.scopeStartDate == rhs.scopeStartDate &&
         lhs.scopeEndDate == rhs.scopeEndDate
+    }
+    
+    // MARK: - Completion Key Helper
+    func completionKey(for date: Date) -> Date {
+        let calendar = Calendar.current
+        
+        switch timeScope {
+        case .today:
+            return calendar.startOfDay(for: date)
+        case .week:
+            if let scopeStart = scopeStartDate {
+                return calendar.startOfWeek(for: scopeStart)
+            }
+            return calendar.startOfWeek(for: date)
+        case .month:
+            if let scopeStart = scopeStartDate {
+                return calendar.dateInterval(of: .month, for: scopeStart)?.start ?? calendar.startOfDay(for: scopeStart)
+            }
+            return calendar.dateInterval(of: .month, for: date)?.start ?? calendar.startOfDay(for: date)
+        case .year:
+            if let scopeStart = scopeStartDate {
+                return calendar.dateInterval(of: .year, for: scopeStart)?.start ?? calendar.startOfDay(for: scopeStart)
+            }
+            return calendar.dateInterval(of: .year, for: date)?.start ?? calendar.startOfDay(for: date)
+        case .longTerm:
+            // Per obiettivi a lungo termine, usiamo una data fissa per permettere un singolo completamento
+            return calendar.startOfDay(for: startTime)
+        }
     }
 }
 

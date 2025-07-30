@@ -271,8 +271,8 @@ struct TaskFormView: View {
                                         insertion: .opacity,
                                         removal: .opacity.animation(.easeInOut(duration: 0.3))
                                     ))
-
-                                    // Notification toggle (only if has specific time and notifications are enabled globally)
+                                    
+                                    // Notification toggle (available for all tasks with specific time)
                                     if taskNotificationManager.areNotificationsEnabled {
                                         HStack {
                                             VStack(alignment: .leading, spacing: 4) {
@@ -448,6 +448,53 @@ struct TaskFormView: View {
                                             insertion: .opacity,
                                             removal: .opacity.animation(.easeInOut(duration: 0.3))
                                         ))
+                                        
+                                        // Notification toggle (available for all tasks with specific time)
+                                        if taskNotificationManager.areNotificationsEnabled {
+                                            HStack {
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text("enable_notification".localized)
+                                                        .font(.subheadline.weight(.medium))
+                                                        .themedPrimaryText()
+                                                    Text("notification_scheduled".localized)
+                                                        .font(.caption)
+                                                        .themedSecondaryText()
+                                                }
+                                                Spacer()
+                                                ModernToggle(isOn: $viewModel.hasNotification)
+                                            }
+                                            .transition(.asymmetric(
+                                                insertion: .opacity,
+                                                removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                            ))
+                                        } else if viewModel.hasNotification {
+                                            // Show notification disabled warning
+                                            HStack {
+                                                Image(systemName: "exclamationmark.triangle.fill")
+                                                    .foregroundColor(.orange)
+                                                    .font(.system(size: 14))
+                                                
+                                                Text("notifications_not_available".localized)
+                                                    .font(.caption)
+                                                    .themedSecondaryText()
+                                                
+                                                Spacer()
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(.orange.opacity(0.1))
+                                            )
+                                            .onAppear {
+                                                // Auto-disable notification if not available
+                                                viewModel.hasNotification = false
+                                            }
+                                            .transition(.asymmetric(
+                                                insertion: .opacity,
+                                                removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                            ))
+                                        }
                                     }
                                 }
                                 .transition(.asymmetric(

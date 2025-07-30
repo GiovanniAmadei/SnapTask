@@ -135,6 +135,9 @@ class TimelineViewModel: ObservableObject {
         // Observe selected date and scope changes
         $selectedDate
             .combineLatest($selectedTimeScope)
+            .combineLatest($currentWeek)
+            .combineLatest($currentMonth)
+            .combineLatest($currentYear)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateMonthYearString()
@@ -172,18 +175,31 @@ class TimelineViewModel: ObservableObject {
     private func filteredTasksForScope() -> [TodoTask] {
         let allTasks = taskManager.tasks
         
+        print("=== FILTERING TASKS FOR SCOPE: \(selectedTimeScope) ===")
+        print("Total tasks available: \(allTasks.count)")
+        
+        let filtered: [TodoTask]
+        
         switch selectedTimeScope {
         case .today:
-            return tasksForDay(selectedDate, from: allTasks)
+            filtered = tasksForDay(selectedDate, from: allTasks)
         case .week:
-            return tasksForWeek(currentWeek, from: allTasks)
+            filtered = tasksForWeek(currentWeek, from: allTasks)
         case .month:
-            return tasksForMonth(currentMonth, from: allTasks)
+            filtered = tasksForMonth(currentMonth, from: allTasks)
         case .year:
-            return tasksForYear(currentYear, from: allTasks)
+            filtered = tasksForYear(currentYear, from: allTasks)
         case .longTerm:
-            return longTermTasks(from: allTasks)
+            filtered = longTermTasks(from: allTasks)
         }
+        
+        print("Final filtered tasks count: \(filtered.count)")
+        for task in filtered {
+            print("- \(task.name) (\(task.timeScope))")
+        }
+        print("=== END FILTERING ===")
+        
+        return filtered
     }
     
     private func tasksForDay(_ date: Date, from tasks: [TodoTask]) -> [TodoTask] {
@@ -191,37 +207,110 @@ class TimelineViewModel: ObservableObject {
         return tasks.filter { task in
             // Tasks with .today scope for this specific date
             if task.timeScope == .today {
-                return calendar.isDate(task.startTime, inSameDayAs: date) || task.shouldShow(for: date, scope: .today)
+                // For daily tasks, check both direct date match and recurrence
+                if task.recurrence != nil {
+                    // For recurring daily tasks, use the existing recurrence logic
+                    return calendar.isDate(task.startTime, inSameDayAs: date) || task.shouldShow(for: date, scope: .today)
+                } else {
+                    // For non-recurring daily tasks, simple date match
+                    return calendar.isDate(task.startTime, inSameDayAs: date)
+                }
             }
             return false
         }
     }
     
     private func tasksForWeek(_ weekStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
-        return tasks.filter { task in
+        let calendar = Calendar.current
+        let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+        
+        print("=== FILTERING WEEK TASKS ===")
+        print("Target week: \(weekStart) to \(weekEnd)")
+        
+        let filteredTasks = tasks.filter { task in
             if task.timeScope == .week {
-                return task.shouldShow(for: weekStart, scope: .week)
+                print("Checking task: \(task.name)")
+                print("  - timeScope: \(task.timeScope)")
+                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
+                print("  - scopeEndDate: \(String(describing: task.scopeEndDate))")
+                print("  - recurrence: \(String(describing: task.recurrence))")
+                
+                // Check if this task belongs to this specific week
+                if let taskScopeStart = task.scopeStartDate, let taskScopeEnd = task.scopeEndDate {
+                    let matches = calendar.isDate(taskScopeStart, inSameDayAs: weekStart) &&
+                                 calendar.isDate(taskScopeEnd, inSameDayAs: weekEnd)
+                    print("  - Week match: \(matches)")
+                    return matches
+                } else {
+                    print("  - Missing scope dates, excluding")
+                    return false
+                }
             }
             return false
         }
+        
+        print("Filtered \(filteredTasks.count) tasks for this week")
+        return filteredTasks
     }
     
     private func tasksForMonth(_ monthStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
-        return tasks.filter { task in
+        let calendar = Calendar.current
+        
+        print("=== FILTERING MONTH TASKS ===")
+        print("Target month: \(monthStart)")
+        
+        let filteredTasks = tasks.filter { task in
             if task.timeScope == .month {
-                return task.shouldShow(for: monthStart, scope: .month)
+                print("Checking task: \(task.name)")
+                print("  - timeScope: \(task.timeScope)")
+                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
+                print("  - recurrence: \(String(describing: task.recurrence))")
+                
+                // Check if this task belongs to this specific month
+                if let taskScopeStart = task.scopeStartDate {
+                    let matches = calendar.isDate(taskScopeStart, equalTo: monthStart, toGranularity: .month)
+                    print("  - Month match: \(matches)")
+                    return matches
+                } else {
+                    print("  - Missing scope start date, excluding")
+                    return false
+                }
             }
             return false
         }
+        
+        print("Filtered \(filteredTasks.count) tasks for this month")
+        return filteredTasks
     }
     
     private func tasksForYear(_ yearStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
-        return tasks.filter { task in
+        let calendar = Calendar.current
+        
+        print("=== FILTERING YEAR TASKS ===")
+        print("Target year: \(yearStart)")
+        
+        let filteredTasks = tasks.filter { task in
             if task.timeScope == .year {
-                return task.shouldShow(for: yearStart, scope: .year)
+                print("Checking task: \(task.name)")
+                print("  - timeScope: \(task.timeScope)")
+                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
+                print("  - recurrence: \(String(describing: task.recurrence))")
+                
+                // Check if this task belongs to this specific year
+                if let taskScopeStart = task.scopeStartDate {
+                    let matches = calendar.isDate(taskScopeStart, equalTo: yearStart, toGranularity: .year)
+                    print("  - Year match: \(matches)")
+                    return matches
+                } else {
+                    print("  - Missing scope start date, excluding")
+                    return false
+                }
             }
             return false
         }
+        
+        print("Filtered \(filteredTasks.count) tasks for this year")
+        return filteredTasks
     }
     
     private func longTermTasks(from tasks: [TodoTask]) -> [TodoTask] {
