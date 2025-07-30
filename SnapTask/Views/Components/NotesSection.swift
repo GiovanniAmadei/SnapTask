@@ -8,14 +8,14 @@ struct TaskNotesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Notes")
+                Text("notes".localized)
                     .font(.subheadline.weight(.medium))
                     .foregroundColor(.secondary)
                 
                 Spacer()
                 
                 if !isEditing && !notes.isEmpty {
-                    Button("Edit") {
+                    Button("edit".localized) {
                         startEditing()
                     }
                     .font(.caption)
@@ -42,7 +42,7 @@ struct TaskNotesSection: View {
                         .frame(minHeight: 80, maxHeight: 120)
                     
                     HStack(spacing: 12) {
-                        Button("Cancel") {
+                        Button("cancel".localized) {
                             cancelEditing()
                         }
                         .font(.subheadline.weight(.medium))
@@ -56,7 +56,7 @@ struct TaskNotesSection: View {
                         
                         Spacer()
                         
-                        Button("Save") {
+                        Button("save".localized) {
                             saveNotes()
                         }
                         .font(.subheadline.weight(.medium))
@@ -79,7 +79,7 @@ struct TaskNotesSection: View {
                                 .font(.system(size: 16))
                                 .foregroundColor(.blue)
                             
-                            Text("Add your thoughts about this completion...")
+                            Text("add_your_thoughts_completion".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                             
@@ -109,7 +109,7 @@ struct TaskNotesSection: View {
                         HStack {
                             Spacer()
                             
-                            Button("Clear") {
+                            Button("clear".localized) {
                                 clearNotes()
                             }
                             .font(.caption)

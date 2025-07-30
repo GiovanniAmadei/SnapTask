@@ -3,14 +3,19 @@ import SwiftUI
 struct WeekdayPicker: View {
     @Binding var selectedDays: Set<Int>
     
-    private let weekdays = [
-        (1, "Sun"), (2, "Mon"), (3, "Tue"),
-        (4, "Wed"), (5, "Thu"), (6, "Fri"), (7, "Sat")
+    private let weekdays: [(Int, String)] = [
+        (1, NSLocalizedString("sunday_short", comment: "Sun")),
+        (2, NSLocalizedString("monday_short", comment: "Mon")),
+        (3, NSLocalizedString("tuesday_short", comment: "Tue")),
+        (4, NSLocalizedString("wednesday_short", comment: "Wed")),
+        (5, NSLocalizedString("thursday_short", comment: "Thu")),
+        (6, NSLocalizedString("friday_short", comment: "Fri")),
+        (7, NSLocalizedString("saturday_short", comment: "Sat"))
     ]
     
     var body: some View {
         VStack(alignment: .leading) {
-            Text("Repeat on")
+            Text("repeat_on".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             

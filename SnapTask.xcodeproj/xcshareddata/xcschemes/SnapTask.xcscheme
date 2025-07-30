@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "ACCAD3E52D37D10500A26002"
+               BlueprintIdentifier = "077E0902895D492899F3A510"
                BuildableName = "SnapTask Pro.app"
                BlueprintName = "SnapTask"
                ReferencedContainer = "container:SnapTask.xcodeproj">
@@ -35,7 +35,7 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "ACCAD3F52D37D10600A26002"
+               BlueprintIdentifier = "2330FD879B154048BAF56383"
                BuildableName = "SnapTaskTests.xctest"
                BlueprintName = "SnapTaskTests"
                ReferencedContainer = "container:SnapTask.xcodeproj">
@@ -68,7 +68,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "ACCAD3E52D37D10500A26002"
+            BlueprintIdentifier = "077E0902895D492899F3A510"
             BuildableName = "SnapTask Pro.app"
             BlueprintName = "SnapTask"
             ReferencedContainer = "container:SnapTask.xcodeproj">
@@ -85,7 +85,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "ACCAD3E52D37D10500A26002"
+            BlueprintIdentifier = "077E0902895D492899F3A510"
             BuildableName = "SnapTask Pro.app"
             BlueprintName = "SnapTask"
             ReferencedContainer = "container:SnapTask.xcodeproj">

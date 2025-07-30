@@ -49,7 +49,7 @@ struct DifficultyRatingView: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 } else {
-                    Text("Tap to rate difficulty")
+                    Text("tap_to_rate_difficulty".localized)
                         .font(.caption2)
                         .foregroundColor(.blue)
                 }
@@ -87,17 +87,17 @@ struct DifficultyRatingView: View {
     private func difficultyDescription(_ level: Int) -> String {
         switch level {
         case 1:
-            return "Very Easy"
+            return "very_easy".localized
         case 2...3:
-            return "Easy"
+            return "easy".localized
         case 4...5:
-            return "Moderate"
+            return "moderate".localized
         case 6...7:
-            return "Challenging"
+            return "challenging".localized
         case 8...9:
-            return "Hard"
+            return "hard".localized
         case 10:
-            return "Extremely Hard"
+            return "extremely_hard".localized
         default:
             return ""
         }

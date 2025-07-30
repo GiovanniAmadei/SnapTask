@@ -20,12 +20,12 @@ struct TrackingModeSelectionView: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                     } else {
-                        Text("Start Focus Session")
+                        Text("start_focus_session".localized)
                             .font(.title2)
                             .fontWeight(.semibold)
                     }
                     
-                    Text("Choose your tracking mode")
+                    Text("choose_tracking_mode".localized)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -85,11 +85,11 @@ struct TrackingModeSelectionView: View {
                 
                 Spacer()
             }
-            .navigationTitle("Select Mode")
+            .navigationTitle("select_mode".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
@@ -139,15 +139,15 @@ struct TrackingModeSelectionView: View {
     private func getCurrentSessionName() -> String {
         if timeTrackerViewModel.hasActiveSession {
             if let taskName = timeTrackerViewModel.currentSession?.taskName {
-                return "Simple Timer: \(taskName)"
+                return "simple_timer".localized + ": \(taskName)"
             } else {
-                return "Simple Timer Session"
+                return "simple_timer_session".localized
             }
         } else if pomodoroViewModel.hasActiveTask {
             if let taskName = pomodoroViewModel.activeTask?.name {
-                return "Pomodoro: \(taskName)"
+                return "pomodoro".localized + ": \(taskName)"
             } else {
-                return "Pomodoro Session"
+                return "pomodoro_session".localized
             }
         }
         return ""

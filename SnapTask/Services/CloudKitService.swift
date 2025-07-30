@@ -47,9 +47,9 @@ class CloudKitService: ObservableObject {
         
         var description: String {
             switch self {
-            case .idle: return "Ready to sync"
-            case .syncing: return "Syncing..."
-            case .success: return "Up to date"
+            case .idle: return "sync_idle".localized
+            case .syncing: return "syncing".localized
+            case .success: return "sync_success".localized
             case .error(let message): return message
             case .disabled: return "Sync disabled"
             }
@@ -1020,7 +1020,7 @@ class CloudKitService: ObservableObject {
         let record = CKRecord(recordType: taskRecordType, recordID: recordID)
         
         // Safely set basic fields
-        record["name"] = task.name.isEmpty ? "Untitled Task" : task.name
+        record["name"] = task.name.isEmpty ? "untitled_task".localized : task.name
         record["taskDescription"] = task.description
         record["startTime"] = task.startTime
         record["hasSpecificTime"] = task.hasSpecificTime
@@ -1434,13 +1434,13 @@ class CloudKitService: ObservableObject {
         case .available:
             syncStatus = .idle
         case .noAccount:
-            syncStatus = .error("No iCloud account")
+            syncStatus = .error("sync_error".localized)
         case .restricted:
-            syncStatus = .error("iCloud restricted")
+            syncStatus = .error("sync_error".localized)
         case .couldNotDetermine:
-            syncStatus = .error("Cannot determine iCloud status")
+            syncStatus = .error("sync_error".localized)
         @unknown default:
-            syncStatus = .error("Unknown iCloud status")
+            syncStatus = .error("sync_error".localized)
         }
     }
     
@@ -1453,17 +1453,17 @@ class CloudKitService: ObservableObject {
         if let ckError = error as? CKError {
             switch ckError.code {
             case .networkFailure, .networkUnavailable:
-                syncStatus = .error("Network error")
+                syncStatus = .error("sync_error".localized)
             case .quotaExceeded:
-                syncStatus = .error("iCloud storage full")
+                syncStatus = .error("sync_error".localized)
             case .notAuthenticated:
-                syncStatus = .error("Authentication failed")
+                syncStatus = .error("sync_error".localized)
             case .zoneNotFound:
-                syncStatus = .error("Zone missing")
+                syncStatus = .error("zone_missing_recreating".localized)
                 try? await ensureZoneExists()
             case .changeTokenExpired:
                 print("⚠️ Change token expired - clearing token and retrying")
-                syncStatus = .error("Sync token expired, retrying...")
+                syncStatus = .error("sync_token_expired".localized)
                 serverChangeToken = nil
                 if syncRetryCount < maxSyncRetries {
                     Task {
@@ -1472,7 +1472,7 @@ class CloudKitService: ObservableObject {
                     }
                 }
             case .serverRecordChanged:
-                syncStatus = .error("Sync conflict")
+                syncStatus = .error("sync_error".localized)
                 // Only retry if under limit
                 if syncRetryCount < maxSyncRetries {
                     Task {
@@ -1484,7 +1484,7 @@ class CloudKitService: ObservableObject {
                 // Handle the "client knowledge differs" error specifically
                 if ckError.localizedDescription.contains("client knowledge differs") {
                     print("⚠️ Client knowledge differs from server - clearing token and retrying")
-                    syncStatus = .error("Sync state mismatch, retrying...")
+                    syncStatus = .error("sync_state_mismatch".localized)
                     serverChangeToken = nil
                     if syncRetryCount < maxSyncRetries {
                         Task {
@@ -1493,11 +1493,11 @@ class CloudKitService: ObservableObject {
                         }
                     }
                 } else {
-                    syncStatus = .error("Sync failed: \(ckError.localizedDescription)")
+                    syncStatus = .error("sync_error".localized)
                 }
             }
         } else {
-            syncStatus = .error("Sync failed")
+            syncStatus = .error("sync_error".localized)
         }
     }
     
@@ -1506,13 +1506,13 @@ class CloudKitService: ObservableObject {
         
         switch error.code {
         case .networkFailure, .networkUnavailable:
-            syncStatus = .error("Network unavailable")
+            syncStatus = .error("sync_error".localized)
         case .quotaExceeded:
-            syncStatus = .error("iCloud storage full")
+            syncStatus = .error("sync_error".localized)
         case .notAuthenticated:
-            syncStatus = .error("Not signed into iCloud")
+            syncStatus = .error("sync_error".localized)
         case .invalidArguments:
-            syncStatus = .error("Invalid data format")
+            syncStatus = .error("sync_error".localized)
         case .serverRecordChanged:
             print("⚠️ Record conflict detected, will retry sync")
             if syncRetryCount < maxSyncRetries {
@@ -1524,9 +1524,9 @@ class CloudKitService: ObservableObject {
         case .unknownItem:
             print("ℹ️ Item already deleted")
         case .constraintViolation:
-            syncStatus = .error("Data constraint violation")
+            syncStatus = .error("sync_error".localized)
         case .zoneNotFound:
-            syncStatus = .error("Zone missing, recreating...")
+            syncStatus = .error("zone_missing_recreating".localized)
             try? await ensureZoneExists()
             if syncRetryCount < maxSyncRetries {
                 Task {
@@ -1535,9 +1535,9 @@ class CloudKitService: ObservableObject {
                 }
             }
         case .limitExceeded:
-            syncStatus = .error("Rate limit exceeded")
+            syncStatus = .error("sync_error".localized)
         default:
-            syncStatus = .error("CloudKit error: \(error.localizedDescription)")
+            syncStatus = .error("sync_error".localized)
         }
     }
     
@@ -1589,7 +1589,7 @@ class CloudKitService: ObservableObject {
     
     private func updateTaskRecord(_ existingRecord: CKRecord, with task: TodoTask) -> CKRecord {
         // Update fields in existing record
-        existingRecord["name"] = task.name.isEmpty ? "Untitled Task" : task.name
+        existingRecord["name"] = task.name.isEmpty ? "untitled_task".localized : task.name
         existingRecord["taskDescription"] = task.description
         existingRecord["startTime"] = task.startTime
         existingRecord["hasSpecificTime"] = task.hasSpecificTime

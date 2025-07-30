@@ -98,7 +98,7 @@ struct TimeTrackingCompletionView: View {
                                     .foregroundColor(.secondary)
                                 
                                 if isEditingDetails {
-                                    TextField("task_name_placeholder".localized, text: $editedTaskName)
+                                    TextField("enter_task_name".localized, text: $editedTaskName)
                                         .textFieldStyle(.roundedBorder)
                                 } else {
                                     HStack {

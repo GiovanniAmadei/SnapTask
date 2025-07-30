@@ -17,12 +17,12 @@ struct TrackingCompletionView: View {
                         .font(.system(size: 60))
                         .foregroundColor(.green)
                     
-                    Text("Session Complete!")
+                    Text("session_complete".localized)
                         .font(.title2)
                         .fontWeight(.semibold)
                     
                     if let session = session {
-                        Text("Tracked \(formatDuration(session.effectiveWorkTime))")
+                        Text(String(format: "tracked_x".localized, formatDuration(session.effectiveWorkTime)))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -32,23 +32,23 @@ struct TrackingCompletionView: View {
                 if let session = session {
                     VStack(spacing: 16) {
                         DetailRow(
-                            title: "Task",
+                            title: "task".localized,
                             value: session.taskName ?? "General Focus"
                         )
                         
                         DetailRow(
-                            title: "Mode",
+                            title: "mode".localized,
                             value: session.mode.displayName
                         )
                         
                         DetailRow(
-                            title: "Effective Time",
+                            title: "effective_time".localized,
                             value: formatDuration(session.effectiveWorkTime)
                         )
                         
                         if session.pausedDuration > 0 {
                             DetailRow(
-                                title: "Paused Time",
+                                title: "paused_time".localized,
                                 value: formatDuration(session.pausedDuration)
                             )
                         }
@@ -62,7 +62,7 @@ struct TrackingCompletionView: View {
                 
                 // Notes Section
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Notes (Optional)")
+                    Text("notes_optional".localized)
                         .font(.headline)
                     
                     TextField("Add notes about this session...", text: $notes, axis: .vertical)
@@ -76,7 +76,7 @@ struct TrackingCompletionView: View {
                 VStack(spacing: 12) {
                     // Save Button
                     Button(action: onSave) {
-                        Text("Save Session")
+                        Text("save_session".localized)
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -87,7 +87,7 @@ struct TrackingCompletionView: View {
                     
                     // Continue Button
                     Button(action: onContinue) {
-                        Text("Continue Session")
+                        Text("continue_session".localized)
                             .font(.headline)
                             .foregroundColor(.blue)
                             .frame(maxWidth: .infinity)
@@ -98,7 +98,7 @@ struct TrackingCompletionView: View {
                     
                     // Discard Button
                     Button(action: onDiscard) {
-                        Text("Discard Session")
+                        Text("discard_session".localized)
                             .font(.subheadline)
                             .foregroundColor(.red)
                     }

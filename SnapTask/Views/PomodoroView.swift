@@ -132,10 +132,10 @@ struct PomodoroView: View {
                 
                 HStack(spacing: 4) {
                     Text("session".localized)
-                        .font(.caption2)
+                        .font(.system(.footnote, design: .rounded).weight(.regular))
                         .themedSecondaryText()
                     Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
-                        .font(.caption2)
+                        .font(.system(.footnote, design: .rounded).weight(.medium))
                         .themedPrimaryText()
                 }
                 .padding(.horizontal, 8)
@@ -157,10 +157,10 @@ struct PomodoroView: View {
                         )
                 }
                 
-                Button("done".localized) {
+                Button("completed".localized) {
                     handleDone()
                 }
-                .font(.caption.weight(.medium))
+                .font(.system(.footnote, design: .rounded).weight(.medium))
                 .foregroundColor(theme.accentColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -201,8 +201,8 @@ struct PomodoroView: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(viewModel.state == .working ? focusColor : breakColor)
                         
-                        Text(viewModel.state == .working ? "focus".localized : "break".localized)
-                            .font(.system(.caption2, design: .rounded))
+                        Text(viewModel.state == .working ? "focus_time".localized : "break_time".localized)
+                            .font(.system(.footnote, design: .rounded))
                             .themedSecondaryText()
                     }
                     
@@ -220,49 +220,30 @@ struct PomodoroView: View {
                         .contentTransition(.numericText())
                     
                     Text("\(Int(viewModel.progress * 100))%")
-                        .font(.system(.caption2, design: .rounded).weight(.medium))
+                        .font(.system(.footnote, design: .rounded).weight(.medium))
                         .themedSecondaryText()
                 }
             }
             .padding(.vertical, 8)
             
-            VStack(spacing: 8) {
-                HStack {
-                    Text("progress".localized)
-                        .font(.subheadline.weight(.medium))
-                        .themedPrimaryText()
-                    Spacer()
-                    Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
-                        .font(.caption)
-                        .themedSecondaryText()
-                }
-                
-                GeometryReader { geometry in
-                    ZStack {
-                        HStack(spacing: 3) {
-                            ForEach(1...viewModel.totalSessions, id: \.self) { session in
-                                let sessionWidth = (geometry.size.width - CGFloat(viewModel.totalSessions - 1) * 3) / CGFloat(viewModel.totalSessions)
-                                
-                                sessionBackgroundBar(width: sessionWidth, session: session)
-                                    .overlay(
-                                        GeometryReader { barGeometry in
-                                            if session == viewModel.currentSession {
-                                                currentSessionProgressBar(width: barGeometry.size.width)
-                                            } else if session < viewModel.currentSession {
-                                                completedSessionProgressBar(width: barGeometry.size.width, session: session)
-                                            }
-                                        }
-                                        .clipShape(RoundedRectangle(cornerRadius: 2))
-                                    )
+            GeometryReader { geometry in
+                ZStack {
+                    HStack(spacing: 3) {
+                        ForEach(1...viewModel.totalSessions, id: \.self) { session in
+                            ZStack {
+                                sessionBackgroundBar(width: (geometry.size.width - CGFloat(viewModel.totalSessions - 1) * 3) / CGFloat(viewModel.totalSessions), session: session)
+                                if session == viewModel.currentSession {
+                                    currentSessionProgressBar(width: (geometry.size.width - CGFloat(viewModel.totalSessions - 1) * 3) / CGFloat(viewModel.totalSessions))
+                                } else if session < viewModel.currentSession {
+                                    completedSessionProgressBar(width: (geometry.size.width - CGFloat(viewModel.totalSessions - 1) * 3) / CGFloat(viewModel.totalSessions), session: session)
+                                }
                             }
-                            
-                            Spacer()
                         }
+                        Spacer()
                     }
                 }
-                .frame(height: 4)
             }
-            .padding(.horizontal, 16)
+            .frame(height: 4)
             
             Spacer()
             
@@ -384,10 +365,10 @@ struct PomodoroView: View {
                         
                         HStack(spacing: 4) {
                             Text("session".localized)
-                                .font(.caption)
+                                .font(.system(.footnote, design: .rounded))
                                 .themedSecondaryText()
                             Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
-                                .font(.caption)
+                                .font(.system(.footnote, design: .rounded).weight(.medium))
                                 .themedPrimaryText()
                         }
                         .padding(.horizontal, 8)
@@ -409,10 +390,10 @@ struct PomodoroView: View {
                                 )
                         }
                         
-                        Button("done".localized) {
+                        Button("completed".localized) {
                             handleDone()
                         }
-                        .font(.body.weight(.medium))
+                        .font(.system(.footnote, design: .rounded).weight(.medium))
                         .foregroundColor(theme.accentColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -506,7 +487,7 @@ struct PomodoroView: View {
                         .themedPrimaryText()
                     Spacer()
                     Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
-                        .font(.subheadline)
+                        .font(.system(.footnote, design: .rounded))
                         .themedSecondaryText()
                 }
                 .padding(.horizontal, 24)
@@ -560,10 +541,10 @@ struct PomodoroView: View {
                     let completionTime = Date().addingTimeInterval(viewModel.timeRemaining)
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
-                            .font(.caption)
+                            .font(.system(.footnote, design: .rounded))
                             .themedSecondaryText()
                         Text("finishes_at".localized + " \(formatTimeOnly(completionTime))")
-                            .font(.caption)
+                            .font(.system(.footnote, design: .rounded))
                             .themedSecondaryText()
                     }
                 }

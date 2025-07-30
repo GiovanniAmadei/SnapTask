@@ -36,7 +36,7 @@ struct SmartTimelineHourRow: View {
                                     .fontWeight(.bold)
                             }
                             
-                            Text("NOW")
+                            Text("now".localized)
                                 .font(.system(.caption2, design: .rounded))
                                 .fontWeight(.bold)
                                 .foregroundColor(.pink)

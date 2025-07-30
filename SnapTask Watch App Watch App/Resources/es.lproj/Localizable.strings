@@ -1,0 +1,165 @@
+// Common
+"now" = "AHORA";
+"points_abbreviation" = "pts";
+"pro_badge" = "PRO";
+
+// Buttons
+"save" = "Guardar";
+"continue" = "Continuar";
+"discard" = "Descartar";
+"redeem" = "Canjear";
+"start" = "Iniciar";
+"add" = "Añadir";
+"done" = "Hecho";
+"cancel" = "Cancelar";
+"delete" = "Eliminar";
+"edit" = "Editar";
+"close" = "Cerrar";
+"stop" = "Detener";
+"pause" = "Pausar";
+"resume" = "Reanudar";
+"reset" = "Restablecer";
+"complete" = "Completar";
+
+// Rewards
+"your_points" = "Tus Puntos";
+"no_rewards_yet" = "Aún No Hay Recompensas";
+"add_first_reward" = "Añadir Primera Recompensa";
+"add_more_rewards" = "Añadir Más Recompensas";
+"add_rewards_motivation" = "¡Añade recompensas para motivarte!";
+"points_format" = "%d puntos";
+"need_x_more" = "Necesitas %d más";
+"frequency" = "Frecuencia";
+"name" = "Nombre";
+"points_cost" = "Costo en Puntos";
+"icon" = "Icono";
+"redeem_reward" = "Canjear Recompensa";
+"free_plan_limits" = "Límites Plan Gratuito";
+"free_plan_description" = "El plan gratuito incluye hasta 3 recompensas personalizadas";
+
+// Pomodoro
+"no_pomodoro_tasks" = "No hay tareas Pomodoro";
+"session_x" = "Sesión %d";
+"focus_x" = "Focus: %@";
+
+// Date/Time
+"today" = "Hoy";
+"yesterday" = "Ayer";
+"tomorrow" = "Mañana";
+"select_date" = "Seleccionar Fecha";
+
+// Task Completion
+"session_complete" = "¡Sesión Completada!";
+"tracked_x" = "Rastreado %@";
+"notes_optional" = "Notas (Opcional)";
+"save_session" = "Guardar Sesión";
+"continue_session" = "Continuar Sesión";
+"discard_session" = "Descartar Sesión";
+"task" = "Tarea";
+"mode" = "Modo";
+"effective_time" = "Tiempo Efectivo";
+"paused_time" = "Tiempo de Pausa";
+
+// Weekday Picker
+"repeat_on" = "Repetir el";
+
+// Feedback
+"title" = "Título";
+"description" = "Descripción";
+
+// Weekdays
+"sunday_short" = "Dom";
+"monday_short" = "Lun";
+"tuesday_short" = "Mar";
+"wednesday_short" = "Mié";
+"thursday_short" = "Jue";
+"friday_short" = "Vie";
+"saturday_short" = "Sáb";
+
+// Rewards
+"rewards" = "Recompensas";
+"points" = "Puntos";
+"reward_details" = "Detalles de Recompensa";
+"enter_reward_name" = "Introducir nombre de recompensa";
+"add_description" = "Añadir descripción (opcional)";
+"use_specific_category" = "Usar categoría específica";
+"use_points_from_specific_category" = "Usar puntos de una categoría específica";
+"category" = "Categoría";
+"custom_points" = "Puntos Personalizados";
+"enter_custom_points" = "Introducir puntos";
+"point_guidelines" = "Directrices de Puntos";
+"quick_rewards_worth" = "Recompensas rápidas por 5-15 minutos de trabajo";
+"small_rewards_worth" = "Recompensas pequeñas por 15-30 minutos de trabajo";
+"medium_rewards_worth" = "Recompensas medianas por 30-60 minutos de trabajo";
+"large_rewards_worth" = "Recompensas grandes por 1-2 horas de trabajo";
+"premium_rewards_worth" = "Recompensas premium por medio día o más de trabajo";
+"new_reward" = "Nueva Recompensa";
+"edit_reward" = "Editar Recompensa";
+"save_changes" = "Guardar Cambios";
+"add_reward" = "Añadir Recompensa";
+"delete_reward" = "Eliminar Recompensa";
+"reward_name" = "Nombre Recompensa";
+"reward_icon" = "Icono";
+"reward_frequency" = "Frecuencia";
+"daily" = "Diaria";
+"weekly" = "Semanal";
+"monthly" = "Mensual";
+"save_reward" = "Guardar Recompensa";
+"filter_by_frequency" = "Filtrar por Frecuencia";
+"all_frequencies" = "Todas las Frecuencias";
+"points_history" = "Historial de Puntos";
+"redeemed_rewards" = "Recompensas Canjeadas";
+"add_your_first_reward" = "¡Añade tu primera recompensa!";
+"unlock_more_rewards" = "Desbloquear Más Recompensas";
+"upgrade_to_pro" = "Actualizar a Pro";
+"pro" = "PRO";
+"free_plan_limit" = "Límite Plan Gratuito";
+"free_plan_limit_description" = "El plan gratuito incluye hasta 3 recompensas personalizadas";
+"premium_limit_info" = "Límite Plan Gratuito";
+"premium_limit_description" = "El plan gratuito incluye hasta 3 recompensas personalizadas";
+"need_%d_more" = "Necesitas %d más";
+"redeemed" = "canjeado";
+
+// Watch App specific strings
+"general_timer" = "Temporizador General";
+"simple_timer" = "Temporizador Simple";
+"select_task" = "Seleccionar Tarea";
+"task_not_found" = "Tarea no encontrada";
+"stats" = "Estadísticas";
+"todays_progress" = "Progreso de Hoy";
+"top_streaks" = "Mejores Rachas";
+"no_active_streaks" = "No hay rachas activas";
+"tasks_simplified" = "Tareas (Simplificado)";
+"no_tasks_today_simplified" = "No hay tareas para hoy (Vista Simplificada)";
+"tasks_simplified_view" = "Tareas (Vista Simplificada):";
+"edit_task" = "Editar Tarea";
+"delete_task" = "Eliminar Tarea";
+"start_pomodoro" = "Iniciar Pomodoro";
+"pomodoro_enabled" = "Pomodoro habilitado";
+"no_pomodoro_settings" = "Sin configuración Pomodoro";
+"color" = "Color";
+"new_category" = "Nueva Categoría";
+"no_tasks_today" = "Sin tareas para hoy";
+"tap_plus_add_first_task" = "Toca + para añadir tu primera tarea";
+"focus" = "Enfoque";
+"break" = "Descanso";
+"session" = "Sesión";
+"progress" = "Progreso";
+"left" = "restante";
+"session_overview" = "Resumen de Sesión";
+"finishes_at" = "Termina a las";
+"focus_time" = "Tiempo de Enfoque";
+"break_time" = "Tiempo de Descanso";
+"paused" = "Pausado";
+"stopped" = "Detenido";
+"running" = "Ejecutándose";
+"ready_to_start" = "Listo para comenzar";
+"complete_session" = "Completar Sesión";
+
+// Accessibility
+"completed" = "completado";
+"not_completed" = "no completado";
+"description_label" = "Descripción:";
+"duration_label" = "Duración:";
+"priority_label" = "Prioridad:";
+"show_voiceover_indicators" = "Mostrar Indicadores VoiceOver";

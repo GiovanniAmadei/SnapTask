@@ -14,7 +14,7 @@ struct LocationPickerView: View {
             VStack(spacing: 0) {
                 // Search Section
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Search Location")
+                    Text("search_location".localized)
                         .font(.headline)
                         .themedPrimaryText()
                         .padding(.horizontal)
@@ -22,7 +22,7 @@ struct LocationPickerView: View {
                     HStack {
                         Image(systemName: "magnifyingglass")
                             .themedSecondaryText()
-                        TextField("Search for a place...", text: $searchText)
+                        TextField("search_for_a_place".localized, text: $searchText)
                             .textFieldStyle(PlainTextFieldStyle())
                             .themedPrimaryText()
                             .accentColor(theme.primaryColor)
@@ -57,7 +57,7 @@ struct LocationPickerView: View {
                             ProgressView()
                                 .scaleEffect(0.8)
                                 .accentColor(theme.primaryColor)
-                            Text("Searching...")
+                            Text("searching".localized)
                                 .font(.subheadline)
                                 .themedSecondaryText()
                         }
@@ -74,7 +74,7 @@ struct LocationPickerView: View {
                                 
                                 if let selectedLoc = selectedLocation {
                                     VStack(alignment: .leading, spacing: 12) {
-                                        Text("Selected Location")
+                                        Text("selected_location".localized)
                                             .font(.headline)
                                             .themedPrimaryText()
                                             .padding(.horizontal)
@@ -88,7 +88,7 @@ struct LocationPickerView: View {
                             .padding(.horizontal)
                         }
                     } else if !searchText.isEmpty && !viewModel.isSearching {
-                        Text("No results found")
+                        Text("no_results_found".localized)
                             .font(.subheadline)
                             .themedSecondaryText()
                             .padding(.horizontal)
@@ -105,7 +105,7 @@ struct LocationPickerView: View {
                     }) {
                         HStack {
                             Image(systemName: "trash")
-                            Text("Remove Location")
+                            Text("remove_location".localized)
                         }
                         .font(.headline)
                         .foregroundColor(.red)
@@ -120,11 +120,11 @@ struct LocationPickerView: View {
                 }
             }
             .themedBackground()
-            .navigationTitle("Select Location")
+            .navigationTitle("select_location".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                     .themedSecondaryText()

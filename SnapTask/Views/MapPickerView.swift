@@ -47,7 +47,7 @@ struct MapPickerView: View {
                 if isLoading {
                     VStack {
                         ProgressView()
-                        Text("Getting location info...")
+                        Text("getting_location_info".localized)
                             .font(.caption)
                     }
                     .padding()
@@ -63,7 +63,7 @@ struct MapPickerView: View {
                         Spacer()
                         
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Selected Location")
+                            Text("selected_location".localized)
                                 .font(.headline)
                             
                             Text(locationName)
@@ -71,7 +71,7 @@ struct MapPickerView: View {
                                 .foregroundColor(.secondary)
                             
                             HStack {
-                                Button("Cancel") {
+                                Button("cancel".localized) {
                                     selectedCoordinate = nil
                                     locationName = ""
                                 }
@@ -80,7 +80,7 @@ struct MapPickerView: View {
                                 
                                 Spacer()
                                 
-                                Button("Select") {
+                                Button("select".localized) {
                                     let location = TaskLocation(
                                         name: locationName,
                                         coordinate: coordinate
@@ -107,17 +107,17 @@ struct MapPickerView: View {
                     }
                 }
             }
-            .navigationTitle("Pick Location")
+            .navigationTitle("pick_location".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Current") {
+                    Button("current".localized) {
                         getCurrentLocation()
                     }
                 }
@@ -151,9 +151,9 @@ struct MapPickerView: View {
                 isLoading = false
                 
                 if let placemark = placemarks?.first {
-                    locationName = placemark.name ?? placemark.thoroughfare ?? "Selected Location"
+                    locationName = placemark.name ?? placemark.thoroughfare ?? "selected_location".localized
                 } else {
-                    locationName = "Selected Location"
+                    locationName = "selected_location".localized
                 }
             }
         }

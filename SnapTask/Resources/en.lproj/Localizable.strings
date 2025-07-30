@@ -57,7 +57,7 @@
 "notification_cancelled" = "Notification Cancelled";
 "notifications_not_available" = "Notifications Not Available";
 "notifications_denied" = "Notifications Denied";
-"notification_permission_denied_message" = "Notifications have been denied. Enable them in iOS Settings > SnapTask > Notifications.";
+"notification_permission_denied_message" = "Notifications have been denied. Enable them in iOS Settings > Privacy & Security > Calendars > SnapTask.";
 
 // Accessibility Support
 "completed" = "completed";
@@ -221,6 +221,7 @@
 "add_new_category" = "Add New Category";
 "select_category" = "Select Category";
 "select_color" = "Select Color";
+"category_name_placeholder" = "Category name";
 
 // Customization View
 "visual_themes" = "Visual Themes";
@@ -715,6 +716,56 @@
 "general_improvements" = "General Bug Fixes";
 "general_improvements_desc" = "Various bug fixes and performance improvements based on feedback";
 
+// CloudKit Sync
+"sync_now" = "Sync Now";
+"sync_data_description" = "Your data will be automatically synced across all your devices";
+"enable_icloud_sync_description" = "Enable to sync your tasks, categories, and rewards across devices";
+"what_gets_synced" = "What Gets Synced";
+"auto_sync" = "Auto Sync";
+"auto_sync_description" = "Automatically sync when you make changes";
+"view_sync_status" = "View Sync Status";
+"sync_details" = "Sync Details";
+"reset_sync_data" = "Reset Sync Data";
+"advanced" = "Advanced";
+"reset_sync_description" = "This will clear all sync data and force a complete resync";
+"storage" = "Storage";
+"privacy" = "Privacy";
+"end_to_end_encrypted" = "End-to-end Encrypted";
+"information" = "Information";
+"icloud_sync_device_support" = "Works seamlessly across iPhone, iPad, and Mac";
+"reset_sync_data_alert_title" = "Reset Sync Data?";
+"reset_sync_data_alert_message" = "This will clear all local sync data and trigger a fresh sync. Your data in iCloud will not be affected.";
+
+// Sync Data Options
+"tasks_sync_description" = "All your tasks and their completion status";
+"rewards_sync_description" = "Your custom rewards and redemption history";
+"points_history_sync_description" = "Points earned from completed tasks";
+"categories_sync_description" = "Your custom task categories";
+"app_settings_sync_description" = "Your preferences and app settings";
+"synchronized_data" = "Synchronized Data";
+"all_data_types_synced" = "All data types are automatically synchronized";
+"sync_options_title" = "Sync Options";
+
+// Sync Details View
+"current_status" = "Current Status";
+"account_information" = "Account Information";
+"service" = "Service";
+"encryption" = "Encryption";
+"zone" = "Zone";
+"common_solutions" = "Common Solutions";
+"check_internet_connection" = "Check your internet connection";
+"verify_icloud_enabled" = "Verify iCloud is enabled for SnapTask";
+"ensure_icloud_storage" = "Ensure you have iCloud storage space";
+
+// Sync Status
+"sync_idle" = "Ready";
+"sync_syncing" = "Syncing...";
+"sync_success" = "Up to date";
+"sync_error" = "Error";
+"sync_disabled" = "Disabled";
+"enabled" = "Enabled";
+"disabled" = "Disabled";
+
 // Backup and Restore
 "backup_restore" = "Backup & Restore";
 "backup" = "Backup";
@@ -795,6 +846,41 @@
 "rewards_limit_reached" = "Rewards Limit Reached";
 "rewards_limit_message" = "You can create up to 3 rewards with the free plan. Upgrade to Pro for unlimited rewards.";
 "premium_badge" = "PRO";
+"by_purchasing_you_agree" = "By purchasing or using the free trial, you agree to SnapTask's Terms of Service and Privacy Policy.";
+
+// Settings
+"contact_support" = "Contact Support";
+"contact_support_message" = "If you need help, have suggestions, or want to report a bug, please don't hesitate to contact me. Your feedback is valuable!";
+"themes_and_customization" = "Themes & Customization";
+"themes" = "Themes";
+"manage_categories" = "Manage Categories";
+"category_gradients" = "Category Gradients";
+"timer_colors" = "Timer Colors";
+
+// Themes
+"current_theme" = "Current Theme";
+"free_themes" = "Free Themes";
+"premium_themes" = "Premium Themes";
+"unlock_premium_themes" = "Unlock Premium Themes";
+
+"theme_default" = "Default";
+"theme_ocean" = "Ocean";
+"theme_forest" = "Forest";
+"theme_sunset" = "Sunset";
+"theme_amethyst" = "Amethyst";
+"theme_carbon" = "Carbon";
+"theme_midnight" = "Midnight";
+"theme_rose_gold" = "Rose Gold";
+"theme_emerald" = "Emerald";
+"theme_volcanic" = "Volcanic";
+"theme_lavender" = "Lavender";
+
+// Premium limits
+"premium_limit_info" = "Free Plan Limit";
+"premium_limit_description" = "The free plan includes up to 3 custom rewards.";
+"rewards_limit_reached" = "Rewards Limit Reached";
+"rewards_limit_message" = "You can create up to 3 rewards with the free plan. Upgrade to Pro for unlimited rewards.";
+"premium_badge" = "PRO";
 
 // Dark Mode Theme Warning
 "dark_mode_theme_warning_title" = "Theme with Custom Colors";
@@ -805,3 +891,160 @@
 "keep_dark_mode" = "Disable Dark Mode";
 "keep_simple_theme" = "Keep Current Theme";
 "theme_dark_mode_warning_message" = "This theme uses custom colors and is not compatible with dark mode. Do you want to disable dark mode to use this theme?";
+
+// Apple Watch specific strings
+"no_pomodoro_tasks" = "No Pomodoro tasks";
+"stats" = "Stats";
+"todays_progress" = "Today's Progress";
+"top_streaks" = "Top Streaks";
+"no_active_streaks" = "No active streaks";
+"tasks_simplified" = "Tasks (Simplified)";
+"no_tasks_today_simplified" = "No tasks for today (Simplified View)";
+"tasks_simplified_view" = "Tasks (Simplified View):";
+"edit_task" = "Edit Task";
+"delete_task" = "Delete Task";
+"task_not_found" = "Task not found";
+"select_date" = "Select Date";
+"select_task" = "Select Task";
+"start_pomodoro" = "Start Pomodoro";
+"pomodoro_enabled" = "Pomodoro enabled";
+"no_pomodoro_settings" = "No Pomodoro settings";
+"add_first_reward" = "Add First Reward";
+"add_more_rewards" = "Add More Rewards";
+"add_rewards_motivate" = "Add rewards to motivate yourself!";
+"your_points" = "Your Points";
+"connection" = "Connection";
+"iphone_connected" = "iPhone Connected";
+"iphone_disconnected" = "iPhone Disconnected";
+"last_sync" = "Last sync";
+"force_sync_iphone" = "Force Sync with iPhone";
+"sync_cloudkit" = "Sync with CloudKit";
+"local_tasks" = "Local tasks";
+"received_tasks" = "Received tasks";
+"sync_status" = "Sync Status";
+"tap_view_details" = "Tap to view details";
+"version" = "Version";
+"reset_all_data" = "Reset All Data";
+"reset_all_data_alert_title" = "Reset All Data";
+"reset_all_data_alert_message" = "This will delete all local data. CloudKit data will remain intact.";
+"cloudkit_sync" = "CloudKit Sync";
+"data_syncs_automatically" = "Data syncs automatically with iPhone";
+"sync_automatically_message" = "Your tasks, categories, and rewards sync automatically between your iPhone and Apple Watch.";
+"both_devices_connected" = "Make sure both devices are connected to the internet for best results.";
+"general_timer" = "General Timer";
+"complete" = "Complete";
+"task_completion" = "Task Completion";
+"task_stats" = "Task Stats";
+"completion_rate" = "Completion Rate";
+"points_summary" = "Points Summary";
+"weekly_overview" = "Weekly Overview";
+"week_pts" = "Week: {points} pts";
+"focus_time" = "Focus: {time}";
+"mark_incomplete" = "Mark Incomplete";
+"mark_complete" = "Mark Complete";
+"recurring_task" = "Recurring Task";
+"has_duration" = "Has Duration";
+"use_pomodoro" = "Use Pomodoro";
+"work_min" = "Work: {minutes} min";
+"break_min" = "Break: {minutes} min";
+"date_time" = "Date & Time";
+"points_cost" = "Points Cost";
+"name" = "Name";
+"reward_details" = "Reward Details";
+"reward_name" = "Reward Name";
+"type" = "Type";
+"custom" = "Custom";
+"min" = "min";
+
+// Additional missing strings for app
+"start" = "Start";
+"pause" = "Pause";
+"resume" = "Resume";
+"stop" = "Stop";
+"stopped" = "Stopped";
+"session_number" = "Session {number}";
+"time_range" = "Time Range";
+"today_colon" = "Today: ";
+"week_colon" = "Week: ";
+"total_colon" = "Total: ";
+"running" = "Running";
+"configure_by" = "Configure by";
+"custom_themes" = "Custom Themes";
+"custom_themes_desc" = "Customize the app appearance with exclusive themes";
+
+// Time Scope Strings
+"time_scope" = "Time Scope";
+"task_happens_today" = "Task for today";
+"task_happens_this_week" = "Goal for this week";
+"task_happens_this_month" = "Goal for this month";
+"task_happens_this_year" = "Goal for this year";
+"long_term_goal" = "Long-term goal";
+"long_term_goals" = "Long-Term Goals";
+"no_tasks" = "No tasks";
+"no_tasks_this_week" = "No goals this week";
+"no_tasks_this_month" = "No goals this month";
+"no_tasks_this_year" = "No goals this year";
+"no_tasks_long_term" = "No long-term goals";
+"obiettivi_settimanali" = "Weekly goals";
+"obiettivi_mensili" = "Monthly goals";
+"obiettivi_annuali" = "Yearly goals";
+"obiettivi_lungo_termine" = "Long-term goals";
+"ready_to_start" = "Ready to start";
+"break_time" = "Break time";
+"reset" = "Reset";
+"complete_session" = "Complete Session";
+"choose_task_focus_on" = "Choose a task to focus on";
+"select_task_enable_pomodoro" = "Select a task to enable Pomodoro";
+"selected_task_no_pomodoro" = "Selected task has no Pomodoro settings";
+
+// Existing code...
+"yesterday" = "Yesterday";
+"tomorrow" = "Tomorrow";
+
+// Difficulty and Quality Rating
+"tap_to_rate_difficulty" = "Tap to rate difficulty";
+"tap_to_rate_quality" = "Tap to rate quality";
+"very_easy" = "Very Easy";
+"easy" = "Easy";
+"moderate" = "Moderate";
+"challenging" = "Challenging";
+"hard" = "Hard";
+"extremely_hard" = "Extremely Hard";
+"poor_quality" = "Poor Quality";
+"below_average" = "Below Average";
+"average" = "Average";
+"good" = "Good";
+"excellent" = "Excellent";
+"perfect" = "Perfect";
+
+// Duration Picker
+"how_long_did_it_take" = "How long did it take?";
+"actual_duration" = "Actual Duration";
+"hours" = "Hours";
+"minutes" = "Minutes";
+
+// Notes Section
+"notes" = "Notes";
+"add_your_thoughts_completion" = "Add your thoughts about this completion...";
+"clear" = "Clear";
+
+// Tracking Mode Selection
+"start_focus_session" = "Start Focus Session";
+"choose_tracking_mode" = "Choose your tracking mode";
+"select_mode" = "Select Mode";
+"simple_timer_session" = "Simple Timer Session";
+
+// Time Tracking Completion
+"focus_session_complete" = "Focus Session Complete!";
+"focused_for" = "You focused for";
+"session_details" = "Session Details";
+"mode" = "Mode";
+"original_category" = "Original Category";
+"track_time_in" = "Track time in";
+"this_task_only" = "This Task Only";
+"save_and_finish" = "Save & Finish";
+
+// Additional missing strings
+"icloud" = "iCloud";
+"pts" = "pts";
+"task_name_placeholder" = "Enter task name";

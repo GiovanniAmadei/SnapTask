@@ -130,7 +130,7 @@ struct RewardsView: View {
                                 .font(.system(size: 32, weight: .bold))
                                 .themedPrimaryText()
                             
-                            Text("pts")
+                            Text(selectedFilter.displayName.localized)
                                 .font(.system(size: 14, weight: .medium))
                                 .themedSecondaryText()
                         }
@@ -191,7 +191,7 @@ struct RewardsView: View {
                                 Image(systemName: frequency.iconName)
                                     .font(.system(size: 14, weight: .medium))
                                 
-                                Text(frequency.displayName)
+                                Text(frequency.displayName.localized)
                                     .font(.system(size: 10, weight: .medium))
                             }
                             .frame(maxWidth: .infinity)
@@ -322,12 +322,12 @@ struct RewardsView: View {
             HStack {
                 Image(systemName: "info.circle")
                     .foregroundColor(.orange)
-                Text("Limiti Piano Gratuito")
+                Text("premium_limit_info".localized)
                     .font(.headline)
                     .foregroundColor(.orange)
             }
             
-            Text("Il piano gratuito include fino a 3 premi personalizzati")
+            Text("premium_limit_description".localized)
                 .font(.subheadline)
                 .themedSecondaryText()
             
@@ -339,7 +339,7 @@ struct RewardsView: View {
                 
                 Spacer()
                 
-                Button("Passa a Pro") {
+                Button("upgrade_to_pro".localized) {
                     showingPremiumPaywall = true
                 }
                 .font(.subheadline.weight(.medium))
@@ -506,7 +506,7 @@ struct CompactPointsChip: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(color)
             
-            Text(title)
+            Text(title.localized)
                 .font(.system(size: 11, weight: .medium))
                 .themedSecondaryText()
         }
@@ -531,7 +531,7 @@ struct PointsMiniCard: View {
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(color)
             
-            Text(title)
+            Text(title.localized)
                 .font(.system(size: 12, weight: .medium))
                 .themedSecondaryText()
         }
@@ -555,7 +555,7 @@ struct CompactActionCard: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(color)
                 
-                Text(title)
+                Text(title.localized)
                     .font(.system(size: 12, weight: .medium))
                     .themedPrimaryText()
             }
@@ -793,7 +793,7 @@ struct RewardCard: View {
                                 RewardManager.shared.availablePoints(for: reward.frequency) :
                                 RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
                             let missingPoints = reward.pointsCost - max(actualAvailablePoints, 0)
-                            Text("Need \(missingPoints) more")
+                            Text(String(format: "need_%d_more".localized, missingPoints))
                                 .font(.system(size: 11))
                                 .themedSecondaryText()
                         }
@@ -882,7 +882,7 @@ struct RewardCard: View {
                 .font(.system(size: 8))
                 .foregroundColor(.green)
             
-            Text("riscattato".localized)
+            Text("redeemed".localized)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(.green)
         }

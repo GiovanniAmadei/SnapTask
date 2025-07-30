@@ -10,14 +10,14 @@ struct DurationPickerView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                Text("How long did it take?")
+                Text("how_long_did_it_take".localized)
                     .font(.title2.bold())
                     .padding(.top)
                 
                 HStack(spacing: 20) {
                     // Hours picker
                     VStack {
-                        Text("Hours")
+                        Text("hours".localized)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
@@ -39,7 +39,7 @@ struct DurationPickerView: View {
                     
                     // Minutes picker
                     VStack {
-                        Text("Minutes")
+                        Text("minutes".localized)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
@@ -58,17 +58,17 @@ struct DurationPickerView: View {
                 
                 Spacer()
             }
-            .navigationTitle("Actual Duration")
+            .navigationTitle("actual_duration".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("save".localized) {
                         duration = TimeInterval(hours * 3600 + minutes * 60)
                         dismiss()
                     }

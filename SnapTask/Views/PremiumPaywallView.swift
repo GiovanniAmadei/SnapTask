@@ -41,19 +41,19 @@ struct PremiumPaywallView: View {
                 
                 Spacer(minLength: 0)
             }
-            .navigationTitle("SnapTask Pro")
+            .navigationTitle(NSLocalizedString("snaptask_pro", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Chiudi") {
+                    Button(NSLocalizedString("close", comment: "")) {
                         dismiss()
                     }
                 }
             }
         }
         .disabled(isProcessingPurchase)
-        .alert("Abbonamento", isPresented: $showingAlert) {
-            Button("OK") { }
+        .alert(NSLocalizedString("subscription", comment: ""), isPresented: $showingAlert) {
+            Button(NSLocalizedString("ok", comment: "")) { }
         } message: {
             Text(alertMessage)
         }
@@ -85,11 +85,11 @@ struct PremiumPaywallView: View {
             }
             
             VStack(spacing: 4) {
-                Text("Sblocca SnapTask Pro")
+                Text(NSLocalizedString("unlock_snaptask_pro", comment: ""))
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                 
-                Text("Massimizza la tua produttività")
+                Text(NSLocalizedString("maximize_your_productivity", comment: ""))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -100,7 +100,7 @@ struct PremiumPaywallView: View {
     // MARK: - Compact Premium Features
     private var premiumFeaturesCompact: some View {
         VStack(spacing: 8) {
-            Text("Tutto quello che ottieni")
+            Text(NSLocalizedString("everything_you_get", comment: ""))
                 .font(.headline.weight(.medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -112,32 +112,32 @@ struct PremiumPaywallView: View {
             ], spacing: 8) {
                 CompactFeatureCard(
                     icon: "folder.fill",
-                    title: "Categorie Illimitate",
+                    title: NSLocalizedString("unlimited_categories", comment: ""),
                     color: .blue
                 )
                 CompactFeatureCard(
                     icon: "star.fill", 
-                    title: "Task Evaluation",
+                    title: NSLocalizedString("task_evaluation", comment: ""),
                     color: .yellow
                 )
                 CompactFeatureCard(
                     icon: "gift.fill",
-                    title: "Premi Illimitati",
+                    title: NSLocalizedString("unlimited_rewards", comment: ""),
                     color: .purple
                 )
                 CompactFeatureCard(
                     icon: "icloud.fill",
-                    title: "Sync Cloud",
+                    title: NSLocalizedString("cloud_sync", comment: ""),
                     color: .cyan
                 )
                 CompactFeatureCard(
                     icon: "chart.line.uptrend.xyaxis",
-                    title: "Statistiche Avanzate",
+                    title: NSLocalizedString("advanced_statistics", comment: ""),
                     color: .green
                 )
                 CompactFeatureCard(
                     icon: "paintbrush.fill",
-                    title: "Temi Custom",
+                    title: NSLocalizedString("custom_themes", comment: ""),
                     color: .pink
                 )
             }
@@ -147,7 +147,7 @@ struct PremiumPaywallView: View {
     // MARK: - Compact Subscription Plans
     private var subscriptionPlansCompact: some View {
         VStack(spacing: 8) {
-            Text("Scegli il tuo piano")
+            Text(NSLocalizedString("choose_your_plan", comment: ""))
                 .font(.headline.weight(.medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,10 +161,10 @@ struct PremiumPaywallView: View {
                     }
                 }) {
                     CompactSubscriptionCard(
-                        title: "Accesso a Vita",
+                        title: NSLocalizedString("lifetime_access", comment: ""),
                         price: subscriptionManager.lifetimeProduct?.displayPrice ?? "€49,99",
-                        subtitle: "Una tantum - Nessun abbonamento",
-                        badge: "Migliore Valore",
+                        subtitle: NSLocalizedString("one_time_no_subscription", comment: ""),
+                        badge: NSLocalizedString("best_value", comment: ""),
                         isSelected: selectedPlan == "lifetime",
                         badgeColor: .orange,
                         isLifetime: true
@@ -181,10 +181,10 @@ struct PremiumPaywallView: View {
                         }
                     }) {
                         CompactSubscriptionCard(
-                            title: "Annuale",
+                            title: NSLocalizedString("yearly", comment: ""),
                             price: subscriptionManager.yearlyProduct?.displayPrice ?? "€24,99",
-                            subtitle: subscriptionManager.hasUsedTrial ? "€2,08/mese" : "3 giorni gratis",
-                            badge: subscriptionManager.hasUsedTrial ? nil : "Prova Gratis",
+                            subtitle: subscriptionManager.hasUsedTrial ? "€2,08/mese" : NSLocalizedString("days_free_then", comment: "3 days free"),
+                            badge: subscriptionManager.hasUsedTrial ? nil : NSLocalizedString("free_trial", comment: ""),
                             isSelected: selectedPlan == "yearly",
                             badgeColor: .green,
                             isLifetime: false
@@ -200,9 +200,9 @@ struct PremiumPaywallView: View {
                         }
                     }) {
                         CompactSubscriptionCard(
-                            title: "Mensile",
+                            title: NSLocalizedString("monthly", comment: ""),
                             price: subscriptionManager.monthlyProduct?.displayPrice ?? "€3,99",
-                            subtitle: "Flessibilità totale",
+                            subtitle: NSLocalizedString("total_flexibility", comment: ""),
                             badge: nil,
                             isSelected: selectedPlan == "monthly",
                             badgeColor: .purple,
@@ -230,23 +230,23 @@ struct PremiumPaywallView: View {
                 } else {
                     VStack(spacing: 2) {
                         if selectedPlan == "yearly" && !subscriptionManager.hasUsedTrial {
-                            Text("Inizia Prova Gratuita")
+                            Text(NSLocalizedString("start_free_trial", comment: ""))
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                             
-                            Text("3 giorni gratis, poi \(selectedProduct?.displayPrice ?? "€24,99")")
+                            Text(String(format: NSLocalizedString("days_free_then", comment: ""), selectedProduct?.displayPrice ?? "€24,99"))
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
                         } else if selectedPlan == "lifetime" {
-                            Text("Acquista Accesso a Vita")
+                            Text(NSLocalizedString("purchase_lifetime_access", comment: ""))
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                             
-                            Text("Pagamento unico")
+                            Text(NSLocalizedString("one_time_payment", comment: ""))
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
                         } else {
-                            Text("Sottoscrivi \(selectedPlan == "yearly" ? "Piano Annuale" : "Piano Mensile")")
+                            Text(selectedPlan == "yearly" ? NSLocalizedString("subscribe_yearly_plan", comment: "") : NSLocalizedString("subscribe_monthly_plan", comment: ""))
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                         }
@@ -278,7 +278,7 @@ struct PremiumPaywallView: View {
                         await handleRestorePurchases()
                     }
                 } label: {
-                    Text("Ripristina Acquisti")
+                    Text(NSLocalizedString("restore_purchases", comment: ""))
                         .font(.footnote.weight(.medium))
                         .foregroundColor(.purple)
                 }
@@ -287,18 +287,18 @@ struct PremiumPaywallView: View {
                 Button {
                     subscriptionManager.manageSubscriptions()
                 } label: {
-                    Text("Gestisci Abbonamenti")
+                    Text(NSLocalizedString("manage_subscriptions", comment: ""))
                         .font(.footnote.weight(.medium))
                         .foregroundColor(.purple)
                 }
             }
             
             HStack(spacing: 16) {
-                Button("Termini di Servizio") {
+                Button(NSLocalizedString("terms_of_service", comment: "")) {
                     showingTerms = true
                 }
                 
-                Button("Privacy Policy") {
+                Button(NSLocalizedString("privacy_policy", comment: "")) {
                     showingPrivacy = true
                 }
             }
@@ -327,11 +327,11 @@ struct PremiumPaywallView: View {
             }
             
             if selectedPlan == "lifetime" {
-                alertMessage = "Benvenuto in SnapTask Pro! Hai accesso completo a tutte le funzionalità per sempre."
+                alertMessage = NSLocalizedString("welcome_snaptask_pro_lifetime", comment: "")
             } else {
                 alertMessage = (selectedPlan == "yearly" && subscriptionManager.subscriptionStatus.isInTrial) ? 
-                    "Prova gratuita di 3 giorni attivata! Esplora tutte le funzionalità Pro." :
-                    "Benvenuto in SnapTask Pro! Tutte le funzionalità sono ora sbloccate."
+                    NSLocalizedString("free_trial_activated", comment: "") :
+                    NSLocalizedString("welcome_snaptask_pro", comment: "")
             }
             
             showingAlert = true
@@ -340,7 +340,7 @@ struct PremiumPaywallView: View {
                 dismiss()
             }
         } else {
-            alertMessage = "Acquisto non completato. Riprova o contatta il supporto."
+            alertMessage = NSLocalizedString("purchase_not_completed", comment: "")
             showingAlert = true
         }
         
@@ -353,14 +353,14 @@ struct PremiumPaywallView: View {
         let success = await subscriptionManager.restorePurchases()
         
         if success {
-            alertMessage = "Acquisti ripristinati con successo!"
+            alertMessage = NSLocalizedString("purchases_restored_successfully", comment: "")
             showingAlert = true
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 dismiss()
             }
         } else {
-            alertMessage = "Nessun acquisto da ripristinare trovato."
+            alertMessage = NSLocalizedString("no_purchases_to_restore", comment: "")
             showingAlert = true
         }
         
@@ -503,32 +503,20 @@ struct TermsOfServiceView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Termini di Servizio")
+                    Text(NSLocalizedString("terms_of_service_title", comment: ""))
                         .font(.title.bold())
                     
-                    Text("""
-                    Benvenuto in SnapTask Pro. Utilizzando i nostri servizi, accetti i seguenti termini:
-                    
-                    1. **Abbonamento**: L'abbonamento a SnapTask Pro è ricorrente e si rinnova automaticamente.
-                    
-                    2. **Prova Gratuita**: La prova gratuita di 3 giorni è disponibile per i nuovi utenti.
-                    
-                    3. **Cancellazione**: Puoi cancellare l'abbonamento in qualsiasi momento dalle impostazioni del tuo account Apple.
-                    
-                    4. **Rimborsi**: I rimborsi sono gestiti secondo le politiche di Apple App Store.
-                    
-                    5. **Modifiche**: Ci riserviamo il diritto di modificare questi termini con preavviso.
-                    """)
+                    Text(NSLocalizedString("terms_content", comment: ""))
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
                 .padding()
             }
-            .navigationTitle("Termini")
+            .navigationTitle(NSLocalizedString("terms", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Chiudi") {
+                    Button(NSLocalizedString("close", comment: "")) {
                         dismiss()
                     }
                 }
@@ -544,32 +532,20 @@ struct PrivacyPolicyView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Privacy Policy")
+                    Text(NSLocalizedString("privacy_policy_title", comment: ""))
                         .font(.title.bold())
                     
-                    Text("""
-                    La tua privacy è importante per noi. Questa policy spiega come gestiamo i tuoi dati:
-                    
-                    1. **Dati Raccolti**: Raccogliamo solo i dati necessari per fornire il servizio.
-                    
-                    2. **Utilizzo**: I dati sono utilizzati per migliorare l'esperienza dell'app e fornire supporto.
-                    
-                    3. **Condivisione**: Non condividiamo i tuoi dati personali con terze parti.
-                    
-                    4. **Sicurezza**: Utilizziamo crittografia e misure di sicurezza per proteggere i tuoi dati.
-                    
-                    5. **Diritti**: Hai il diritto di accedere, modificare o eliminare i tuoi dati.
-                    """)
+                    Text(NSLocalizedString("privacy_content", comment: ""))
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
                 .padding()
             }
-            .navigationTitle("Privacy")
+            .navigationTitle(NSLocalizedString("privacy", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Chiudi") {
+                    Button(NSLocalizedString("close", comment: "")) {
                         dismiss()
                     }
                 }

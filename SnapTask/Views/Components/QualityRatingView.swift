@@ -49,7 +49,7 @@ struct QualityRatingView: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 } else {
-                    Text("Tap to rate quality")
+                    Text("tap_to_rate_quality".localized)
                         .font(.caption2)
                         .foregroundColor(.blue)
                 }
@@ -89,17 +89,17 @@ struct QualityRatingView: View {
     private func qualityDescription(_ level: Int) -> String {
         switch level {
         case 1:
-            return "Poor Quality"
+            return "poor_quality".localized
         case 2...3:
-            return "Below Average"
+            return "below_average".localized
         case 4...5:
-            return "Average"
+            return "average".localized
         case 6...7:
-            return "Good"
+            return "good".localized
         case 8...9:
-            return "Excellent"
+            return "excellent".localized
         case 10:
-            return "Perfect"
+            return "perfect".localized
         default:
             return ""
         }

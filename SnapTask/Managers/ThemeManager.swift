@@ -156,7 +156,7 @@ class ThemeManager: ObservableObject {
         // Free themes
         Theme(
             id: "default",
-            name: "default_theme".localized,
+            name: "theme_default".localized,
             isPremium: false,
             primaryColor: Color.blue,
             secondaryColor: Color.cyan,
@@ -169,7 +169,7 @@ class ThemeManager: ObservableObject {
         
         Theme(
             id: "forest",
-            name: "forest_theme".localized,
+            name: "theme_forest".localized,
             isPremium: false,
             primaryColor: Color.green,
             secondaryColor: Color.mint,
@@ -182,7 +182,7 @@ class ThemeManager: ObservableObject {
         
         Theme(
             id: "sunset",
-            name: "sunset_theme".localized,
+            name: "theme_sunset".localized,
             isPremium: false,
             primaryColor: Color.orange,
             secondaryColor: Color.pink,
@@ -196,7 +196,20 @@ class ThemeManager: ObservableObject {
         // Premium themes with improved contrast
         Theme(
             id: "midnight",
-            name: "midnight_theme".localized,
+            name: "theme_midnight".localized,
+            isPremium: true,
+            primaryColor: Color(red: 0.5, green: 0.2, blue: 0.8),  // Viola più acceso
+            secondaryColor: Color(red: 0.3, green: 0.2, blue: 0.5),  // Viola scuro
+            accentColor: Color(red: 0.8, green: 0.4, blue: 1.0),     // Viola chiaro
+            backgroundColor: Color(red: 0.05, green: 0.05, blue: 0.1), // Nero con sfumatura bluastra
+            surfaceColor: Color(red: 0.15, green: 0.15, blue: 0.2),  // Grigio scuro con sfumatura bluastra
+            textColor: Color.white,                                   // Testo bianco
+            secondaryTextColor: Color(red: 0.9, green: 0.9, blue: 0.95)  // Grigio molto chiaro per migliore leggibilità
+        ),
+        
+        Theme(
+            id: "amethyst",
+            name: "theme_amethyst".localized,
             isPremium: true,
             primaryColor: Color(red: 0.5, green: 0.2, blue: 0.8),  // Viola più acceso
             secondaryColor: Color(red: 0.3, green: 0.2, blue: 0.5),  // Viola scuro
@@ -209,7 +222,7 @@ class ThemeManager: ObservableObject {
         
         Theme(
             id: "rose_gold",
-            name: "rose_gold_theme".localized,
+            name: "theme_rose_gold".localized,
             isPremium: true,
             primaryColor: Color.pink,
             secondaryColor: Color(red: 0.9, green: 0.7, blue: 0.5),
@@ -222,7 +235,7 @@ class ThemeManager: ObservableObject {
         
         Theme(
             id: "ocean",
-            name: "ocean_theme".localized,
+            name: "theme_ocean".localized,
             isPremium: true,
             primaryColor: Color.blue,
             secondaryColor: Color.teal,
@@ -235,7 +248,7 @@ class ThemeManager: ObservableObject {
         
         Theme(
             id: "emerald",
-            name: "emerald_theme".localized,
+            name: "theme_emerald".localized,
             isPremium: true,
             primaryColor: Color.green,
             secondaryColor: Color(red: 0.2, green: 0.8, blue: 0.6),
@@ -248,7 +261,7 @@ class ThemeManager: ObservableObject {
         
         Theme(
             id: "volcanic",
-            name: "volcanic_theme".localized,
+            name: "theme_volcanic".localized,
             isPremium: true,
             primaryColor: Color.red,
             secondaryColor: Color.orange,
@@ -261,7 +274,7 @@ class ThemeManager: ObservableObject {
         
         Theme(
             id: "lavender",
-            name: "lavender_theme".localized,
+            name: "theme_lavender".localized,
             isPremium: true,
             primaryColor: Color.purple,
             secondaryColor: Color(red: 0.8, green: 0.7, blue: 0.9),

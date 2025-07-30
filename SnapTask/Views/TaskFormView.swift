@@ -574,27 +574,47 @@ struct TaskFormView: View {
                                 
                                 if viewModel.isRecurring {
                                     VStack(spacing: 16) {
-                                        NavigationLink {
-                                            ContextualRecurrenceSettingsView(viewModel: viewModel)
-                                        } label: {
-                                            HStack {
-                                                Text("frequency".localized)
-                                                    .font(.subheadline.weight(.medium))
-                                                    .themedPrimaryText()
-                                                Spacer()
-                                                VStack(alignment: .trailing, spacing: 4) {
-                                                    Text(viewModel.recurrenceDisplayText)
+                                        // Use the ORIGINAL EnhancedRecurrenceSettingsView for today tasks
+                                        if viewModel.selectedTimeScope == .today {
+                                            NavigationLink {
+                                                EnhancedRecurrenceSettingsView(viewModel: viewModel)
+                                            } label: {
+                                                HStack {
+                                                    Text("frequency".localized)
+                                                        .font(.subheadline.weight(.medium))
+                                                        .themedPrimaryText()
+                                                    Spacer()
+                                                    Text(viewModel.recurrenceType.localizedString)
                                                         .font(.subheadline)
                                                         .themedSecondaryText()
-                                                    // Show hint about contextual options
-                                                    Text("contextual_to_scope".localized)
-                                                        .font(.caption)
+                                                    Image(systemName: "chevron.right")
+                                                        .font(.system(size: 12))
                                                         .themedSecondaryText()
-                                                        .opacity(0.7)
                                                 }
-                                                Image(systemName: "chevron.right")
-                                                    .font(.system(size: 12))
-                                                    .themedSecondaryText()
+                                            }
+                                        } else {
+                                            // Use new ContextualRecurrenceSettingsView for other time scopes
+                                            NavigationLink {
+                                                ContextualRecurrenceSettingsView(viewModel: viewModel)
+                                            } label: {
+                                                HStack {
+                                                    Text("frequency".localized)
+                                                        .font(.subheadline.weight(.medium))
+                                                        .themedPrimaryText()
+                                                    Spacer()
+                                                    VStack(alignment: .trailing, spacing: 4) {
+                                                        Text(viewModel.recurrenceDisplayText)
+                                                            .font(.subheadline)
+                                                            .themedSecondaryText()
+                                                        Text("contextual_to_scope".localized)
+                                                            .font(.caption)
+                                                            .themedSecondaryText()
+                                                            .opacity(0.7)
+                                                    }
+                                                    Image(systemName: "chevron.right")
+                                                        .font(.system(size: 12))
+                                                        .themedSecondaryText()
+                                                }
                                             }
                                         }
                                         
