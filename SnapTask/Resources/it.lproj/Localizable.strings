@@ -113,6 +113,10 @@
 "medium_priority" = "Media";
 "low_priority" = "Bassa";
 "no_tasks_today" = "Nessuna attività per oggi";
+"no_tasks_this_week" = "Nessuna attività per questa settimana";
+"no_tasks_this_month" = "Nessuna attività per questo mese";
+"no_tasks_this_year" = "Nessuna attività per quest'anno";
+"no_tasks_long_term" = "Nessuna attività a lungo termine";
 "task_details" = "Dettagli Attività";
 "due_tasks" = "Attività in Scadenza";
 "no_tasks_due" = "Nessuna Attività in Scadenza";
@@ -416,156 +420,6 @@
 "estimated_sessions" = "Sessioni Stimate";
 "estimated_duration" = "Durata Stimata";
 "session_breakdown" = "Dettaglio Sessione";
-"work_time" = "Tempo di Lavoro";
-"break_time" = "Tempo di Pausa";
-"total_time" = "Tempo Totale";
-"summary" = "Riepilogo";
-"sessions_until_long_break" = "Sessioni fino alla pausa lunga";
-"focus_time" = "Tempo di Concentrazione";
-"colors" = "Colori";
-
-// Timeline specific
-"list" = "Lista";
-"next_task_in_1_hour" = "Prossima attività tra 1 ora";
-"next_task_in_hours" = "Prossima attività tra %d ore";
-"all_day" = "Tutto il giorno";
-"tap_plus_add_first_task" = "Tocca il pulsante + per aggiungere la tua prima attività";
-"track" = "Traccia";
-"organize_tasks" = "Organizza Attività";
-"organization_mode" = "Modalità di Organizzazione";
-"time_sort_order" = "Ordinamento per Ora";
-"day_timeline" = "Timeline del Giorno";
-"default_view" = "Vista Predefinita";
-"by_time" = "Per Ora";
-"by_category" = "Per Categoria";
-"by_priority" = "Per Priorità";
-// Task Form specific
-"enter_task_name" = "Inserisci nome attività...";
-"add_description" = "Aggiungi descrizione...";
-"add_location" = "Aggiungi Posizione";
-"specific_time" = "Orario Specifico";
-"set_exact_time" = "Imposta orario esatto";
-"start_time" = "Ora di Inizio";
-"add_duration" = "Aggiungi durata";
-"duration_value" = "Valore Durata";
-"category_priority" = "Categoria e Priorità";
-"folder" = "Cartella";
-"repeat_task" = "Ripeti Attività";
-"frequency" = "Frequenza";
-"pomodoro_mode" = "Modalità Pomodoro";
-"enable_pomodoro" = "Abilita Pomodoro";
-"reward_points" = "Punti Premio";
-"earn_reward_points" = "Guadagna punti premio";
-"custom_points" = "Punti Personalizzati";
-"point_guidelines" = "Linee Guida Punti";
-"quick_tasks_5_15_min" = "Attività veloci (5-15 min)";
-"regular_tasks_30_90_min" = "Attività regolari (30-90 min)";
-"complex_tasks_2_4_hours" = "Attività complesse (2-4 ore)";
-"save_task" = "Salva Attività";
-"choose_icon" = "Scegli Icona";
-
-// Rewards View
-"available_points" = "Punti Disponibili";
-"available_rewards" = "Premi Disponibili";
-"no_rewards_yet" = "Ancora Nessun Premio";
-"create_first_reward_motivation" = "Crea il tuo primo premio per iniziare a motivarti!";
-"redeem" = "Riscatta";
-"general" = "Generale";
-"tap_for_details" = "Tocca per\ndettagli";
-"filter_by_frequency" = "Filtra per Frequenza";
-"pts_available" = "pt disponibili";
-"points_history" = "Cronologia Punti";
-"redeemed_rewards" = "Premi Riscattati";
-"need_more_points" = "Servono altri {points} punti";
-"rewards_count" = "premi";
-
-// Reward Form View
-"reward_details" = "Dettagli Premio";
-"reward_name" = "Nome Premio";
-"enter_reward_name" = "Inserisci nome premio";
-"description" = "Descrizione";
-
-"manage_subscriptions" = "Gestisci Abbonamenti";
-"terms_of_service" = "Termini di Servizio";
-"privacy_policy" = "Privacy Policy";
-"free_trial" = "Prova Gratuita";
-"free_plan_limits" = "Limiti del Piano Gratuito";
-"categories_limit_message" = "Hai raggiunto il limite di categorie per il piano gratuito.";
-"premium_feature_title" = "Funzionalità Premium";
-"premium_feature_message_categories" = "Crea categorie illimitate per organizzare le tue attività. Passa a Pro per sbloccare questa funzionalità.";
-"premium_feature_message_rewards" = "Crea premi illimitati per motivarti. Passa a Pro per sbloccare questa funzionalità.";
-"premium_feature_message_themes" = "Personalizza l'aspetto dell'app con temi esclusivi. Passa a Pro per sbloccare questa funzionalità.";
-"premium_feature_message_statistics" = "Accedi a statistiche avanzate per analizzare la tua produttività. Passa a Pro per sbloccare questa funzionalità.";
-"premium_feature_message_evaluation" = "Valuta la qualità e la difficoltà delle tue attività per ottenere analisi dettagliate. Passa a Pro per sbloccare questa funzionalità.";
-"upgrade_to_pro" = "Passa a Pro";
-"categories_limit_reached" = "Limite categorie raggiunto";
-"rewards_limit_reached" = "Limite premi raggiunto";
-
-// Purchase Success Messages
-"welcome_snaptask_pro_lifetime" = "Benvenuto in SnapTask Pro! Hai accesso completo a tutte le funzionalità per sempre.";
-"free_trial_activated" = "Prova gratuita di 3 giorni attivata! Esplora tutte le funzionalità Pro.";
-"welcome_snaptask_pro" = "Benvenuto in SnapTask Pro! Tutte le funzionalità sono ora sbloccate.";
-"purchase_not_completed" = "Acquisto non completato. Riprova o contatta il supporto.";
-"purchases_restored_successfully" = "Acquisti ripristinati con successo!";
-"no_purchases_to_restore" = "Nessun acquisto da ripristinare trovato.";
-
-// Terms of Service
-"terms" = "Termini";
-"terms_of_service_title" = "Termini di Servizio";
-"terms_content" = "Benvenuto in SnapTask Pro. Utilizzando i nostri servizi, accetti i seguenti termini:\n\n1. **Abbonamento**: L'abbonamento a SnapTask Pro è ricorrente e si rinnova automaticamente.\n\n2. **Prova Gratuita**: La prova gratuita di 3 giorni è disponibile per i nuovi utenti.\n\n3. **Cancellazione**: Puoi cancellare l'abbonamento in qualsiasi momento dalle impostazioni del tuo account Apple.\n\n4. **Rimborsi**: I rimborsi sono gestiti secondo le politiche di Apple App Store.\n\n5. **Modifiche**: Ci riserviamo il diritto di modificare questi termini con preavviso.";
-"by_purchasing_you_agree" = "Acquistando o utilizzando la prova gratuita, accetti i Termini di Servizio e l'Informativa sulla Privacy di SnapTask.";
-
-// Impostazioni
-"contact_support" = "Contatta il supporto";
-"contact_support_message" = "Se hai bisogno di aiuto, hai suggerimenti o vuoi segnalare un bug, non esitare a contattarmi. Il tuo feedback è prezioso!";
-"themes_and_customization" = "Temi e personalizzazione";
-"themes" = "Temi";
-"manage_categories" = "Gestisci categorie";
-"category_gradients" = "Gradienti per categorie";
-"timer_colors" = "Colori del timer";
-
-// Temi
-"current_theme" = "Tema Corrente";
-"free_themes" = "Temi Gratuiti";
-"premium_themes" = "Temi Premium";
-"unlock_premium_themes" = "Sblocca Temi Premium";
-
-"theme_default" = "Predefinito";
-"theme_ocean" = "Oceano";
-"theme_forest" = "Foresta";
-"theme_sunset" = "Tramonto";
-"theme_amethyst" = "Ametista";
-"theme_carbon" = "Carbonio";
-"theme_midnight" = "Mezzanotte";
-"theme_rose_gold" = "Oro Rosa";
-"theme_emerald" = "Smeraldo";
-"theme_volcanic" = "Vulcanico";
-"theme_lavender" = "Lavanda";
-
-// Limiti Premium
-"premium_limit_info" = "Limite piano gratuito";
-"premium_limit_description" = "Il piano gratuito include fino a 3 ricompense personalizzate.";
-
-// Privacy Policy  
-"privacy_content" = "La tua privacy è importante per noi. Questa policy spiega come gestiamo i tuoi dati:\n\n1. **Dati Raccolti**: Raccogliamo solo i dati necessari per fornire il servizio.\n\n2. **Utilizzo**: I dati sono utilizzati per migliorare l'esperienza dell'app e fornire supporto.\n\n3. **Condivisione**: Non condividiamo i tuoi dati personali con terze parti.\n\n4. **Sicurezza**: Utilizziamo crittografia e misure di sicurezza per proteggere i tuoi dati.\n\n5. **Diritti**: Hai il diritto di accedere, modificare o eliminare i tuoi dati.";
-
-
-// Pomodoro
-"pomodoro" = "Pomodoro";
-"pomodoro_settings" = "Impostazioni Pomodoro";
-"work_duration" = "Durata Lavoro";
-"short_break" = "Pausa Breve";
-"long_break" = "Pausa Lunga";
-"sessions_before_long_break" = "Sessioni Prima della Pausa Lunga";
-"work_session" = "Sessione di Lavoro";
-"break" = "Pausa";
-"session_configuration" = "Configurazione Sessione";
-"number_of_sessions" = "Numero di Sessioni";
-"total_duration" = "Durata Totale";
-"total_sessions" = "Sessioni Totali";
-"estimated_sessions" = "Sessioni Stimate";
-"estimated_duration" = "Durata Stimata";
-"session_breakdown" = "Ripartizione Sessione";
 "work_time" = "Tempo di Lavoro";
 "break_time" = "Tempo di Pausa";
 "total_time" = "Tempo Totale";
