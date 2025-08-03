@@ -183,7 +183,7 @@ struct PremiumPaywallView: View {
                         CompactSubscriptionCard(
                             title: NSLocalizedString("yearly", comment: ""),
                             price: subscriptionManager.yearlyProduct?.displayPrice ?? "€24,99",
-                            subtitle: subscriptionManager.hasUsedTrial ? "€2,08/mese" : NSLocalizedString("days_free_then", comment: "3 days free"),
+                            subtitle: subscriptionManager.hasUsedTrial ? "€2,08/mese" : "3 giorni gratis, poi €24,99",
                             badge: subscriptionManager.hasUsedTrial ? nil : NSLocalizedString("free_trial", comment: ""),
                             isSelected: selectedPlan == "yearly",
                             badgeColor: .green,
@@ -419,12 +419,23 @@ struct CompactSubscriptionCard: View {
     let badgeColor: Color
     let isLifetime: Bool
     
+    // Calcolo del risparmio
+    private var savingsText: String? {
+        if isLifetime {
+            // Lifetime vs Monthly: €49.99 vs €3.99 x 24 mesi = €95.76
+            return "Risparmi €45,77"
+        } else if title.contains("Yearly") || title.contains("yearly") {
+            // Yearly vs Monthly: €24.99 vs €3.99 x 12 = €47.88
+            return "Risparmi €22,89"
+        }
+        return nil
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            // Badge
-            if let badge = badge {
-                HStack {
-                    Spacer()
+            // Badge - occupa spazio fisso
+            VStack {
+                if let badge = badge {
                     Text(badge)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.white)
@@ -434,10 +445,17 @@ struct CompactSubscriptionCard: View {
                             RoundedRectangle(cornerRadius: 6)
                                 .fill(badgeColor)
                         )
-                    Spacer()
+                } else {
+                    // Spazio invisibile della stessa altezza del badge
+                    Text(" ")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .opacity(0)
                 }
-                .padding(.bottom, 4)
             }
+            .frame(height: 20) // Altezza fissa per l'area badge
+            .padding(.bottom, 4)
             
             VStack(spacing: 4) {
                 Text(title)
@@ -452,17 +470,41 @@ struct CompactSubscriptionCard: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
+                    .lineLimit(2)
                 
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.green)
-                        .padding(.top, 2)
+                // Savings text - spazio fisso
+                VStack {
+                    if let savingsText = savingsText {
+                        Text(savingsText)
+                            .font(.system(size: 11, weight: .semibold)) // Aumentato da 9 a 11
+                            .foregroundColor(.green)
+                    } else {
+                        // Spazio invisibile per mantenere l'allineamento
+                        Text(" ")
+                            .font(.system(size: 11, weight: .semibold))
+                            .opacity(0)
+                    }
                 }
+                .frame(height: 16) // Altezza fissa per l'area savings
+                
+                // Checkmark - sempre alla stessa altezza con spazio fisso
+                VStack {
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18)) // Leggermente più grande
+                            .foregroundColor(.green)
+                    } else {
+                        // Placeholder invisibile per mantenere l'altezza
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.clear)
+                    }
+                }
+                .frame(height: 24) // Altezza fissa più generosa per il checkmark
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: isLifetime ? 80 : 70)
+        .frame(height: isLifetime ? 120 : 110) // Aumentato per fare spazio ai nuovi elementi
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(

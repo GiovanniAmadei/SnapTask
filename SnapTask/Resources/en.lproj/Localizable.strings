@@ -1048,3 +1048,93 @@
 "icloud" = "iCloud";
 "pts" = "pts";
 "task_name_placeholder" = "Enter task name";
+
+// Missing Time Scope Strings
+"select_week" = "Select Week";
+"week_range" = "Week Range";
+"select_month" = "Select Month";
+"select_year" = "Select Year";
+"selected_period" = "Selected Period";
+
+// Missing Premium Paywall Strings
+"unlock_snaptask_pro" = "Unlock SnapTask Pro";
+"maximize_your_productivity" = "Maximize your productivity";
+"everything_you_get" = "Everything you get";
+"choose_your_plan" = "Choose your plan";
+"lifetime_access" = "Lifetime Access";
+"one_time_no_subscription" = "One-time payment, no subscription";
+"best_value" = "Best Value";
+"days_free_then" = "3 days free, then %@";
+"total_flexibility" = "Total flexibility";
+"start_free_trial" = "Start Free Trial";
+"purchase_lifetime_access" = "Purchase Lifetime Access";
+"one_time_payment" = "One-time payment";
+"subscribe_yearly_plan" = "Subscribe to Yearly Plan";
+"subscribe_monthly_plan" = "Subscribe to Monthly Plan";
+"manage_subscriptions" = "Manage Subscriptions";
+"welcome_snaptask_pro_lifetime" = "Welcome to SnapTask Pro Lifetime! Enjoy unlimited access forever.";
+"free_trial_activated" = "Free trial activated! Enjoy 3 days of SnapTask Pro.";
+"welcome_snaptask_pro" = "Welcome to SnapTask Pro! Enjoy all premium features.";
+"purchase_not_completed" = "Purchase was not completed. Please try again.";
+"purchases_restored_successfully" = "Purchases restored successfully!";
+"no_purchases_to_restore" = "No purchases found to restore.";
+"terms_of_service_title" = "Terms of Service";
+"terms_content" = "By using SnapTask, you agree to our terms and conditions. This app is provided as-is for productivity purposes.";
+"terms" = "Terms";
+"privacy_policy_title" = "Privacy Policy";
+"privacy_content" = "Your privacy is important to us. SnapTask processes your data locally and through iCloud sync when enabled.";
+"privacy" = "Privacy";
+
+// Missing Settings Strings
+"premium_plan" = "Premium Plan";
+"premium_features" = "Premium Features";
+"email_client_not_available" = "Email Client Not Available";
+"email_client_not_available_message" = "No email client is configured on this device. Please set up Mail app or install another email client.";
+
+// Additional recurrence strings already in some languages but missing from English
+"contextual_to_scope" = "Contextual to scope";
+"choose_how_often_daily_task" = "Choose how often to repeat this daily task";
+"choose_how_often_weekly_goal" = "Choose how often to repeat this weekly goal";  
+"choose_how_often_monthly_goal" = "Choose how often to repeat this monthly goal";
+"choose_how_often_yearly_goal" = "Choose how often to repeat this yearly goal";
+"long_term_goals_no_recurrence" = "Long-term goals don't have recurrence";
+"recurrence_options" = "Recurrence Options";
+
+// Missing onetime reward strings
+"onetime" = "One-time";
+"free_trial" = "Free Trial";
+
+// Missing EnhancedRecurrenceSettingsView Strings
+"recurrence_type" = "Recurrence Type";
+"daily_enum" = "Daily";
+"weekly_enum" = "Weekly";
+"monthly_enum" = "Monthly";
+"yearly_enum" = "Yearly";
+"days_enum" = "Days";
+"patterns_enum" = "Patterns";
+"daily_recurrence" = "Daily Recurrence";
+"task_repeat_every_day" = "Task will repeat every day";
+"weekly_recurrence" = "Weekly Recurrence";
+"monthly_recurrence" = "Monthly Recurrence";
+"yearly_recurrence" = "Yearly Recurrence";
+"select_days_of_month" = "Select Days of Month";
+"select_patterns_ordinal" = "Select Patterns (Ordinal)";
+"monthly_patterns" = "Monthly Patterns";
+"none_selected" = "None selected";
+"select_day_of_year" = "Select day of the year";
+"repeat_on" = "Repeat on";
+"task_repeat_yearly_on" = "Task will repeat yearly on";
+"end_date" = "End Date";
+"set_end_date" = "Set end date";
+
+// Missing OrdinalPatternPickerView Strings
+"select_patterns_description" = "Select specific patterns for monthly recurrence";
+"first" = "First";
+"second" = "Second";
+"third" = "Third";
+"fourth" = "Fourth";
+"last" = "Last";
+"clear_all" = "Clear All";
+
+// Missing TaskFormView string
+"long_term_info" = "Long-term goals have no specific timeline";
