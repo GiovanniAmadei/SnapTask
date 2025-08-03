@@ -60,6 +60,10 @@ struct PremiumPaywallView: View {
         .onAppear {
             Task {
                 await subscriptionManager.loadProducts()
+                print("🔍 Products loaded in PaywallView:")
+                print("   Monthly: \(subscriptionManager.monthlyProduct?.displayPrice ?? "nil")")
+                print("   Yearly: \(subscriptionManager.yearlyProduct?.displayPrice ?? "nil")")
+                print("   Lifetime: \(subscriptionManager.lifetimeProduct?.displayPrice ?? "nil")")
             }
         }
     }
@@ -162,12 +166,13 @@ struct PremiumPaywallView: View {
                 }) {
                     CompactSubscriptionCard(
                         title: NSLocalizedString("lifetime_access", comment: ""),
-                        price: subscriptionManager.lifetimeProduct?.displayPrice ?? "€49,99",
+                        price: subscriptionManager.lifetimeProduct?.displayPrice ?? "---",
                         subtitle: NSLocalizedString("one_time_no_subscription", comment: ""),
                         badge: NSLocalizedString("best_value", comment: ""),
                         isSelected: selectedPlan == "lifetime",
                         badgeColor: .orange,
-                        isLifetime: true
+                        isLifetime: true,
+                        savingsAmount: subscriptionManager.lifetimeSavingsAmount
                     )
                 }
                 .buttonStyle(.plain)
@@ -182,12 +187,13 @@ struct PremiumPaywallView: View {
                     }) {
                         CompactSubscriptionCard(
                             title: NSLocalizedString("yearly", comment: ""),
-                            price: subscriptionManager.yearlyProduct?.displayPrice ?? "€24,99",
-                            subtitle: subscriptionManager.hasUsedTrial ? "€2,08/mese" : "3 giorni gratis, poi €24,99",
+                            price: subscriptionManager.yearlyProduct?.displayPrice ?? "---",
+                            subtitle: subscriptionManager.hasUsedTrial ? subscriptionManager.monthlyEquivalentForYearly + "/mese" : String(format: NSLocalizedString("days_free_then", comment: ""), subscriptionManager.yearlyProduct?.displayPrice ?? "---"),
                             badge: subscriptionManager.hasUsedTrial ? nil : NSLocalizedString("free_trial", comment: ""),
                             isSelected: selectedPlan == "yearly",
                             badgeColor: .green,
-                            isLifetime: false
+                            isLifetime: false,
+                            savingsAmount: subscriptionManager.yearlySavingsAmount
                         )
                     }
                     .buttonStyle(.plain)
@@ -201,12 +207,13 @@ struct PremiumPaywallView: View {
                     }) {
                         CompactSubscriptionCard(
                             title: NSLocalizedString("monthly", comment: ""),
-                            price: subscriptionManager.monthlyProduct?.displayPrice ?? "€3,99",
+                            price: subscriptionManager.monthlyProduct?.displayPrice ?? "---",
                             subtitle: NSLocalizedString("total_flexibility", comment: ""),
                             badge: nil,
                             isSelected: selectedPlan == "monthly",
                             badgeColor: .purple,
-                            isLifetime: false
+                            isLifetime: false,
+                            savingsAmount: nil
                         )
                     }
                     .buttonStyle(.plain)
@@ -234,7 +241,7 @@ struct PremiumPaywallView: View {
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                             
-                            Text(String(format: NSLocalizedString("days_free_then", comment: ""), selectedProduct?.displayPrice ?? "€24,99"))
+                            Text(String(format: NSLocalizedString("days_free_then", comment: ""), selectedProduct?.displayPrice ?? "---"))
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
                         } else if selectedPlan == "lifetime" {
@@ -418,22 +425,17 @@ struct CompactSubscriptionCard: View {
     let isSelected: Bool
     let badgeColor: Color
     let isLifetime: Bool
+    let savingsAmount: String?
     
     // Calcolo del risparmio
     private var savingsText: String? {
-        if isLifetime {
-            // Lifetime vs Monthly: €49.99 vs €3.99 x 24 mesi = €95.76
-            return "Risparmi €45,77"
-        } else if title.contains("Yearly") || title.contains("yearly") {
-            // Yearly vs Monthly: €24.99 vs €3.99 x 12 = €47.88
-            return "Risparmi €22,89"
-        }
-        return nil
+        guard let savingsAmount = savingsAmount else { return nil }
+        return String(format: NSLocalizedString("savings_amount", comment: ""), savingsAmount)
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Badge - occupa spazio fisso
+            // Badge - spazio fisso
             VStack {
                 if let badge = badge {
                     Text(badge)
@@ -454,9 +456,11 @@ struct CompactSubscriptionCard: View {
                         .opacity(0)
                 }
             }
-            .frame(height: 20) // Altezza fissa per l'area badge
-            .padding(.bottom, 4)
+            .frame(height: 20)
             
+            Spacer(minLength: 4) // Spazio flessibile dopo il badge
+            
+            // Contenuto principale
             VStack(spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -471,40 +475,29 @@ struct CompactSubscriptionCard: View {
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                
-                // Savings text - spazio fisso
-                VStack {
-                    if let savingsText = savingsText {
-                        Text(savingsText)
-                            .font(.system(size: 11, weight: .semibold)) // Aumentato da 9 a 11
-                            .foregroundColor(.green)
-                    } else {
-                        // Spazio invisibile per mantenere l'allineamento
-                        Text(" ")
-                            .font(.system(size: 11, weight: .semibold))
-                            .opacity(0)
-                    }
-                }
-                .frame(height: 16) // Altezza fissa per l'area savings
-                
-                // Checkmark - sempre alla stessa altezza con spazio fisso
-                VStack {
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 18)) // Leggermente più grande
-                            .foregroundColor(.green)
-                    } else {
-                        // Placeholder invisibile per mantenere l'altezza
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.clear)
-                    }
-                }
-                .frame(height: 24) // Altezza fissa più generosa per il checkmark
             }
+            
+            Spacer(minLength: 4) // Spazio flessibile prima del savings
+            
+            // Savings text
+            VStack {
+                if let savingsText = savingsText {
+                    Text(savingsText)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.green)
+                } else {
+                    // Spazio invisibile per mantenere l'allineamento
+                    Text(" ")
+                        .font(.system(size: 11, weight: .semibold))
+                        .opacity(0)
+                }
+            }
+            .frame(height: 16)
+            
+            Spacer(minLength: 2) // Piccolo spazio finale
         }
         .frame(maxWidth: .infinity)
-        .frame(height: isLifetime ? 120 : 110) // Aumentato per fare spazio ai nuovi elementi
+        .frame(height: isLifetime ? 100 : 95) // Altezze più ragionevoli
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(

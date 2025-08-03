@@ -142,14 +142,27 @@ class SubscriptionManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
+        print("🛒 App Bundle ID: \(Bundle.main.bundleIdentifier ?? "Unknown")")
+        print("🛒 Loading products for IDs: \(productIDs)")
+        
         do {
             let products = try await Product.products(for: productIDs)
+            
+            print("🛒 StoreKit returned \(products.count) products")
+            if products.isEmpty {
+                print("⚠️ No products found. Possible reasons:")
+                print("   - Products not 'Ready for Review' in App Store Connect")
+                print("   - Agreements not completed")
+                print("   - Wrong Product IDs")
+                print("   - Network issues")
+            }
             
             await MainActor.run {
                 self.subscriptionProducts = products.filter { $0.type == .autoRenewable }.sorted { $0.price < $1.price }
                 
                 // Separate products by type
                 for product in products {
+                    print("🛒 Found product: \(product.id) - \(product.displayName) - \(product.displayPrice)")
                     if product.id.contains("monthly") {
                         self.monthlyProduct = product
                     } else if product.id.contains("yearly") {
@@ -159,21 +172,27 @@ class SubscriptionManager: ObservableObject {
                     }
                 }
                 
-                print("✅ Loaded \(products.count) products")
+                print("✅ Final assignment:")
                 if let monthly = monthlyProduct {
                     print("   Monthly: \(monthly.displayName) - \(monthly.displayPrice)")
+                } else {
+                    print("   Monthly: NIL")
                 }
                 if let yearly = yearlyProduct {
                     print("   Yearly: \(yearly.displayName) - \(yearly.displayPrice)")
+                } else {
+                    print("   Yearly: NIL")
                 }
                 if let lifetime = lifetimeProduct {
                     print("   Lifetime: \(lifetime.displayName) - \(lifetime.displayPrice)")
+                } else {
+                    print("   Lifetime: NIL")
                 }
             }
         } catch {
             print("❌ Failed to load products: \(error)")
             await MainActor.run {
-                self.subscriptionStatus = .failed(error: "Impossibile caricare i prodotti")
+                self.subscriptionStatus = .failed(error: "Impossibile caricare i prodotti: \(error.localizedDescription)")
             }
         }
     }
@@ -429,6 +448,19 @@ extension SubscriptionManager {
         }
     }
     
+    var monthlyEquivalentForYearly: String {
+        guard let yearly = yearlyProduct else {
+            return "---"
+        }
+        
+        let monthlyPrice = yearly.price / 12
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        
+        return formatter.string(from: NSNumber(value: Double(truncating: monthlyPrice as NSNumber))) ?? "---"
+    }
+    
     var yearlySavingsPercentage: Int {
         guard let monthly = monthlyProduct,
               let yearly = yearlyProduct else {
@@ -445,13 +477,34 @@ extension SubscriptionManager {
     var yearlySavingsAmount: String {
         guard let monthly = monthlyProduct,
               let yearly = yearlyProduct else {
-            return "€22,89" // Updated default amount
+            return "---"
         }
         
         let monthlyYearlyPrice = monthly.price * 12
         let savings = monthlyYearlyPrice - yearly.price
         
-        return savings.formatted(.currency(code: "EUR"))
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        
+        return formatter.string(from: NSNumber(value: Double(truncating: savings as NSNumber))) ?? "---"
+    }
+    
+    var lifetimeSavingsAmount: String {
+        guard let monthly = monthlyProduct,
+              let lifetime = lifetimeProduct else {
+            return "---"
+        }
+        
+        // Assumiamo 24 mesi per calcolare il risparmio lifetime
+        let monthly24Price = monthly.price * 24
+        let savings = monthly24Price - lifetime.price
+        
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        
+        return formatter.string(from: NSNumber(value: Double(truncating: savings as NSNumber))) ?? "---"
     }
     
     // Premium feature limits for free users

@@ -588,7 +588,7 @@
 
 // Statistics View
 "overview" = "Overview";
-"streaks" = "Streaks";
+"streakreak" = "Streaks";
 "consistency" = "Consistency";
 "time_distribution" = "Time Distribution";
 "total" = "Total";
@@ -828,7 +828,7 @@
 "yearly_price" = "€34.99/year";
 "yearly_savings" = "Save 27%";
 "subscribe" = "Subscribe";
-"restore_purchases" = "Restore Purchases";
+"restore_hurchases" = "Restore Purchases";
 "subscription_terms" = "Subscription Terms";
 "privacy_policy" = "Privacy Policy";
 "terms_of_service" = "Terms of Service";
@@ -847,6 +847,8 @@
 "rewards_limit_message" = "You can create up to 3 rewards with the free plan. Upgrade to Pro for unlimited rewards.";
 "premium_badge" = "PRO";
 "by_purchasing_you_agree" = "By purchasing or using the free trial, you agree to SnapTask's Terms of Service and Privacy Policy.";
+"you_save" = "You Save";
+"savings_amount" = "You Save %@";
 
 // Settings
 "contact_support" = "Contact Support";
@@ -1071,7 +1073,15 @@
 "one_time_payment" = "One-time payment";
 "subscribe_yearly_plan" = "Subscribe to Yearly Plan";
 "subscribe_monthly_plan" = "Subscribe to Monthly Plan";
+"restore_purchases" = "Restore Purchases";
 "manage_subscriptions" = "Manage Subscriptions";
+"savings_amount" = "You Save %@";
+"yearly" = "Yearly";
+"monthly" = "Monthly";
+"free_trial" = "Free Trial";
+"subscription" = "Subscription";
+"terms_of_service" = "Terms of Service";
+"privacy_policy" = "Privacy Policy";
 "welcome_snaptask_pro_lifetime" = "Welcome to SnapTask Pro Lifetime! Enjoy unlimited access forever.";
 "free_trial_activated" = "Free trial activated! Enjoy 3 days of SnapTask Pro.";
 "welcome_snaptask_pro" = "Welcome to SnapTask Pro! Enjoy all premium features.";
