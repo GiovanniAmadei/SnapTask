@@ -1108,71 +1108,15 @@
 "privacy_content" = "Your privacy is important to us. SnapTask processes your data locally and through iCloud sync when enabled.";
 "privacy" = "Privacy";
 
-// Missing Settings Strings
-"premium_plan" = "Premium Plan";
-"premium_features" = "Premium Features";
-"email_client_not_available" = "Email Client Not Available";
-"email_client_not_available_message" = "No email client is configured on this device. Please set up Mail app or install another email client.";
-
-// Time Scope Labels (localized)
-"time_scope_today" = "Today";
-"time_scope_week" = "Week";
-"time_scope_month" = "Month";
-"time_scope_year" = "Year";
-"time_scope_long_term" = "L. Term";
-
-// Period Display Strings
-"this_week" = "This Week";
-"this_month" = "This Month";
-"this_year" = "This Year";
-"long_term_objective" = "Long-term objective";
-"week_abbreviation" = "Week";
-"long_term_objectives" = "L. Term Objectives";
-
-// Additional recurrence strings already in some languages but missing from English
-"contextual_to_scope" = "Contextual to scope";
-"choose_how_often_daily_task" = "Choose how often to repeat this daily task";
-"choose_how_often_weekly_goal" = "Choose how often to repeat this weekly goal";  
-"choose_how_often_monthly_goal" = "Choose how often to repeat this monthly goal";
-"choose_how_often_yearly_goal" = "Choose how often to repeat this yearly goal";
-"long_term_goals_no_recurrence" = "Long-term goals don't have recurrence";
-"recurrence_options" = "Recurrence Options";
-
-// Missing onetime reward strings
-"onetime" = "One-time";
-"free_trial" = "Free Trial";
-
-// Missing EnhancedRecurrenceSettingsView Strings
-"recurrence_type" = "Recurrence Type";
-"daily_enum" = "Daily";
-"weekly_enum" = "Weekly";
-"monthly_enum" = "Monthly";
-"yearly_enum" = "Yearly";
-"days_enum" = "Days";
-"patterns_enum" = "Patterns";
-"daily_recurrence" = "Daily Recurrence";
-"task_repeat_every_day" = "Task will repeat every day";
-"weekly_recurrence" = "Weekly Recurrence";
-"monthly_recurrence" = "Monthly Recurrence";
-"yearly_recurrence" = "Yearly Recurrence";
-"select_days_of_month" = "Select Days of Month";
-"select_patterns_ordinal" = "Select Patterns (Ordinal)";
-"monthly_patterns" = "Monthly Patterns";
-"none_selected" = "None selected";
-"select_day_of_year" = "Select day of the year";
-"repeat_on" = "Repeat on";
-"task_repeat_yearly_on" = "Task will repeat yearly on";
-"end_date" = "End Date";
-"set_end_date" = "Set end date";
-
-// Missing OrdinalPatternPickerView Strings
-"select_patterns_description" = "Select specific patterns for monthly recurrence";
-"first" = "First";
-"second" = "Second";
-"third" = "Third";
-"fourth" = "Fourth";
-"last" = "Last";
-"clear_all" = "Clear All";
-
-// Missing TaskFormView string
-"long_term_info" = "Long-term goals have no specific timeline";
+// Missing Subscription Manager Strings
+"not_subscribed" = "Not Subscribed";
+"subscription_expires_on" = "Subscribed until %@";
+"subscription_expired" = "Subscription Expired";
+"trial_expires_on" = "Free trial until %@";
+"purchase_pending" = "Purchase Pending";
+"subscription_error" = "Error: %@";
+"unable_to_load_products" = "Unable to load products: %@";
+"purchase_failed" = "Purchase Failed";
+"restore_failed" = "Restore Failed";
+"unknown_error" = "Unknown Error";
+"per_month" = "/month";
