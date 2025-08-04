@@ -783,7 +783,7 @@ struct TimelineHeaderView: View {
                                             .foregroundColor(Color(scope.color))
                                             .font(.system(size: 14, weight: .medium))
                                         
-                                        Text(scope.rawValue)
+                                        Text(scope.displayName)
                                             .font(.subheadline)
                                         
                                         Spacer()
@@ -803,7 +803,7 @@ struct TimelineHeaderView: View {
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(Color(viewModel.selectedTimeScope.color))
                                 
-                                Text(viewModel.selectedTimeScope.rawValue)
+                                Text(viewModel.selectedTimeScope.displayName)
                                     .font(.subheadline.weight(.semibold))
                                     .themedPrimaryText()
                                     .lineLimit(1)

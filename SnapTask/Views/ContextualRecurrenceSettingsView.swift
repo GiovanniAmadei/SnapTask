@@ -15,7 +15,7 @@ struct ContextualRecurrenceSettingsView: View {
                             .font(.system(size: 16))
                             .foregroundColor(Color(viewModel.selectedTimeScope.color))
                         
-                        Text("recurrence_for".localized + " " + viewModel.selectedTimeScope.rawValue)
+                        Text("recurrence_for".localized + " " + viewModel.selectedTimeScope.displayName)
                             .font(.headline)
                             .themedPrimaryText()
                         

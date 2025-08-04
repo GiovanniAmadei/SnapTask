@@ -225,7 +225,7 @@ struct TaskFormView: View {
                                         Button(action: {
                                             viewModel.selectedTimeScope = scope
                                         }) {
-                                            Label(scope.rawValue, systemImage: scope.icon)
+                                            Label(scope.displayName, systemImage: scope.icon)
                                         }
                                     }
                                 } label: {
@@ -233,9 +233,11 @@ struct TaskFormView: View {
                                         Image(systemName: viewModel.selectedTimeScope.icon)
                                             .font(.system(size: 12))
                                             .foregroundColor(Color(viewModel.selectedTimeScope.color))
-                                        Text(viewModel.selectedTimeScope.rawValue)
-                                            .font(.subheadline)
-                                            .themedSecondaryText()
+                                        Text(viewModel.selectedTimeScope.displayName)
+                                            .font(.subheadline.weight(.semibold))
+                                            .themedPrimaryText()
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
                                         Image(systemName: "chevron.down")
                                             .font(.system(size: 10))
                                             .themedSecondaryText()

@@ -3,16 +3,26 @@ import Combine
 
 // MARK: - TaskTimeScope Enum
 enum TaskTimeScope: String, CaseIterable, Codable {
-    case today = "Oggi"
-    case week = "Settimana"
-    case month = "Mese"
-    case year = "Anno"
-    case longTerm = "L. Termine"
+    case today = "today"
+    case week = "week"
+    case month = "month"
+    case year = "year"
+    case longTerm = "longTerm"
+    
+    var displayName: String {
+        switch self {
+        case .today: return "scope_today".localized
+        case .week: return "scope_week".localized
+        case .month: return "scope_month".localized
+        case .year: return "scope_year".localized
+        case .longTerm: return "scope_long_term".localized
+        }
+    }
     
     var icon: String {
         switch self {
         case .today: return "star.fill"
-        case .week: return "target"
+        case .week: return "target" 
         case .month: return "calendar"
         case .year: return "trophy.fill"
         case .longTerm: return "sparkles"
@@ -126,21 +136,21 @@ struct TodoTask: Identifiable, Codable, Equatable {
                 formatter.dateStyle = .short
                 return "\(formatter.string(from: weekStart)) - \(formatter.string(from: weekEnd))"
             }
-            return "Questa settimana"
+            return "this_week".localized
         case .month:
             if let start = scopeStartDate {
                 formatter.dateFormat = "MMMM yyyy"
                 return formatter.string(from: start)
             }
-            return "Questo mese"
+            return "this_month".localized
         case .year:
             if let start = scopeStartDate {
                 formatter.dateFormat = "yyyy"
                 return formatter.string(from: start)
             }
-            return "Quest'anno"
+            return "this_year".localized
         case .longTerm:
-            return "Obiettivo a lungo termine"
+            return "long_term_objective".localized
         }
     }
     

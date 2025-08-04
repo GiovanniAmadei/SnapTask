@@ -1049,113 +1049,16 @@
 "pts" = "pts";
 "task_name_placeholder" = "Inserisci nome attività";
 
-// Missing Time Scope Strings
-"select_week" = "Seleziona Settimana";
-"week_range" = "Intervallo Settimana";
-"select_month" = "Seleziona Mese";
-"select_year" = "Seleziona Anno";
-"selected_period" = "Periodo Selezionato";
-
-// Missing Premium Paywall Strings
-"unlock_snaptask_pro" = "Sblocca SnapTask Pro";
-"maximize_your_productivity" = "Massimizza la tua produttività";
-"everything_you_get" = "Tutto quello che ottieni";
-"choose_your_plan" = "Scegli il tuo piano";
-"lifetime_access" = "Accesso a Vita";
-"one_time_no_subscription" = "Pagamento unico, nessun abbonamento";
-"best_value" = "Migliore Valore";
-"days_free_then" = "3 giorni gratis, poi %@";
-"total_flexibility" = "Flessibilità totale";
-"start_free_trial" = "Inizia Prova Gratuita";
-"purchase_lifetime_access" = "Acquista Accesso a Vita";
-"one_time_payment" = "Pagamento unico";
-"subscribe_yearly_plan" = "Sottoscrivi Piano Annuale";
-"subscribe_monthly_plan" = "Sottoscrivi Piano Mensile";
-"restore_purchases" = "Ripristina Acquisti";
-"manage_subscriptions" = "Gestisci Abbonamenti";
-"savings_amount" = "Risparmi %@";
-"yearly" = "Annuale";
-"monthly" = "Mensile";
-"free_trial" = "Prova Gratuita";
-"subscription" = "Abbonamento";
-"terms_of_service" = "Termini di Servizio";
-"privacy_policy" = "Informativa Privacy";
-"welcome_snaptask_pro_lifetime" = "Benvenuto in SnapTask Pro Lifetime! Goditi l'accesso illimitato per sempre.";
-"free_trial_activated" = "Prova gratuita attivata! Goditi 3 giorni di SnapTask Pro.";
-"welcome_snaptask_pro" = "Benvenuto in SnapTask Pro! Goditi tutte le funzionalità premium.";
-"purchase_not_completed" = "L'acquisto non è stato completato. Riprova.";
-"purchases_restored_successfully" = "Acquisti ripristinati con successo!";
-"no_purchases_to_restore" = "Nessun acquisto trovato da ripristinare.";
-"terms_of_service_title" = "Termini di Servizio";
-"terms_content" = "Utilizzando SnapTask, accetti i nostri termini e condizioni. Questa app è fornita così com'è per scopi di produttività.";
-"terms" = "Termini";
-"privacy_policy_title" = "Informativa Privacy";
-"privacy_content" = "La tua privacy è importante per noi. SnapTask elabora i tuoi dati localmente e tramite sincronizzazione iCloud quando abilitata.";
-"privacy" = "Privacy";
-
-// Missing Settings Strings
-"premium_plan" = "Piano Premium";
-"premium_features" = "Funzionalità Premium";
-"email_client_not_available" = "Client Email Non Disponibile";
-"email_client_not_available_message" = "Nessun client email è configurato su questo dispositivo. Ti prego di configurare l'app Mail o installare un altro client email.";
-
-// Additional recurrence strings already in some languages but missing from English
-"contextual_to_scope" = "Contestuale all'ambito";
-"choose_how_often_daily_task" = "Scegli ogni quanto ripetere questa attività giornaliera";
-"choose_how_often_weekly_goal" = "Scegli ogni quanto ripetere questo obiettivo settimanale";  
-"choose_how_often_monthly_goal" = "Scegli ogni quanto ripetere questo obiettivo mensile";
-"choose_how_often_yearly_goal" = "Scegli ogni quanto ripetere questo obiettivo annuale";
-"long_term_goals_no_recurrence" = "Gli obiettivi a lungo termine non hanno ricorrenza";
-"recurrence_options" = "Opzioni Ricorrenza";
-
-// Missing onetime reward strings
-"onetime" = "Una tantum";
-"free_trial" = "Prova Gratuita";
-
-// Missing EnhancedRecurrenceSettingsView Strings
-"recurrence_type" = "Tipo Ricorrenza";
-"daily_enum" = "Giornaliera";
-"weekly_enum" = "Settimanale";
-"monthly_enum" = "Mensile";
-"yearly_enum" = "Annuale";
-"days_enum" = "Giorni";
-"patterns_enum" = "Modelli";
-"daily_recurrence" = "Ricorrenza Giornaliera";
-"task_repeat_every_day" = "L'attività si ripeterà ogni giorno";
-"weekly_recurrence" = "Ricorrenza Settimanale";
-"monthly_recurrence" = "Ricorrenza Mensile";
-"yearly_recurrence" = "Ricorrenza Annuale";
-"select_days_of_month" = "Seleziona Giorni del Mese";
-"select_patterns_ordinal" = "Seleziona Modelli (Ordinali)";
-"monthly_patterns" = "Modelli Mensili";
-"none_selected" = "Nessuno selezionato";
-"select_day_of_year" = "Seleziona giorno dell'anno";
-"repeat_on" = "Ripeti il";
-"task_repeat_yearly_on" = "L'attività si ripeterà annualmente il";
-"end_date" = "Data Fine";
-"set_end_date" = "Imposta data fine";
-
-// Missing OrdinalPatternPickerView Strings
-"select_patterns_description" = "Seleziona modelli specifici per ricorrenza mensile";
-"first" = "Primo";
-"second" = "Secondo";
-"third" = "Terzo";
-"fourth" = "Quarto";
-"last" = "Ultimo";
-"clear_all" = "Cancella Tutto";
-
-// Missing TaskFormView string
-"long_term_info" = "Gli obiettivi a lungo termine non hanno una timeline specifica";
-
-// Subscription Manager Strings
-"not_subscribed" = "Non abbonato";
-"subscription_expires_on" = "Abbonato fino al %@";
-"subscription_expired" = "Abbonamento scaduto";
-"trial_expires_on" = "Trial gratuito fino al %@";
-"purchase_pending" = "Acquisto in elaborazione";
-"subscription_error" = "Errore: %@";
-"unable_to_load_products" = "Impossibile caricare i prodotti: %@";
-"purchase_failed" = "Acquisto fallito";
-"restore_failed" = "Ripristino fallito";
-"unknown_error" = "Errore sconosciuto";
-"per_month" = "/mese";
+// Missing Time Scope Localization Strings
+"scope_today" = "Oggi";
+"scope_week" = "Settimana";
+"scope_month" = "Mese";
+"scope_year" = "Anno";
+"scope_long_term" = "L. Termine";
+"this_week" = "Questa Settimana";
+"this_month" = "Questo Mese";
+"this_year" = "Quest'Anno";
+"long_term_objective" = "Obiettivo a lungo termine";
+"weekly_objectives" = "Obiettivi Settimanali";
+"week_short_format" = "Sett.";
+"long_term_objectives

@@ -135,6 +135,7 @@
 "recurrence_settings" = "Wiederholungseinstellungen";
 "repeat_settings" = "Wiederholungseinstellungen";
 "select_days" = "Tage auswählen";
+// Recurrence adaptation
 "adapted_to_scope" = "An gewählten Umfang angepasst";
 "no_recurrence_long_term" = "Keine Wiederholung für langfristige Ziele";
 
@@ -454,7 +455,6 @@
 "points_by_period" = "Punkte nach Zeitraum";
 "points_by_category" = "Punkte nach Kategorie";
 "create_categories_organize_rewards" = "Kategorien erstellen, um Ihre Belohnungen zu organisieren";
-"daily" = "Täglich";
 "yearly" = "Jährlich";
 
 // Task Performance Analytics
@@ -816,115 +816,181 @@
 "cloud_sync_desc" = "Synchronisieren Sie alle Ihre Daten über alle Geräte";
 "advanced_statistics" = "Erweiterte Statistiken";
 "advanced_statistics_desc" = "Zugriff auf alle Statistikbereiche für detaillierte Analysen";
+"custom_themes" = "Benutzerdefinierte Themes";
+"custom_themes_desc" = "Das App-Erscheinungsbild mit exklusiven Themes anpassen";
 
-// Subscription
+// Premium Paywall
 "snaptask_pro" = "SnapTask Pro";
-"upgrade_to_pro" = "Auf Pro upgraden";
-"monthly_subscription" = "Monatsabonnement";
-"yearly_subscription" = "Jahresabonnement";
-"monthly_price" = "3,99 €/Monat";
-"yearly_price" = "34,99 €/Jahr";
-"yearly_savings" = "27% sparen";
-"subscribe" = "Abonnieren";
+"unlock_snaptask_pro" = "SnapTask Pro freischalten";
+"maximize_your_productivity" = "Maximieren Sie Ihre Produktivität";
+"everything_you_get" = "Alles was Sie erhalten";
+"choose_your_plan" = "Wählen Sie Ihren Plan";
+"lifetime_access" = "Lebenslanger Zugang";
+"one_time_no_subscription" = "Einmalige Zahlung, kein Abonnement";
+"best_value" = "Bester Wert";
+"yearly" = "Jährlich";
+"monthly" = "Monatlich";
+"total_flexibility" = "Totale Flexibilität";
+"free_trial" = "Kostenlose Testversion";
+"days_free_then" = "3 Tage kostenlos, dann %@";
+"start_free_trial" = "Kostenlose Testversion starten";
+"purchase_lifetime_access" = "Lebenslangen Zugang kaufen";
+"one_time_payment" = "Einmalige Zahlung";
+"subscribe_yearly_plan" = "Jahresplan abonnieren";
+"subscribe_monthly_plan" = "Monatsplan abonnieren";
 "restore_purchases" = "Käufe wiederherstellen";
-"subscription_terms" = "Abonnementbedingungen";
-"privacy_policy" = "Datenschutzrichtlinie";
+"manage_subscriptions" = "Abonnements verwalten";
+"savings_amount" = "Sie sparen %@";
+"subscription" = "Abonnement";
 "terms_of_service" = "Nutzungsbedingungen";
-"manage_subscription" = "Abonnement verwalten";
-"cancel_subscription" = "Abonnement kündigen";
-"subscription_active" = "Abonnement aktiv";
-"subscription_expires" = "Läuft ab";
+"privacy_policy" = "Datenschutzrichtlinie";
+"welcome_snaptask_pro_lifetime" = "Willkommen bei SnapTask Pro Lifetime! Genießen Sie unbegrenzten Zugang für immer.";
+"free_trial_activated" = "Kostenlose Testversion aktiviert! Genießen Sie 3 Tage SnapTask Pro.";
+"welcome_snaptask_pro" = "Willkommen bei SnapTask Pro! Genießen Sie alle Premium-Funktionen.";
+"purchase_not_completed" = "Der Kauf wurde nicht abgeschlossen. Bitte versuchen Sie es erneut.";
+"purchases_restored_successfully" = "Käufe erfolgreich wiederhergestellt!";
+"no_purchases_to_restore" = "Keine Käufe zum Wiederherstellen gefunden.";
+"terms_of_service_title" = "Nutzungsbedingungen";
+"terms_content" = "Durch die Nutzung von SnapTask stimmen Sie unseren Geschäftsbedingungen zu. Diese App wird wie besehen für Produktivitätszwecke bereitgestellt.";
+"terms" = "Bedingungen";
+"privacy_policy_title" = "Datenschutzrichtlinie";
+"privacy_content" = "Ihre Privatsphäre ist uns wichtig. SnapTask verarbeitet Ihre Daten lokal und über iCloud-Synchronisation, wenn aktiviert.";
+"privacy" = "Datenschutz";
+
+// Subscription Manager Strings
+"not_subscribed" = "Nicht abonniert";
+"subscription_expires_on" = "Abonniert bis %@";
 "subscription_expired" = "Abonnement abgelaufen";
-"premium_required" = "Premium erforderlich";
-"premium_feature_locked" = "Diese Funktion ist nur mit SnapTask Pro verfügbar";
-"premium_upgrade_message" = "Upgraden Sie auf SnapTask Pro, um alle Premium-Funktionen freizuschalten";
-"free_plan_limits" = "Gratis-Plan Limits";
-"categories_limit_reached" = "Kategorienlimit erreicht";
-"categories_limit_message" = "Sie können bis zu 4 Kategorien mit dem Gratis-Plan erstellen. Upgraden Sie auf Pro für unbegrenzte Kategorien.";
-"rewards_limit_reached" = "Belohnungslimit erreicht";
-"rewards_limit_message" = "Sie können bis zu 3 Belohnungen mit dem Gratis-Plan erstellen. Upgraden Sie auf Pro für unbegrenzte Belohnungen.";
-"premium_badge" = "PRO";
-"by_purchasing_you_agree" = "Durch den Kauf oder die Nutzung der kostenlosen Testversion stimmen Sie den Nutzungsbedingungen und der Datenschutzrichtlinie von SnapTask zu.";
+"trial_expires_on" = "Kostenlose Testversion bis %@";
+"purchase_pending" = "Kauf wird bearbeitet";
+"subscription_error" = "Fehler: %@";
+"unable_to_load_products" = "Produkte können nicht geladen werden: %@";
+"purchase_failed" = "Kauf fehlgeschlagen";
+"restore_failed" = "Wiederherstellung fehlgeschlagen";
+"unknown_error" = "Unbekannter Fehler";
+"per_month" = "/Monat";
 
 // Settings
+"premium_plan" = "Premium-Plan";
+"premium_features" = "Premium-Funktionen";
 "contact_support" = "Support kontaktieren";
 "contact_support_message" = "Wenn Sie Hilfe benötigen, Vorschläge haben oder einen Fehler melden möchten, zögern Sie bitte nicht, mich zu kontaktieren. Ihr Feedback ist wertvoll!";
-"themes_and_customization" = "Themes & Anpassung";
-"themes" = "Themes";
-"manage_categories" = "Kategorien verwalten";
-"category_gradients" = "Kategorie-Verläufe";
-"timer_colors" = "Timer-Farben";
+"email_client_not_available" = "E-Mail-Client nicht verfügbar";
+"email_client_not_available_message" = "Auf diesem Gerät ist kein E-Mail-Client konfiguriert. Bitte richten Sie die Mail-App ein oder installieren Sie einen anderen E-Mail-Client.";
 
-// Themes
-"current_theme" = "Aktuelles Theme";
-"free_themes" = "Kostenlose Themes";
-"premium_themes" = "Premium-Themes";
-"unlock_premium_themes" = "Premium-Themes freischalten";
-
-"theme_default" = "Standard";
-"theme_ocean" = "Ozean";
-"theme_forest" = "Wald";
-"theme_sunset" = "Sonnenuntergang";
-"theme_amethyst" = "Amethyst";
-"theme_carbon" = "Carbon";
-"theme_midnight" = "Mitternacht";
-"theme_rose_gold" = "Roségold";
-"theme_emerald" = "Smaragd";
-"theme_volcanic" = "Vulkanisch";
-"theme_lavender" = "Lavendel";
-
-// Premium limits
-"premium_limit_info" = "Gratis-Plan Limit";
-"premium_limit_description" = "Der Gratis-Plan umfasst bis zu 3 benutzerdefinierte Belohnungen.";
-"rewards_limit_reached" = "Belohnungslimit erreicht";
-"rewards_limit_message" = "Sie können bis zu 3 Belohnungen mit dem Gratis-Plan erstellen. Upgraden Sie auf Pro für unbegrenzte Belohnungen.";
-"premium_badge" = "PRO";
-
-// Dark Mode Theme Warning
-"dark_mode_theme_warning_title" = "Theme mit benutzerdefinierten Farben";
-"dark_mode_theme_warning_message" = "Dieses Theme überschreibt Systemfarben und ist nicht mit dem dunklen Modus kompatibel. Um den dunklen Modus zu verwenden, wählen Sie bitte ein einfaches Theme wie 'Standard', 'Wald' oder 'Sonnenuntergang'.";
-"switch_to_simple_theme" = "Einfaches Theme verwenden";
-"keep_current_theme" = "Aktuelles Theme behalten";
-"custom_colors" = "Benutzerdefinierte Farben";
-"keep_dark_mode" = "Dunklen Modus deaktivieren";
-"keep_simple_theme" = "Aktuelles Theme behalten";
-"theme_dark_mode_warning_message" = "Dieses Theme verwendet benutzerdefinierte Farben und ist nicht mit dem dunklen Modus kompatibel. Möchten Sie den dunklen Modus deaktivieren, um dieses Theme zu verwenden?";
-
-// Category names
-"work_category" = "Arbeit";
-"personal_category" = "Persönlich";
-"health_category" = "Gesundheit";
-
-// Language names
-"system" = "System";
-"english" = "Englisch";
-"italiano" = "Italienisch";
-"español" = "Spanisch";
-"français" = "Französisch";
-"deutsch" = "Deutsch";
-
-// Additional strings
-"yesterday" = "Gestern";
-"tomorrow" = "Morgen";
-"untitled_task" = "Aufgabe ohne Titel";
+// Common actions
 "start" = "Starten";
 "pause" = "Pausieren";
 "resume" = "Fortsetzen";
 "stop" = "Stoppen";
-"stopped" = "Gestoppt";
-"reset" = "Zurücksetzen";
-"complete_session" = "Sitzung abschließen";
-"ready_to_start" = "Bereit zum Starten";
+"general" = "Allgemein";
+"name" = "Name";
+"type" = "Typ";
+"custom" = "Benutzerdefiniert";
+"enabled" = "Aktiviert";
+"disabled" = "Deaktiviert";
 "running" = "Läuft";
-"custom_themes" = "Benutzerdefinierte Themes";
-"custom_themes_desc" = "Das App-Erscheinungsbild mit exklusiven Themes anpassen";
 
-// Time scope
+// Additional required strings
+"overview" = "Übersicht";
+"performance" = "Leistung";
+"sync" = "Synchronisieren";
+"premium_required" = "Premium erforderlich";
+"premium_feature_locked" = "Diese Funktion ist nur mit SnapTask Pro verfügbar";
+"upgrade_to_pro" = "Auf Pro upgraden";
+"premium_upgrade_message" = "Upgraden Sie auf SnapTask Pro, um alle Premium-Funktionen freizuschalten";
+
+// Apple Watch specific strings
+"no_pomodoro_tasks" = "Keine Pomodoro-Aufgaben";
+"stats" = "Statistiken";
+"todays_progress" = "Heutiger Fortschritt";
+"top_streaks" = "Top-Serien";
+"no_active_streaks" = "Keine aktiven Serien";
+"tasks_simplified" = "Aufgaben (Vereinfacht)";
+"no_tasks_today_simplified" = "Keine Aufgaben für heute (Vereinfachte Ansicht)";
+"tasks_simplified_view" = "Aufgaben (Vereinfachte Ansicht):";
+"edit_task" = "Aufgabe bearbeiten";
+"delete_task" = "Aufgabe löschen";
+"task_not_found" = "Aufgabe nicht gefunden";
+"select_date" = "Datum auswählen";
+"select_task" = "Aufgabe auswählen";
+"start_pomodoro" = "Pomodoro starten";
+"pomodoro_enabled" = "Pomodoro aktiviert";
+"no_pomodoro_settings" = "Keine Pomodoro-Einstellungen";
+"add_first_reward" = "Erste Belohnung hinzufügen";
+"add_more_rewards" = "Weitere Belohnungen hinzufügen";
+"add_rewards_motivate" = "Belohnungen hinzufügen, um sich zu motivieren!";
+"your_points" = "Ihre Punkte";
+"connection" = "Verbindung";
+"iphone_connected" = "iPhone verbunden";
+"iphone_disconnected" = "iPhone getrennt";
+"last_sync" = "Letzte Synchronisation";
+"force_sync_iphone" = "Synchronisation mit iPhone erzwingen";
+"sync_cloudkit" = "Mit CloudKit synchronisieren";
+"local_tasks" = "Lokale Aufgaben";
+"received_tasks" = "Empfangene Aufgaben";
+"sync_status" = "Synchronisationsstatus";
+"tap_view_details" = "Tippen, um Details anzuzeigen";
+"version" = "Version";
+"reset_all_data" = "Alle Daten zurücksetzen";
+"reset_all_data_alert_title" = "Alle Daten zurücksetzen";
+"reset_all_data_alert_message" = "Dies löscht alle lokalen Daten. CloudKit-Daten bleiben intakt.";
+"cloudkit_sync" = "CloudKit-Synchronisation";
+"data_syncs_automatically" = "Daten synchronisieren automatisch mit iPhone";
+"sync_automatically_message" = "Ihre Aufgaben, Kategorien und Belohnungen synchronisieren automatisch zwischen iPhone und Apple Watch.";
+"both_devices_connected" = "Stellen Sie sicher, dass beide Geräte mit dem Internet verbunden sind für beste Ergebnisse.";
+"general_timer" = "Allgemeiner Timer";
+"complete" = "Abschließen";
+"task_completion" = "Aufgabenabschluss";
+"task_stats" = "Aufgaben-Statistiken";
+"completion_rate" = "Abschlussrate";
+"points_summary" = "Punkteübersicht";
+"weekly_overview" = "Wochenübersicht";
+"week_pts" = "Woche: {points} Pkt";
+"focus_time" = "Fokus: {time}";
+"mark_incomplete" = "Als unvollständig markieren";
+"mark_complete" = "Als vollständig markieren";
+"recurring_task" = "Wiederkehrende Aufgabe";
+"has_duration" = "Hat Dauer";
+"use_pomodoro" = "Pomodoro verwenden";
+"work_min" = "Arbeit: {minutes} Min";
+"break_min" = "Pause: {minutes} Min";
+"date_time" = "Datum & Zeit";
+"points_cost" = "Punktekosten";
+"name" = "Name";
+"reward_details" = "Belohnungsdetails";
+"reward_name" = "Belohnungsname";
+"type" = "Typ";
+"custom" = "Benutzerdefiniert";
+"min" = "Min";
+
+// Time Scope Strings
+"time_scope" = "Zeitrahmen";
+"task_happens_today" = "Aufgabe für heute";
+"task_happens_this_week" = "Ziel für diese Woche";
+"task_happens_this_month" = "Ziel für diesen Monat";
+"task_happens_this_year" = "Ziel für dieses Jahr";
+"long_term_goal" = "Langfristiges Ziel";
+"long_term_goals" = "Langfristige Ziele";
+"no_tasks" = "Keine Aufgaben";
 "no_tasks_this_week" = "Keine Aufgaben für diese Woche";
 "no_tasks_this_month" = "Keine Aufgaben für diesen Monat";
 "no_tasks_this_year" = "Keine Aufgaben für dieses Jahr";
 "no_tasks_long_term" = "Keine langfristigen Aufgaben";
-"long_term" = "Langfristig";
+"obiettivi_settimanali" = "Wöchentliche Ziele";
+"obiettivi_mensili" = "Monatliche Ziele";
+"obiettivi_annuali" = "Jährliche Ziele";
+"obiettivi_lungo_termine" = "Langfristige Ziele";
+"ready_to_start" = "Bereit zum Starten";
+"break_time" = "Pausenzeit";
+"reset" = "Zurücksetzen";
+"complete_session" = "Sitzung abschließen";
+"choose_task_focus_on" = "Wählen Sie eine Aufgabe, auf die Sie sich konzentrieren möchten";
+"select_task_enable_pomodoro" = "Wählen Sie eine Aufgabe aus, um Pomodoro zu aktivieren";
+"selected_task_no_pomodoro" = "Ausgewählte Aufgabe hat keine Pomodoro-Einstellungen";
+
+"yesterday" = "Gestern";
+"tomorrow" = "Morgen";
 
 // Difficulty and Quality Rating
 "tap_to_rate_difficulty" = "Tippen, um Schwierigkeit zu bewerten";
@@ -973,3 +1039,57 @@
 "icloud" = "iCloud";
 "pts" = "Pkt";
 "task_name_placeholder" = "Aufgabenname eingeben";
+
+// Missing Time Scope Strings
+"select_week" = "Woche auswählen";
+"week_range" = "Wochenbereich";
+"select_month" = "Monat auswählen";
+"select_year" = "Jahr auswählen";
+"selected_period" = "Ausgewählter Zeitraum";
+
+// Missing onetime reward strings
+"onetime" = "Einmalig";
+
+// Missing EnhancedRecurrenceSettingsView Strings
+"recurrence_type" = "Wiederholungstyp";
+"daily_enum" = "Täglich";
+"weekly_enum" = "Wöchentlich";
+"monthly_enum" = "Monatlich";
+"yearly_enum" = "Jährlich";
+"days_enum" = "Tage";
+"patterns_enum" = "Muster";
+"daily_recurrence" = "Tägliche Wiederholung";
+"task_repeat_every_day" = "Aufgabe wird jeden Tag wiederholt";
+"weekly_recurrence" = "Wöchentliche Wiederholung";
+"monthly_recurrence" = "Monatliche Wiederholung";
+"yearly_recurrence" = "Jährliche Wiederholung";
+"select_days_of_month" = "Tage des Monats auswählen";
+"select_patterns_ordinal" = "Muster auswählen (Ordinal)";
+"monthly_patterns" = "Monatliche Muster";
+"none_selected" = "Keine ausgewählt";
+"select_day_of_year" = "Tag des Jahres auswählen";
+"repeat_on" = "Wiederholen am";
+"task_repeat_yearly_on" = "Aufgabe wird jährlich wiederholt am";
+"end_date" = "Enddatum";
+"set_end_date" = "Enddatum festlegen";
+
+// Missing OrdinalPatternPickerView Strings
+"select_patterns_description" = "Spezifische Muster für monatliche Wiederholung auswählen";
+"first" = "Erste";
+"second" = "Zweite";
+"third" = "Dritte";
+"fourth" = "Vierte";
+"last" = "Letzte";
+"clear_all" = "Alle löschen";
+
+// Missing TaskFormView string
+"long_term_info" = "Langfristige Ziele haben keine spezifische Zeitlinie";
+
+// Additional missing
+"stopped" = "Gestoppt";
+"session_number" = "Sitzung {number}";
+"time_range" = "Zeitbereich";
+"today_colon" = "Heute: ";
+"week_colon" = "Woche: ";
+"total_colon" = "Gesamt: ";
+"configure_by" = "Konfigurieren nach";

@@ -94,7 +94,7 @@ class TimelineViewModel: ObservableObject {
         switch selectedTimeScope {
         case .today:
             if calendar.isDateInToday(selectedDate) {
-                return "Oggi"
+                return "scope_today".localized
             } else {
                 formatter.dateStyle = .medium
                 return formatter.string(from: selectedDate)
@@ -104,7 +104,7 @@ class TimelineViewModel: ObservableObject {
             formatter.dateFormat = "dd/MM"
             let startString = formatter.string(from: currentWeek)
             let endString = formatter.string(from: weekEnd)
-            return "Sett. \(startString) - \(endString)"
+            return "week_short_format".localized + " \(startString) - \(endString)"
         case .month:
             formatter.dateFormat = "MMMM yyyy"
             return formatter.string(from: currentMonth)
@@ -112,7 +112,7 @@ class TimelineViewModel: ObservableObject {
             formatter.dateFormat = "yyyy"
             return formatter.string(from: currentYear)
         case .longTerm:
-            return "Obiettivi L. Termine"
+            return "long_term_objectives".localized
         }
     }
     

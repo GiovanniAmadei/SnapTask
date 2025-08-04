@@ -898,7 +898,7 @@
 "no_pomodoro_tasks" = "No Pomodoro tasks";
 "stats" = "Stats";
 "todays_progress" = "Today's Progress";
-"top_streaks" = "Top Streaks";
+"top_streaks" = "Top Streakss";
 "no_active_streaks" = "No active streaks";
 "tasks_simplified" = "Tasks (Simplified)";
 "no_tasks_today_simplified" = "No tasks for today (Simplified View)";
@@ -1003,6 +1003,19 @@
 "yesterday" = "Yesterday";
 "tomorrow" = "Tomorrow";
 
+"scope_today" = "Today";
+"scope_week" = "Week";
+"scope_month" = "Month";  
+"scope_year" = "Year";
+"scope_long_term" = "L. Term";
+"this_week" = "This Week";
+"this_month" = "This Month";
+"this_year" = "This Year";
+"long_term_objective" = "Long-term objective";
+"weekly_objectives" = "Weekly Objectives";
+"week_short_format" = "Week";
+"long_term_objectives" = "L. Term Objectives";
+
 // Difficulty and Quality Rating
 "tap_to_rate_difficulty" = "Tap to rate difficulty";
 "tap_to_rate_quality" = "Tap to rate quality";
@@ -1100,6 +1113,21 @@
 "premium_features" = "Premium Features";
 "email_client_not_available" = "Email Client Not Available";
 "email_client_not_available_message" = "No email client is configured on this device. Please set up Mail app or install another email client.";
+
+// Time Scope Labels (localized)
+"time_scope_today" = "Today";
+"time_scope_week" = "Week";
+"time_scope_month" = "Month";
+"time_scope_year" = "Year";
+"time_scope_long_term" = "L. Term";
+
+// Period Display Strings
+"this_week" = "This Week";
+"this_month" = "This Month";
+"this_year" = "This Year";
+"long_term_objective" = "Long-term objective";
+"week_abbreviation" = "Week";
+"long_term_objectives" = "L. Term Objectives";
 
 // Additional recurrence strings already in some languages but missing from English
 "contextual_to_scope" = "Contextual to scope";
