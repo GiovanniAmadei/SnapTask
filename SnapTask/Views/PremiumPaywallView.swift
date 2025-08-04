@@ -188,7 +188,7 @@ struct PremiumPaywallView: View {
                         CompactSubscriptionCard(
                             title: NSLocalizedString("yearly", comment: ""),
                             price: subscriptionManager.yearlyProduct?.displayPrice ?? "---",
-                            subtitle: subscriptionManager.hasUsedTrial ? subscriptionManager.monthlyEquivalentForYearly + "/mese" : String(format: NSLocalizedString("days_free_then", comment: ""), subscriptionManager.yearlyProduct?.displayPrice ?? "---"),
+                            subtitle: subscriptionManager.hasUsedTrial ? subscriptionManager.monthlyEquivalentForYearly + NSLocalizedString("per_month", comment: "") : String(format: NSLocalizedString("days_free_then", comment: ""), subscriptionManager.yearlyProduct?.displayPrice ?? "---"),
                             badge: subscriptionManager.hasUsedTrial ? nil : NSLocalizedString("free_trial", comment: ""),
                             isSelected: selectedPlan == "yearly",
                             badgeColor: .green,

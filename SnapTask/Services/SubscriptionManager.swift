@@ -77,17 +77,17 @@ enum SubscriptionStatus: Equatable {
     var displayStatus: String {
         switch self {
         case .notSubscribed:
-            return "Non abbonato"
+            return NSLocalizedString("not_subscribed", comment: "")
         case .subscribed(let expirationDate):
-            return "Abbonato fino al \(expirationDate.formatted(date: .abbreviated, time: .omitted))"
+            return String(format: NSLocalizedString("subscription_expires_on", comment: ""), expirationDate.formatted(date: .abbreviated, time: .omitted))
         case .expired:
-            return "Abbonamento scaduto"
+            return NSLocalizedString("subscription_expired", comment: "")
         case .inTrial(let expirationDate):
-            return "Trial gratuito fino al \(expirationDate.formatted(date: .abbreviated, time: .omitted))"
+            return String(format: NSLocalizedString("trial_expires_on", comment: ""), expirationDate.formatted(date: .abbreviated, time: .omitted))
         case .pending:
-            return "Acquisto in elaborazione"
+            return NSLocalizedString("purchase_pending", comment: "")
         case .failed(let error):
-            return "Errore: \(error)"
+            return String(format: NSLocalizedString("subscription_error", comment: ""), error)
         }
     }
 }
@@ -192,7 +192,7 @@ class SubscriptionManager: ObservableObject {
         } catch {
             print("❌ Failed to load products: \(error)")
             await MainActor.run {
-                self.subscriptionStatus = .failed(error: "Impossibile caricare i prodotti: \(error.localizedDescription)")
+                self.subscriptionStatus = .failed(error: String(format: NSLocalizedString("unable_to_load_products", comment: ""), error.localizedDescription))
             }
         }
     }
@@ -235,7 +235,7 @@ class SubscriptionManager: ObservableObject {
         } catch {
             print("❌ Purchase failed: \(error)")
             await MainActor.run {
-                self.subscriptionStatus = .failed(error: "Acquisto fallito")
+                self.subscriptionStatus = .failed(error: NSLocalizedString("purchase_failed", comment: ""))
             }
             return false
         }
@@ -254,7 +254,7 @@ class SubscriptionManager: ObservableObject {
         } catch {
             print("❌ Failed to restore purchases: \(error)")
             await MainActor.run {
-                self.subscriptionStatus = .failed(error: "Ripristino fallito")
+                self.subscriptionStatus = .failed(error: NSLocalizedString("restore_failed", comment: ""))
             }
             return false
         }
