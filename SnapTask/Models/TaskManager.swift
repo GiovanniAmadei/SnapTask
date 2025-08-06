@@ -1,6 +1,5 @@
 import Foundation
 import Combine
-import WatchConnectivity
 import EventKit
 import WidgetKit
 
@@ -61,9 +60,6 @@ class TaskManager: ObservableObject {
         // Sync with CloudKit
         debouncedSaveTask(updatedTask)
         
-        // Sincronizza con Apple Watch
-        synchronizeWithWatch()
-        
         handleTaskCalendarSync(updatedTask, isNew: true)
         
         print("✅ Task added: \(updatedTask.name)")
@@ -114,9 +110,6 @@ class TaskManager: ObservableObject {
             // Sync with CloudKit
             debouncedSaveTask(task)
             
-            // Sincronizza con Apple Watch
-            synchronizeWithWatch()
-            
             handleTaskCalendarSync(task, isNew: false)
             
             print("✅ Task updated: \(task.name)")
@@ -132,9 +125,6 @@ class TaskManager: ObservableObject {
         notifyTasksUpdated()
         objectWillChange.send()
         isUpdatingFromSync = false
-        
-        // Sync with Apple Watch
-        synchronizeWithWatch()
         
         print(" Updated \(newTasks.count) tasks from sync")
     }
@@ -163,9 +153,6 @@ class TaskManager: ObservableObject {
         // Delete from CloudKit
         CloudKitService.shared.deleteTask(task)
         
-        // Sincronizza con Apple Watch
-        synchronizeWithWatch()
-        
         await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
         
         print(" Task removed: \(task.name)")
@@ -189,9 +176,6 @@ class TaskManager: ObservableObject {
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
-        
-        // Sincronizza con Apple Watch
-        synchronizeWithWatch()
         
         // NON chiamare CloudKitService.shared.deleteTask perché stiamo ricevendo la cancellazione da CloudKit
         
@@ -552,8 +536,6 @@ class TaskManager: ObservableObject {
             
             debouncedSaveTask(task)
             
-            synchronizeWithWatch()
-            
             if calendarIntegrationManager.settings.autoSyncOnTaskComplete {
                 Task {
                     await calendarIntegrationManager.updateTaskInCalendar(task)
@@ -655,8 +637,6 @@ class TaskManager: ObservableObject {
         objectWillChange.send()
         
         debouncedSaveTask(task)
-        
-        synchronizeWithWatch()
         
         if calendarIntegrationManager.settings.autoSyncOnTaskComplete {
             Task {
@@ -773,11 +753,6 @@ class TaskManager: ObservableObject {
         NotificationCenter.default.post(name: Notification.Name("tasksDidUpdate"), object: nil)
     }
     
-    private func synchronizeWithWatch() {
-        let connectivityManager = WatchConnectivityManager.shared
-        connectivityManager.updateWatchContext()
-    }
-    
     func startRegularSync() {
         guard CloudKitService.shared.isCloudKitEnabled else { return }
         
@@ -820,8 +795,6 @@ class TaskManager: ObservableObject {
         objectWillChange.send()
         
         CloudKitService.shared.syncNow()
-        
-        synchronizeWithWatch()
     }
     
     private func removeTaskFromStatistics(_ taskId: UUID) {

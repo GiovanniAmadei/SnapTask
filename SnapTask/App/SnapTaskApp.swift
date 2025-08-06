@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchConnectivity
 import CloudKit
 import UserNotifications
 import Firebase
@@ -10,7 +9,6 @@ struct SnapTaskApp: App {
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var taskManager = TaskManager.shared
     @StateObject private var taskNotificationManager = TaskNotificationManager.shared
-    @StateObject private var connectivityManager = WatchConnectivityManager.shared
     @StateObject private var cloudKitService = CloudKitService.shared
     @StateObject private var firebaseService = FirebaseService.shared
     @StateObject private var settingsManager = CloudKitSettingsManager.shared
@@ -52,7 +50,6 @@ struct SnapTaskApp: App {
                             await quoteManager.checkAndUpdateQuote()
                         }
                         cloudKitService.syncNow()
-                        connectivityManager.updateWatchContext()
                         
                         // Sync settings when app becomes active
                         if cloudKitService.isCloudKitEnabled {
@@ -123,7 +120,6 @@ struct SnapTaskApp: App {
         // Start CloudKit sync
         cloudKitService.syncNow()
         taskManager.startRegularSync()
-        connectivityManager.updateWatchContext()
         
         // Initialize settings sync
         if cloudKitService.isCloudKitEnabled {
