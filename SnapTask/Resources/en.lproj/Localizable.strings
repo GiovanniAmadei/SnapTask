@@ -40,6 +40,8 @@
 "task_completion" = "Task Completion";
 "priority_name" = "Priority Name";
 "new_priority" = "New Priority";
+"auto_complete_tasks" = "Auto-complete Tasks";
+"auto_complete_tasks_description" = "Complete main tasks when all subtasks are finished";
 
 // Task Notifications
 "task_notifications" = "Task Notifications";
@@ -231,7 +233,6 @@
 "customize_timer_colors" = "Customize Pomodoro timer colors";
 "priority_details" = "Priority Details";
 "auto_complete_tasks_footer" = "Automatically complete main tasks when all subtasks are completed";
-"task_completion" = "Task Completion";
 "manage_priorities" = "Manage Priorities";
 "new_priority" = "New Priority";
 
@@ -588,7 +589,7 @@
 
 // Statistics View
 "overview" = "Overview";
-"streakreak" = "Streaks";
+"streaks" = "Streaks";
 "consistency" = "Consistency";
 "time_distribution" = "Time Distribution";
 "total" = "Total";
@@ -987,10 +988,6 @@
 "no_tasks_this_month" = "No tasks for this month";
 "no_tasks_this_year" = "No tasks for this year";
 "no_tasks_long_term" = "No long-term tasks";
-"obiettivi_settimanali" = "Weekly goals";
-"obiettivi_mensili" = "Monthly goals";
-"obiettivi_annuali" = "Yearly goals";
-"obiettivi_lungo_termine" = "Long-term goals";
 "ready_to_start" = "Ready to start";
 "break_time" = "Break time";
 "reset" = "Reset";
@@ -1086,29 +1083,41 @@
 "one_time_payment" = "One-time payment";
 "subscribe_yearly_plan" = "Subscribe to Yearly Plan";
 "subscribe_monthly_plan" = "Subscribe to Monthly Plan";
-"restore_purchases" = "Restore Purchases";
-"manage_subscriptions" = "Manage Subscriptions";
-"savings_amount" = "You Save %@";
-"yearly" = "Yearly";
-"monthly" = "Monthly";
-"free_trial" = "Free Trial";
-"subscription" = "Subscription";
-"terms_of_service" = "Terms of Service";
-"privacy_policy" = "Privacy Policy";
-"welcome_snaptask_pro_lifetime" = "Welcome to SnapTask Pro Lifetime! Enjoy unlimited access forever.";
-"free_trial_activated" = "Free trial activated! Enjoy 3 days of SnapTask Pro.";
-"welcome_snaptask_pro" = "Welcome to SnapTask Pro! Enjoy all premium features.";
-"purchase_not_completed" = "Purchase was not completed. Please try again.";
-"purchases_restored_successfully" = "Purchases restored successfully!";
-"no_purchases_to_restore" = "No purchases found to restore.";
-"terms_of_service_title" = "Terms of Service";
-"terms_content" = "By using SnapTask, you agree to our terms and conditions. This app is provided as-is for productivity purposes.";
-"terms" = "Terms";
-"privacy_policy_title" = "Privacy Policy";
-"privacy_content" = "Your privacy is important to us. SnapTask processes your data locally and through iCloud sync when enabled.";
-"privacy" = "Privacy";
+"premium_plan" = "Premium Plan";
+"premium_features" = "Premium Features";
 
-// Missing Subscription Manager Strings
+// Subscription
+"snaptask_pro" = "SnapTask Pro";
+"upgrade_to_pro" = "Upgrade to Pro";
+"monthly_subscription" = "Monthly Subscription";
+"yearly_subscription" = "Yearly Subscription";
+"monthly_price" = "€3.99/month";
+"yearly_price" = "€34.99/year";
+"yearly_savings" = "Save 27%";
+"subscribe" = "Subscribe";
+"restore_purchases" = "Restore Purchases";
+"subscription_terms" = "Subscription Terms";
+"privacy_policy" = "Privacy Policy";
+"terms_of_service" = "Terms of Service";
+"manage_subscription" = "Manage Subscription";
+"cancel_subscription" = "Cancel Subscription";
+"subscription_active" = "Subscription Active";
+"subscription_expires" = "Expires";
+"subscription_expired" = "Subscription Expired";
+"premium_required" = "Premium Required";
+"premium_feature_locked" = "This feature is only available with SnapTask Pro";
+"premium_upgrade_message" = "Upgrade to SnapTask Pro to unlock all premium features";
+"free_plan_limits" = "Free Plan Limits";
+"categories_limit_reached" = "Categories Limit Reached";
+"categories_limit_message" = "You can create up to 4 categories with the free plan. Upgrade to Pro for unlimited categories.";
+"rewards_limit_reached" = "Rewards Limit Reached";
+"rewards_limit_message" = "You can create up to 3 rewards with the free plan. Upgrade to Pro for unlimited rewards.";
+"premium_badge" = "PRO";
+"by_purchasing_you_agree" = "By purchasing or using the free trial, you agree to SnapTask's Terms of Service and Privacy Policy.";
+"you_save" = "You Save";
+"savings_amount" = "You Save %@";
+
+// Subscription Manager Strings
 "not_subscribed" = "Not Subscribed";
 "subscription_expires_on" = "Subscribed until %@";
 "subscription_expired" = "Subscription Expired";
@@ -1120,3 +1129,39 @@
 "restore_failed" = "Restore Failed";
 "unknown_error" = "Unknown Error";
 "per_month" = "/month";
+
+// EnhancedRecurrenceSettingsView Strings
+"recurrence_type" = "Recurrence Type";
+"daily_enum" = "Daily";
+"weekly_enum" = "Weekly";
+"monthly_enum" = "Monthly";
+"yearly_enum" = "Yearly";
+"days_enum" = "Days";
+"patterns_enum" = "Patterns";
+"daily_recurrence" = "Daily Recurrence";
+"task_repeat_every_day" = "The task will repeat every day";
+"weekly_recurrence" = "Weekly Recurrence";
+"monthly_recurrence" = "Monthly Recurrence";
+"yearly_recurrence" = "Yearly Recurrence";
+"select_days_of_month" = "Select the days of the month";
+"select_patterns_ordinal" = "Select the patterns (Ordinal)";
+"monthly_patterns" = "Monthly Patterns";
+"none_selected" = "None selected";
+"select_day_of_year" = "Select the day of the year";
+"repeat_on" = "Repeat on";
+"task_repeat_yearly_on" = "The task will repeat yearly on";
+"end_date" = "End Date";
+"set_end_date" = "Set End Date";
+
+// OrdinalPatternPickerView Strings
+"select_patterns_description" = "Select specific patterns for monthly recurrence";
+"first" = "First";
+"second" = "Second";
+"third" = "Third";
+"fourth" = "Fourth";
+"last" = "Last";
+"clear_all" = "Clear All";
+
+// Long-term info
+"long_term_info" = "Long-term goals do not have a specific timeline";
+"complete" = "Complete";

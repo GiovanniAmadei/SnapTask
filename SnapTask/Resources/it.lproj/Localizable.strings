@@ -40,6 +40,8 @@
 "task_completion" = "Completamento Attività";
 "priority_name" = "Nome Priorità";
 "new_priority" = "Nuova Priorità";
+"auto_complete_tasks" = "Completamento Automatico";
+"auto_complete_tasks_description" = "Completa le attività principali quando tutte le sotto-attività sono completate";
 
 // Task Notifications
 "task_notifications" = "Notifiche Attività";
@@ -977,6 +979,7 @@
 "obiettivi_annuali" = "Obiettivi annuali";
 "obiettivi_lungo_termine" = "Obiettivi a lungo termine";
 "ready_to_start" = "Pronto per iniziare";
+"break_time" = "Tempo pausa";
 "reset" = "Reimposta";
 "complete_session" = "Completa Sessione";
 "choose_task_focus_on" = "Scegli un'attività su cui concentrarti";
@@ -984,14 +987,13 @@
 "selected_task_no_pomodoro" = "L'attività selezionata non ha impostazioni Pomodoro";
 "yesterday" = "Ieri";
 "tomorrow" = "Domani";
+
+// Missing Time Scope Localization Strings
 "scope_today" = "Oggi";
 "scope_week" = "Settimana";
 "scope_month" = "Mese";
 "scope_year" = "Anno";
 "scope_long_term" = "L. Termine";
-"this_week" = "Questa Settimana";
-"this_month" = "Questo Mese";
-"this_year" = "Quest'Anno";
 "long_term_objective" = "Obiettivo a lungo termine";
 "weekly_objectives" = "Obiettivi Settimanali";
 "week_short_format" = "Sett.";
@@ -1045,7 +1047,7 @@
 "pts" = "pts";
 "task_name_placeholder" = "Inserisci nome attività";
 
-// Missing Time Scope Localization Strings
+// Missing Time Scope Strings
 "select_week" = "Seleziona Settimana";
 "week_range" = "Intervallo Settimana";
 "select_month" = "Seleziona Mese";
@@ -1090,4 +1092,3 @@
 // Missing TaskFormView string
 "long_term_info" = "Gli obiettivi a lungo termine non hanno una timeline specifica";
 "complete" = "Completa";
-"streaks" = "Serie";

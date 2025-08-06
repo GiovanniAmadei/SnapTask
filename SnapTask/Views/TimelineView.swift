@@ -1272,9 +1272,17 @@ private struct DayCell: View {
     }
     
     private var dayName: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date).lowercased()
+        let weekday = Calendar.current.component(.weekday, from: date)
+        switch weekday {
+        case 1: return "sunday".localized.prefix(3).lowercased()
+        case 2: return "monday".localized.prefix(3).lowercased()
+        case 3: return "tuesday".localized.prefix(3).lowercased()
+        case 4: return "wednesday".localized.prefix(3).lowercased()
+        case 5: return "thursday".localized.prefix(3).lowercased()
+        case 6: return "friday".localized.prefix(3).lowercased()
+        case 7: return "saturday".localized.prefix(3).lowercased()
+        default: return ""
+        }
     }
     
     private var dayNumber: String {

@@ -99,11 +99,9 @@ struct ThemesAndCustomizationView: View {
             
             // Timer Customization Section
             Section {
-                NavigationLink {
-                    PomodoroColorsView()
-                } label: {
+                NavigationLink(destination: PomodoroColorsView()) {
                     HStack {
-                        Image(systemName: "timer")
+                        Image(systemName: "timer.circle.fill")
                             .foregroundColor(.orange)
                             .frame(width: 24)
                         
@@ -122,20 +120,19 @@ struct ThemesAndCustomizationView: View {
                     .themedSecondaryText()
             }
             
-            // Behavior Section
+            // Task Completion Section
             Section {
                 HStack {
                     Image(systemName: "checklist")
                         .foregroundColor(.green)
                         .frame(width: 24)
                     
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading) {
                         Text("auto_complete_tasks".localized)
                             .themedPrimaryText()
-                            .font(.body)
                         Text("auto_complete_tasks_description".localized)
-                            .font(.caption)
                             .themedSecondaryText()
+                            .font(.caption)
                     }
                     
                     Spacer()
