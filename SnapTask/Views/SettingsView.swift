@@ -76,29 +76,11 @@ struct SettingsView: View {
                         }
                     }
                     .listRowBackground(theme.surfaceColor)
-                    
-                    #if DEBUG
-                    // Testing mode toggle for development
-                    HStack {
-                        Image(systemName: "testtube.2")
-                            .foregroundColor(.orange)
-                            .frame(width: 24)
-                        
-                        Text("Test Premium Restrictions")
-                            .themedPrimaryText()
-                        
-                        Spacer()
-                        
-                        Toggle("", isOn: $subscriptionManager.testingMode)
-                            .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
-                    }
-                    .listRowBackground(theme.surfaceColor)
-                    #endif
                 } header: {
                     Text("premium_plan".localized)
                         .themedSecondaryText()
                 }
-
+                
                 // Quote Section - iOS style
                 Section {
                     IOSQuoteCard()
