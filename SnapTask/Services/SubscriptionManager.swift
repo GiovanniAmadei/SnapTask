@@ -77,17 +77,17 @@ enum SubscriptionStatus: Equatable {
     var displayStatus: String {
         switch self {
         case .notSubscribed:
-            return NSLocalizedString("not_subscribed", comment: "")
+            return "not_subscribed".localized
         case .subscribed(let expirationDate):
-            return String(format: NSLocalizedString("subscription_expires_on", comment: ""), expirationDate.formatted(date: .abbreviated, time: .omitted))
+            return String(format: "subscription_expires_on".localized, expirationDate.formatted(date: .abbreviated, time: .omitted))
         case .expired:
-            return NSLocalizedString("subscription_expired", comment: "")
+            return "subscription_expired".localized
         case .inTrial(let expirationDate):
-            return String(format: NSLocalizedString("trial_expires_on", comment: ""), expirationDate.formatted(date: .abbreviated, time: .omitted))
+            return String(format: "trial_expires_on".localized, expirationDate.formatted(date: .abbreviated, time: .omitted))
         case .pending:
-            return NSLocalizedString("purchase_pending", comment: "")
+            return "purchase_pending".localized
         case .failed(let error):
-            return String(format: NSLocalizedString("subscription_error", comment: ""), error)
+            return String(format: "subscription_error".localized, error)
         }
     }
 }

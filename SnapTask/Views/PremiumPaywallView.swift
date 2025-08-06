@@ -41,19 +41,19 @@ struct PremiumPaywallView: View {
                 
                 Spacer(minLength: 0)
             }
-            .navigationTitle(NSLocalizedString("snaptask_pro", comment: ""))
+            .navigationTitle("snaptask_pro".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(NSLocalizedString("close", comment: "")) {
+                    Button("close".localized) {
                         dismiss()
                     }
                 }
             }
         }
         .disabled(isProcessingPurchase)
-        .alert(NSLocalizedString("subscription", comment: ""), isPresented: $showingAlert) {
-            Button(NSLocalizedString("ok", comment: "")) { }
+        .alert("subscription".localized, isPresented: $showingAlert) {
+            Button("ok".localized) { }
         } message: {
             Text(alertMessage)
         }
@@ -89,11 +89,11 @@ struct PremiumPaywallView: View {
             }
             
             VStack(spacing: 4) {
-                Text(NSLocalizedString("unlock_snaptask_pro", comment: ""))
+                Text("unlock_snaptask_pro".localized)
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                 
-                Text(NSLocalizedString("maximize_your_productivity", comment: ""))
+                Text("maximize_your_productivity".localized)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -104,7 +104,7 @@ struct PremiumPaywallView: View {
     // MARK: - Compact Premium Features
     private var premiumFeaturesCompact: some View {
         VStack(spacing: 8) {
-            Text(NSLocalizedString("everything_you_get", comment: ""))
+            Text("everything_you_get".localized)
                 .font(.headline.weight(.medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -116,32 +116,32 @@ struct PremiumPaywallView: View {
             ], spacing: 8) {
                 CompactFeatureCard(
                     icon: "folder.fill",
-                    title: NSLocalizedString("unlimited_categories", comment: ""),
+                    title: "unlimited_categories".localized,
                     color: .blue
                 )
                 CompactFeatureCard(
                     icon: "star.fill", 
-                    title: NSLocalizedString("task_evaluation", comment: ""),
+                    title: "task_evaluation".localized,
                     color: .yellow
                 )
                 CompactFeatureCard(
                     icon: "gift.fill",
-                    title: NSLocalizedString("unlimited_rewards", comment: ""),
+                    title: "unlimited_rewards".localized,
                     color: .purple
                 )
                 CompactFeatureCard(
                     icon: "icloud.fill",
-                    title: NSLocalizedString("cloud_sync", comment: ""),
+                    title: "cloud_sync".localized,
                     color: .cyan
                 )
                 CompactFeatureCard(
                     icon: "chart.line.uptrend.xyaxis",
-                    title: NSLocalizedString("advanced_statistics", comment: ""),
+                    title: "advanced_statistics".localized,
                     color: .green
                 )
                 CompactFeatureCard(
                     icon: "paintbrush.fill",
-                    title: NSLocalizedString("custom_themes", comment: ""),
+                    title: "custom_themes".localized,
                     color: .pink
                 )
             }
@@ -151,7 +151,7 @@ struct PremiumPaywallView: View {
     // MARK: - Compact Subscription Plans
     private var subscriptionPlansCompact: some View {
         VStack(spacing: 8) {
-            Text(NSLocalizedString("choose_your_plan", comment: ""))
+            Text("choose_your_plan".localized)
                 .font(.headline.weight(.medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -165,10 +165,10 @@ struct PremiumPaywallView: View {
                     }
                 }) {
                     CompactSubscriptionCard(
-                        title: NSLocalizedString("lifetime_access", comment: ""),
+                        title: "lifetime_access".localized,
                         price: subscriptionManager.lifetimeProduct?.displayPrice ?? "---",
-                        subtitle: NSLocalizedString("one_time_no_subscription", comment: ""),
-                        badge: NSLocalizedString("best_value", comment: ""),
+                        subtitle: "one_time_no_subscription".localized,
+                        badge: "best_value".localized,
                         isSelected: selectedPlan == "lifetime",
                         badgeColor: .orange,
                         isLifetime: true,
@@ -186,10 +186,10 @@ struct PremiumPaywallView: View {
                         }
                     }) {
                         CompactSubscriptionCard(
-                            title: NSLocalizedString("yearly", comment: ""),
+                            title: "yearly".localized,
                             price: subscriptionManager.yearlyProduct?.displayPrice ?? "---",
-                            subtitle: subscriptionManager.hasUsedTrial ? subscriptionManager.monthlyEquivalentForYearly + NSLocalizedString("per_month", comment: "") : String(format: NSLocalizedString("days_free_then", comment: ""), subscriptionManager.yearlyProduct?.displayPrice ?? "---"),
-                            badge: subscriptionManager.hasUsedTrial ? nil : NSLocalizedString("free_trial", comment: ""),
+                            subtitle: subscriptionManager.hasUsedTrial ? subscriptionManager.monthlyEquivalentForYearly + "per_month".localized : String(format: "days_free_then".localized, subscriptionManager.yearlyProduct?.displayPrice ?? "---"),
+                            badge: subscriptionManager.hasUsedTrial ? nil : "free_trial".localized,
                             isSelected: selectedPlan == "yearly",
                             badgeColor: .green,
                             isLifetime: false,
@@ -206,9 +206,9 @@ struct PremiumPaywallView: View {
                         }
                     }) {
                         CompactSubscriptionCard(
-                            title: NSLocalizedString("monthly", comment: ""),
+                            title: "monthly".localized,
                             price: subscriptionManager.monthlyProduct?.displayPrice ?? "---",
-                            subtitle: NSLocalizedString("total_flexibility", comment: ""),
+                            subtitle: "total_flexibility".localized,
                             badge: nil,
                             isSelected: selectedPlan == "monthly",
                             badgeColor: .purple,
@@ -237,23 +237,23 @@ struct PremiumPaywallView: View {
                 } else {
                     VStack(spacing: 2) {
                         if selectedPlan == "yearly" && !subscriptionManager.hasUsedTrial {
-                            Text(NSLocalizedString("start_free_trial", comment: ""))
+                            Text("start_free_trial".localized)
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                             
-                            Text(String(format: NSLocalizedString("days_free_then", comment: ""), selectedProduct?.displayPrice ?? "---"))
+                            Text(String(format: "days_free_then".localized, selectedProduct?.displayPrice ?? "---"))
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
                         } else if selectedPlan == "lifetime" {
-                            Text(NSLocalizedString("purchase_lifetime_access", comment: ""))
+                            Text("purchase_lifetime_access".localized)
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                             
-                            Text(NSLocalizedString("one_time_payment", comment: ""))
+                            Text("one_time_payment".localized)
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
                         } else {
-                            Text(selectedPlan == "yearly" ? NSLocalizedString("subscribe_yearly_plan", comment: "") : NSLocalizedString("subscribe_monthly_plan", comment: ""))
+                            Text(selectedPlan == "yearly" ? "subscribe_yearly_plan".localized : "subscribe_monthly_plan".localized)
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                         }
@@ -285,7 +285,7 @@ struct PremiumPaywallView: View {
                         await handleRestorePurchases()
                     }
                 } label: {
-                    Text(NSLocalizedString("restore_purchases", comment: ""))
+                    Text("restore_purchases".localized)
                         .font(.footnote.weight(.medium))
                         .foregroundColor(.purple)
                 }
@@ -294,18 +294,18 @@ struct PremiumPaywallView: View {
                 Button {
                     subscriptionManager.manageSubscriptions()
                 } label: {
-                    Text(NSLocalizedString("manage_subscriptions", comment: ""))
+                    Text("manage_subscriptions".localized)
                         .font(.footnote.weight(.medium))
                         .foregroundColor(.purple)
                 }
             }
             
             HStack(spacing: 16) {
-                Button(NSLocalizedString("terms_of_service", comment: "")) {
+                Button("terms_of_service".localized) {
                     showingTerms = true
                 }
                 
-                Button(NSLocalizedString("privacy_policy", comment: "")) {
+                Button("privacy_policy".localized) {
                     showingPrivacy = true
                 }
             }
@@ -334,11 +334,11 @@ struct PremiumPaywallView: View {
             }
             
             if selectedPlan == "lifetime" {
-                alertMessage = NSLocalizedString("welcome_snaptask_pro_lifetime", comment: "")
+                alertMessage = "welcome_snaptask_pro_lifetime".localized
             } else {
                 alertMessage = (selectedPlan == "yearly" && subscriptionManager.subscriptionStatus.isInTrial) ? 
-                    NSLocalizedString("free_trial_activated", comment: "") :
-                    NSLocalizedString("welcome_snaptask_pro", comment: "")
+                    "free_trial_activated".localized :
+                    "welcome_snaptask_pro".localized
             }
             
             showingAlert = true
@@ -347,7 +347,7 @@ struct PremiumPaywallView: View {
                 dismiss()
             }
         } else {
-            alertMessage = NSLocalizedString("purchase_not_completed", comment: "")
+            alertMessage = "purchase_not_completed".localized
             showingAlert = true
         }
         
@@ -360,14 +360,14 @@ struct PremiumPaywallView: View {
         let success = await subscriptionManager.restorePurchases()
         
         if success {
-            alertMessage = NSLocalizedString("purchases_restored_successfully", comment: "")
+            alertMessage = "purchases_restored_successfully".localized
             showingAlert = true
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 dismiss()
             }
         } else {
-            alertMessage = NSLocalizedString("no_purchases_to_restore", comment: "")
+            alertMessage = "no_purchases_to_restore".localized
             showingAlert = true
         }
         
@@ -430,7 +430,7 @@ struct CompactSubscriptionCard: View {
     // Calcolo del risparmio
     private var savingsText: String? {
         guard let savingsAmount = savingsAmount else { return nil }
-        return String(format: NSLocalizedString("savings_amount", comment: ""), savingsAmount)
+        return String(format: "savings_amount".localized, savingsAmount)
     }
     
     var body: some View {
@@ -538,20 +538,20 @@ struct TermsOfServiceView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text(NSLocalizedString("terms_of_service_title", comment: ""))
+                    Text("terms_of_service_title".localized)
                         .font(.title.bold())
                     
-                    Text(NSLocalizedString("terms_content", comment: ""))
+                    Text("terms_content".localized)
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
                 .padding()
             }
-            .navigationTitle(NSLocalizedString("terms", comment: ""))
+            .navigationTitle("terms".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(NSLocalizedString("close", comment: "")) {
+                    Button("close".localized) {
                         dismiss()
                     }
                 }
@@ -567,20 +567,20 @@ struct PrivacyPolicyView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text(NSLocalizedString("privacy_policy_title", comment: ""))
+                    Text("privacy_policy_title".localized)
                         .font(.title.bold())
                     
-                    Text(NSLocalizedString("privacy_content", comment: ""))
+                    Text("privacy_content".localized)
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
                 .padding()
             }
-            .navigationTitle(NSLocalizedString("privacy", comment: ""))
+            .navigationTitle("privacy".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(NSLocalizedString("close", comment: "")) {
+                    Button("close".localized) {
                         dismiss()
                     }
                 }
