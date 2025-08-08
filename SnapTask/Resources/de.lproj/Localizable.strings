@@ -875,6 +875,9 @@
 "premium_features" = "Premium-Funktionen";
 "contact_support" = "Support kontaktieren";
 "contact_support_message" = "Wenn Sie Hilfe benötigen, Vorschläge haben oder einen Fehler melden möchten, zögern Sie bitte nicht, mich zu kontaktieren. Ihr Feedback ist wertvoll!";
+"manage_categories" = "Kategorien verwalten";
+"category_gradients" = "Kategorieverläufe";
+"timer_colors" = "Timer-Farben";
 "email_client_not_available" = "E-Mail-Client nicht verfügbar";
 "email_client_not_available_message" = "Auf diesem Gerät ist kein E-Mail-Client konfiguriert. Bitte richten Sie die Mail-App ein oder installieren Sie einen anderen E-Mail-Client.";
 
@@ -899,6 +902,23 @@
 "premium_feature_locked" = "Diese Funktion ist nur mit SnapTask Pro verfügbar";
 "upgrade_to_pro" = "Auf Pro upgraden";
 "premium_upgrade_message" = "Upgraden Sie auf SnapTask Pro, um alle Premium-Funktionen freizuschalten";
+
+// Premium limits
+"premium_limit_info" = "Limit des kostenlosen Plans";
+"premium_limit_description" = "Der kostenlose Plan enthält bis zu 3 benutzerdefinierte Belohnungen.";
+"rewards_limit_reached" = "Belohnungslimit erreicht";
+"rewards_limit_message" = "Sie können bis zu 3 Belohnungen mit dem kostenlosen Plan erstellen. Upgrade auf Pro für unbegrenzte Belohnungen.";
+"premium_badge" = "PRO";
+
+// Dark Mode Theme Warning
+"dark_mode_theme_warning_title" = "Theme mit benutzerdefinierten Farben";
+"dark_mode_theme_warning_message" = "Dieses Theme überschreibt Systemfarben und ist nicht mit dem Dunkelmodus kompatibel. Um den Dunkelmodus zu verwenden, wählen Sie bitte ein einfaches Theme wie 'Standard', 'Wald' oder 'Sonnenuntergang'.";
+"switch_to_simple_theme" = "Einfaches Theme verwenden";
+"keep_current_theme" = "Aktuelles Theme beibehalten";
+"custom_colors" = "Benutzerdefinierte Farben";
+"keep_dark_mode" = "Dunkelmodus deaktivieren";
+"keep_simple_theme" = "Aktuelles Theme beibehalten";
+"theme_dark_mode_warning_message" = "Dieses Theme verwendet benutzerdefinierte Farben und ist nicht mit dem Dunkelmodus kompatibel. Möchten Sie den Dunkelmodus deaktivieren, um dieses Theme zu verwenden?";
 
 // Apple Watch specific strings
 "no_pomodoro_tasks" = "Keine Pomodoro-Aufgaben";
@@ -977,10 +997,6 @@
 "no_tasks_this_month" = "Keine Aufgaben für diesen Monat";
 "no_tasks_this_year" = "Keine Aufgaben für dieses Jahr";
 "no_tasks_long_term" = "Keine langfristigen Aufgaben";
-"obiettivi_settimanali" = "Wöchentliche Ziele";
-"obiettivi_mensili" = "Monatliche Ziele";
-"obiettivi_annuali" = "Jährliche Ziele";
-"obiettivi_lungo_termine" = "Langfristige Ziele";
 "ready_to_start" = "Bereit zum Starten";
 "break_time" = "Pausenzeit";
 "reset" = "Zurücksetzen";
@@ -1093,3 +1109,45 @@
 "week_colon" = "Woche: ";
 "total_colon" = "Gesamt: ";
 "configure_by" = "Konfigurieren nach";
+
+// ===== Fehlende Schlüssel aus der englischen Referenz hinzugefügt =====
+
+// Customization – Auto complete tasks
+"auto_complete_tasks" = "Aufgaben automatisch abschließen";
+"auto_complete_tasks_description" = "Hauptaufgaben abschließen, wenn alle Unteraufgaben beendet sind";
+
+// Themes – zusätzliche Schlüssel
+"free_themes" = "Kostenlose Themes";
+"premium_themes" = "Premium-Themes";
+"unlock_premium_themes" = "Premium-Themes freischalten";
+"theme_default" = "Standard";
+"theme_ocean" = "Ozean";
+"theme_forest" = "Wald";
+"theme_sunset" = "Sonnenuntergang";
+"theme_amethyst" = "Amethyst";
+"theme_carbon" = "Carbon";
+"theme_midnight" = "Mitternacht";
+"theme_rose_gold" = "Roségold";
+"theme_emerald" = "Smaragd";
+"theme_volcanic" = "Vulkanisch";
+"theme_lavender" = "Lavendel";
+
+// Premium – zusätzliche Hinweise
+"by_purchasing_you_agree" = "Durch den Kauf oder die Nutzung der kostenlosen Testversion stimmen Sie den Nutzungsbedingungen und der Datenschutzrichtlinie von SnapTask zu.";
+"you_save" = "Sie sparen";
+
+// Premium Limits – Kategorien
+"categories_limit_reached" = "Kategorielimit erreicht";
+"categories_limit_message" = "Sie können mit dem kostenlosen Plan bis zu 4 Kategorien erstellen. Upgrade auf Pro für unbegrenzte Kategorien.";
+
+// Time scope – zusätzliche Schlüssel
+"week_short_format" = "Woche";
+"long_term_objective" = "Langfristiges Ziel";
+"long_term_objectives" = "Langfristige Ziele";
+
+// Time scope short labels
+"scope_today" = "Heute";
+"scope_week" = "Woche";
+"scope_month" = "Monat";
+"scope_year" = "Jahr";
+"scope_long_term" = "Langfr.";

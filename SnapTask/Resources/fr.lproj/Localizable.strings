@@ -892,6 +892,7 @@
 "tasks_simplified" = "Tâches (Simplifiées)";
 "no_tasks_today_simplified" = "Aucune tâche pour aujourd'hui (Vue Simplifiée)";
 "tasks_simplified_view" = "Tâches (Vue Simplifiée) :";
+"edit_task" = "Modifier la Tâche";
 "delete_task" = "Supprimer la Tâche";
 "task_not_found" = "Tâche non trouvée";
 "select_date" = "Sélectionner la Date";
@@ -911,6 +912,7 @@
 "sync_cloudkit" = "Synchroniser avec CloudKit";
 "local_tasks" = "Tâches locales";
 "received_tasks" = "Tâches reçues";
+"sync_status" = "Statut de Synchronisation";
 "tap_view_details" = "Appuyez pour voir les détails";
 "version" = "Version";
 "reset_all_data" = "Réinitialiser Toutes les Données";
@@ -922,8 +924,10 @@
 "both_devices_connected" = "Assurez-vous que les deux appareils sont connectés à internet pour de meilleurs résultats.";
 "general_timer" = "Timer Général";
 "task_stats" = "Stats de Tâches";
+"task_completion" = "Achèvement de Tâche";
 "completion_rate" = "Taux d'Achèvement";
 "points_summary" = "Résumé des Points";
+"weekly_overview" = "Aperçu Hebdomadaire";
 "week_pts" = "Semaine : %d pts";
 "focus_time" = "Focus : %s";
 "mark_incomplete" = "Marquer Incomplet";
@@ -936,6 +940,8 @@
 "date_time" = "Date & Heure";
 "points_cost" = "Coût en Points";
 "name" = "Nom";
+"reward_details" = "Détails de la Récompense";
+"reward_name" = "Nom de la Récompense";
 "type" = "Type";
 "custom" = "Personnalisé";
 "min" = "min";

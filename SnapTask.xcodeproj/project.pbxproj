@@ -68,7 +68,6 @@
 		D58B432B55A343BB8233FA51 /* SnapTask Pro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SnapTask Pro.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F410AB27FC1B43A7B59795D0 /* SnapTask ProUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SnapTask ProUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5F5DAAB9E22424CBC996659 /* SnapTask Pro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SnapTask Pro.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		F671999EB7724D9382E0ACED /* SnapTaskWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SnapTaskWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -82,24 +81,9 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		0AE4F42797D54F1297CE4D2D /* SnapTask ProTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "SnapTask ProTests";
-			sourceTree = "<group>";
-		};
-		346BFE2191A54E47A0AEEB6C /* SnapTask Watch App Watch App */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "SnapTask Watch App Watch App";
-			sourceTree = "<group>";
-		};
 		7C5DB2BAEEFA4BE6BF36C947 /* SnapTaskTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SnapTaskTests;
-			sourceTree = "<group>";
-		};
-		7DACF7F430064FC584DB886A /* SnapTask Watch App Watch AppUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "SnapTask Watch App Watch AppUITests";
 			sourceTree = "<group>";
 		};
 		81E1F18F4F5647BF997A6867 /* SnapTaskUITests */ = {
@@ -113,26 +97,6 @@
 				F06FD242C14E48EDB783BA46 /* Exceptions for "SnapTask" folder in "SnapTask" target */,
 			);
 			path = SnapTask;
-			sourceTree = "<group>";
-		};
-		9112B9F5B3AC425C8CB5C5B6 /* SnapTask ProUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "SnapTask ProUITests";
-			sourceTree = "<group>";
-		};
-		D7C58E46FA47459E9656021E /* SnapTask Watch App Watch AppTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "SnapTask Watch App Watch AppTests";
-			sourceTree = "<group>";
-		};
-		FB50AF4F4BCB4E00ACE0056E /* SnapTaskWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SnapTaskWidget;
-			sourceTree = "<group>";
-		};
-		FCF94FD8F8F849E89CA4DE4D /* SnapTask Pro */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "SnapTask Pro";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -182,17 +146,9 @@
 		42636F0840E444CB8C194D30 = {
 			isa = PBXGroup;
 			children = (
-				F671999EB7724D9382E0ACED /* SnapTaskWidgetExtension.entitlements */,
 				836D3975FC0642468BE2CA9B /* SnapTask */,
 				7C5DB2BAEEFA4BE6BF36C947 /* SnapTaskTests */,
 				81E1F18F4F5647BF997A6867 /* SnapTaskUITests */,
-				346BFE2191A54E47A0AEEB6C /* SnapTask Watch App Watch App */,
-				D7C58E46FA47459E9656021E /* SnapTask Watch App Watch AppTests */,
-				7DACF7F430064FC584DB886A /* SnapTask Watch App Watch AppUITests */,
-				FB50AF4F4BCB4E00ACE0056E /* SnapTaskWidget */,
-				FCF94FD8F8F849E89CA4DE4D /* SnapTask Pro */,
-				0AE4F42797D54F1297CE4D2D /* SnapTask ProTests */,
-				9112B9F5B3AC425C8CB5C5B6 /* SnapTask ProUITests */,
 				F90FF5C009E5401BB3E1882E /* Frameworks */,
 				91AAC91753284605B39E028F /* Products */,
 				4EA9C2CF45A241B4AF67EF2A /* Recovered References */,
@@ -294,9 +250,6 @@
 			dependencies = (
 				47FDDB24E1A64D3F86D56FDC /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				9112B9F5B3AC425C8CB5C5B6 /* SnapTask ProUITests */,
-			);
 			name = "SnapTask ProUITests";
 			packageProductDependencies = (
 			);
@@ -317,9 +270,6 @@
 			dependencies = (
 				4E8501B46FE44250A8A2E615 /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				0AE4F42797D54F1297CE4D2D /* SnapTask ProTests */,
-			);
 			name = "SnapTask ProTests";
 			packageProductDependencies = (
 			);
@@ -338,9 +288,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				FCF94FD8F8F849E89CA4DE4D /* SnapTask Pro */,
 			);
 			name = "SnapTask Pro";
 			packageProductDependencies = (
