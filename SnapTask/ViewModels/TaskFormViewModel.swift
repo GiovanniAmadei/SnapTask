@@ -85,6 +85,22 @@ enum MonthlySelectionType: String, CaseIterable {
     }
 }
 
+enum WeekRecurrenceMode: String, CaseIterable {
+    case everyNWeeks
+    case specificWeeksOfMonth
+    case moduloPattern
+}
+
+enum MonthRecurrenceMode: String, CaseIterable {
+    case everyNMonths
+    case specificMonths
+}
+
+enum YearRecurrenceMode: String, CaseIterable {
+    case everyNYears
+    case moduloPattern
+}
+
 @MainActor
 class TaskFormViewModel: ObservableObject {
     @Published var name: String = ""
@@ -137,6 +153,22 @@ class TaskFormViewModel: ObservableObject {
     @Published var selectedYearDate: Date = Date()
     @Published var selectedMonth: Int = Calendar.current.component(.month, from: Date())
     @Published var selectedYear: Int = Calendar.current.component(.year, from: Date())
+    
+    // MARK: - Contextual Recurrence (NEW)
+    @Published var weekRecurrenceMode: WeekRecurrenceMode = .everyNWeeks
+    @Published var weekInterval: Int = 1
+    @Published var weekSelectedOrdinals: Set<Int> = [] // 1..5 and -1 for last
+    @Published var weekModuloK: Int = 2
+    @Published var weekModuloOffset: Int = 0
+    
+    @Published var monthRecurrenceMode: MonthRecurrenceMode = .everyNMonths
+    @Published var monthInterval: Int = 1
+    @Published var monthSelectedMonths: Set<Int> = [] // 1..12
+    
+    @Published var yearRecurrenceMode: YearRecurrenceMode = .everyNYears
+    @Published var yearInterval: Int = 1
+    @Published var yearModuloK: Int = 2
+    @Published var yearModuloOffset: Int = 0
     
     @Published private(set) var categories: [Category] = []
     var taskId: UUID?
@@ -282,7 +314,54 @@ class TaskFormViewModel: ObservableObject {
         if selectedTimeScope == .longTerm {
             return "no_recurrence_long_term".localized
         }
-        return contextualRecurrenceType.localizedString
+        return contextualRecurrenceSummary
+    }
+    
+    var contextualRecurrenceSummary: String {
+        switch selectedTimeScope {
+        case .today:
+            return contextualRecurrenceType.localizedString
+        case .week:
+            switch weekRecurrenceMode {
+            case .everyNWeeks:
+                return weekInterval == 1 ? "Ogni settimana" : "Ogni \(weekInterval) settimane"
+            case .specificWeeksOfMonth:
+                if weekSelectedOrdinals.isEmpty { return "Seleziona settimane del mese" }
+                let ordinals = weekSelectedOrdinals
+                    .sorted(by: { ordinalSortOrder($0) < ordinalSortOrder($1) })
+                    .map { ordinalDisplay($0) }
+                    .joined(separator: ", ")
+                return "Settimane del mese: \(ordinals)"
+            case .moduloPattern:
+                if weekModuloK == 2 {
+                    return weekModuloOffset == 0 ? "Settimane pari" : "Settimane dispari"
+                } else {
+                    return "Ogni \(weekModuloK)-esima settimana (offset \(weekModuloOffset + 1))"
+                }
+            }
+        case .month:
+            switch monthRecurrenceMode {
+            case .everyNMonths:
+                return monthInterval == 1 ? "Ogni mese" : "Ogni \(monthInterval) mesi"
+            case .specificMonths:
+                if monthSelectedMonths.isEmpty { return "Seleziona mesi specifici" }
+                let months = monthSelectedMonths.sorted().map { Calendar.current.monthSymbols[$0 - 1].capitalized }
+                return "Mesi: \(months.joined(separator: ", "))"
+            }
+        case .year:
+            switch yearRecurrenceMode {
+            case .everyNYears:
+                return yearInterval == 1 ? "Ogni anno" : "Ogni \(yearInterval) anni"
+            case .moduloPattern:
+                if yearModuloK == 2 {
+                    return yearModuloOffset == 0 ? "Anni pari" : "Anni dispari"
+                } else {
+                    return "Ogni \(yearModuloK) anni (offset \(yearModuloOffset + 1))"
+                }
+            }
+        case .longTerm:
+            return "Nessuna ricorrenza"
+        }
     }
     
     var isDailyRecurrence: Bool {
@@ -499,4 +578,21 @@ class TaskFormViewModel: ObservableObject {
     }
     
     static var shared: TaskFormViewModel?
+    
+    private func ordinalDisplay(_ value: Int) -> String {
+        switch value {
+        case 1: return "1ª"
+        case 2: return "2ª"
+        case 3: return "3ª"
+        case 4: return "4ª"
+        case 5: return "5ª"
+        case -1: return "ultima"
+        default: return "\(value)ª"
+        }
+    }
+    
+    private func ordinalSortOrder(_ value: Int) -> Int {
+        // -1 (last) should come after 5
+        return value == -1 ? 6 : value
+    }
 }

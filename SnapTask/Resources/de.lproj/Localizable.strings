@@ -1151,3 +1151,10 @@
 "scope_month" = "Monat";
 "scope_year" = "Jahr";
 "scope_long_term" = "Langfr.";
+
+// Standortauswahl/Suche
+"select_location" = "Standort auswählen";
+"search_location" = "Standort suchen";
+"search_for_a_place" = "Ort suchen";
+"remove_location" = "Standort entfernen";
+"selected_location" = "Ausgewählter Standort";

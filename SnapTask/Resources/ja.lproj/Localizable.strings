@@ -1097,3 +1097,10 @@
 "categories_limit_message" = "無料プランでは最大4つのカテゴリを作成できます。Proで無制限に。";
 "by_purchasing_you_agree" = "購入または無料トライアルの利用により、SnapTaskの利用規約とプライバシーポリシーに同意したものとみなされます。";
 "you_save" = "お得額";
+
+// 場所の選択/検索
+"select_location" = "場所を選択";
+"search_location" = "場所を検索";
+"search_for_a_place" = "場所を検索";
+"remove_location" = "場所を削除";
+"selected_location" = "選択した場所";

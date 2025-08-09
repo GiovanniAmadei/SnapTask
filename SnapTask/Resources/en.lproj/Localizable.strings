@@ -834,6 +834,7 @@
 "privacy_policy" = "Privacy Policy";
 "terms_of_service" = "Terms of Service";
 "manage_subscription" = "Manage Subscription";
+"manage_subscriptions" = "Manage Subscriptions";
 "cancel_subscription" = "Cancel Subscription";
 "subscription_active" = "Subscription Active";
 "subscription_expires" = "Expires";
@@ -1152,6 +1153,41 @@
 "task_repeat_yearly_on" = "The task will repeat yearly on";
 "end_date" = "End Date";
 "set_end_date" = "Set End Date";
+"open_in_maps" = "Open in Maps";
+"session_complete" = "Session Complete";
+"tracking_sessions" = "Tracking Sessions";
+"new_feedback" = "New Feedback";
+"sync_details" = "Sync Details";
+"sync_status" = "Sync Status";
+"last_sync" = "Last Sync";
+"auto_sync" = "Auto Sync";
+"account" = "Account";
+"service" = "Service";
+"zone" = "Zone";
+"encryption" = "Encryption";
+"data_types" = "Data Types";
+"error_details" = "Error Details";
+"tasks" = "Tasks";
+"rewards" = "Rewards";
+"categories" = "Categories";
+"points_history" = "Points History";
+"app_settings" = "App Settings";
+"all_devices" = "All Devices";
+"completed" = "Completed";
+"running" = "Running";
+"paused" = "Paused";
+"sync_error" = "Sync Error";
+"try_again" = "Try Again";
+"last_synced" = "Last synced";
+"syncing" = "Syncing...";
+"up_to_date" = "Up to date";
+"tap_to_sync" = "Tap to sync";
+"sync_disabled" = "Sync disabled";
+"check_internet_connection" = "Check your internet connection and try again.";
+"icloud_storage_full" = "Your iCloud storage is full. Free up space in Settings.";
+"sign_in_icloud" = "Sign in to iCloud in Settings to enable sync.";
+"setting_up_sync" = "Setting up sync for the first time...";
+"check_icloud_connection" = "Check your iCloud connection and try again.";
 
 // OrdinalPatternPickerView Strings
 "select_patterns_description" = "Select specific patterns for monthly recurrence";
@@ -1165,3 +1201,10 @@
 // Long-term info
 "long_term_info" = "Long-term goals do not have a specific timeline";
 "complete" = "Complete";
+
+// Location selection/search
+"select_location" = "Select Location";
+"search_location" = "Search Location";
+"search_for_a_place" = "Search for a place";
+"remove_location" = "Remove Location";
+"selected_location" = "Selected Location";

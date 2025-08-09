@@ -1092,3 +1092,10 @@
 // Missing TaskFormView string
 "long_term_info" = "Gli obiettivi a lungo termine non hanno una timeline specifica";
 "complete" = "Completa";
+
+// Selezione/ricerca luogo
+"select_location" = "Seleziona luogo";
+"search_location" = "Cerca luogo";
+"search_for_a_place" = "Cerca un luogo";
+"remove_location" = "Rimuovi luogo";
+"selected_location" = "Luogo selezionato";

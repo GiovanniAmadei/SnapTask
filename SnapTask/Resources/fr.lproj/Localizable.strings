@@ -1092,3 +1092,10 @@
 "long_term_info" = "Les objectifs à long terme n'ont pas de chronologie spécifique";
 "complete" = "Terminer";
 "streaks" = "Séries";
+
+ // Sélection/recherche de lieu
+ "select_location" = "Sélectionner un lieu";
+ "search_location" = "Rechercher un lieu";
+ "search_for_a_place" = "Rechercher un lieu";
+ "remove_location" = "Supprimer le lieu";
+ "selected_location" = "Lieu sélectionné";

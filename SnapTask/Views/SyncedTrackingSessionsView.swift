@@ -43,11 +43,11 @@ struct SyncedTrackingSessionsView: View {
                     }
                 }
             }
-            .navigationTitle("Tracking Sessions")
+            .navigationTitle("tracking_sessions".localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button("All Devices") {
+                        Button("all_devices".localized) {
                             selectedDevice = nil
                         }
                         
@@ -134,15 +134,15 @@ struct TrackingSessionRow: View {
                 Spacer()
                 
                 if session.isCompleted {
-                    Label("Completed", systemImage: "checkmark.circle.fill")
+                    Label("completed".localized, systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundColor(.green)
                 } else if session.isRunning {
-                    Label("Running", systemImage: "play.circle.fill")
+                    Label("running".localized, systemImage: "play.circle.fill")
                         .font(.caption)
                         .foregroundColor(.blue)
                 } else if session.isPaused {
-                    Label("Paused", systemImage: "pause.circle.fill")
+                    Label("paused".localized, systemImage: "pause.circle.fill")
                         .font(.caption)
                         .foregroundColor(.orange)
                 }

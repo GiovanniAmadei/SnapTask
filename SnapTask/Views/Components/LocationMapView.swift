@@ -34,6 +34,15 @@ struct LocationMapView: View {
         return location.coordinate ?? geocodedCoordinate
     }
     
+    // A stable key to detect coordinate changes for live updates
+    private var coordinateKey: String {
+        if let c = displayCoordinate {
+            return String(format: "%.6f,%.6f", c.latitude, c.longitude)
+        }
+        // include name/address so geocode triggers when only textual data changes
+        return "none::\(location.name)::\(location.address ?? "")"
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let coordinate = displayCoordinate {
@@ -51,6 +60,7 @@ struct LocationMapView: View {
                         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
                     )
                 }
+                .id(coordinateKey)
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
@@ -97,6 +107,17 @@ struct LocationMapView: View {
                 }
             }
             .padding(.top, 8)
+        }
+        // Live update region/geocoding when the underlying coordinate or textual address changes
+        .onChange(of: coordinateKey) { _ in
+            if let c = displayCoordinate {
+                region = MKCoordinateRegion(
+                    center: c,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
+            } else if !isGeocoding {
+                geocodeLocation()
+            }
         }
     }
     

@@ -831,3 +831,10 @@
 "categories_limit_message" = "Puedes crear hasta 4 categorías con el plan gratuito. Pásate a Pro para categorías ilimitadas.";
 "by_purchasing_you_agree" = "Al comprar o usar la prueba gratuita, aceptas los Términos del servicio y la Política de privacidad de SnapTask.";
 "you_save" = "Ahorras";
+
+// Selección/búsqueda de ubicación
+"select_location" = "Seleccionar ubicación";
+"search_location" = "Buscar ubicación";
+"search_for_a_place" = "Buscar un lugar";
+"remove_location" = "Eliminar ubicación";
+"selected_location" = "Ubicación seleccionada";

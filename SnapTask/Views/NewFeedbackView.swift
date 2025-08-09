@@ -229,7 +229,7 @@ struct NewFeedbackView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .navigationTitle("New Feedback")
+            .navigationTitle("new_feedback".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
