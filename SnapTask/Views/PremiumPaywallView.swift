@@ -14,39 +14,72 @@ struct PremiumPaywallView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Header Section
-                headerSection
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                
-                // Premium Features - Compact Grid
-                premiumFeaturesCompact
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                
-                // Subscription Plans
-                subscriptionPlansCompact
-                    .padding(.horizontal, 20)
-                
-                // Purchase Button
-                purchaseButton
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                
-                // Footer actions
-                footerActions
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-                
-                Spacer(minLength: 0)
-            }
-            .navigationTitle("snaptask_pro".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("close".localized) {
-                        dismiss()
+            if subscriptionManager.isSubscribed {
+                // Stato Premium attivo: mostra features e informazioni abbonamento
+                VStack(spacing: 0) {
+                    statusHeaderSection
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                    
+                    premiumFeaturesCompact
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    
+                    subscriptionInfoCard
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
+                    
+                    statusFooterActions
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                    
+                    Spacer(minLength: 0)
+                }
+                .navigationTitle("snaptask_pro".localized)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("close".localized) {
+                            dismiss()
+                        }
+                    }
+                }
+            } else {
+                // Paywall per utenti non premium
+                VStack(spacing: 0) {
+                    // Header Section
+                    headerSection
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                    
+                    // Premium Features - Compact Grid
+                    premiumFeaturesCompact
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    
+                    // Subscription Plans
+                    subscriptionPlansCompact
+                        .padding(.horizontal, 20)
+                    
+                    // Purchase Button
+                    purchaseButton
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    
+                    // Footer actions
+                    footerActions
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                    
+                    Spacer(minLength: 0)
+                }
+                .navigationTitle("snaptask_pro".localized)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("close".localized) {
+                            dismiss()
+                        }
                     }
                 }
             }
@@ -317,6 +350,95 @@ struct PremiumPaywallView: View {
         }
         .sheet(isPresented: $showingPrivacy) {
             PrivacyPolicyView()
+        }
+    }
+    
+    private var statusHeaderSection: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.purple.opacity(0.8), .pink.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 50, height: 50)
+                    .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 3)
+                
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            
+            VStack(spacing: 4) {
+                Text("premium_plan_active".localized)
+                    .font(.title3.bold())
+                    .foregroundColor(.primary)
+                
+                if let expirationDate = subscriptionManager.subscriptionExpirationDate {
+                    if expirationDate == .distantFuture {
+                        Text("lifetime_access".localized)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    } else {
+                        Text("\("subscription_expires".localized) \(expirationDate.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var subscriptionInfoCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("subscription_active".localized)
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            if let expirationDate = subscriptionManager.subscriptionExpirationDate {
+                if expirationDate == .distantFuture {
+                    HStack {
+                        Image(systemName: "infinity")
+                            .foregroundColor(.orange)
+                        Text("lifetime_access".localized)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.purple)
+                        Text("\("subscription_expires".localized) \(expirationDate.formatted(date: .abbreviated, time: .omitted))")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
+        )
+    }
+    
+    private var statusFooterActions: some View {
+        HStack(spacing: 16) {
+            Button {
+                subscriptionManager.manageSubscriptions()
+            } label: {
+                Text("manage_subscriptions".localized)
+                    .font(.footnote.weight(.medium))
+                    .foregroundColor(.purple)
+            }
         }
     }
     

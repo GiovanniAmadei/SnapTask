@@ -205,18 +205,19 @@ class TimelineViewModel: ObservableObject {
     private func tasksForDay(_ date: Date, from tasks: [TodoTask]) -> [TodoTask] {
         let calendar = Calendar.current
         return tasks.filter { task in
-            // Tasks with .today scope for this specific date
-            if task.timeScope == .today {
-                // For daily tasks, check both direct date match and recurrence
-                if task.recurrence != nil {
-                    // For recurring daily tasks, use the existing recurrence logic
-                    return calendar.isDate(task.startTime, inSameDayAs: date) || task.shouldShow(for: date, scope: .today)
-                } else {
-                    // For non-recurring daily tasks, simple date match
-                    return calendar.isDate(task.startTime, inSameDayAs: date)
-                }
+            guard task.timeScope == .today else { return false }
+            
+            if let recurrence = task.recurrence {
+                let checkDate = calendar.startOfDay(for: date)
+                let recurrenceStart = calendar.startOfDay(for: recurrence.startDate)
+                
+                if checkDate < recurrenceStart { return false }
+                if let end = recurrence.endDate, checkDate > calendar.startOfDay(for: end) { return false }
+                
+                return recurrence.shouldOccurOn(date: date)
+            } else {
+                return calendar.isDate(task.startTime, inSameDayAs: date)
             }
-            return false
         }
     }
     
@@ -224,92 +225,62 @@ class TimelineViewModel: ObservableObject {
         let calendar = Calendar.current
         let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
         
-        print("=== FILTERING WEEK TASKS ===")
-        print("Target week: \(weekStart) to \(weekEnd)")
-        
         let filteredTasks = tasks.filter { task in
-            if task.timeScope == .week {
-                print("Checking task: \(task.name)")
-                print("  - timeScope: \(task.timeScope)")
-                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
-                print("  - scopeEndDate: \(String(describing: task.scopeEndDate))")
-                print("  - recurrence: \(String(describing: task.recurrence))")
-                
-                // Check if this task belongs to this specific week
+            guard task.timeScope == .week else { return false }
+            
+            if let recurrence = task.recurrence {
+                return taskOccursInRange(task, recurrence: recurrence, start: weekStart, end: weekEnd)
+            } else {
                 if let taskScopeStart = task.scopeStartDate, let taskScopeEnd = task.scopeEndDate {
-                    let matches = calendar.isDate(taskScopeStart, inSameDayAs: weekStart) &&
-                                 calendar.isDate(taskScopeEnd, inSameDayAs: weekEnd)
-                    print("  - Week match: \(matches)")
-                    return matches
-                } else {
-                    print("  - Missing scope dates, excluding")
-                    return false
+                    return calendar.isDate(taskScopeStart, inSameDayAs: weekStart) &&
+                           calendar.isDate(taskScopeEnd, inSameDayAs: weekEnd)
                 }
+                return false
             }
-            return false
         }
         
-        print("Filtered \(filteredTasks.count) tasks for this week")
         return filteredTasks
     }
     
     private func tasksForMonth(_ monthStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
         let calendar = Calendar.current
-        
-        print("=== FILTERING MONTH TASKS ===")
-        print("Target month: \(monthStart)")
+        guard let monthInterval = calendar.dateInterval(of: .month, for: monthStart) else { return [] }
+        let monthEnd = calendar.date(byAdding: .day, value: -1, to: monthInterval.end) ?? monthInterval.end
         
         let filteredTasks = tasks.filter { task in
-            if task.timeScope == .month {
-                print("Checking task: \(task.name)")
-                print("  - timeScope: \(task.timeScope)")
-                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
-                print("  - recurrence: \(String(describing: task.recurrence))")
-                
-                // Check if this task belongs to this specific month
+            guard task.timeScope == .month else { return false }
+            
+            if let recurrence = task.recurrence {
+                return taskOccursInRange(task, recurrence: recurrence, start: monthStart, end: monthEnd)
+            } else {
                 if let taskScopeStart = task.scopeStartDate {
-                    let matches = calendar.isDate(taskScopeStart, equalTo: monthStart, toGranularity: .month)
-                    print("  - Month match: \(matches)")
-                    return matches
-                } else {
-                    print("  - Missing scope start date, excluding")
-                    return false
+                    return calendar.isDate(taskScopeStart, equalTo: monthStart, toGranularity: .month)
                 }
+                return false
             }
-            return false
         }
         
-        print("Filtered \(filteredTasks.count) tasks for this month")
         return filteredTasks
     }
     
     private func tasksForYear(_ yearStart: Date, from tasks: [TodoTask]) -> [TodoTask] {
         let calendar = Calendar.current
-        
-        print("=== FILTERING YEAR TASKS ===")
-        print("Target year: \(yearStart)")
+        guard let nextYearStart = calendar.date(byAdding: .year, value: 1, to: yearStart) else { return [] }
+        let yearEnd = calendar.date(byAdding: .day, value: -1, to: nextYearStart) ?? nextYearStart
         
         let filteredTasks = tasks.filter { task in
-            if task.timeScope == .year {
-                print("Checking task: \(task.name)")
-                print("  - timeScope: \(task.timeScope)")
-                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
-                print("  - recurrence: \(String(describing: task.recurrence))")
-                
-                // Check if this task belongs to this specific year
+            guard task.timeScope == .year else { return false }
+            
+            if let recurrence = task.recurrence {
+                return taskOccursInRange(task, recurrence: recurrence, start: yearStart, end: yearEnd)
+            } else {
                 if let taskScopeStart = task.scopeStartDate {
-                    let matches = calendar.isDate(taskScopeStart, equalTo: yearStart, toGranularity: .year)
-                    print("  - Year match: \(matches)")
-                    return matches
-                } else {
-                    print("  - Missing scope start date, excluding")
-                    return false
+                    return calendar.isDate(taskScopeStart, equalTo: yearStart, toGranularity: .year)
                 }
+                return false
             }
-            return false
         }
         
-        print("Filtered \(filteredTasks.count) tasks for this year")
         return filteredTasks
     }
     
@@ -807,3 +778,26 @@ extension Calendar {
         return self.date(from: components) ?? date
     }
 }
+
+    private func taskOccursInRange(_ task: TodoTask, recurrence: Recurrence, start: Date, end: Date) -> Bool {
+        let calendar = Calendar.current
+        var day = calendar.startOfDay(for: start)
+        let endDay = calendar.startOfDay(for: end)
+        
+        let recurrenceStart = calendar.startOfDay(for: recurrence.startDate)
+        if day < recurrenceStart { day = recurrenceStart }
+        
+        let recurrenceEnd = recurrence.endDate.map { calendar.startOfDay(for: $0) }
+        let lastDay = recurrenceEnd.map { min(endDay, $0) } ?? endDay
+        if day > lastDay { return false }
+        
+        var current = day
+        while current <= lastDay {
+            if recurrence.shouldOccurOn(date: current) {
+                return true
+            }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
+        }
+        return false
+    }

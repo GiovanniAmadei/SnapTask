@@ -181,6 +181,8 @@ class AppleCalendarService: ObservableObject {
     private func createRecurrenceRule(from recurrence: Recurrence) -> EKRecurrenceRule {
         let frequency: EKRecurrenceFrequency
         var interval = 1
+        interval = recurrence.interval ?? 1
+
         var daysOfWeek: [EKRecurrenceDayOfWeek]?
         var daysOfMonth: [NSNumber]?
         
