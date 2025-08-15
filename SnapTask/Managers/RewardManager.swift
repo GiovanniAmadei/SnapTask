@@ -56,6 +56,13 @@ class RewardManager: ObservableObject {
         CloudKitService.shared.deleteReward(reward)
     }
     
+    func removeRewardFromRemoteSync(_ reward: Reward) {
+        rewards.removeAll { $0.id == reward.id }
+        saveRewards()
+        print("✅ RewardManager: Removed reward from remote sync: \(reward.name)")
+        objectWillChange.send()
+    }
+    
     func importRewards(_ newRewards: [Reward]) {
         // Create a dictionary of existing rewards by ID for quick lookup
         let existingRewardsDict = Dictionary(uniqueKeysWithValues: rewards.map { ($0.id, $0) })

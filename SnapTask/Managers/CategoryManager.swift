@@ -78,6 +78,14 @@ class CategoryManager: ObservableObject {
         print("CategoryManager: Removed category locally: \(category.name)")
     }
     
+    func removeCategoryFromRemoteSync(_ category: Category) {
+        isUpdatingFromSync = true
+        categories.removeAll { $0.id == category.id }
+        saveCategories()
+        isUpdatingFromSync = false
+        print("✅ CategoryManager: Removed category from remote sync: \(category.name)")
+    }
+    
     func updateCategory(_ category: Category) {
         guard !isUpdatingFromSync else { return }
         
@@ -94,41 +102,38 @@ class CategoryManager: ObservableObject {
     func importCategories(_ newCategories: [Category]) {
         isUpdatingFromSync = true
         
-        // Merge categories intelligently
-        var mergedCategories: [Category] = []
-        var seenIds = Set<UUID>()
-        var seenNames = Set<String>()
+        var mergedById: [UUID: Category] = Dictionary(uniqueKeysWithValues: categories.map { ($0.id, $0) })
+        var seenNames: Set<String> = Set(categories.map { $0.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) })
         
-        // First, add existing categories that aren't duplicated
-        for category in categories {
-            let normalizedName = category.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            if !seenIds.contains(category.id) && !seenNames.contains(normalizedName) {
-                mergedCategories.append(category)
-                seenIds.insert(category.id)
-                seenNames.insert(normalizedName)
+        for incoming in newCategories {
+            let normalizedName = incoming.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            if let existing = mergedById[incoming.id] {
+                if existing != incoming {
+                    // Update existing with remote version
+                    mergedById[incoming.id] = incoming
+                    seenNames.insert(normalizedName)
+                }
+            } else {
+                // Only add if no name-duplicate
+                if !seenNames.contains(normalizedName) {
+                    mergedById[incoming.id] = incoming
+                    seenNames.insert(normalizedName)
+                }
             }
         }
         
-        // Then add new categories that aren't duplicates
-        for category in newCategories {
-            let normalizedName = category.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            if !seenIds.contains(category.id) && !seenNames.contains(normalizedName) {
-                mergedCategories.append(category)
-                seenIds.insert(category.id)
-                seenNames.insert(normalizedName)
+        // Ensure we always have default categories if somehow empty
+        if mergedById.isEmpty {
+            for c in createDefaultCategories() {
+                mergedById[c.id] = c
             }
         }
         
-        // Ensure we always have default categories
-        if mergedCategories.isEmpty {
-            mergedCategories = createDefaultCategories()
-        }
-        
-        categories = mergedCategories
+        categories = Array(mergedById.values)
         saveCategories()
         isUpdatingFromSync = false
         
-        print("CategoryManager: Imported \(mergedCategories.count) unique categories")
+        print("CategoryManager: Imported/Merged categories - total now \(categories.count)")
     }
     
     private func saveCategories() {

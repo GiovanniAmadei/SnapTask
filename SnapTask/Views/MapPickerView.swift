@@ -53,7 +53,7 @@ struct MapPickerView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(.regularMaterial)
+                            .fill(Color(.systemBackground))
                     )
                 }
                 
@@ -101,7 +101,7 @@ struct MapPickerView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(.regularMaterial)
+                                .fill(Color(.systemBackground))
                         )
                         .padding()
                     }
