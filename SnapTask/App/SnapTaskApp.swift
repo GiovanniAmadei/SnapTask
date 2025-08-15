@@ -220,9 +220,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         // Handle CloudKit notifications
-        Task { @MainActor in
-            CloudKitService.shared.handleRemoteNotification(userInfo)
-        }
+        CloudKitService.shared.processRemoteNotification(userInfo)
         
         if let notification = CKNotification(fromRemoteNotificationDictionary: userInfo) {
             if notification.subscriptionID == "SnapTaskZone-changes" {

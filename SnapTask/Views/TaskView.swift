@@ -18,11 +18,12 @@ struct TaskView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(task.name)
                         .font(.headline)
                         .foregroundColor(.primary)
+                        .padding(.leading, 8)
                     
                     if let description = task.description {
                         Text(description)

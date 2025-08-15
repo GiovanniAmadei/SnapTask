@@ -13,7 +13,7 @@ class QuoteManager: ObservableObject {
     private let lastUpdateDateKey = "lastQuoteUpdateDate"
     private let currentQuoteKey = "currentQuote"
     
-    // Collection of fallback motivational quotes (kept as backup)
+    // Collection of fallback motivational quotes
     private let fallbackQuotes: [Quote] = [
         Quote(text: "The only way to do great work is to love what you do.", author: "Steve Jobs"),
         Quote(text: "Success is not final, failure is not fatal: It is the courage to continue that counts.", author: "Winston Churchill"),
@@ -30,17 +30,20 @@ class QuoteManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        // Initialize with placeholder first
         self.currentQuote = Quote.placeholder
-
+        
+        // Then try to load saved quote
         if let savedQuote = loadSavedQuote() {
             self.currentQuote = savedQuote
         }
         
+        // Set up notification handling
         setupNotificationHandling()
         
-        // Check for update on init (but only if needed)
+        // FORCE: Always check and update quote on initialization (for testing)
         Task {
-            await checkAndUpdateQuote()
+            await forceUpdateQuote()
         }
     }
     
@@ -59,45 +62,26 @@ class QuoteManager: ObservableObject {
     func checkAndUpdateQuote() async {
         // Only update if we haven't updated today
         guard shouldUpdateQuote() else { 
-            print("📅 Quote already updated today, skipping")
+            print(" Quote already updated today, skipping")
             return 
         }
         
-        await performQuoteUpdate()
-    }
-    
-    @MainActor
-    func forceUpdateQuote() async {
-        print("🔄 Force updating quote...")
-        await performQuoteUpdate()
-    }
-    
-    @MainActor
-    private func performQuoteUpdate() async {
         isLoading = true
         defer { isLoading = false }
         
         do {
-            print("🌐 Fetching quote from online API...")
+            print(" Fetching quote from API...")
             let quote = try await service.fetchDailyQuote()
-            print("✅ Quote fetched successfully: \(quote.text)")
+            print(" Quote fetched: \(quote.text)")
             currentQuote = quote
             saveCurrentQuote()
             updateLastUpdateDate()
         } catch {
-            print("❌ Error fetching quote: \(error)")
+            print(" Error fetching quote: \(error)")
             // If there's an error, use a random fallback quote
             let randomQuote = fallbackQuotes.randomElement() ?? Quote.placeholder
-            
-            // Ensure we don't repeat the same quote
-            if randomQuote.text == currentQuote.text && fallbackQuotes.count > 1 {
-                let filteredQuotes = fallbackQuotes.filter { $0.text != currentQuote.text }
-                currentQuote = filteredQuotes.randomElement() ?? randomQuote
-            } else {
-                currentQuote = randomQuote
-            }
-            
-            print("🔄 Using fallback quote: \(currentQuote.text)")
+            currentQuote = randomQuote
+            print(" Using fallback quote: \(randomQuote.text)")
             saveCurrentQuote()
             updateLastUpdateDate()
         }
@@ -105,43 +89,71 @@ class QuoteManager: ObservableObject {
     
     private func shouldUpdateQuote() -> Bool {
         guard let lastUpdate = UserDefaults.standard.object(forKey: lastUpdateDateKey) as? Date else {
-            print("📅 No last update date found, updating quote")
+            print(" No last update date found, updating quote")
             return true
         }
         let shouldUpdate = !Calendar.current.isDate(lastUpdate, inSameDayAs: Date())
-        print("📅 Last update: \(lastUpdate), should update: \(shouldUpdate)")
+        print(" Last update: \(lastUpdate), should update: \(shouldUpdate)")
         return shouldUpdate
     }
     
     private func updateLastUpdateDate() {
         UserDefaults.standard.set(Date(), forKey: lastUpdateDateKey)
-        print("📅 Updated last update date to: \(Date())")
+        print(" Updated last update date to: \(Date())")
     }
     
     private func saveCurrentQuote() {
         if let encoded = try? JSONEncoder().encode(currentQuote) {
             UserDefaults.standard.set(encoded, forKey: currentQuoteKey)
-            print("💾 Quote saved to UserDefaults")
+            print(" Quote saved to UserDefaults")
         }
     }
     
     private func loadSavedQuote() -> Quote? {
         guard let data = UserDefaults.standard.data(forKey: currentQuoteKey),
               let quote = try? JSONDecoder().decode(Quote.self, from: data) else {
-            print("💾 No saved quote found")
+            print(" No saved quote found")
             return nil
         }
-        print("💾 Loaded saved quote: \(quote.text)")
+        print(" Loaded saved quote: \(quote.text)")
         return quote
     }
     
     func refreshQuote() {
         Task {
-            await forceUpdateQuote()
+            await checkAndUpdateQuote()
         }
     }
     
-    // Method to get current quote text for notifications
+    @MainActor
+    func forceUpdateQuote() async {
+        print(" Force updating quote...")
+        isLoading = true
+        
+        do {
+            let quote = try await service.fetchDailyQuote()
+            print(" Force update - Quote fetched: \(quote.text)")
+            currentQuote = quote
+            saveCurrentQuote()
+            updateLastUpdateDate()
+        } catch {
+            print(" Force update error: \(error)")
+            let randomQuote = fallbackQuotes.randomElement() ?? fallbackQuotes[0]
+            if fallbackQuotes.count > 1 && randomQuote.text == currentQuote.text {
+                let filteredQuotes = fallbackQuotes.filter { $0.text != currentQuote.text }
+                currentQuote = filteredQuotes.randomElement() ?? randomQuote
+            } else {
+                currentQuote = randomQuote
+            }
+            print(" Using fallback quote: \(currentQuote.text)")
+            saveCurrentQuote()
+            updateLastUpdateDate()
+        }
+        
+        isLoading = false
+    }
+    
+    // Method to get current quote for notifications
     func getCurrentQuoteText() -> String {
         return "\"\(currentQuote.text)\" - \(currentQuote.author)"
     }

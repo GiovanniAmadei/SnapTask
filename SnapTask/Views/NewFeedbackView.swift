@@ -66,7 +66,7 @@ struct NewFeedbackView: View {
                         .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemBackground))
+                                .fill(Material.thin)
                                 .shadow(
                                     color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
                                     radius: 8,
@@ -93,7 +93,7 @@ struct NewFeedbackView: View {
                         .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemBackground))
+                                .fill(Material.thin)
                                 .shadow(
                                     color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
                                     radius: 8,
@@ -141,7 +141,7 @@ struct NewFeedbackView: View {
                         .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemBackground))
+                                .fill(Material.thin)
                                 .shadow(
                                     color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
                                     radius: 8,
@@ -176,7 +176,7 @@ struct NewFeedbackView: View {
                         .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemBackground))
+                                .fill(Material.thin)
                                 .shadow(
                                     color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08),
                                     radius: 8,

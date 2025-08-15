@@ -5,52 +5,12 @@ class QuoteService {
     static let shared = QuoteService()
     
     private let session = URLSession.shared
-    private let zenQuotesURL = "https://zenquotes.io/api/random"
     
     private init() {}
     
     func fetchDailyQuote() async throws -> Quote {
-        do {
-            // Try to fetch from ZenQuotes API first
-            let quote = try await fetchFromZenQuotesAPI()
-            print("✅ Quote fetched from ZenQuotes API: \(quote.text)")
-            return quote
-        } catch {
-            print("⚠️ Error fetching from API: \(error), using fallback quotes")
-            // If API fails, use fallback quotes with better randomization
-            return getRandomFallbackQuote()
-        }
-    }
-    
-    private func fetchFromZenQuotesAPI() async throws -> Quote {
-        guard let url = URL(string: zenQuotesURL) else {
-            throw QuoteError.invalidURL
-        }
-        
-        let (data, response) = try await session.data(from: url)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw QuoteError.networkError
-        }
-        
-        guard httpResponse.statusCode == 200 else {
-            throw QuoteError.networkError
-        }
-        
-        // ZenQuotes returns an array with one quote object
-        let zenQuotes = try JSONDecoder().decode([ZenQuote].self, from: data)
-        
-        guard let zenQuote = zenQuotes.first else {
-            throw QuoteError.decodingError
-        }
-        
-        return Quote(
-            text: zenQuote.q,
-            author: zenQuote.a
-        )
-    }
-    
-    private func getRandomFallbackQuote() -> Quote {
+        // For now, we'll use the built-in quotes
+        // In the future, this could be extended to fetch from an API
         let fallbackQuotes = [
             Quote(text: "The only way to do great work is to love what you do.", author: "Steve Jobs"),
             Quote(text: "Success is not final, failure is not fatal: It is the courage to continue that counts.", author: "Winston Churchill"),
@@ -71,28 +31,60 @@ class QuoteService {
             Quote(text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein"),
             Quote(text: "What you get by achieving your goals is not as important as what you become by achieving your goals.", author: "Zig Ziglar"),
             Quote(text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery"),
-            Quote(text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "Anonymous"),
-            Quote(text: "Dream big and dare to fail.", author: "Norman Vaughan"),
-            Quote(text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb"),
-            Quote(text: "Don't be afraid to give up the good to go for the great.", author: "John D. Rockefeller"),
-            Quote(text: "The secret of getting ahead is getting started.", author: "Mark Twain"),
-            Quote(text: "It's not whether you get knocked down, it's whether you get up.", author: "Vince Lombardi"),
-            Quote(text: "Opportunities don't happen. You create them.", author: "Chris Grosser"),
-            Quote(text: "Success is walking from failure to failure with no loss of enthusiasm.", author: "Winston Churchill"),
-            Quote(text: "Try not to become a person of success, but rather try to become a person of value.", author: "Albert Einstein"),
-            Quote(text: "Great things never come from comfort zones.", author: "Anonymous"),
-            Quote(text: "If you are not willing to risk the usual, you will have to settle for the ordinary.", author: "Jim Rohn")
+            Quote(text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "Anonymous")
         ]
         
-        // Use truly random selection for fallback quotes
-        return fallbackQuotes.randomElement() ?? Quote.placeholder
+        // Use a deterministic approach based on the current date
+        // This ensures the same quote is returned throughout the day
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: Date())
+        let seed = dateString.hash
+        
+        // Use the hash as seed for deterministic randomness
+        var generator = LinearCongruentialGenerator(seed: UInt64(abs(seed)))
+        let randomIndex = Int(generator.next() % UInt64(fallbackQuotes.count))
+        
+        return fallbackQuotes[randomIndex]
     }
+    
+    // MARK: - Future API Implementation
+    /*
+    private func fetchFromAPI() async throws -> Quote {
+        guard let url = URL(string: "https://api.quotegarden.io/quotes/random") else {
+            throw QuoteError.invalidURL
+        }
+        
+        let (data, response) = try await session.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw QuoteError.networkError
+        }
+        
+        let apiResponse = try JSONDecoder().decode(QuoteAPIResponse.self, from: data)
+        
+        return Quote(
+            text: apiResponse.data.quoteText,
+            author: apiResponse.data.quoteAuthor
+        )
+    }
+    */
 }
 
-// MARK: - ZenQuotes API Response Model
-private struct ZenQuote: Codable {
-    let q: String  // quote text
-    let a: String  // author
+// MARK: - Linear Congruential Generator
+// Simple pseudo-random number generator for deterministic randomness
+private struct LinearCongruentialGenerator {
+    private var state: UInt64
+    
+    init(seed: UInt64) {
+        state = seed
+    }
+    
+    mutating func next() -> UInt64 {
+        state = state &* 1103515245 &+ 12345
+        return state
+    }
 }
 
 // MARK: - Errors
@@ -100,15 +92,14 @@ enum QuoteError: Error {
     case invalidURL
     case networkError
     case decodingError
-    
-    var localizedDescription: String {
-        switch self {
-        case .invalidURL:
-            return "Invalid URL"
-        case .networkError:
-            return "Network error"
-        case .decodingError:
-            return "Failed to decode response"
-        }
-    }
+}
+
+// MARK: - API Response Models (for future use)
+private struct QuoteAPIResponse: Codable {
+    let data: QuoteData
+}
+
+private struct QuoteData: Codable {
+    let quoteText: String
+    let quoteAuthor: String
 }

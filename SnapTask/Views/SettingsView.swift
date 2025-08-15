@@ -32,8 +32,6 @@ struct SettingsView: View {
     @State private var showingTaskNotificationPermissionAlert = false
     @State private var showingEmailNotAvailableAlert = false
 
-    @State private var didLoadSettingsData = false
-
     var body: some View {
         NavigationStack {
             List {
@@ -451,18 +449,25 @@ struct SettingsView: View {
             }
             .themedBackground()
             .scrollContentBackground(.hidden)
-            .listStyle(.insetGrouped)
             .onAppear {
-                if !didLoadSettingsData {
-                    didLoadSettingsData = true
-                    Task {
-                        await quoteManager.checkAndUpdateQuote()
-                        await subscriptionManager.loadProducts()
-                    }
-                    loadNotificationTime()
-                    checkNotificationPermissionStatus()
-                    taskNotificationManager.checkAuthorizationStatus()
+                Task {
+                    await quoteManager.checkAndUpdateQuote()
+                    await subscriptionManager.loadProducts()
                 }
+                loadNotificationTime()
+                checkNotificationPermissionStatus()
+                taskNotificationManager.checkAuthorizationStatus()
+            }
+            .actionSheet(isPresented: $showingLanguagePicker) {
+                ActionSheet(
+                    title: Text("language".localized),
+                    message: Text("choose_language".localized),
+                    buttons: languageManager.localizedLanguages.map { language in
+                        .default(Text(language.name)) {
+                            languageManager.setLanguage(language.code)
+                        }
+                    } + [.cancel(Text("cancel".localized))]
+                )
             }
             .sheet(isPresented: $showingDonationSheet) {
                 DonationView()
@@ -526,23 +531,9 @@ struct SettingsView: View {
             .fullScreenCover(isPresented: $showingWelcome) {
                 WelcomeView()
             }
-            .navigationTitle("settings".localized)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitle("settings".localized)
+            .navigationBarTitleDisplayMode(.large)
             .navigationBarHidden(false)
-
-            //     ForEach(languageManager.localizedLanguages, id: \.code) { language in
-            //         Button(language.name) {
-            //             languageManager.setLanguage(language.code)
-            //         }
-            //     }
-            //     Button("cancel".localized, role: .cancel) { }
-            // } message: {
-            //     Text("choose_language".localized)
-            // }
-
-            .sheet(isPresented: $showingLanguagePicker) {
-                LanguagePickerView(isPresented: $showingLanguagePicker)
-            }
         }
     }
     

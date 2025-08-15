@@ -689,7 +689,7 @@
 "thanks_previous_support" = "Thanks for your previous support!";
 "last_donation" = "Last donation:";
 "thanks_so_much" = "Thank you so much! ";
-"donation_help_help_development" = "Your donation helps me continue developing SnapTask Pro. I really appreciate your support!";
+"donation_helps_development" = "Your donation helps me continue developing SnapTask Pro. I really appreciate your support!";
 "coffee_for_giovanni" = "Coffee for Giovanni";
 "small_coffee" = "A small coffee ";
 "pizza_for_giovanni" = "Pizza for Giovanni";
@@ -1208,5 +1208,3 @@
 "search_for_a_place" = "Search for a place";
 "remove_location" = "Remove Location";
 "selected_location" = "Selected Location";
-
-"premium_plan_active" = "Premium plan active";
