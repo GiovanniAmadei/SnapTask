@@ -3,15 +3,15 @@ import Foundation
 struct Recurrence: Codable, Equatable, Hashable {
     enum RecurrenceType: Codable, Equatable, Hashable {
         case daily
-        case weekly(days: Set<Int>)
-        case monthly(days: Set<Int>)
+        case weekly(days: Set<Int>)            // 1 = Sunday ... 7 = Saturday
+        case monthly(days: Set<Int>)           // 1...31
         case monthlyOrdinal(patterns: Set<OrdinalPattern>)
         case yearly
     }
     
     struct OrdinalPattern: Codable, Equatable, Hashable {
-        let ordinal: Int // 1 = first, 2 = second, 3 = third, 4 = fourth, -1 = last
-        let weekday: Int // 1 = Sunday, 2 = Monday, etc.
+        let ordinal: Int // 1=first, 2=second, 3=third, 4=fourth, -1=last
+        let weekday: Int // 1=Sunday ... 7=Saturday
         
         var displayText: String {
             let ordinalText: String
@@ -42,6 +42,10 @@ struct Recurrence: Codable, Equatable, Hashable {
     
     private enum CodingKeys: String, CodingKey {
         case type, endDate, trackInStatistics, startDate
+        case interval
+        case selectedMonths
+        case weekModuloK, weekModuloOffset
+        case yearModuloK, yearModuloOffset
     }
     
     let type: RecurrenceType
@@ -49,53 +53,170 @@ struct Recurrence: Codable, Equatable, Hashable {
     let endDate: Date?
     let trackInStatistics: Bool
     
-    init(type: RecurrenceType, startDate: Date, endDate: Date?, trackInStatistics: Bool = true) {
+    // Interval and pattern metadata
+    // interval semantics by type:
+    // - daily: every N days
+    // - weekly: every N weeks (anchored to start week)
+    // - monthly/monthlyOrdinal: every N months (anchored to start month)
+    // - yearly: every N years (anchored to start year)
+    var interval: Int? = nil
+    
+    // Weekly modulo pattern (e.g. even/odd weeks)
+    var weekModuloK: Int? = nil
+    var weekModuloOffset: Int? = nil // 0...(k-1), based on weeks since anchor
+    
+    // Month selection (months-of-year, 1...12)
+    var selectedMonths: Set<Int>? = nil
+    
+    // Year modulo pattern (even/odd years or generic modulo)
+    var yearModuloK: Int? = nil
+    var yearModuloOffset: Int? = nil
+    
+    init(
+        type: RecurrenceType,
+        startDate: Date,
+        endDate: Date?,
+        trackInStatistics: Bool = true,
+        interval: Int? = nil,
+        selectedMonths: Set<Int>? = nil,
+        weekModuloK: Int? = nil,
+        weekModuloOffset: Int? = nil,
+        yearModuloK: Int? = nil,
+        yearModuloOffset: Int? = nil
+    ) {
         self.type = type
         self.startDate = startDate
         self.endDate = endDate
         self.trackInStatistics = trackInStatistics
+        self.interval = interval
+        self.selectedMonths = selectedMonths
+        self.weekModuloK = weekModuloK
+        self.weekModuloOffset = weekModuloOffset
+        self.yearModuloK = yearModuloK
+        self.yearModuloOffset = yearModuloOffset
     }
     
-    // Custom decoder to handle missing trackInStatistics in older data
+    // Custom decoder to handle old data (backward compatible)
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         type = try container.decode(RecurrenceType.self, forKey: .type)
         startDate = try container.decode(Date.self, forKey: .startDate)
         endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
-        
-        // Default to true if property doesn't exist in saved data
         trackInStatistics = try container.decodeIfPresent(Bool.self, forKey: .trackInStatistics) ?? true
+        
+        interval = try container.decodeIfPresent(Int.self, forKey: .interval)
+        selectedMonths = try container.decodeIfPresent(Set<Int>.self, forKey: .selectedMonths)
+        weekModuloK = try container.decodeIfPresent(Int.self, forKey: .weekModuloK)
+        weekModuloOffset = try container.decodeIfPresent(Int.self, forKey: .weekModuloOffset)
+        yearModuloK = try container.decodeIfPresent(Int.self, forKey: .yearModuloK)
+        yearModuloOffset = try container.decodeIfPresent(Int.self, forKey: .yearModuloOffset)
     }
 }
 
 extension Recurrence {
     func shouldOccurOn(date: Date) -> Bool {
         let calendar = Calendar.current
+        let dateStart = calendar.startOfDay(for: date)
+        let startDay = calendar.startOfDay(for: startDate)
+        
+        if dateStart < startDay { return false }
+        if let end = endDate, dateStart > calendar.startOfDay(for: end) { return false }
         
         switch self.type {
         case .daily:
+            let days = calendar.dateComponents([.day], from: startDay, to: dateStart).day ?? 0
+            if let every = interval, every > 1 {
+                guard days % every == 0 else { return false }
+            }
             return true
             
         case .weekly(let days):
-            // Ottieni il giorno della settimana (1-7, dove 1 è Domenica)
-            let weekday = calendar.component(.weekday, from: date)
-            return days.contains(weekday)
+            let weekday = calendar.component(.weekday, from: dateStart)
+            let validDays = days.intersection(Set(1...7))
+            guard validDays.contains(weekday) else { return false }
             
-        case .monthly(let days):
-            // Ottieni il giorno del mese (1-31)
-            let day = calendar.component(.day, from: date)
-            return days.contains(day)
+            let anchorWeek = calendar.startOfWeek(for: startDay)
+            let currentWeek = calendar.startOfWeek(for: dateStart)
+            let weeksPassed = calendar.dateComponents([.weekOfYear], from: anchorWeek, to: currentWeek).weekOfYear ?? 0
+            
+            if let every = interval, every > 1, weeksPassed % every != 0 {
+                return false
+            }
+            
+            if let k = weekModuloK, k >= 2 {
+                let rawOffset = weekModuloOffset ?? 0
+                let offset = ((rawOffset % k) + k) % k
+                if (weeksPassed % k) != offset {
+                    return false
+                }
+            }
+            return true
+            
+        case .monthly(let daySet):
+            if let months = selectedMonths?.intersection(Set(1...12)), !months.isEmpty {
+                let currentMonthIndex = calendar.component(.month, from: dateStart)
+                if !months.contains(currentMonthIndex) { return false }
+            }
+            
+            let validDays = daySet.intersection(Set(1...31))
+            let dayOfMonth = calendar.component(.day, from: dateStart)
+            guard validDays.contains(dayOfMonth) else { return false }
+            
+            guard
+                let startMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: startDay)),
+                let currentMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: dateStart))
+            else {
+                return false
+            }
+            
+            let monthsPassed = calendar.dateComponents([.month], from: startMonth, to: currentMonth).month ?? 0
+            if let every = interval, every > 1, monthsPassed % every != 0 {
+                return false
+            }
+            return true
             
         case .monthlyOrdinal(let patterns):
-            return patterns.contains { pattern in
-                return matchesOrdinalPattern(date: date, pattern: pattern, calendar: calendar)
+            let validPatterns = patterns.filter { p in
+                (p.weekday >= 1 && p.weekday <= 7) && ((p.ordinal >= 1 && p.ordinal <= 4) || p.ordinal == -1)
+            }
+            guard !validPatterns.isEmpty else { return false }
+            
+            guard
+                let startMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: startDay)),
+                let currentMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: dateStart))
+            else {
+                return false
+            }
+            let monthsPassed = calendar.dateComponents([.month], from: startMonth, to: currentMonth).month ?? 0
+            if let every = interval, every > 1, monthsPassed % every != 0 {
+                return false
+            }
+            
+            return validPatterns.contains { pattern in
+                matchesOrdinalPattern(date: dateStart, pattern: pattern, calendar: calendar)
             }
             
         case .yearly:
-            // Check if it's the same day and month as the start date
-            let startComponents = calendar.dateComponents([.month, .day], from: startDate)
-            let dateComponents = calendar.dateComponents([.month, .day], from: date)
-            return startComponents.month == dateComponents.month && startComponents.day == dateComponents.day
+            let startComponents = calendar.dateComponents([.month, .day], from: startDay)
+            let dateComponents = calendar.dateComponents([.month, .day], from: dateStart)
+            guard startComponents.month == dateComponents.month &&
+                  startComponents.day == dateComponents.day else {
+                return false
+            }
+            
+            let yearsPassed = calendar.dateComponents([.year], from: startDay, to: dateStart).year ?? 0
+            if let every = interval, every > 1, yearsPassed % every != 0 {
+                return false
+            }
+            
+            if let k = yearModuloK, k >= 2 {
+                let rawOffset = yearModuloOffset ?? 0
+                let offset = ((rawOffset % k) + k) % k
+                if (yearsPassed % k) != offset {
+                    return false
+                }
+            }
+            return true
         }
     }
     
@@ -106,15 +227,11 @@ extension Recurrence {
         let day = calendar.component(.day, from: date)
         
         if pattern.ordinal == -1 {
-            // Last occurrence - check if this is the last occurrence of this weekday in the month
-            let range = calendar.range(of: .day, in: .month, for: date)!
+            guard let range = calendar.range(of: .day, in: .month, for: date) else { return false }
             let lastDayOfMonth = range.upperBound - 1
-            
-            // Find the last occurrence of this weekday
             for dayOffset in 0..<7 {
                 let checkDay = lastDayOfMonth - dayOffset
                 if checkDay < 1 { break }
-                
                 if let checkDate = calendar.date(bySetting: .day, value: checkDay, of: date) {
                     let checkWeekday = calendar.component(.weekday, from: checkDate)
                     if checkWeekday == pattern.weekday {
@@ -124,7 +241,6 @@ extension Recurrence {
             }
             return false
         } else {
-            // Nth occurrence - calculate which occurrence this is
             let occurrence = (day - 1) / 7 + 1
             return occurrence == pattern.ordinal
         }
