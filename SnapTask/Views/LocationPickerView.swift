@@ -12,6 +12,20 @@ struct LocationPickerView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // Selected Location Preview (always visible if a location is set)
+                if let selectedLoc = selectedLocation {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("selected_location".localized)
+                            .font(.headline)
+                            .themedPrimaryText()
+                            .padding(.horizontal)
+
+                        LocationMapView(location: selectedLoc, height: 150, allowsInteraction: false)
+                            .padding(.horizontal)
+                    }
+                    .padding(.top, 8)
+                }
+
                 // Search Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("search_location".localized)
@@ -68,21 +82,7 @@ struct LocationPickerView: View {
                                 ForEach(viewModel.searchResults, id: \.id) { location in
                                     LocationResultRow(location: location) {
                                         selectedLocation = location
-                                        dismiss()
                                     }
-                                }
-                                
-                                if let selectedLoc = selectedLocation {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        Text("selected_location".localized)
-                                            .font(.headline)
-                                            .themedPrimaryText()
-                                            .padding(.horizontal)
-                                        
-                                        LocationMapView(location: selectedLoc, height: 120, allowsInteraction: false)
-                                            .padding(.horizontal)
-                                    }
-                                    .padding(.top, 16)
                                 }
                             }
                             .padding(.horizontal)
@@ -101,7 +101,6 @@ struct LocationPickerView: View {
                 if selectedLocation != nil {
                     Button(action: {
                         selectedLocation = nil
-                        dismiss()
                     }) {
                         HStack {
                             Image(systemName: "trash")
@@ -123,11 +122,11 @@ struct LocationPickerView: View {
             .navigationTitle("select_location".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("cancel".localized) {
                         dismiss()
                     }
-                    .themedSecondaryText()
+                    .tint(.red)
                 }
             }
             .onChange(of: searchText) { _, newValue in
