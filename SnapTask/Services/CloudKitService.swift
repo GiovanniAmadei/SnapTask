@@ -575,7 +575,7 @@ class CloudKitService: ObservableObject {
         }
     }
     
-    private struct SyncChanges {
+    struct SyncChanges {
         var tasks: [TodoTask] = []
         var categories: [Category] = []
         var rewards: [Reward] = []
@@ -600,6 +600,8 @@ class CloudKitService: ObservableObject {
         
         operation.recordChangedBlock = { [weak self] record in
             guard let self = self else { return }
+            
+            self.rememberRecordType(record)
             
             switch record.recordType {
             case self.taskRecordType:
@@ -642,14 +644,11 @@ class CloudKitService: ObservableObject {
             
             operation.recordZoneFetchCompletionBlock = { [weak self] _, token, _, _, error in
                 if let error = error {
-                    // Handle specific "client knowledge differs" error
-                    if let ckError = error as? CKError, 
-                       ckError.code == .changeTokenExpired {
+                    if let ckError = error as? CKError, ckError.code == .changeTokenExpired {
                         print("⚠️ Change token expired, clearing and retrying full sync")
                         self?.serverChangeToken = nil
-                        // Retry without token for full sync
                         Task {
-                            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+                            try? await Task.sleep(nanoseconds: 1_000_000_000) 
                             do {
                                 let freshChanges = try await self?.fetchChangesWithoutToken()
                                 continuation.resume(returning: freshChanges ?? changes)
@@ -666,11 +665,20 @@ class CloudKitService: ObservableObject {
                 }
             }
             
-            privateDatabase.add(operation)
+            self.privateDatabase.add(operation)
         }
     }
     
-    // MARK: - Fresh Sync Without Token
+    private func rememberRecordType(_ record: CKRecord) {
+        var map = knownRecordTypes
+        map[record.recordID.recordName] = record.recordType
+        knownRecordTypes = map
+    }
+    
+    private func knownType(for recordID: CKRecord.ID) -> String? {
+        return knownRecordTypes[recordID.recordName]
+    }
+    
     private func fetchChangesWithoutToken() async throws -> SyncChanges {
         print("🔄 Performing fresh sync without change token")
         
@@ -678,13 +686,14 @@ class CloudKitService: ObservableObject {
         
         var changes = SyncChanges()
         
-        // No token configuration - fetch all records
         operation.configurationsByRecordZoneID = [
             zoneID: CKFetchRecordZoneChangesOperation.ZoneConfiguration()
         ]
         
         operation.recordChangedBlock = { [weak self] record in
             guard let self = self else { return }
+            
+            self.rememberRecordType(record)
             
             switch record.recordType {
             case self.taskRecordType:
@@ -736,15 +745,13 @@ class CloudKitService: ObservableObject {
                 }
             }
             
-            privateDatabase.add(operation)
+            self.privateDatabase.add(operation)
         }
     }
     
     private func processChanges(_ changes: SyncChanges) async {
-        // Process deletions first
         await processDeletions(changes.deletedRecordIDs)
         
-        // Merge and apply changes
         await mergeTasks(changes.tasks)
         await mergeCategories(changes.categories)
         await mergeRewards(changes.rewards)
@@ -755,16 +762,40 @@ class CloudKitService: ObservableObject {
             await applySettings(changes.settings)
         }
         
-        // Notify UI
         NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
+    }
+    
+    private var knownRecordTypes: [String: String] {
+        get {
+            if let data = UserDefaults.standard.data(forKey: "cloudkit_known_record_types"),
+               let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+                return dict
+            }
+            return [:]
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                UserDefaults.standard.set(data, forKey: "cloudkit_known_record_types")
+            }
+        }
     }
     
     private func processDeletions(_ deletedIDs: [CKRecord.ID]) async {
         for recordID in deletedIDs {
-            let id = recordID.recordName
+            let idString = recordID.recordName
             
-            // Handle task deletions
-            if let uuid = UUID(uuidString: id) {
+            guard let type = knownType(for: recordID) else {
+                print("ℹ️ Skipping deletion for unknown type recordID: \(idString)")
+                continue
+            }
+            
+            guard let uuid = UUID(uuidString: idString) else {
+                print("ℹ️ Skipping deletion for non-UUID recordID: \(idString)")
+                continue
+            }
+            
+            switch type {
+            case taskRecordType:
                 let tasks = TaskManager.shared.tasks
                 if let taskIndex = tasks.firstIndex(where: { $0.id == uuid }) {
                     let task = tasks[taskIndex]
@@ -772,7 +803,7 @@ class CloudKitService: ObservableObject {
                     print("🗑️ Deleted task from remote: \(task.name)")
                 }
                 
-                // Handle category deletions
+            case categoryRecordType:
                 let categories = CategoryManager.shared.categories
                 if let categoryIndex = categories.firstIndex(where: { $0.id == uuid }) {
                     let category = categories[categoryIndex]
@@ -780,7 +811,7 @@ class CloudKitService: ObservableObject {
                     print("🗑️ Deleted category from remote: \(category.name)")
                 }
                 
-                // Handle reward deletions
+            case rewardRecordType:
                 let rewards = RewardManager.shared.rewards
                 if let rewardIndex = rewards.firstIndex(where: { $0.id == uuid }) {
                     let reward = rewards[rewardIndex]
@@ -788,13 +819,16 @@ class CloudKitService: ObservableObject {
                     print("🗑️ Deleted reward from remote: \(reward.name)")
                 }
                 
-                // Handle tracking session deletions
+            case trackingSessionRecordType:
                 let trackingSessions = TaskManager.shared.getTrackingSessions()
                 if let sessionIndex = trackingSessions.firstIndex(where: { $0.id == uuid }) {
                     let session = trackingSessions[sessionIndex]
                     TaskManager.shared.deleteTrackingSession(session)
                     print("🗑️ Deleted tracking session from remote: \(session.deviceDisplayInfo)")
                 }
+                
+            default:
+                print("ℹ️ Skipping deletion for unsupported type \(type) id: \(idString)")
             }
         }
     }
@@ -810,22 +844,19 @@ class CloudKitService: ObservableObject {
         
         for remoteTask in remoteTasks {
             if deletedItems.tasks.contains(remoteTask.id.uuidString) {
-                continue // Skip deleted items
+                continue 
             }
             
             if let localTask = localMap[remoteTask.id] {
                 var mergedTask: TodoTask
                 
                 if remoteTask.lastModifiedDate > localTask.lastModifiedDate {
-                    // Remote is newer, use remote as base but preserve any local completions that are newer
                     mergedTask = remoteTask
                     print("🔄 Remote task is newer for \(remoteTask.name)")
                 } else if localTask.lastModifiedDate > remoteTask.lastModifiedDate {
-                    // Local is newer, keep local
                     mergedTask = localTask
                     print("🔄 Local task is newer for \(localTask.name)")
                 } else {
-                    // Same timestamp, merge completions intelligently
                     mergedTask = remoteTask
                     var mergedCompletions = remoteTask.completions
                     
@@ -841,7 +872,6 @@ class CloudKitService: ObservableObject {
                     print("🔄 Same timestamp, merged completions for \(remoteTask.name)")
                 }
                 
-                // Sync subtask states
                 syncSubtaskCompletionStates(&mergedTask)
                 
                 if let index = mergedTasks.firstIndex(where: { $0.id == remoteTask.id }) {
@@ -849,7 +879,6 @@ class CloudKitService: ObservableObject {
                     hasChanges = true
                 }
             } else {
-                // New remote task
                 var newTask = remoteTask
                 syncSubtaskCompletionStates(&newTask)
                 mergedTasks.append(newTask)
@@ -868,12 +897,10 @@ class CloudKitService: ObservableObject {
         
         let localCategories = CategoryManager.shared.categories
         
-        // Create a comprehensive merge
         var mergedCategories: [Category] = []
         var processedIds = Set<UUID>()
         var processedNames = Set<String>()
         
-        // Add existing local categories first
         for localCategory in localCategories {
             let normalizedName = localCategory.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             if !processedIds.contains(localCategory.id) && !processedNames.contains(normalizedName) {
@@ -883,17 +910,14 @@ class CloudKitService: ObservableObject {
             }
         }
         
-        // Add remote categories that aren't duplicates or deleted
         var hasChanges = false
         for remoteCategory in remoteCategories {
-            // Skip deleted categories
             if deletedItems.categories.contains(remoteCategory.id.uuidString) {
-                continue
+                continue 
             }
             
             let normalizedName = remoteCategory.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             
-            // Only add if we haven't seen this ID or name
             if !processedIds.contains(remoteCategory.id) && !processedNames.contains(normalizedName) {
                 mergedCategories.append(remoteCategory)
                 processedIds.insert(remoteCategory.id)
@@ -919,11 +943,10 @@ class CloudKitService: ObservableObject {
         
         for remoteReward in remoteRewards {
             if deletedItems.rewards.contains(remoteReward.id.uuidString) {
-                continue
+                continue 
             }
             
             if let localReward = localMap[remoteReward.id] {
-                // Merge redemptions
                 let allRedemptions = Set(localReward.redemptions + remoteReward.redemptions)
                 var updatedReward = remoteReward
                 updatedReward.redemptions = Array(allRedemptions).sorted()
@@ -947,7 +970,6 @@ class CloudKitService: ObservableObject {
     private func mergePointsHistory(_ remoteHistory: [PointsHistory]) async {
         guard !remoteHistory.isEmpty else { return }
         
-        // Convert to daily points dictionary format
         var dailyPoints: [Date: Int] = [:]
         
         for entry in remoteHistory {
@@ -955,7 +977,6 @@ class CloudKitService: ObservableObject {
             dailyPoints[startOfDay] = (dailyPoints[startOfDay] ?? 0) + entry.points
         }
         
-        // Merge with existing points
         let existingPoints = RewardManager.shared.dailyPointsHistory
         for (date, points) in dailyPoints {
             if existingPoints[date] == nil {
@@ -977,11 +998,10 @@ class CloudKitService: ObservableObject {
         
         for remoteSession in remoteSessions {
             if deletedItems.trackingSessions.contains(remoteSession.id.uuidString) {
-                continue // Skip deleted items
+                continue 
             }
             
             if let localSession = localMap[remoteSession.id] {
-                // Merge sessions - prefer the one with the latest modification date
                 if remoteSession.lastModifiedDate > localSession.lastModifiedDate {
                     if let index = mergedSessions.firstIndex(where: { $0.id == remoteSession.id }) {
                         mergedSessions[index] = remoteSession
@@ -990,7 +1010,6 @@ class CloudKitService: ObservableObject {
                     }
                 }
             } else {
-                // New remote session
                 mergedSessions.append(remoteSession)
                 hasChanges = true
                 print("📥 Added tracking session from \(remoteSession.deviceDisplayInfo) - \(formatDuration(remoteSession.effectiveWorkTime))")
@@ -998,18 +1017,15 @@ class CloudKitService: ObservableObject {
         }
         
         if hasChanges {
-            // We'll need to add this method to TaskManager
             TaskManager.shared.updateAllTrackingSessions(mergedSessions)
         }
     }
     
     private func applySettings(_ settings: [String: Any]) async {
-        // Apply remote settings to UserDefaults
         for (key, value) in settings {
             UserDefaults.standard.set(value, forKey: "cloudkit_\(key)")
         }
         
-        // Notify about settings changes
         NotificationCenter.default.post(name: .cloudKitSettingsChanged, object: settings)
         print("📥 Applied remote settings: \(settings.keys)")
     }
@@ -1024,16 +1040,19 @@ class CloudKitService: ObservableObject {
         record["taskDescription"] = task.description
         record["startTime"] = task.startTime
         record["hasSpecificTime"] = task.hasSpecificTime
-        record["duration"] = max(0, task.duration) // Ensure non-negative
+        record["duration"] = max(0, task.duration) 
         record["hasDuration"] = task.hasDuration
         record["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
         record["priority"] = task.priority.rawValue
         record["hasRewardPoints"] = task.hasRewardPoints
-        record["rewardPoints"] = max(0, task.rewardPoints) // Ensure non-negative
+        record["rewardPoints"] = max(0, task.rewardPoints) 
         record["taskCreationDate"] = task.creationDate
         record["taskLastModifiedDate"] = task.lastModifiedDate
         
-        // Safely encode complex objects
+        record["timeScope"] = task.timeScope.rawValue
+        record["scopeStartDate"] = task.scopeStartDate
+        record["scopeEndDate"] = task.scopeEndDate
+        
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -1077,6 +1096,11 @@ class CloudKitService: ObservableObject {
         let completions: [Date: TaskCompletion] = decodeFromRecord(record, key: "completions") ?? [:]
         let completionDates: [Date] = decodeFromRecord(record, key: "completionDates") ?? []
         
+        let timeScopeRaw = record["timeScope"] as? String
+        let decodedTimeScope = TaskTimeScope(rawValue: timeScopeRaw ?? "") ?? .today
+        let decodedScopeStart: Date? = record["scopeStartDate"] as? Date
+        let decodedScopeEnd: Date? = record["scopeEndDate"] as? Date
+        
         var task = TodoTask(
             id: uuid,
             name: name,
@@ -1093,7 +1117,12 @@ class CloudKitService: ObservableObject {
             pomodoroSettings: pomodoroSettings,
             subtasks: subtasks,
             hasRewardPoints: hasRewardPoints,
-            rewardPoints: rewardPoints
+            rewardPoints: rewardPoints,
+            hasNotification: false,
+            notificationId: nil,
+            timeScope: decodedTimeScope,
+            scopeStartDate: decodedScopeStart,
+            scopeEndDate: decodedScopeEnd
         )
         
         task.completions = completions
@@ -1215,10 +1244,8 @@ class CloudKitService: ObservableObject {
         let recordID = CKRecord.ID(recordName: "AppSettings", zoneID: zoneID)
         let record = CKRecord(recordType: settingsRecordType, recordID: recordID)
         
-        // Ensure settings are JSON-compatible before serialization
         let jsonCompatibleSettings = makeJSONCompatible(settings)
         
-        // Convert settings to Data manually since [String: Any] doesn't conform to Codable
         if let data = try? JSONSerialization.data(withJSONObject: jsonCompatibleSettings) {
             record["settings"] = data
         }
@@ -1251,7 +1278,6 @@ class CloudKitService: ObservableObject {
             case let float as Float:
                 result[key] = Double(float)
             default:
-                // Skip non-JSON-serializable types
                 print("⚠️ Skipping non-JSON-serializable value for key \(key): \(type(of: value))")
             }
         }
@@ -1291,7 +1317,6 @@ class CloudKitService: ObservableObject {
         let recordID = CKRecord.ID(recordName: session.id.uuidString, zoneID: zoneID)
         let record = CKRecord(recordType: trackingSessionRecordType, recordID: recordID)
         
-        // Basic session info
         record["sessionId"] = session.id.uuidString
         record["taskId"] = session.taskId?.uuidString
         record["taskName"] = session.taskName
@@ -1304,7 +1329,6 @@ class CloudKitService: ObservableObject {
         record["sessionCreatedAt"] = session.creationDate
         record["sessionModifiedAt"] = session.lastModifiedDate
         
-        // Tracking state
         record["isRunning"] = session.isRunning
         record["isPaused"] = session.isPaused
         record["elapsedTime"] = session.elapsedTime
@@ -1360,7 +1384,6 @@ class CloudKitService: ObservableObject {
             isPaused: isPaused
         )
         
-        // Set additional properties
         session.totalDuration = totalDuration
         session.pausedDuration = pausedDuration
         session.isCompleted = isCompleted
@@ -1414,14 +1437,13 @@ class CloudKitService: ObservableObject {
             return false
         }
         
-        // Check retry limits
         if syncRetryCount >= maxSyncRetries {
             let timeSinceLastError = now.timeIntervalSince(lastErrorTime)
-            if timeSinceLastError < 300 { // 5 minutes cooldown
+            if timeSinceLastError < 300 { 
                 print("🔄 Max sync retries reached, cooling down")
                 return false
             } else {
-                syncRetryCount = 0 // Reset after cooldown
+                syncRetryCount = 0 
             }
         }
         
@@ -1467,28 +1489,26 @@ class CloudKitService: ObservableObject {
                 serverChangeToken = nil
                 if syncRetryCount < maxSyncRetries {
                     Task {
-                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) 
                         await performFullSync()
                     }
                 }
             case .serverRecordChanged:
                 syncStatus = .error("sync_error".localized)
-                // Only retry if under limit
                 if syncRetryCount < maxSyncRetries {
                     Task {
-                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) 
                         await performFullSync()
                     }
                 }
             default:
-                // Handle the "client knowledge differs" error specifically
                 if ckError.localizedDescription.contains("client knowledge differs") {
                     print("⚠️ Client knowledge differs from server - clearing token and retrying")
                     syncStatus = .error("sync_state_mismatch".localized)
                     serverChangeToken = nil
                     if syncRetryCount < maxSyncRetries {
                         Task {
-                            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 second delay
+                            try? await Task.sleep(nanoseconds: 3_000_000_000) 
                             await performFullSync()
                         }
                     }
@@ -1517,7 +1537,7 @@ class CloudKitService: ObservableObject {
             print("⚠️ Record conflict detected, will retry sync")
             if syncRetryCount < maxSyncRetries {
                 Task {
-                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) 
                     await performFullSync()
                 }
             }
@@ -1530,7 +1550,7 @@ class CloudKitService: ObservableObject {
             try? await ensureZoneExists()
             if syncRetryCount < maxSyncRetries {
                 Task {
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) 
                     await performFullSync()
                 }
             }
@@ -1543,23 +1563,18 @@ class CloudKitService: ObservableObject {
     
     private func resolveConflictAndRetry(task: TodoTask, retryCount: Int) async {
         do {
-            // Fetch the current version from CloudKit
             let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
             let currentRecord = try await privateDatabase.record(for: recordID)
             
-            // Create current task from record
             guard let currentTask = createTask(from: currentRecord) else {
                 print("❌ Could not parse current task from CloudKit")
                 return
             }
             
-            // Merge our changes into the current version
             let mergedTask = mergeTaskConflict(local: task, remote: currentTask)
             
-            // Update the existing record instead of creating new one
             let updatedRecord = updateTaskRecord(currentRecord, with: mergedTask)
             
-            // Save the updated record
             let operation = CKModifyRecordsOperation(recordsToSave: [updatedRecord])
             operation.savePolicy = .changedKeys
             operation.isAtomic = false
@@ -1580,29 +1595,29 @@ class CloudKitService: ObservableObject {
         } catch {
             print("❌ Failed to resolve conflict for \(task.name): \(error)")
             if retryCount < 3 {
-                // Try one more time with simple save
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                try? await Task.sleep(nanoseconds: 2_000_000_000) 
                 saveTask(task, retryCount: retryCount + 1)
             }
         }
     }
     
     private func updateTaskRecord(_ existingRecord: CKRecord, with task: TodoTask) -> CKRecord {
-        // Update fields in existing record
         existingRecord["name"] = task.name.isEmpty ? "untitled_task".localized : task.name
         existingRecord["taskDescription"] = task.description
         existingRecord["startTime"] = task.startTime
         existingRecord["hasSpecificTime"] = task.hasSpecificTime
-        existingRecord["duration"] = max(0, task.duration)
+        existingRecord["duration"] = max(0, task.duration) 
         existingRecord["hasDuration"] = task.hasDuration
         existingRecord["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
         existingRecord["priority"] = task.priority.rawValue
         existingRecord["hasRewardPoints"] = task.hasRewardPoints
-        existingRecord["rewardPoints"] = max(0, task.rewardPoints)
+        existingRecord["rewardPoints"] = max(0, task.rewardPoints) 
         existingRecord["taskCreationDate"] = task.creationDate
         existingRecord["taskLastModifiedDate"] = task.lastModifiedDate
+        existingRecord["timeScope"] = task.timeScope.rawValue
+        existingRecord["scopeStartDate"] = task.scopeStartDate
+        existingRecord["scopeEndDate"] = task.scopeEndDate
         
-        // Update complex objects
         encodeToRecord(existingRecord, key: "category", value: task.category)
         encodeToRecord(existingRecord, key: "location", value: task.location)
         encodeToRecord(existingRecord, key: "recurrence", value: task.recurrence)
@@ -1626,14 +1641,11 @@ class CloudKitService: ObservableObject {
         }
         merged.completions = mergedCompletions
         
-        // Merge completion dates
         let allCompletionDates = Set(local.completionDates + remote.completionDates)
         merged.completionDates = Array(allCompletionDates).sorted()
         
-        // Use latest modification date
         merged.lastModifiedDate = max(local.lastModifiedDate, remote.lastModifiedDate)
         
-        // Sync subtask states
         syncSubtaskCompletionStates(&merged)
         
         print("🔄 Merged conflict for task: \(merged.name) (using \(local.lastModifiedDate > remote.lastModifiedDate ? "local" : "remote") completion state)")
@@ -1660,18 +1672,14 @@ class CloudKitService: ObservableObject {
     func resetSyncState() async {
         print("🔄 Resetting CloudKit sync state")
         
-        // Clear change token
         serverChangeToken = nil
         
-        // Clear deletion markers
         clearDeletionMarkers()
         
-        // Reset sync status
         syncStatus = .idle
         lastSyncDate = nil
         syncRetryCount = 0
         
-        // Perform fresh sync
         await performFullSync()
     }
     

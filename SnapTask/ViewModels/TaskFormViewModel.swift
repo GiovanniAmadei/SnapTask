@@ -438,7 +438,16 @@ class TaskFormViewModel: ObservableObject {
             scopeEndDate = nil
         }
         
-        let recurrence: Recurrence? = isRecurring ? createContextualRecurrence(startDate: taskStartTime) : nil
+        let recurrence: Recurrence?
+        if isRecurring {
+            if selectedTimeScope == .today {
+                recurrence = createEnhancedRecurrence(startDate: taskStartTime)
+            } else {
+                recurrence = createContextualRecurrence(startDate: taskStartTime)
+            }
+        } else {
+            recurrence = nil
+        }
         
         return TodoTask(
             id: id,
@@ -464,72 +473,132 @@ class TaskFormViewModel: ObservableObject {
         )
     }
     
-    private func createContextualRecurrence(startDate: Date) -> Recurrence? {
+    private func createEnhancedRecurrence(startDate: Date) -> Recurrence? {
         let calendar = Calendar.current
-        let startDate = calendar.startOfDay(for: startDate)
-        let endDate = hasRecurrenceEndDate ? recurrenceEndDate : nil
+        let startDay = calendar.startOfDay(for: startDate)
+        let endDate = hasRecurrenceEndDate ? calendar.startOfDay(for: recurrenceEndDate) : nil
         
-        switch contextualRecurrenceType {
-        // Today scope recurrences
-        case .everyDay:
-            return Recurrence(type: .daily, startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyTwoDays:
-            // TODO: Implement interval-based daily recurrence
-            return Recurrence(type: .daily, startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyThreeDays:
-            // TODO: Implement interval-based daily recurrence
-            return Recurrence(type: .daily, startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyWeekday:
-            return Recurrence(type: .weekly(days: [2, 3, 4, 5, 6]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyWeekend:
-            return Recurrence(type: .weekly(days: [1, 7]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        
-        // Week scope recurrences
-        case .everyWeek:
-            let weekday = calendar.component(.weekday, from: startDate)
-            return Recurrence(type: .weekly(days: [weekday]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyTwoWeeks:
-            // TODO: Implement interval-based weekly recurrence
-            let weekday = calendar.component(.weekday, from: startDate)
-            return Recurrence(type: .weekly(days: [weekday]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyThreeWeeks:
-            // TODO: Implement interval-based weekly recurrence
-            let weekday = calendar.component(.weekday, from: startDate)
-            return Recurrence(type: .weekly(days: [weekday]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyMonthFromWeek:
-            // TODO: Implement interval-based weekly recurrence
-            let weekday = calendar.component(.weekday, from: startDate)
-            return Recurrence(type: .weekly(days: [weekday]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        
-        // Month scope recurrences
-        case .everyMonth:
-            let day = calendar.component(.day, from: startDate)
-            return Recurrence(type: .monthly(days: [day]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyTwoMonths:
-            // TODO: Implement interval-based monthly recurrence
-            let day = calendar.component(.day, from: startDate)
-            return Recurrence(type: .monthly(days: [day]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyThreeMonths:
-            // TODO: Implement interval-based monthly recurrence
-            let day = calendar.component(.day, from: startDate)
-            return Recurrence(type: .monthly(days: [day]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everySixMonths:
-            // TODO: Implement interval-based monthly recurrence
-            let day = calendar.component(.day, from: startDate)
-            return Recurrence(type: .monthly(days: [day]), startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        
-        // Year scope recurrences
-        case .everyYear:
-            return Recurrence(type: .yearly, startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyTwoYears:
-            // TODO: Implement interval-based yearly recurrence
-            return Recurrence(type: .yearly, startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
-        case .everyThreeYears:
-            // TODO: Implement interval-based yearly recurrence
-            return Recurrence(type: .yearly, startDate: startDate, endDate: endDate, trackInStatistics: trackInStatistics)
+        switch recurrenceType {
+        case .daily:
+            return Recurrence(type: .daily, startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+            
+        case .weekly:
+            var days = selectedDays
+            if days.isEmpty {
+                // Default to weekday of startDay if user didn't pick any
+                let wd = calendar.component(.weekday, from: startDay)
+                days.insert(wd)
+            }
+            return Recurrence(type: .weekly(days: days), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+            
+        case .monthly:
+            if monthlySelectionType == .days {
+                var days = selectedMonthlyDays
+                if days.isEmpty {
+                    let d = calendar.component(.day, from: startDay)
+                    days.insert(d)
+                }
+                return Recurrence(type: .monthly(days: days), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+            } else {
+                let patterns = selectedOrdinalPatterns
+                if patterns.isEmpty {
+                    // Fallback: first occurrence of the weekday of startDay
+                    let wd = calendar.component(.weekday, from: startDay)
+                    let pattern = Recurrence.OrdinalPattern(ordinal: 1, weekday: wd)
+                    return Recurrence(type: .monthlyOrdinal(patterns: [pattern]), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+                } else {
+                    return Recurrence(type: .monthlyOrdinal(patterns: patterns), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+                }
+            }
+            
+        case .yearly:
+            // Anchor yearly recurrence to the chosen yearlyDate’s month/day
+            let yearlyStart = calendar.startOfDay(for: yearlyDate)
+            return Recurrence(type: .yearly, startDate: yearlyStart, endDate: endDate, trackInStatistics: trackInStatistics)
         }
     }
     
+    private func createContextualRecurrence(startDate: Date) -> Recurrence? {
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: startDate)
+        let endDate = hasRecurrenceEndDate ? calendar.startOfDay(for: recurrenceEndDate) : nil
+        
+        switch selectedTimeScope {
+        case .week:
+            // Build WEEK-scope recurrence using WeekRecurrenceMode (ignore legacy contextualRecurrenceType here)
+            let weekday = calendar.component(.weekday, from: startDay)
+            var rec = Recurrence(
+                type: .weekly(days: [weekday]),
+                startDate: startDay,
+                endDate: endDate,
+                trackInStatistics: trackInStatistics
+            )
+            switch weekRecurrenceMode {
+            case .everyNWeeks:
+                rec.weekInterval = max(1, weekInterval)
+            case .specificWeeksOfMonth:
+                // Use ordinals of week-of-month (1..5, -1=last) to show in specific weeks each month
+                rec.weekSelectedOrdinals = weekSelectedOrdinals.isEmpty ? [weekOrdinalInMonth(startDay)] : weekSelectedOrdinals
+                rec.monthInterval = 1
+            case .moduloPattern:
+                rec.weekModuloK = max(2, weekModuloK)
+                rec.weekModuloOffset = max(0, min(weekModuloK - 1, weekModuloOffset))
+            }
+            return rec
+            
+        case .month:
+            // Build MONTH-scope recurrence using MonthRecurrenceMode
+            let day = calendar.component(.day, from: startDay)
+            var rec = Recurrence(
+                type: .monthly(days: [day]),
+                startDate: startDay,
+                endDate: endDate,
+                trackInStatistics: trackInStatistics
+            )
+            switch monthRecurrenceMode {
+            case .everyNMonths:
+                rec.monthInterval = max(1, monthInterval)
+            case .specificMonths:
+                rec.monthSelectedMonths = monthSelectedMonths.isEmpty ? [calendar.component(.month, from: startDay)] : monthSelectedMonths
+            }
+            return rec
+            
+        case .year:
+            // Build YEAR-scope recurrence using YearRecurrenceMode
+            var rec = Recurrence(
+                type: .yearly,
+                startDate: startDay,
+                endDate: endDate,
+                trackInStatistics: trackInStatistics
+            )
+            switch yearRecurrenceMode {
+            case .everyNYears:
+                rec.yearInterval = max(1, yearInterval)
+            case .moduloPattern:
+                rec.yearModuloK = max(2, yearModuloK)
+                rec.yearModuloOffset = max(0, min(yearModuloK - 1, yearModuloOffset))
+            }
+            return rec
+            
+        case .today:
+            // For daily scope, keep using the enhanced editor (already uses weekly/monthly/monthlyOrdinal/yearly concrete patterns)
+            // Legacy contextual types like everyTwoDays can be extended later if needed.
+            return createEnhancedRecurrence(startDate: startDay)
+            
+        case .longTerm:
+            return nil
+        }
+    }
+    
+    private func weekOrdinalInMonth(_ date: Date) -> Int {
+        let calendar = Calendar.current
+        let ord = calendar.component(.weekOfMonth, from: date)
+        // Check if it's last week of the month
+        let nextWeekStart = calendar.date(byAdding: .day, value: 7, to: calendar.startOfWeek(for: date))!
+        let isLast = calendar.component(.month, from: nextWeekStart) != calendar.component(.month, from: date)
+        return isLast ? -1 : ord
+    }
+
     func addSubtask(name: String) {
         let subtask = Subtask(id: UUID(), name: name, isCompleted: false)
         subtasks.append(subtask)
