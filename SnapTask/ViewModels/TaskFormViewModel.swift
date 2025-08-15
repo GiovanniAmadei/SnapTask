@@ -438,7 +438,9 @@ class TaskFormViewModel: ObservableObject {
             scopeEndDate = nil
         }
         
-        let recurrence: Recurrence? = isRecurring ? createContextualRecurrence(startDate: taskStartTime) : nil
+        // Build recurrence prioritizing Enhanced settings when provided,
+        // falling back to contextual recurrence for time-scope presets.
+        let recurrence: Recurrence? = isRecurring ? createRecurrence(startDate: taskStartTime) : nil
         
         return TodoTask(
             id: id,
@@ -527,6 +529,53 @@ class TaskFormViewModel: ObservableObject {
             
         case .longTerm:
             return nil
+        }
+    }
+
+    // Prefer building recurrence from Enhanced selections when available.
+    // Fallback to contextual recurrence logic otherwise.
+    private func createRecurrence(startDate: Date) -> Recurrence? {
+        let calendar = Calendar.current
+        let anchor = calendar.startOfDay(for: startDate)
+        let endDate = hasRecurrenceEndDate ? recurrenceEndDate : nil
+        
+        switch recurrenceType {
+        case .daily:
+            // Map contextual daily presets to interval. Default to every day.
+            let interval: Int
+            switch contextualRecurrenceType {
+            case .everyTwoDays: interval = 2
+            case .everyThreeDays: interval = 3
+            default: interval = 1
+            }
+            return Recurrence(type: .daily, startDate: anchor, endDate: endDate, trackInStatistics: trackInStatistics, interval: interval)
+            
+        case .weekly:
+            let days = !selectedDays.isEmpty ? selectedDays : [calendar.component(.weekday, from: anchor)]
+            return Recurrence(type: .weekly(days: days), startDate: anchor, endDate: endDate, trackInStatistics: trackInStatistics)
+            
+        case .monthly:
+            if monthlySelectionType == .ordinal {
+                let patterns = selectedOrdinalPatterns
+                guard !patterns.isEmpty else {
+                    // Fallback: use the day of the anchor date as monthly day
+                    let d = calendar.component(.day, from: anchor)
+                    return Recurrence(type: .monthly(days: [d]), startDate: anchor, endDate: endDate, trackInStatistics: trackInStatistics, interval: 1)
+                }
+                return Recurrence(type: .monthlyOrdinal(patterns: patterns), startDate: anchor, endDate: endDate, trackInStatistics: trackInStatistics, interval: 1)
+            } else {
+                let days = !selectedMonthlyDays.isEmpty ? selectedMonthlyDays : [calendar.component(.day, from: anchor)]
+                // Preserve month-specific selection if provided in contextual UI
+                let months = monthSelectedMonths.isEmpty ? nil : monthSelectedMonths
+                let interval = monthRecurrenceMode == .everyNMonths ? max(1, monthInterval) : nil
+                return Recurrence(type: .monthly(days: days), startDate: anchor, endDate: endDate, trackInStatistics: trackInStatistics, interval: interval, selectedMonths: months)
+            }
+            
+        case .yearly:
+            // Yearly is anchored on month/day of startDate; interval from contextual setting
+            let interval = yearRecurrenceMode == .everyNYears ? max(1, yearInterval) : nil
+            let (k, off): (Int?, Int?) = yearRecurrenceMode == .moduloPattern ? (max(2, yearModuloK), min(max(0, yearModuloOffset), max(2, yearModuloK) - 1)) : (nil, nil)
+            return Recurrence(type: .yearly, startDate: anchor, endDate: endDate, trackInStatistics: trackInStatistics, interval: interval, selectedMonths: nil, weekModuloK: nil, weekModuloOffset: nil, yearModuloK: k, yearModuloOffset: off)
         }
     }
     

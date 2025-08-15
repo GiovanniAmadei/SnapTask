@@ -633,20 +633,8 @@ class TimelineViewModel: ObservableObject {
                 return false
             }
             
-            switch recurrence.type {
-            case .daily:
-                return true
-            case .weekly(let days):
-                let weekday = calendar.component(.weekday, from: date)
-                return days.contains(weekday)
-            case .monthly(let days):
-                let day = calendar.component(.day, from: date)
-                return days.contains(day)
-            case .monthlyOrdinal(let patterns):
-                return recurrence.shouldOccurOn(date: date)
-            case .yearly:
-                return recurrence.shouldOccurOn(date: date)
-            }
+            // Delegate to unified recurrence logic for ALL types
+            return recurrence.shouldOccurOn(date: date)
         }
         .sorted { $0.startTime < $1.startTime }
     }
@@ -676,21 +664,8 @@ class TimelineViewModel: ObservableObject {
                 if let endDate = recurrence.endDate, now > endDate {
                     return false
                 }
-                
-                switch recurrence.type {
-                case .daily:
-                    return true
-                case .weekly(let days):
-                    let weekday = calendar.component(.weekday, from: now)
-                    return days.contains(weekday)
-                case .monthly(let days):
-                    let day = calendar.component(.day, from: now)
-                    return days.contains(day)
-                case .monthlyOrdinal(let patterns):
-                    return recurrence.shouldOccurOn(date: now)
-                case .yearly:
-                    return recurrence.shouldOccurOn(date: now)
-                }
+                // Use unified recurrence logic
+                return recurrence.shouldOccurOn(date: now)
             }
             
             return false

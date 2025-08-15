@@ -228,6 +228,14 @@ class TaskManager: ObservableObject {
         print(" Tracking session deleted: \(session.deviceDisplayInfo)")
     }
     
+    func removeTrackingSessionFromRemoteSync(_ session: TrackingSession) {
+        isUpdatingFromSync = true
+        trackingSessions.removeAll { $0.id == session.id }
+        saveTrackingSessions()
+        isUpdatingFromSync = false
+        print("✅ Tracking session removed from remote sync: \(session.deviceDisplayInfo)")
+    }
+
     func getTrackingSessionsFromDevice(_ deviceType: DeviceType) -> [TrackingSession] {
         return trackingSessions.filter { $0.deviceType == deviceType }
     }
