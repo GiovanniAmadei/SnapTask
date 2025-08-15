@@ -45,16 +45,16 @@ struct TaskDetailView: View {
             if let task = localTask {
                 taskContent(task)
             } else {
-                Text("Task not found")
+                Text("task_not_found".localized)
                     .themedSecondaryText()
             }
         }
         .themedBackground()
-        .navigationTitle("Task Details")
+        .navigationTitle("task_details".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Close") {
+                Button("close".localized) {
                     dismiss()
                 }
                 .themedPrimary()
@@ -365,11 +365,11 @@ struct TaskDetailView: View {
     }
     
     private func scheduleCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "clock", title: "Schedule", color: Color.orange) {
+        DetailCard(icon: "clock", title: "time".localized, color: Color.orange) {
             VStack(alignment: .leading, spacing: 8) {
                 // Prima riga: mostra sempre il periodo/scope della task
                 HStack {
-                    Text("Period")
+                    Text("time_range".localized)
                         .font(.subheadline.weight(.medium))
                         .themedSecondaryText()
                     Spacer()
@@ -381,7 +381,7 @@ struct TaskDetailView: View {
                 // Seconda riga: mostra il tempo specifico se disponibile
                 if task.hasSpecificTime {
                     HStack {
-                        Text("Start Time")
+                        Text("start_time".localized)
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         Spacer()
@@ -394,7 +394,7 @@ struct TaskDetailView: View {
                 // Notification status (read-only display)
                 if task.hasNotification {
                     HStack {
-                        Text("Notification")
+                        Text("notifications".localized)
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         Spacer()
@@ -402,7 +402,7 @@ struct TaskDetailView: View {
                             Image(systemName: "bell.fill")
                                 .font(.system(size: 12))
                                 .foregroundColor(.blue)
-                            Text("Enabled")
+                            Text("enabled".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
@@ -415,7 +415,7 @@ struct TaskDetailView: View {
     }
     
     private func descriptionCard(_ description: String) -> some View {
-        DetailCard(icon: "doc.text", title: "Description", color: .blue) {
+        DetailCard(icon: "doc.text", title: "description".localized, color: .blue) {
             Text(description)
                 .font(.body)
                 .themedPrimaryText()
@@ -424,7 +424,7 @@ struct TaskDetailView: View {
     }
     
     private func locationCard(_ location: TaskLocation) -> some View {
-        DetailCard(icon: "location", title: "Location", color: .green) {
+        DetailCard(icon: "location", title: "location".localized, color: .green) {
             VStack(alignment: .leading, spacing: 16) {
                 // Map view (already shows name and address below)
                 LocationMapView(location: location, height: 120)
@@ -436,7 +436,7 @@ struct TaskDetailView: View {
                         Image(systemName: "map")
                             .font(.system(size: 16))
                             .foregroundColor(.blue)
-                        Text("Open in Maps")
+                        Text("open_in_maps".localized)
                             .font(.body.weight(.medium))
                             .foregroundColor(.blue)
                         Spacer()
@@ -462,20 +462,20 @@ struct TaskDetailView: View {
                 // Priority to actual duration
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Actual Duration")
+                        Text("actual_duration".localized)
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         
                         Spacer()
                         
                         HStack(spacing: 8) {
-                            Button("Edit") {
+                            Button("edit".localized) {
                                 showingDurationPicker = true
                             }
                             .font(.caption)
                             .foregroundColor(.blue)
                             
-                            Button("Clear") {
+                            Button("clear".localized) {
                                 updateLocalTaskRating(actualDuration: 0, updateDuration: true)
                             }
                             .font(.caption)
@@ -493,7 +493,7 @@ struct TaskDetailView: View {
                     // Show comparison with estimated if available
                     if hasEstimatedDuration {
                         HStack {
-                            Text("vs estimated")
+                            Text("estimation_accuracy".localized)
                                 .font(.caption)
                                 .themedSecondaryText()
                             Spacer()
@@ -519,7 +519,7 @@ struct TaskDetailView: View {
                 // Show estimated duration with option to add actual
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Estimated Duration")
+                        Text("duration".localized)
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         Spacer()
@@ -535,7 +535,7 @@ struct TaskDetailView: View {
                             Image(systemName: "plus.circle")
                                 .font(.system(size: 12))
                                 .foregroundColor(.blue)
-                            Text("Add actual duration")
+                            Text("add_duration".localized)
                                 .font(.caption)
                                 .foregroundColor(.blue)
                             Spacer()
@@ -548,11 +548,11 @@ struct TaskDetailView: View {
                 // No duration at all - option to add
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("Duration")
+                        Text("duration".localized)
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         Spacer()
-                        Text("Not set")
+                        Text("none".localized)
                             .font(.subheadline)
                             .themedSecondaryText()
                     }
@@ -564,7 +564,7 @@ struct TaskDetailView: View {
                             Image(systemName: "plus.circle")
                                 .font(.system(size: 12))
                                 .foregroundColor(.blue)
-                            Text("Add duration")
+                            Text("add_duration".localized)
                                 .font(.caption)
                                 .foregroundColor(.blue)
                             Spacer()
@@ -578,10 +578,10 @@ struct TaskDetailView: View {
     }
     
     private func recurrenceCard(_ task: TodoTask, _ recurrence: Recurrence) -> some View {
-        DetailCard(icon: "repeat", title: "Recurrence", color: .purple) {
+        DetailCard(icon: "repeat", title: "recurrence".localized, color: .purple) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Pattern")
+                    Text("patterns_enum".localized)
                         .font(.subheadline.weight(.medium))
                         .themedSecondaryText()
                     Spacer()
@@ -592,7 +592,7 @@ struct TaskDetailView: View {
                 
                 if let endDate = recurrence.endDate {
                     HStack {
-                        Text("Ends")
+                        Text("end_date".localized)
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         Spacer()
@@ -603,7 +603,7 @@ struct TaskDetailView: View {
                 }
                 
                 HStack {
-                    Text("Current Streak")
+                    Text("current_streak".localized)
                         .font(.subheadline.weight(.medium))
                         .themedSecondaryText()
                     Spacer()
@@ -621,7 +621,7 @@ struct TaskDetailView: View {
     }
     
     private func subtasksCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "checklist", title: "Subtasks", color: .indigo) {
+        DetailCard(icon: "checklist", title: "subtasks".localized, color: .indigo) {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(task.subtasks) { subtask in
                     subtaskRow(task, subtask)
@@ -648,10 +648,10 @@ struct TaskDetailView: View {
     }
     
     private func pomodoroCard(_ task: TodoTask, _ pomodoroSettings: PomodoroSettings) -> some View {
-        DetailCard(icon: "timer", title: "Pomodoro", color: .red) {
+        DetailCard(icon: "timer", title: "pomodoro".localized, color: .red) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Work Duration")
+                    Text("work_duration".localized)
                         .font(.subheadline.weight(.medium))
                         .themedSecondaryText()
                     Spacer()
@@ -661,7 +661,7 @@ struct TaskDetailView: View {
                 }
                 
                 HStack {
-                    Text("Break Duration")
+                    Text("break_time".localized)
                         .font(.subheadline.weight(.medium))
                         .themedSecondaryText()
                     Spacer()
@@ -676,7 +676,7 @@ struct TaskDetailView: View {
                 }) {
                     HStack {
                         Image(systemName: "play.fill")
-                        Text("Start Pomodoro")
+                        Text("start_pomodoro".localized)
                             .font(.subheadline.weight(.medium))
                     }
                     .foregroundColor(theme.backgroundColor)
@@ -705,13 +705,13 @@ struct TaskDetailView: View {
     }
     
     private func rewardsCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "star", title: "Rewards", color: .yellow) {
+        DetailCard(icon: "star", title: "rewards".localized, color: .yellow) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Points Available")
+                    Text("available_points".localized)
                         .font(.subheadline.weight(.medium))
                         .themedSecondaryText()
-                    Text("\(task.rewardPoints) points")
+                    Text("\(task.rewardPoints) \(("points".localized))")
                         .font(.title3.bold())
                         .foregroundColor(.yellow)
                 }
@@ -724,7 +724,7 @@ struct TaskDetailView: View {
     }
     
     private func notesCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "note.text", title: "Notes", color: .purple) {
+        DetailCard(icon: "note.text", title: "notes".localized, color: .purple) {
             TaskNotesSection(
                 notes: Binding(
                     get: { task.completions[completionKey]?.notes ?? "" },
@@ -768,7 +768,7 @@ struct TaskDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: "play.fill")
                     .font(.system(size: 16, weight: .medium))
-                Text("Track")
+                Text("track".localized)
                     .font(.headline)
             }
             .themedButtonText()
@@ -793,7 +793,7 @@ struct TaskDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16, weight: .medium))
-                Text(isCompleted ? "Undo" : "Done")
+                Text(isCompleted ? "mark_incomplete".localized : "done".localized)
                     .font(.headline)
             }
             .themedButtonText()
@@ -818,7 +818,7 @@ struct TaskDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: "pencil")
                     .font(.system(size: 16, weight: .medium))
-                Text("Edit")
+                Text("edit".localized)
                     .font(.headline)
             }
             .themedButtonText()
@@ -1124,7 +1124,7 @@ private struct TaskPerformanceChartView: View {
                 .padding(16)
             }
             .themedBackground()
-            .navigationTitle("Performance Charts")
+            .navigationTitle("performance_charts".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -1143,7 +1143,7 @@ private struct TaskPerformanceChartView: View {
     private var timeRangeSelector: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Time Range")
+                Text("time_range".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                     .themedPrimaryText()
                 Spacer()
@@ -1231,7 +1231,7 @@ private struct TaskPerformanceChartView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.orange)
             
-            Text("No Data for \(selectedTimeRange.rawValue)")
+            Text("no_data".localized)
                 .font(.title3.bold())
             
             VStack(spacing: 8) {
@@ -1388,7 +1388,7 @@ private struct TaskPerformanceChartView: View {
             HStack {
                 Image(systemName: "star.fill")
                     .foregroundColor(.yellow)
-                Text("Quality Over Time (\(selectedTimeRange.rawValue))")
+                Text("quality_trend".localized)
                     .font(.headline)
                     .themedPrimaryText()
                 Spacer()
@@ -1444,15 +1444,15 @@ private struct TaskPerformanceChartView: View {
                         }
                     }
                 }
-                .chartXAxisLabel("Date", position: .bottom)
-                .chartYAxisLabel("Quality Rating", position: .leading)
+                .chartXAxisLabel("date".localized, position: .bottom)
+                .chartYAxisLabel("quality_rating".localized, position: .leading)
             } else {
                 VStack(spacing: 8) {
-                    Text("No quality ratings in \(selectedTimeRange.rawValue.lowercased())")
+                    Text("no_quality_ratings_in_period".localized("\(selectedTimeRange.rawValue)"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Complete tasks and add quality ratings to see trends")
+                    Text("complete_tasks_add_quality_ratings".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1473,7 +1473,7 @@ private struct TaskPerformanceChartView: View {
             HStack {
                 Image(systemName: "bolt.fill")
                     .foregroundColor(.orange)
-                Text("Difficulty Over Time (\(selectedTimeRange.rawValue))")
+                Text("difficulty_trend".localized)
                     .font(.headline)
                     .themedPrimaryText()
                 Spacer()
@@ -1529,15 +1529,15 @@ private struct TaskPerformanceChartView: View {
                         }
                     }
                 }
-                .chartXAxisLabel("Date", position: .bottom)
-                .chartYAxisLabel("Difficulty Rating", position: .leading)
+                .chartXAxisLabel("date".localized, position: .bottom)
+                .chartYAxisLabel("difficulty_rating".localized, position: .leading)
             } else {
                 VStack(spacing: 8) {
-                    Text("No difficulty ratings in \(selectedTimeRange.rawValue.lowercased())")
+                    Text("no_difficulty_ratings_in_period".localized("\(selectedTimeRange.rawValue)"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Complete tasks and add difficulty ratings to see trends")
+                    Text("complete_tasks_add_difficulty_ratings".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1586,7 +1586,7 @@ private struct TaskPerformanceChartView: View {
             HStack {
                 Image(systemName: "list.bullet")
                     .foregroundColor(.blue)
-                Text("Completions (\(selectedTimeRange.rawValue))")
+                Text("completions_period".localized("\(selectedTimeRange.rawValue)"))
                     .font(.headline)
                     .themedPrimaryText()
                 Spacer()
@@ -1594,11 +1594,11 @@ private struct TaskPerformanceChartView: View {
             
             if analytics.completions.isEmpty {
                 VStack(spacing: 8) {
-                    Text("No completions in \(selectedTimeRange.rawValue.lowercased())")
+                    Text("no_completions_in_period".localized("\(selectedTimeRange.rawValue)"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Complete this task to start tracking performance")
+                    Text("complete_this_task_start_tracking".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -1632,10 +1632,10 @@ private struct TaskPerformanceChartView: View {
                 .font(.system(size: 64))
                 .foregroundColor(.secondary)
             
-            Text("No Performance Data")
+            Text("no_completion_data".localized)
                 .font(.title2.bold())
             
-            Text("Complete this task with quality and difficulty ratings to see performance charts over time")
+            Text("complete_recurring_tasks_performance".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

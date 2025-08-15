@@ -56,7 +56,7 @@ struct CloudSyncStatusView: View {
                     
                     VStack(alignment: .leading, spacing: 6) {
                         if case .error(let message) = cloudKitService.syncStatus {
-                            Label("Sync Error", systemImage: "exclamationmark.triangle.fill")
+                            Label("sync_error".localized, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
                                 .foregroundColor(.orange)
                             
@@ -67,14 +67,14 @@ struct CloudSyncStatusView: View {
                         }
                         
                         if let lastSync = cloudKitService.lastSyncDate {
-                            Label("Last synced \(timeAgoString(from: lastSync))", systemImage: "clock")
+                            Label("last_synced".localized + " \(timeAgoString(from: lastSync))", systemImage: "clock")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
                         
                         // Manual sync button (only in details)
                         if case .error(_) = cloudKitService.syncStatus {
-                            Button("Try Again") {
+                            Button("try_again".localized) {
                                 cloudKitService.syncNow()
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     isShowingDetails = false
@@ -132,39 +132,39 @@ struct CloudSyncStatusView: View {
     
     private var statusText: String {
         if cloudKitService.isSyncing {
-            return "Syncing..."
+            return "syncing".localized
         }
         
         switch cloudKitService.syncStatus {
         case .success:
             if let lastSync = cloudKitService.lastSyncDate {
-                return "Up to date • \(timeAgoString(from: lastSync))"
+                return "up_to_date".localized + " • \(timeAgoString(from: lastSync))"
             } else {
-                return "Up to date"
+                return "up_to_date".localized
             }
         case .error(let message):
             return message
         case .idle:
-            return "Tap to sync"
+            return "tap_to_sync".localized
         case .syncing:
-            return "Syncing..."
+            return "syncing".localized
         case .disabled:
-            return "Sync disabled"
+            return "sync_disabled".localized
         }
     }
     
     private func friendlyErrorMessage(_ message: String) -> String {
         // Try to provide friendly messages based on the error message content
         if message.contains("Network") || message.contains("network") {
-            return "Check your internet connection and try again."
+            return "check_internet_connection".localized
         } else if message.contains("storage") || message.contains("quota") {
-            return "Your iCloud storage is full. Free up space in Settings."
+            return "icloud_storage_full".localized
         } else if message.contains("Authentication") || message.contains("account") {
-            return "Sign in to iCloud in Settings to enable sync."
+            return "sign_in_icloud".localized
         } else if message.contains("Zone") || message.contains("zone") {
-            return "Setting up sync for the first time..."
+            return "setting_up_sync".localized
         } else {
-            return "Check your iCloud connection and try again."
+            return "check_icloud_connection".localized
         }
     }
     

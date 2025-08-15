@@ -1352,15 +1352,21 @@ private struct TimelineTaskCard: View {
             currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
         }
         
-        while true {
+        // Limit iterations to prevent infinite loops (max 1000 days back)
+        var iterationCount = 0
+        let maxIterations = 1000
+        
+        while iterationCount < maxIterations {
             guard recurrence.shouldOccurOn(date: currentDate) else {
                 currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
+                iterationCount += 1
                 continue
             }
             
             if task.completions[currentDate]?.isCompleted == true {
                 streak += 1
                 currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
+                iterationCount += 1
             } else {
                 break
             }

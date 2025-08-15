@@ -322,9 +322,9 @@ struct SyncDetailsModalView: View {
     var body: some View {
         NavigationView {
             List {
-                Section("Sync Status") {
+                Section("sync_status".localized) {
                     HStack {
-                        Text("Status")
+                        Text("status".localized)
                         Spacer()
                         Text(cloudKitService.syncStatus.description)
                             .foregroundColor(.secondary)
@@ -332,7 +332,7 @@ struct SyncDetailsModalView: View {
                     
                     if let lastSync = cloudKitService.lastSyncDate {
                         HStack {
-                            Text("Last Sync")
+                            Text("last_sync".localized)
                             Spacer()
                             Text(lastSync, style: .time)
                                 .foregroundColor(.secondary)
@@ -340,57 +340,57 @@ struct SyncDetailsModalView: View {
                     }
                     
                     HStack {
-                        Text("Auto Sync")
+                        Text("auto_sync".localized)
                         Spacer()
-                        Text(CloudKitSettingsManager.shared.autoSyncEnabled ? "Enabled" : "Disabled")
+                        Text(CloudKitSettingsManager.shared.autoSyncEnabled ? "enabled".localized : "disabled".localized)
                             .foregroundColor(.secondary)
                     }
                 }
                 
-                Section("Account") {
+                Section("account".localized) {
                     HStack {
-                        Text("Service")
+                        Text("service".localized)
                         Spacer()
                         Text("iCloud")
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
-                        Text("Zone")
+                        Text("zone".localized)
                         Spacer()
                         Text("SnapTaskZone")
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
-                        Text("Encryption")
+                        Text("encryption".localized)
                         Spacer()
                         Text("End-to-End")
                             .foregroundColor(.secondary)
                     }
                 }
                 
-                Section("Data Types") {
-                    SyncDataTypeRow(name: "Tasks", isEnabled: true)
-                    SyncDataTypeRow(name: "Rewards", isEnabled: true)
-                    SyncDataTypeRow(name: "Categories", isEnabled: true)
-                    SyncDataTypeRow(name: "Points History", isEnabled: true)
-                    SyncDataTypeRow(name: "App Settings", isEnabled: true)
+                Section("data_types".localized) {
+                    SyncDataTypeRow(name: "tasks".localized, isEnabled: true)
+                    SyncDataTypeRow(name: "rewards".localized, isEnabled: true)
+                    SyncDataTypeRow(name: "categories".localized, isEnabled: true)
+                    SyncDataTypeRow(name: "points_history".localized, isEnabled: true)
+                    SyncDataTypeRow(name: "app_settings".localized, isEnabled: true)
                 }
                 
                 if case .error(let errorMessage) = cloudKitService.syncStatus {
-                    Section("Error Details") {
+                    Section("error_details".localized) {
                         Text(errorMessage)
                             .foregroundColor(.red)
                             .font(.caption)
                     }
                 }
             }
-            .navigationTitle("Sync Details")
+            .navigationTitle("sync_details".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("done".localized) {
                         dismiss()
                     }
                 }

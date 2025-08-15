@@ -205,14 +205,10 @@ class TimelineViewModel: ObservableObject {
     private func tasksForDay(_ date: Date, from tasks: [TodoTask]) -> [TodoTask] {
         let calendar = Calendar.current
         return tasks.filter { task in
-            // Tasks with .today scope for this specific date
             if task.timeScope == .today {
-                // For daily tasks, check both direct date match and recurrence
                 if task.recurrence != nil {
-                    // For recurring daily tasks, use the existing recurrence logic
-                    return calendar.isDate(task.startTime, inSameDayAs: date) || task.shouldShow(for: date, scope: .today)
+                    return task.occurs(on: date)
                 } else {
-                    // For non-recurring daily tasks, simple date match
                     return calendar.isDate(task.startTime, inSameDayAs: date)
                 }
             }
@@ -228,17 +224,22 @@ class TimelineViewModel: ObservableObject {
         print("Target week: \(weekStart) to \(weekEnd)")
         
         let filteredTasks = tasks.filter { task in
-            if task.timeScope == .week {
-                print("Checking task: \(task.name)")
-                print("  - timeScope: \(task.timeScope)")
-                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
-                print("  - scopeEndDate: \(String(describing: task.scopeEndDate))")
-                print("  - recurrence: \(String(describing: task.recurrence))")
-                
-                // Check if this task belongs to this specific week
+            guard task.timeScope == .week else { return false }
+            
+            print("Checking task: \(task.name)")
+            print("  - timeScope: \(task.timeScope)")
+            print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
+            print("  - scopeEndDate: \(String(describing: task.scopeEndDate))")
+            print("  - recurrence: \(String(describing: task.recurrence))")
+            
+            if task.recurrence != nil {
+                let occurs = task.occurs(inWeekStarting: weekStart)
+                print("  - Recurs in this week: \(occurs)")
+                return occurs
+            } else {
                 if let taskScopeStart = task.scopeStartDate, let taskScopeEnd = task.scopeEndDate {
                     let matches = calendar.isDate(taskScopeStart, inSameDayAs: weekStart) &&
-                                 calendar.isDate(taskScopeEnd, inSameDayAs: weekEnd)
+                                  calendar.isDate(taskScopeEnd, inSameDayAs: weekEnd)
                     print("  - Week match: \(matches)")
                     return matches
                 } else {
@@ -246,7 +247,6 @@ class TimelineViewModel: ObservableObject {
                     return false
                 }
             }
-            return false
         }
         
         print("Filtered \(filteredTasks.count) tasks for this week")
@@ -260,13 +260,18 @@ class TimelineViewModel: ObservableObject {
         print("Target month: \(monthStart)")
         
         let filteredTasks = tasks.filter { task in
-            if task.timeScope == .month {
-                print("Checking task: \(task.name)")
-                print("  - timeScope: \(task.timeScope)")
-                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
-                print("  - recurrence: \(String(describing: task.recurrence))")
-                
-                // Check if this task belongs to this specific month
+            guard task.timeScope == .month else { return false }
+            
+            print("Checking task: \(task.name)")
+            print("  - timeScope: \(task.timeScope)")
+            print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
+            print("  - recurrence: \(String(describing: task.recurrence))")
+            
+            if task.recurrence != nil {
+                let occurs = task.occurs(inMonth: monthStart)
+                print("  - Recurs this month: \(occurs)")
+                return occurs
+            } else {
                 if let taskScopeStart = task.scopeStartDate {
                     let matches = calendar.isDate(taskScopeStart, equalTo: monthStart, toGranularity: .month)
                     print("  - Month match: \(matches)")
@@ -276,7 +281,6 @@ class TimelineViewModel: ObservableObject {
                     return false
                 }
             }
-            return false
         }
         
         print("Filtered \(filteredTasks.count) tasks for this month")
@@ -290,13 +294,18 @@ class TimelineViewModel: ObservableObject {
         print("Target year: \(yearStart)")
         
         let filteredTasks = tasks.filter { task in
-            if task.timeScope == .year {
-                print("Checking task: \(task.name)")
-                print("  - timeScope: \(task.timeScope)")
-                print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
-                print("  - recurrence: \(String(describing: task.recurrence))")
-                
-                // Check if this task belongs to this specific year
+            guard task.timeScope == .year else { return false }
+            
+            print("Checking task: \(task.name)")
+            print("  - timeScope: \(task.timeScope)")
+            print("  - scopeStartDate: \(String(describing: task.scopeStartDate))")
+            print("  - recurrence: \(String(describing: task.recurrence))")
+            
+            if task.recurrence != nil {
+                let occurs = task.occurs(inYear: yearStart)
+                print("  - Recurs this year: \(occurs)")
+                return occurs
+            } else {
                 if let taskScopeStart = task.scopeStartDate {
                     let matches = calendar.isDate(taskScopeStart, equalTo: yearStart, toGranularity: .year)
                     print("  - Year match: \(matches)")
@@ -306,7 +315,6 @@ class TimelineViewModel: ObservableObject {
                     return false
                 }
             }
-            return false
         }
         
         print("Filtered \(filteredTasks.count) tasks for this year")
@@ -617,7 +625,7 @@ class TimelineViewModel: ObservableObject {
     }
     
     func dayString(for offset: Int) -> String {
-        guard let date = Calendar.current.date(byAdding: .day, value: offset, to: Date()) else {
+        guard let date = Calendar.current.date(byAdding: .day, value: offset, to: selectedDate) else {
             return ""
         }
         let formatter = DateFormatter()

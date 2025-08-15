@@ -296,7 +296,10 @@ class CloudKitRepository: TaskRepository {
         record["hasDuration"] = task.hasDuration as CKRecordValue
         record["icon"] = task.icon as CKRecordValue
         record["priority"] = task.priority.rawValue as CKRecordValue
-        
+        record["timeScope"] = task.timeScope.rawValue as CKRecordValue
+        if let scopeStart = task.scopeStartDate { record["scopeStartDate"] = scopeStart as CKRecordValue }
+        if let scopeEnd = task.scopeEndDate { record["scopeEndDate"] = scopeEnd as CKRecordValue }
+
         if let description = task.description, !description.isEmpty {
             record["description"] = description as CKRecordValue
         }
@@ -353,6 +356,11 @@ class CloudKitRepository: TaskRepository {
             let completions = (record["completions"] as? Data).flatMap { try? decoder.decode([Date: TaskCompletion].self, from: $0) } ?? [:]
             let completionDates = (record["completionDates"] as? Data).flatMap { try? decoder.decode([Date].self, from: $0) } ?? []
 
+            let timeScopeRaw = record["timeScope"] as? String
+            let decodedTimeScope = TaskTimeScope(rawValue: timeScopeRaw ?? "") ?? .today
+            let decodedScopeStart = record["scopeStartDate"] as? Date
+            let decodedScopeEnd = record["scopeEndDate"] as? Date
+
             var task = TodoTask(
                 id: uuid,
                 name: name,
@@ -365,7 +373,10 @@ class CloudKitRepository: TaskRepository {
                 icon: icon,
                 recurrence: recurrence,
                 pomodoroSettings: pomodoroSettings,
-                subtasks: subtasks
+                subtasks: subtasks,
+                timeScope: decodedTimeScope,
+                scopeStartDate: decodedScopeStart,
+                scopeEndDate: decodedScopeEnd
             )
 
             task.creationDate = creationDateToUse

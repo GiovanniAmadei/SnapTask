@@ -228,7 +228,11 @@ struct TodoTask: Identifiable, Codable, Equatable {
             return 0
         }
         
-        while true {
+        // Limit iterations to prevent infinite loops (max 1000 days back)
+        var iterationCount = 0
+        let maxIterations = 1000
+        
+        while iterationCount < maxIterations {
             if currentDate < calendar.startOfDay(for: startTime) {
                 break
             }
@@ -249,6 +253,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
             
             guard let newDate = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
             currentDate = newDate
+            iterationCount += 1
         }
         
         return streak
@@ -378,6 +383,154 @@ extension Calendar {
     func startOfWeek(for date: Date) -> Date {
         let components = dateComponents([.calendar, .yearForWeekOfYear, .weekOfYear], from: date)
         return self.date(from: components) ?? date
+    }
+}
+
+extension TodoTask {
+    func occurs(on date: Date) -> Bool {
+        if let recurrence {
+            return recurrence.shouldOccurOn(date: date)
+        } else {
+            return Calendar.current.isDate(startTime, inSameDayAs: date)
+        }
+    }
+    
+    func occurs(inWeekStarting weekStart: Date) -> Bool {
+        guard let recurrence = recurrence else {
+            let calendar = Calendar.current
+            if let scopeStart = scopeStartDate, let scopeEnd = scopeEndDate {
+                return calendar.isDate(scopeStart, inSameDayAs: weekStart) &&
+                       calendar.isDate(scopeEnd, inSameDayAs: calendar.date(byAdding: .day, value: 6, to: weekStart)!)
+            }
+            return Calendar.current.isDate(startTime, inSameDayAs: weekStart)
+        }
+        
+        let calendar = Calendar.current
+        // Boundaries
+        let anchor = calendar.startOfWeek(for: recurrence.startDate)
+        let target = calendar.startOfWeek(for: weekStart)
+        if target < anchor { return false }
+        if let end = recurrence.endDate, target > calendar.startOfWeek(for: end) { return false }
+        
+        // If week ordinals are specified, match ordinal of this week within its month
+        if let ordinals = recurrence.weekSelectedOrdinals, !ordinals.isEmpty {
+            let ord = calendar.component(.weekOfMonth, from: target)
+            if ordinals.contains(-1) {
+                // allow "last" week of month
+                if isLastWeekOfMonth(target, calendar: calendar) { return true }
+            }
+            if ordinals.contains(ord) { return true }
+            return false
+        }
+        
+        // Modulo or interval on weeks since anchor
+        if let weeks = calendar.dateComponents([.weekOfYear], from: anchor, to: target).weekOfYear, weeks >= 0 {
+            if let k = recurrence.weekModuloK, k > 1 {
+                let offset = recurrence.weekModuloOffset ?? 0
+                if weeks % k != offset { return false }
+            }
+            if let iv = recurrence.weekInterval, iv > 1, weeks % iv != 0 {
+                return false
+            }
+        }
+        
+        // If no week-level constraints, consider it occurs in this week if any day matches
+        // Otherwise, also accept it (interval satisfied) without scanning days
+        if recurrence.weekInterval != nil || recurrence.weekModuloK != nil {
+            return true
+        }
+        
+        // Fallback: scan week days for a daily occurrence
+        var day = target
+        for _ in 0..<7 {
+            if recurrence.shouldOccurOn(date: day) { return true }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        return false
+    }
+    
+    func occurs(inMonth monthStart: Date) -> Bool {
+        guard let recurrence = recurrence else {
+            let calendar = Calendar.current
+            if let scopeStart = scopeStartDate {
+                return calendar.isDate(scopeStart, equalTo: monthStart, toGranularity: .month)
+            }
+            return Calendar.current.isDate(startTime, equalTo: monthStart, toGranularity: .month)
+        }
+        
+        let calendar = Calendar.current
+        // Boundaries
+        let anchor = calendar.startOfMonth(for: recurrence.startDate)
+        let target = calendar.startOfMonth(for: monthStart)
+        if target < anchor { return false }
+        if let end = recurrence.endDate, target > calendar.startOfMonth(for: end) { return false }
+        
+        // Month-level gating with interval/specific months
+        if let months = calendar.dateComponents([.month], from: anchor, to: target).month, months >= 0 {
+            if let iv = recurrence.monthInterval, iv > 1, months % iv != 0 { return false }
+        }
+        if let allowed = recurrence.monthSelectedMonths, !allowed.isEmpty {
+            let m = calendar.component(.month, from: target)
+            if !allowed.contains(m) { return false }
+        }
+        
+        // If we reached here, accept; optional: ensure at least one day matches
+        // To be strict, check a few candidate days
+        switch recurrence.type {
+        case .monthly, .monthlyOrdinal, .weekly, .daily, .yearly:
+            var day = target
+            let end = calendar.date(byAdding: .month, value: 1, to: target) ?? target
+            while day < end {
+                if recurrence.shouldOccurOn(date: day) { return true }
+                guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+                day = next
+            }
+            return false
+        }
+    }
+    
+    func occurs(inYear yearStart: Date) -> Bool {
+        guard let recurrence = recurrence else {
+            let calendar = Calendar.current
+            if let scopeStart = scopeStartDate {
+                return calendar.isDate(scopeStart, equalTo: yearStart, toGranularity: .year)
+            }
+            return Calendar.current.isDate(startTime, equalTo: yearStart, toGranularity: .year)
+        }
+        
+        let calendar = Calendar.current
+        // Boundaries
+        let anchor = calendar.startOfYear(for: recurrence.startDate)
+        let target = calendar.startOfYear(for: yearStart)
+        if target < anchor { return false }
+        if let end = recurrence.endDate, target > calendar.startOfYear(for: end) { return false }
+        
+        // Year-level gating (interval/modulo)
+        if let years = calendar.dateComponents([.year], from: anchor, to: target).year, years >= 0 {
+            if let k = recurrence.yearModuloK, k > 1 {
+                let offset = recurrence.yearModuloOffset ?? 0
+                if years % k != offset { return false }
+            }
+            if let iv = recurrence.yearInterval, iv > 1, years % iv != 0 {
+                return false
+            }
+        }
+        
+        // Candidate check: scan key dates (same month/day as anchor for yearly, or any matching day if other types)
+        var day = target
+        let end = calendar.date(byAdding: .year, value: 1, to: target) ?? target
+        while day < end {
+            if recurrence.shouldOccurOn(date: day) { return true }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        return false
+    }
+    
+    private func isLastWeekOfMonth(_ weekStart: Date, calendar: Calendar) -> Bool {
+        guard let nextWeek = calendar.date(byAdding: .day, value: 7, to: weekStart) else { return false }
+        return calendar.component(.month, from: nextWeek) != calendar.component(.month, from: weekStart)
     }
 }
 

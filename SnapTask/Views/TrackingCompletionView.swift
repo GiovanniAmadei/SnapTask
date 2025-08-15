@@ -105,7 +105,7 @@ struct TrackingCompletionView: View {
                 }
             }
             .padding()
-            .navigationTitle("Session Complete")
+            .navigationTitle("session_complete".localized)
             .navigationBarTitleDisplayMode(.inline)
         }
     }
