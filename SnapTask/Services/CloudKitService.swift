@@ -339,13 +339,8 @@ class CloudKitService: ObservableObject {
                 let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
                 _ = try await privateDatabase.deleteRecord(withID: recordID)
                 print("✅ Task deleted: \(task.name)")
-            } catch let error as CKError {
-                if error.code == .unknownItem {
-                    print("ℹ️ Task already deleted from CloudKit: \(task.name)")
-                } else {
-                    print("❌ CloudKit error deleting task: \(error.localizedDescription)")
-                    await handleCloudKitError(error)
-                }
+            } catch let error as CKError where error.code == .unknownItem {
+                print("ℹ️ Task already deleted from CloudKit: \(task.name)")
             } catch {
                 print("❌ Failed to delete task: \(error)")
                 await handleSyncError(error)
@@ -356,6 +351,10 @@ class CloudKitService: ObservableObject {
     // MARK: - Category Operations
     func saveCategory(_ category: Category) {
         guard isCloudKitEnabled else { return }
+        if deletedItems.categories.contains(category.id.uuidString) {
+            print("⏭️ Skipping CloudKit save for deleted category \(category.name)")
+            return
+        }
         
         Task {
             do {
@@ -381,10 +380,12 @@ class CloudKitService: ObservableObject {
             do {
                 let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
                 _ = try await privateDatabase.deleteRecord(withID: recordID)
+                await saveDeletionMarker(type: "Category", id: category.id.uuidString)
                 print("✅ Category deleted: \(category.name)")
             } catch let error as CKError {
                 if error.code == .unknownItem {
                     print("ℹ️ Category already deleted from CloudKit: \(category.name)")
+                    await saveDeletionMarker(type: "Category", id: category.id.uuidString)
                 } else {
                     print("❌ CloudKit error deleting category: \(error.localizedDescription)")
                     await handleCloudKitError(error)
@@ -583,6 +584,11 @@ class CloudKitService: ObservableObject {
         var trackingSessions: [TrackingSession] = []
         var settings: [String: Any] = [:]
         var deletedRecordIDs: [CKRecord.ID] = []
+        struct DeletionMarkerEvent {
+            let type: String
+            let id: String
+        }
+        var deletionMarkers: [DeletionMarkerEvent] = []
     }
     
     private func fetchChanges() async throws -> SyncChanges {
@@ -628,6 +634,12 @@ class CloudKitService: ObservableObject {
                 if let session = self.createTrackingSession(from: record) {
                     changes.trackingSessions.append(session)
                 }
+            case self.deletionMarkerRecordType:
+                if let type = record["type"] as? String,
+                   let itemId = record["itemId"] as? String {
+                    changes.deletionMarkers.append(.init(type: type, id: itemId))
+                    print("📥 Deletion marker received for \(type) \(itemId.prefix(8))…")
+                }
             default:
                 break
             }
@@ -667,16 +679,6 @@ class CloudKitService: ObservableObject {
             
             self.privateDatabase.add(operation)
         }
-    }
-    
-    private func rememberRecordType(_ record: CKRecord) {
-        var map = knownRecordTypes
-        map[record.recordID.recordName] = record.recordType
-        knownRecordTypes = map
-    }
-    
-    private func knownType(for recordID: CKRecord.ID) -> String? {
-        return knownRecordTypes[recordID.recordName]
     }
     
     private func fetchChangesWithoutToken() async throws -> SyncChanges {
@@ -720,6 +722,12 @@ class CloudKitService: ObservableObject {
                 if let session = self.createTrackingSession(from: record) {
                     changes.trackingSessions.append(session)
                 }
+            case self.deletionMarkerRecordType:
+                if let type = record["type"] as? String,
+                   let itemId = record["itemId"] as? String {
+                    changes.deletionMarkers.append(.init(type: type, id: itemId))
+                    print("📥 Deletion marker received (fresh) for \(type) \(itemId.prefix(8))…")
+                }
             default:
                 break
             }
@@ -750,6 +758,8 @@ class CloudKitService: ObservableObject {
     }
     
     private func processChanges(_ changes: SyncChanges) async {
+        // First apply tombstones so we don't resurrect items in merge steps
+        await processDeletionMarkers(changes.deletionMarkers)
         await processDeletions(changes.deletedRecordIDs)
         
         await mergeTasks(changes.tasks)
@@ -780,6 +790,16 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    private func knownType(for recordID: CKRecord.ID) -> String? {
+        return knownRecordTypes[recordID.recordName]
+    }
+    
+    private func rememberRecordType(_ record: CKRecord) {
+        var map = knownRecordTypes
+        map[record.recordID.recordName] = record.recordType
+        knownRecordTypes = map
+    }
+    
     private func processDeletions(_ deletedIDs: [CKRecord.ID]) async {
         for recordID in deletedIDs {
             let idString = recordID.recordName
@@ -800,6 +820,7 @@ class CloudKitService: ObservableObject {
                 if let taskIndex = tasks.firstIndex(where: { $0.id == uuid }) {
                     let task = tasks[taskIndex]
                     TaskManager.shared.removeTaskFromRemoteSync(task)
+                    markAsDeleted(itemID: task.id.uuidString, type: .task)
                     print("🗑️ Deleted task from remote: \(task.name)")
                 }
                 
@@ -807,7 +828,8 @@ class CloudKitService: ObservableObject {
                 let categories = CategoryManager.shared.categories
                 if let categoryIndex = categories.firstIndex(where: { $0.id == uuid }) {
                     let category = categories[categoryIndex]
-                    CategoryManager.shared.removeCategory(category)
+                    await CategoryManager.shared.forceRemoveCategory(category)
+                    markAsDeleted(itemID: category.id.uuidString, type: .category)
                     print("🗑️ Deleted category from remote: \(category.name)")
                 }
                 
@@ -816,6 +838,7 @@ class CloudKitService: ObservableObject {
                 if let rewardIndex = rewards.firstIndex(where: { $0.id == uuid }) {
                     let reward = rewards[rewardIndex]
                     RewardManager.shared.removeReward(reward)
+                    markAsDeleted(itemID: reward.id.uuidString, type: .reward)
                     print("🗑️ Deleted reward from remote: \(reward.name)")
                 }
                 
@@ -824,11 +847,70 @@ class CloudKitService: ObservableObject {
                 if let sessionIndex = trackingSessions.firstIndex(where: { $0.id == uuid }) {
                     let session = trackingSessions[sessionIndex]
                     TaskManager.shared.deleteTrackingSession(session)
+                    markAsDeleted(itemID: session.id.uuidString, type: .trackingSession)
                     print("🗑️ Deleted tracking session from remote: \(session.deviceDisplayInfo)")
                 }
                 
             default:
                 print("ℹ️ Skipping deletion for unsupported type \(type) id: \(idString)")
+            }
+        }
+    }
+    
+    private func processDeletionMarkers(_ markers: [SyncChanges.DeletionMarkerEvent]) async {
+        guard !markers.isEmpty else { return }
+        for marker in markers {
+            let idString = marker.id
+            guard let uuid = UUID(uuidString: idString) else { continue }
+            
+            switch marker.type {
+            case "Category":
+                let categories = CategoryManager.shared.categories
+                if let idx = categories.firstIndex(where: { $0.id == uuid }) {
+                    let category = categories[idx]
+                    await CategoryManager.shared.forceRemoveCategory(category)
+                    print("🪦 Applied tombstone for Category \(category.name)")
+                } else {
+                    print("🪦 Tombstone Category for unknown local id \(idString.prefix(8))…")
+                }
+                markAsDeleted(itemID: idString, type: .category)
+                
+            case "Reward":
+                let rewards = RewardManager.shared.rewards
+                if let idx = rewards.firstIndex(where: { $0.id == uuid }) {
+                    let reward = rewards[idx]
+                    RewardManager.shared.removeReward(reward)
+                    print("🪦 Applied tombstone for Reward \(reward.name)")
+                } else {
+                    print("🪦 Tombstone Reward for unknown local id \(idString.prefix(8))…")
+                }
+                markAsDeleted(itemID: idString, type: .reward)
+                
+            case "TodoTask", "Task":
+                let tasks = TaskManager.shared.tasks
+                if let idx = tasks.firstIndex(where: { $0.id == uuid }) {
+                    let task = tasks[idx]
+                    TaskManager.shared.removeTaskFromRemoteSync(task)
+                    print("🪦 Applied tombstone for Task \(task.name)")
+                } else {
+                    print("🪦 Tombstone Task for unknown local id \(idString.prefix(8))…")
+                }
+                markAsDeleted(itemID: idString, type: .task)
+                
+            case "TrackingSession":
+                let sessions = TaskManager.shared.getTrackingSessions()
+                if let idx = sessions.firstIndex(where: { $0.id == uuid }) {
+                    let session = sessions[idx]
+                    TaskManager.shared.deleteTrackingSession(session)
+                    print("🪦 Applied tombstone for TrackingSession \(session.deviceDisplayInfo)")
+                }
+                markAsDeleted(itemID: idString, type: .trackingSession)
+                
+            case "PointsHistory":
+                markAsDeleted(itemID: idString, type: .pointsHistory)
+                
+            default:
+                print("ℹ️ Unknown tombstone type \(marker.type) for id \(idString)")
             }
         }
     }

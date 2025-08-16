@@ -101,7 +101,9 @@ struct CategoriesView: View {
             }
             Button("delete_anyway".localized, role: .destructive) {
                 if let category = categoryWithTasks {
-                    viewModel.forceDeleteCategory(category)
+                    Task {
+                        await viewModel.forceDeleteCategory(category)
+                    }
                 }
                 categoryWithTasks = nil
             }
