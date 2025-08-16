@@ -12,6 +12,8 @@
 	<string>Allow SnapTask to access your photo library to attach images to your tasks.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow SnapTask to use your camera to capture photos for your tasks.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Allow SnapTask to use your microphone to record voice memos for your tasks.</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>

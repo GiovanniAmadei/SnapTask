@@ -71,6 +71,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var photoPath: String? = nil
     var photoThumbnailPath: String? = nil
     var photos: [TaskPhoto] = []
+    var voiceMemos: [TaskVoiceMemo] = []
     
     var timeScope: TaskTimeScope = .today
     var scopeStartDate: Date? = nil
@@ -100,7 +101,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         scopeEndDate: Date? = nil,
         photoPath: String? = nil,
         photoThumbnailPath: String? = nil,
-        photos: [TaskPhoto] = []
+        photos: [TaskPhoto] = [],
+        voiceMemos: [TaskVoiceMemo] = []
     ) {
         self.id = id
         self.name = name
@@ -128,6 +130,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.photoPath = photoPath
         self.photoThumbnailPath = photoThumbnailPath
         self.photos = photos
+        self.voiceMemos = voiceMemos
     }
     
     var displayPeriod: String {
@@ -358,7 +361,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.scopeEndDate == rhs.scopeEndDate &&
         lhs.photoPath == rhs.photoPath &&
         lhs.photoThumbnailPath == rhs.photoThumbnailPath &&
-        lhs.photos == rhs.photos
+        lhs.photos == rhs.photos &&
+        lhs.voiceMemos == rhs.voiceMemos
     }
     
     // MARK: - Completion Key Helper
@@ -556,5 +560,6 @@ extension TodoTask {
         case timeScope, scopeStartDate, scopeEndDate
         case photoPath, photoThumbnailPath
         case photos
+        case voiceMemos
     }
 }

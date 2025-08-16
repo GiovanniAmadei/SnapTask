@@ -3,6 +3,8 @@ import MapKit
 import Charts
 import PhotosUI
 import UIKit
+import AVFoundation
+import Combine
 
 struct TaskDetailView: View {
     let taskId: UUID
@@ -25,6 +27,10 @@ struct TaskDetailView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var fullScreenPhoto: TaskPhoto?
     @State private var showingCameraPicker = false
+    @StateObject private var voiceMemoService = VoiceMemoService()
+    @State private var isRecordingVoice = false
+    @State private var showMicDeniedAlert = false
+    @State private var meterCancellable: AnyCancellable?
 
     private var effectiveDate: Date {
         let calendar = Calendar.current
@@ -165,6 +171,11 @@ struct TaskDetailView: View {
                     showingCameraPicker = false
                 }
             }
+        }
+        .alert("Microphone Access Denied", isPresented: $showMicDeniedAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Enable microphone access in Settings to record voice memos.")
         }
     }
     
@@ -372,6 +383,8 @@ struct TaskDetailView: View {
             
             photoCard(task)
             
+            voiceMemosCard(task)
+            
             notesCard(task)
             
             postCompletionInsightsCard(task)
@@ -556,7 +569,6 @@ struct TaskDetailView: View {
                         HStack {
                             Image(systemName: "plus.circle")
                                 .font(.system(size: 12))
-                                .foregroundColor(.blue)
                             Text("add_duration".localized)
                                 .font(.caption)
                                 .foregroundColor(.blue)
@@ -584,7 +596,6 @@ struct TaskDetailView: View {
                         HStack {
                             Image(systemName: "plus.circle")
                                 .font(.system(size: 12))
-                                .foregroundColor(.blue)
                             Text("add_duration".localized)
                                 .font(.caption)
                                 .foregroundColor(.blue)
@@ -1082,10 +1093,12 @@ struct TaskDetailView: View {
                             HStack {
                                 Image(systemName: "plus.circle")
                                     .font(.system(size: 16))
+                                    .foregroundColor(.blue)
                                 Text("Add Photos")
-                                    .font(.subheadline.weight(.medium))
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                Spacer()
                             }
-                            .foregroundColor(.blue)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
                             .background(
@@ -1162,7 +1175,6 @@ struct TaskDetailView: View {
                             HStack {
                                 Image(systemName: "camera")
                                     .font(.system(size: 16))
-                                    .foregroundColor(.blue)
                                 Text("Take Photo")
                                     .font(.subheadline)
                                     .foregroundColor(.blue)
@@ -1303,9 +1315,355 @@ struct TaskDetailView: View {
             await TaskManager.shared.updateTask(updated)
         }
     }
+    
+    private func voiceMemosCard(_ task: TodoTask) -> some View {
+        DetailCard(icon: "waveform", title: "Voice Memos", color: .pink) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    Button {
+                        Task {
+                            let granted = await voiceMemoService.requestPermission()
+                            if !granted {
+                                showMicDeniedAlert = true
+                                return
+                            }
+                            do {
+                                try voiceMemoService.startRecording(for: task.id)
+                                isRecordingVoice = true
+                            } catch {
+                                isRecordingVoice = false
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "record.circle.fill")
+                            Text("Record")
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.9)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10).fill(Color.red)
+                        )
+                    }
+                    .disabled(isRecordingVoice)
+                    .frame(minWidth: 110)
+                    
+                    Button {
+                        if let memo = voiceMemoService.stopRecording() {
+                            var updated = task
+                            updated.voiceMemos.insert(memo, at: 0)
+                            updated.lastModifiedDate = Date()
+                            localTask = updated
+                            Task {
+                                await TaskManager.shared.updateTask(updated)
+                            }
+                        }
+                        isRecordingVoice = false
+                    } label: {
+                        HStack {
+                            Image(systemName: "stop.circle.fill")
+                            Text("Stop")
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.9)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10).fill(isRecordingVoice ? Color.orange : Color.gray.opacity(0.4))
+                        )
+                    }
+                    .disabled(!isRecordingVoice)
+                    .frame(minWidth: 110)
+
+                    Spacer()
+                }
+                
+                if isRecordingVoice {
+                    VStack(alignment: .leading, spacing: 6) {
+                        WaveformView(levels: voiceMemoService.meterLevels, color: .pink)
+                            .frame(height: 40)
+                        Text("Recording...")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                    .transition(.opacity)
+                }
+
+                if task.voiceMemos.isEmpty {
+                    Text("No voice memos yet.")
+                        .font(.subheadline)
+                        .themedSecondaryText()
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(task.voiceMemos) { memo in
+                            VoiceMemoRow(
+                                memo: memo,
+                                onDelete: {
+                                    removeVoiceMemo(memo, from: task)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func removeVoiceMemo(_ memo: TaskVoiceMemo, from task: TodoTask) {
+        voiceMemoService.deleteMemo(memo)
+        var updated = task
+        updated.voiceMemos.removeAll { $0.id == memo.id }
+        updated.lastModifiedDate = Date()
+        localTask = updated
+        Task {
+            await TaskManager.shared.updateTask(updated)
+        }
+    }
 }
 
-struct DetailCard<Content: View>: View {
+private struct VoiceMemoRow: View {
+    let memo: TaskVoiceMemo
+    let onDelete: () -> Void
+    @StateObject private var player = AudioPlayerObject()
+    @State private var waveform: [Float] = []
+    @State private var isLoadingWaveform = true
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button {
+                if player.isPlaying {
+                    player.pause()
+                } else {
+                    player.play(path: memo.audioPath)
+                }
+            } label: {
+                Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.blue)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Voice memo")
+                        .font(.subheadline.weight(.medium))
+                    Spacer()
+                    if player.isPlaying || player.currentTime > 0 {
+                        Text("\(formatTime(player.currentTime)) / \(formatTime(memo.duration))")
+                            .font(.caption.monospacedDigit())
+                            .foregroundColor(.blue)
+                    }
+                }
+                Text(formatted(duration: memo.duration) + " • " + memo.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                WaveformWithProgress(
+                    levels: waveform, 
+                    color: .blue, 
+                    progress: memo.duration > 0 ? player.currentTime / memo.duration : 0,
+                    onScrub: { p in
+                        let t = max(0, min(memo.duration, p * memo.duration))
+                        player.seek(to: t)
+                    }
+                )
+                .frame(height: 28)
+            }
+            Spacer()
+
+            Button {
+                player.stop()
+                onDelete()
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.05))
+        )
+        .onAppear {
+            if waveform.isEmpty {
+                let path = memo.audioPath
+                Task {
+                    let samples = await WaveformGenerator.generate(from: URL(fileURLWithPath: path), samples: 60)
+                    await MainActor.run {
+                        self.waveform = samples.isEmpty ? Array(repeating: 0.2, count: 60) : samples
+                        self.isLoadingWaveform = false
+                    }
+                }
+            } else {
+                isLoadingWaveform = false
+            }
+        }
+    }
+    
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%d:%02d", mins, secs)
+    }
+    
+    private func formatted(duration: TimeInterval) -> String {
+        let h = Int(duration) / 3600
+        let m = (Int(duration) % 3600) / 60
+        let s = Int(duration) % 60
+        if h > 0 {
+            return String(format: "%dh %02dm %02ds", h, m, s)
+        } else {
+            return String(format: "%02dm %02ds", m, s)
+        }
+    }
+}
+
+private final class AudioPlayerObject: NSObject, ObservableObject, AVAudioPlayerDelegate {
+    @Published var isPlaying: Bool = false
+    @Published var currentTime: TimeInterval = 0
+    @Published var duration: TimeInterval = 0
+    private var player: AVAudioPlayer?
+    private var timer: Timer?
+    private var lastURL: URL?
+
+    func play(path: String) {
+        if let p = player, p.isPlaying {
+            p.pause()
+            isPlaying = false
+            return
+        }
+        do {
+            let url = URL(fileURLWithPath: path)
+            lastURL = url
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.delegate = self
+            player?.prepareToPlay()
+            player?.play()
+            duration = player?.duration ?? 0
+            isPlaying = true
+            startTimer()
+        } catch {
+            isPlaying = false
+        }
+    }
+
+    func seek(to time: TimeInterval) {
+        // Inizializza il player se possibile
+        if player == nil, let url = lastURL {
+            player = try? AVAudioPlayer(contentsOf: url)
+            player?.delegate = self
+            player?.prepareToPlay()
+            duration = player?.duration ?? 0
+        }
+        guard let p = player else { return }
+        let clamped = max(0, min(time, p.duration))
+        p.currentTime = clamped
+        // Non cambiamo isPlaying; aggiorniamo subito il tempo pubblicato
+        currentTime = clamped
+    }
+
+    func pause() {
+        player?.pause()
+        isPlaying = false
+        stopTimer()
+    }
+
+    func stop() {
+        player?.stop()
+        player = nil
+        isPlaying = false
+        currentTime = 0
+        duration = 0
+        stopTimer()
+    }
+
+    private func startTimer() {
+        stopTimer()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self, let player = self.player else { return }
+            self.currentTime = player.currentTime
+        }
+    }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        DispatchQueue.main.async {
+            self.isPlaying = false
+            self.currentTime = 0
+            self.stopTimer()
+        }
+    }
+}
+
+private struct WaveformWithProgress: View {
+    let levels: [Float]
+    var color: Color = .blue
+    var spacing: CGFloat = 2
+    let progress: Double // 0.0 to 1.0
+    var onScrub: ((Double) -> Void)? = nil
+    
+    var body: some View {
+        GeometryReader { geo in
+            let count = max(1, levels.count)
+            let totalSpacing = spacing * CGFloat(max(0, count - 1))
+            let barWidth = max(1, (geo.size.width - totalSpacing) / CGFloat(count))
+            let progressIndex = Int(Double(count) * progress)
+            
+            ZStack {
+                HStack(alignment: .center, spacing: spacing) {
+                    ForEach(0..<count, id: \.self) { i in
+                        let raw = (i < levels.count) ? levels[i] : 0
+                        let level = max(0, min(1, raw))
+                        let h = max(2, CGFloat(level) * geo.size.height)
+                        
+                        // Colore più saturo per le barre già riprodotte
+                        let barColor = i <= progressIndex ? color : color.opacity(0.3)
+                        
+                        Capsule(style: .continuous)
+                            .fill(barColor)
+                            .frame(width: barWidth, height: h)
+                            .frame(height: geo.size.height, alignment: .center)
+                    }
+                }
+                
+                // Indicatore verticale di posizione
+                let clampedProgress = max(0, min(1, progress))
+                let x = clampedProgress * geo.size.width
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 2)
+                    .position(x: x, y: geo.size.height / 2)
+
+                // Layer trasparente per catturare drag/tap
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                let p = max(0, min(1, value.location.x / geo.size.width))
+                                onScrub?(p)
+                            }
+                            .onEnded { value in
+                                let p = max(0, min(1, value.location.x / geo.size.width))
+                                onScrub?(p)
+                            }
+                    )
+            }
+        }
+        .drawingGroup()
+    }
+}
+
+private struct DetailCard<Content: View>: View {
     let icon: String
     let title: String
     let color: Color
@@ -1346,7 +1704,8 @@ private struct TaskPerformanceChartView: View {
     @StateObject private var statisticsViewModel = StatisticsViewModel()
     @State private var taskAnalytics: StatisticsViewModel.TaskPerformanceAnalytics?
     @State private var selectedTimeRange: TaskPerformanceTimeRange = .month
-    
+
+
     enum TaskPerformanceTimeRange: String, CaseIterable {
         case week = "Week"
         case month = "Month"
@@ -1372,7 +1731,7 @@ private struct TaskPerformanceChartView: View {
             }
         }
     }
-    
+
     private var filteredAnalytics: StatisticsViewModel.TaskPerformanceAnalytics? {
         guard let analytics = taskAnalytics else { return nil }
         
@@ -1415,7 +1774,7 @@ private struct TaskPerformanceChartView: View {
             improvementTrend: .stable
         )
     }
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -1494,7 +1853,7 @@ private struct TaskPerformanceChartView: View {
                                     .fill(selectedTimeRange == range ? theme.primaryColor.opacity(0.15) : theme.surfaceColor)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 6)
-                                            .strokeBorder(selectedTimeRange == range ? theme.primaryColor : Color.clear, lineWidth: 1)
+                                            .stroke(selectedTimeRange == range ? theme.primaryColor : Color.clear, lineWidth: 1)
                                     )
                             )
                     }
@@ -1680,7 +2039,7 @@ private struct TaskPerformanceChartView: View {
                 if let avgDuration = analytics.averageDuration {
                     TaskDetailMetricCard(
                         title: "Time",
-                        value: formatDuration(avgDuration),
+                        value: formatted(duration: avgDuration),
                         color: .green,
                         icon: "clock.fill"
                     )
@@ -1939,10 +2298,15 @@ private struct TaskPerformanceChartView: View {
         )
     }
     
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let hours = Int(duration) / 3600
-        let minutes = Int(duration) % 3600 / 60
-        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+    private func formatted(duration: TimeInterval) -> String {
+        let h = Int(duration) / 3600
+        let m = (Int(duration) % 3600) / 60
+        let s = Int(duration) % 60
+        if h > 0 {
+            return String(format: "%dh %02dm %02ds", h, m, s)
+        } else {
+            return String(format: "%02dm %02ds", m, s)
+        }
     }
     
     private var emptyStateView: some View {
@@ -2013,7 +2377,7 @@ private struct CompletionDetailRow: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(completion.date.formatted(.dateTime.month().day().year()))
                     .font(.subheadline.weight(.medium))
@@ -2030,7 +2394,7 @@ private struct CompletionDetailRow: View {
                 if let duration = completion.actualDuration {
                     MetricBadge(
                         icon: "clock.fill",
-                        value: formatDuration(duration),
+                        value: formatted(duration: duration),
                         color: .green
                     )
                 }
@@ -2060,10 +2424,15 @@ private struct CompletionDetailRow: View {
         )
     }
     
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let hours = Int(duration) / 3600
-        let minutes = Int(duration) % 3600 / 60
-        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+    private func formatted(duration: TimeInterval) -> String {
+        let h = Int(duration) / 3600
+        let m = (Int(duration) % 3600) / 60
+        let s = Int(duration) % 60
+        if h > 0 {
+            return String(format: "%dh %02dm %02ds", h, m, s)
+        } else {
+            return String(format: "%02dm %02ds", m, s)
+        }
     }
 }
 
