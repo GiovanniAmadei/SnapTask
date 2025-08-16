@@ -154,8 +154,8 @@ struct TaskDetailView: View {
                     Spacer()
                 }
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Close") {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("close".localized) {
                             fullScreenPhoto = nil
                         }
                     }
@@ -173,10 +173,10 @@ struct TaskDetailView: View {
                 }
             }
         }
-        .alert("Microphone Access Denied", isPresented: $showMicDeniedAlert) {
-            Button("OK", role: .cancel) {}
+        .alert("microphone_access_denied_title".localized, isPresented: $showMicDeniedAlert) {
+            Button("ok".localized, role: .cancel) {}
         } message: {
-            Text("Enable microphone access in Settings to record voice memos.")
+            Text("microphone_access_denied_message".localized)
         }
     }
     
@@ -432,12 +432,12 @@ struct TaskDetailView: View {
                     }
                 }
                 
-                if task.hasNotification {
-                    HStack {
-                        Text("notifications".localized)
-                            .font(.subheadline.weight(.medium))
-                            .themedSecondaryText()
-                        Spacer()
+                HStack {
+                    Text("notifications".localized)
+                        .font(.subheadline.weight(.medium))
+                        .themedSecondaryText()
+                    Spacer()
+                    if task.hasNotification {
                         HStack(spacing: 4) {
                             Image(systemName: "bell.fill")
                                 .font(.system(size: 12))
@@ -446,10 +446,14 @@ struct TaskDetailView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                         }
+                    } else {
+                        Text("disabled".localized)
+                            .font(.subheadline)
+                            .themedSecondaryText()
                     }
                 }
                 
-                durationSection(task)
+                durationSectionTask(task)
             }
         }
     }
@@ -490,7 +494,7 @@ struct TaskDetailView: View {
         }
     }
     
-    private func durationSection(_ task: TodoTask) -> some View {
+    private func durationSectionTask(_ task: TodoTask) -> some View {
         let hasActualDuration = task.completions[completionKey]?.actualDuration != nil
         let hasEstimatedDuration = task.hasDuration
         let actualDuration = task.completions[completionKey]?.actualDuration
@@ -764,6 +768,111 @@ struct TaskDetailView: View {
         }
     }
     
+    private func postCompletionInsightsCard(_ task: TodoTask) -> some View {
+        let hasRatingsHistory = task.completions.values.contains { $0.difficultyRating != nil || $0.qualityRating != nil || $0.actualDuration != nil }
+
+        return DetailCard(icon: "chart.line.uptrend.xyaxis", title: "performance_analytics".localized, color: .cyan) {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("difficulty_rating".localized)
+                            .font(.subheadline.weight(.medium))
+                            .themedSecondaryText()
+
+                        Spacer()
+
+                        if let difficultyRating = task.completions[completionKey]?.difficultyRating, difficultyRating > 0 {
+                            Button("clear".localized) {
+                                updateLocalTaskRating(difficultyRating: 0, updateDifficulty: true)
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        } else if !isCompleted {
+                            Text("complete_this_task_start_tracking".localized)
+                                .font(.caption)
+                                .themedSecondaryText()
+                                .italic()
+                        }
+                    }
+
+                    DifficultyRatingView(
+                        rating: Binding(
+                            get: { task.completions[completionKey]?.difficultyRating ?? 0 },
+                            set: { newValue in
+                                updateLocalTaskRating(difficultyRating: newValue == 0 ? nil : newValue, updateDifficulty: true)
+                            }
+                        )
+                    )
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("quality_rating".localized)
+                            .font(.subheadline.weight(.medium))
+                            .themedSecondaryText()
+
+                        Spacer()
+
+                        if let qualityRating = task.completions[completionKey]?.qualityRating, qualityRating > 0 {
+                            Button("clear".localized) {
+                                updateLocalTaskRating(qualityRating: 0, updateQuality: true)
+                            }
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        } else if !isCompleted {
+                            Text("complete_this_task_start_tracking".localized)
+                                .font(.caption)
+                                .themedSecondaryText()
+                                .italic()
+                        }
+                    }
+
+                    QualityRatingView(
+                        rating: Binding(
+                            get: { task.completions[completionKey]?.qualityRating ?? 0 },
+                            set: { newValue in
+                                updateLocalTaskRating(qualityRating: newValue, updateQuality: true)
+                            }
+                        )
+                    )
+                }
+
+                if hasRatingsHistory {
+                    Divider()
+
+                    Button(action: {
+                        showingPerformanceChart = true
+                    }) {
+                        HStack {
+                            Image(systemName: "chart.xyaxis.line")
+                                .font(.system(size: 16))
+                                .foregroundColor(.cyan)
+
+                            Text("performance_charts".localized)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.cyan)
+
+                            Spacer()
+
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 12))
+                                .foregroundColor(.cyan)
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.cyan.opacity(0.1))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+    
     private func actionButtons(_ task: TodoTask) -> some View {
         VStack(spacing: 0) {
             if !isEditingVoiceMemo {
@@ -884,111 +993,6 @@ struct TaskDetailView: View {
         }
     }
     
-    private func postCompletionInsightsCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "chart.line.uptrend.xyaxis", title: "Performance Tracking", color: .cyan) {
-            VStack(alignment: .leading, spacing: 16) {
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Difficulty Rating")
-                            .font(.subheadline.weight(.medium))
-                            .themedSecondaryText()
-                        
-                        Spacer()
-                        
-                        if let difficultyRating = task.completions[completionKey]?.difficultyRating, difficultyRating > 0 {
-                            Button("Clear") {
-                                updateLocalTaskRating(difficultyRating: 0, updateDifficulty: true)
-                            }
-                            .font(.caption)
-                            .foregroundColor(.red)
-                        } else if !isCompleted {
-                            Text("Rate after completing")
-                                .font(.caption)
-                                .themedSecondaryText()
-                                .italic()
-                        }
-                    }
-                    
-                    DifficultyRatingView(
-                        rating: Binding(
-                            get: { task.completions[completionKey]?.difficultyRating ?? 0 },
-                            set: { newValue in
-                                updateLocalTaskRating(difficultyRating: newValue == 0 ? nil : newValue, updateDifficulty: true)
-                            }
-                        )
-                    )
-                }
-                
-                Divider()
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Quality Rating")
-                            .font(.subheadline.weight(.medium))
-                            .themedSecondaryText()
-                        
-                        Spacer()
-
-                        
-                        if let qualityRating = task.completions[completionKey]?.qualityRating, qualityRating > 0 {
-                            Button("Clear") {
-                                updateLocalTaskRating(qualityRating: 0, updateQuality: true)
-                            }
-                            .font(.caption)
-                            .foregroundColor(.red)
-                        } else if !isCompleted {
-                            Text("Rate after completing")
-                                .font(.caption)
-                                .themedSecondaryText()
-                                .italic()
-                        }
-                    }
-                    
-                    QualityRatingView(
-                        rating: Binding(
-                            get: { task.completions[completionKey]?.qualityRating ?? 0 },
-                            set: { newValue in
-                                updateLocalTaskRating(qualityRating: newValue, updateQuality: true)
-                            }
-                        )
-                    )
-                }
-                
-                if task.hasHistoricalRatings {
-                    Divider()
-                    
-                    Button(action: {
-                        showingPerformanceChart = true
-                    }) {
-                        HStack {
-                            Image(systemName: "chart.xyaxis.line")
-                                .font(.system(size: 16))
-                                .foregroundColor(.cyan)
-                            
-                            Text("View Performance Charts")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundColor(.cyan)
-                            
-                            Spacer()
-                            
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 12))
-                                .foregroundColor(.cyan)
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.cyan.opacity(0.1))
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-    
     private func openInMaps(location: TaskLocation) {
         let mapItem: MKMapItem
         
@@ -1014,7 +1018,7 @@ struct TaskDetailView: View {
     }
     
     private func photoCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "photo", title: "Photos", color: .blue) {
+        DetailCard(icon: "photo", title: "photos".localized, color: .blue) {
             VStack(alignment: .leading, spacing: 12) {
                 if !task.photos.isEmpty {
                     let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
@@ -1065,7 +1069,7 @@ struct TaskDetailView: View {
                             HStack {
                                 Image(systemName: "camera")
                                     .font(.system(size: 16))
-                                Text("Take Photo")
+                                Text("take_photo".localized)
                                     .font(.subheadline.weight(.medium))
                             }
                             .foregroundColor(.blue)
@@ -1092,7 +1096,7 @@ struct TaskDetailView: View {
                                 Image(systemName: "plus.circle")
                                     .font(.system(size: 16))
                                     .foregroundColor(.blue)
-                                Text("Add Photos")
+                                Text("add_photos".localized)
                                     .font(.subheadline)
                                     .foregroundColor(.blue)
                                 Spacer()
@@ -1119,10 +1123,6 @@ struct TaskDetailView: View {
                             .frame(width: 90, height: 90)
                             .clipped()
                             .cornerRadius(10)
-//                            .onTapGesture {
-//                                showingFullImage = true
-//                            }
-                        
                         VStack(alignment: .leading, spacing: 8) {
                             Button {
                                 if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -1132,7 +1132,7 @@ struct TaskDetailView: View {
                                 HStack {
                                     Image(systemName: "camera")
                                         .font(.system(size: 14))
-                                    Text("Take Photo")
+                                    Text("take_photo".localized)
                                         .font(.subheadline.weight(.medium))
                                 }
                                 .foregroundColor(.blue)
@@ -1142,7 +1142,7 @@ struct TaskDetailView: View {
                                 HStack {
                                     Image(systemName: "pencil")
                                         .font(.system(size: 14))
-                                    Text("Change Photo")
+                                    Text("change_photo".localized)
                                         .font(.subheadline.weight(.medium))
                                 }
                                 .foregroundColor(.blue)
@@ -1154,13 +1154,12 @@ struct TaskDetailView: View {
                                 HStack {
                                     Image(systemName: "trash")
                                         .font(.system(size: 14))
-                                    Text("Remove Photo")
+                                    Text("remove_photo".localized)
                                         .font(.subheadline.weight(.medium))
                                 }
                                 .foregroundColor(.red)
                             }
                         }
-                        
                         Spacer()
                     }
                 } else {
@@ -1173,7 +1172,7 @@ struct TaskDetailView: View {
                             HStack {
                                 Image(systemName: "camera")
                                     .font(.system(size: 16))
-                                Text("Take Photo")
+                                Text("take_photo".localized)
                                     .font(.subheadline)
                                     .foregroundColor(.blue)
                                 Spacer()
@@ -1201,7 +1200,7 @@ struct TaskDetailView: View {
                                 Image(systemName: "plus.circle")
                                     .font(.system(size: 16))
                                     .foregroundColor(.blue)
-                                Text("Add Photos")
+                                Text("add_photos".localized)
                                     .font(.subheadline)
                                     .foregroundColor(.blue)
                                 Spacer()
@@ -1315,12 +1314,11 @@ struct TaskDetailView: View {
     }
     
     private func voiceMemosCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "waveform", title: "Voice Memos", color: .pink) {
+        DetailCard(icon: "waveform", title: "voice_memos".localized, color: .pink) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
                     Button {
                         if isRecordingVoice {
-                            // Stop recording
                             if let memo = voiceMemoService.stopRecording() {
                                 var updated = task
                                 updated.voiceMemos.insert(memo, at: 0)
@@ -1332,7 +1330,6 @@ struct TaskDetailView: View {
                             }
                             isRecordingVoice = false
                         } else {
-                            // Start recording
                             Task {
                                 let granted = await voiceMemoService.requestPermission()
                                 if !granted {
@@ -1351,7 +1348,7 @@ struct TaskDetailView: View {
                         HStack {
                             Image(systemName: isRecordingVoice ? "stop.circle.fill" : "record.circle.fill")
                                 .font(.system(size: 16))
-                            Text(isRecordingVoice ? "Stop" : "Record")
+                            Text(isRecordingVoice ? "stop".localized : "record".localized)
                                 .font(.subheadline.weight(.medium))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.9)
@@ -1373,7 +1370,7 @@ struct TaskDetailView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         WaveformView(levels: voiceMemoService.meterLevels, color: .pink)
                             .frame(height: 40)
-                        Text("Recording...")
+                        Text("recording".localized)
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
@@ -1381,7 +1378,7 @@ struct TaskDetailView: View {
                 }
 
                 if task.voiceMemos.isEmpty {
-                    Text("No voice memos yet.")
+                    Text("no_voice_memos_yet".localized)
                         .font(.subheadline)
                         .themedSecondaryText()
                 } else {
@@ -1460,20 +1457,20 @@ private struct VoiceMemoRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     if isEditing {
-                        TextField("Nome memo vocale", text: $editingText)
+                        TextField("voice_memo_name_placeholder".localized, text: $editingText)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .font(.subheadline.weight(.medium))
                             .onSubmit {
                                 saveName()
                             }
                         
-                        Button("Salva") {
+                        Button("save".localized) {
                             saveName()
                         }
                         .font(.caption)
                         .foregroundColor(.blue)
                         
-                        Button("Annulla") {
+                        Button("cancel".localized) {
                             cancelEditing()
                         }
                         .font(.caption)
@@ -1798,7 +1795,6 @@ private struct TaskPerformanceChartView: View {
     @State private var taskAnalytics: StatisticsViewModel.TaskPerformanceAnalytics?
     @State private var selectedTimeRange: TaskPerformanceTimeRange = .month
 
-
     enum TaskPerformanceTimeRange: String, CaseIterable {
         case week = "Week"
         case month = "Month"
@@ -1900,8 +1896,8 @@ private struct TaskPerformanceChartView: View {
             .navigationTitle("performance_charts".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("done".localized) {
                         dismiss()
                     }
                     .themedPrimary()
@@ -1960,8 +1956,8 @@ private struct TaskPerformanceChartView: View {
     
     private func loadTaskAnalytics() {
         let completionAnalytics = task.completions.compactMap { (date, completion) -> StatisticsViewModel.TaskCompletionAnalytics? in
-            guard completion.isCompleted else { return nil }
-            
+            guard completion.isCompleted || completion.difficultyRating != nil || completion.qualityRating != nil || completion.actualDuration != nil else { return nil }
+
             return StatisticsViewModel.TaskCompletionAnalytics(
                 date: date,
                 actualDuration: completion.actualDuration,
@@ -1971,17 +1967,17 @@ private struct TaskPerformanceChartView: View {
                 wasTracked: false
             )
         }.sorted { $0.date < $1.date }
-        
+
         if !completionAnalytics.isEmpty {
             let avgDifficulty = completionAnalytics.compactMap { $0.difficultyRating }.isEmpty ? nil :
                 Double(completionAnalytics.compactMap { $0.difficultyRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.difficultyRating }.count)
-            
+
             let avgQuality = completionAnalytics.compactMap { $0.qualityRating }.isEmpty ? nil :
                 Double(completionAnalytics.compactMap { $0.qualityRating }.reduce(0, +)) / Double(completionAnalytics.compactMap { $0.qualityRating }.count)
-            
+
             let avgDuration = completionAnalytics.compactMap { $0.actualDuration }.isEmpty ? nil :
                 completionAnalytics.compactMap { $0.actualDuration }.reduce(0, +) / Double(completionAnalytics.compactMap { $0.actualDuration }.count)
-            
+
             taskAnalytics = StatisticsViewModel.TaskPerformanceAnalytics(
                 taskId: task.id,
                 taskName: task.name,
@@ -1993,6 +1989,19 @@ private struct TaskPerformanceChartView: View {
                 averageDuration: avgDuration,
                 estimationAccuracy: nil,
                 improvementTrend: .stable
+            )
+        } else {
+            taskAnalytics = StatisticsViewModel.TaskPerformanceAnalytics(
+                taskId: task.id,
+                taskName: task.name,
+                categoryName: task.category?.name,
+                categoryColor: task.category?.color,
+                completions: [],
+                averageDifficulty: nil,
+                averageQuality: nil,
+                averageDuration: nil,
+                estimationAccuracy: nil,
+                improvementTrend: .insufficient
             )
         }
     }

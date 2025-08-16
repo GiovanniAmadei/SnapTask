@@ -524,7 +524,7 @@
 // New Feedback View
 "share_your_feedback_title" = "Ihr Feedback teilen";
 "feedback_category_title" = "Kategorie";
-"feedback_title_placeholder" = "Kurze Zusammenfassung Ihres Feedbacks";
+"feedback_title_placeholder" = "Kurze Zusammenfassung Ihres Feedbackfeedback";
 "feedback_description_placeholder" = "Beschreiben Sie Ihr Feedback im Detail...";
 "author_info_title" = "Autor-Info";
 "submit_anonymously_toggle" = "Anonym einreichen";
@@ -917,7 +917,7 @@
 "keep_current_theme" = "Aktuelles Theme beibehalten";
 "custom_colors" = "Benutzerdefinierte Farben";
 "keep_dark_mode" = "Dunkelmodus deaktivieren";
-"keep_simple_theme" = "Aktuelles Theme beibehalten";
+"keep_simple_theme" = "Aktuelles Themebeibehalten";
 "theme_dark_mode_warning_message" = "Dieses Theme verwendet benutzerdefinierte Farben und ist nicht mit dem Dunkelmodus kompatibel. Möchten Sie den Dunkelmodus deaktivieren, um dieses Theme zu verwenden?";
 
 // Apple Watch specific strings
@@ -1018,143 +1018,7 @@
 "hard" = "Schwer";
 "extremely_hard" = "Extrem schwer";
 "poor_quality" = "Schlechte Qualität";
-"below_average" = "Unterdurchschnittlich";
+'below_average" = "Unterdurchschnittlich";
 "average" = "Durchschnittlich";
 "good" = "Gut";
-"excellent" = "Ausgezeichnet";
-"perfect" = "Perfekt";
-
-// Duration Picker
-"how_long_did_it_take" = "Wie lange hat es gedauert?";
-"actual_duration" = "Tatsächliche Dauer";
-"hours" = "Stunden";
-"minutes" = "Minuten";
-
-// Notes Section
-"notes" = "Notizen";
-"add_your_thoughts_completion" = "Fügen Sie Ihre Gedanken zu diesem Abschluss hinzu...";
-"clear" = "Löschen";
-
-// Tracking Mode Selection
-"start_focus_session" = "Fokussitzung starten";
-"choose_tracking_mode" = "Wählen Sie Ihren Verfolgungsmodus";
-"select_mode" = "Modus auswählen";
-"simple_timer_session" = "Einfache Timer-Sitzung";
-
-// Time Tracking Completion
-"focus_session_complete" = "Fokussitzung abgeschlossen!";
-"focused_for" = "Sie haben sich konzentriert für";
-"session_details" = "Sitzungsdetails";
-"mode" = "Modus";
-"original_category" = "Ursprüngliche Kategorie";
-"track_time_in" = "Zeit verfolgen in";
-"this_task_only" = "Nur diese Aufgabe";
-"save_and_finish" = "Speichern & Beenden";
-
-// Additional missing strings
-"icloud" = "iCloud";
-"pts" = "Pkt";
-"task_name_placeholder" = "Aufgabenname eingeben";
-
-// Missing Time Scope Strings
-"select_week" = "Woche auswählen";
-"week_range" = "Wochenbereich";
-"select_month" = "Monat auswählen";
-"select_year" = "Jahr auswählen";
-"selected_period" = "Ausgewählter Zeitraum";
-
-// Missing onetime reward strings
-"onetime" = "Einmalig";
-
-// Missing EnhancedRecurrenceSettingsView Strings
-"recurrence_type" = "Wiederholungstyp";
-"daily_enum" = "Täglich";
-"weekly_enum" = "Wöchentlich";
-"monthly_enum" = "Monatlich";
-"yearly_enum" = "Jährlich";
-"days_enum" = "Tage";
-"patterns_enum" = "Muster";
-"daily_recurrence" = "Tägliche Wiederholung";
-"task_repeat_every_day" = "Aufgabe wird jeden Tag wiederholt";
-"weekly_recurrence" = "Wöchentliche Wiederholung";
-"monthly_recurrence" = "Monatliche Wiederholung";
-"yearly_recurrence" = "Jährliche Wiederholung";
-"select_days_of_month" = "Tage des Monats auswählen";
-"select_patterns_ordinal" = "Muster auswählen (Ordinal)";
-"monthly_patterns" = "Monatliche Muster";
-"none_selected" = "Keine ausgewählt";
-"select_day_of_year" = "Tag des Jahres auswählen";
-"repeat_on" = "Wiederholen am";
-"task_repeat_yearly_on" = "Aufgabe wird jährlich wiederholt am";
-"end_date" = "Enddatum";
-"set_end_date" = "Enddatum festlegen";
-
-// Missing OrdinalPatternPickerView Strings
-"select_patterns_description" = "Spezifische Muster für monatliche Wiederholung auswählen";
-"first" = "Erste";
-"second" = "Zweite";
-"third" = "Dritte";
-"fourth" = "Vierte";
-"last" = "Letzte";
-"clear_all" = "Alle löschen";
-
-// Missing TaskFormView string
-"long_term_info" = "Langfristige Ziele haben keine spezifische Zeitlinie";
-
-// Additional missing
-"stopped" = "Gestoppt";
-"session_number" = "Sitzung {number}";
-"time_range" = "Zeitbereich";
-"today_colon" = "Heute: ";
-"week_colon" = "Woche: ";
-"total_colon" = "Gesamt: ";
-"configure_by" = "Konfigurieren nach";
-
-// ===== Fehlende Schlüssel aus der englischen Referenz hinzugefügt =====
-
-// Customization – Auto complete tasks
-"auto_complete_tasks" = "Aufgaben automatisch abschließen";
-"auto_complete_tasks_description" = "Hauptaufgaben abschließen, wenn alle Unteraufgaben beendet sind";
-
-// Themes – zusätzliche Schlüssel
-"free_themes" = "Kostenlose Themes";
-"premium_themes" = "Premium-Themes";
-"unlock_premium_themes" = "Premium-Themes freischalten";
-"theme_default" = "Standard";
-"theme_ocean" = "Ozean";
-"theme_forest" = "Wald";
-"theme_sunset" = "Sonnenuntergang";
-"theme_amethyst" = "Amethyst";
-"theme_carbon" = "Carbon";
-"theme_midnight" = "Mitternacht";
-"theme_rose_gold" = "Roségold";
-"theme_emerald" = "Smaragd";
-"theme_volcanic" = "Vulkanisch";
-"theme_lavender" = "Lavendel";
-
-// Premium – zusätzliche Hinweise
-"by_purchasing_you_agree" = "Durch den Kauf oder die Nutzung der kostenlosen Testversion stimmen Sie den Nutzungsbedingungen und der Datenschutzrichtlinie von SnapTask zu.";
-"you_save" = "Sie sparen";
-
-// Premium Limits – Kategorien
-"categories_limit_reached" = "Kategorielimit erreicht";
-"categories_limit_message" = "Sie können mit dem kostenlosen Plan bis zu 4 Kategorien erstellen. Upgrade auf Pro für unbegrenzte Kategorien.";
-
-// Time scope – zusätzliche Schlüssel
-"week_short_format" = "Woche";
-"long_term_objective" = "Langfristiges Ziel";
-"long_term_objectives" = "Langfristige Ziele";
-
-// Time scope short labels
-"scope_today" = "Heute";
-"scope_week" = "Woche";
-"scope_month" = "Monat";
-"scope_year" = "Jahr";
-"scope_long_term" = "Langfr.";
-
-// Standortauswahl/Suche
-"select_location" = "Standort auswählen";
-"search_location" = "Standort suchen";
-"search_for_a_place" = "Ort suchen";
-"remove_location" = "Standort entfernen";
-"selected_location" = "Ausgewählter Standort";
+"excellent" = "Aus

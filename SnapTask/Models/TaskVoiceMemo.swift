@@ -16,6 +16,6 @@ struct TaskVoiceMemo: Identifiable, Codable, Equatable {
     }
     
     var displayName: String {
-        return name ?? "Voice memo"
+        return name ?? "voice_memo".localized
     }
 }

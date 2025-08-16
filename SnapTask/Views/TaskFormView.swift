@@ -988,7 +988,9 @@ struct ModernToggle: View {
     var body: some View {
         Toggle("", isOn: $isOn)
             .toggleStyle(SwitchToggleStyle(tint: theme.primaryColor))
-            .scaleEffect(0.9)
+            .labelsHidden()
+            .frame(width: 51, alignment: .trailing)
+            .scaleEffect(0.9, anchor: .trailing)
             .animation(.easeInOut(duration: 0.3), value: isOn)
     }
 }

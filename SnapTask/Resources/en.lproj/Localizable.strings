@@ -689,7 +689,7 @@
 "thanks_previous_support" = "Thanks for your previous support!";
 "last_donation" = "Last donation:";
 "thanks_so_much" = "Thank you so much! ";
-"donation_helps_development" = "Your donation helps me continue developing SnapTask Pro. I really appreciate your support!";
+"donation_help_help_development" = "Your donation helps me continue developing SnapTask Pro. I really appreciate your support!";
 "coffee_for_giovanni" = "Coffee for Giovanni";
 "small_coffee" = "A small coffee ";
 "pizza_for_giovanni" = "Pizza for Giovanni";
@@ -901,7 +901,7 @@
 "stats" = "Stats";
 "todays_progress" = "Today's Progress";
 "top_streaks" = "Top Streakss";
-"no_active_streaks" = "No active streaks";
+"no_active_streakss" = "No active streaks";
 "tasks_simplified" = "Tasks (Simplified)";
 "no_tasks_today_simplified" = "No tasks for today (Simplified View)";
 "tasks_simplified_view" = "Tasks (Simplified View):";
@@ -1208,3 +1208,18 @@
 "search_for_a_place" = "Search for a place";
 "remove_location" = "Remove Location";
 "selected_location" = "Selected Location";
+
+// Photos & Voice Memos (Task Details)
+"photos" = "Photos";
+"take_photo" = "Take Photo";
+"add_photos" = "Add Photos";
+"change_photo" = "Change Photo";
+"remove_photo" = "Remove Photo";
+"voice_memos" = "Voice Memos";
+"record" = "Record";
+"recording" = "Recording...";
+"no_voice_memos_yet" = "No voice memos yet.";
+"microphone_access_denied_title" = "Microphone Access Denied";
+"microphone_access_denied_message" = "Enable microphone access in Settings to record voice memos.";
+"voice_memo" = "Voice memo";
+"voice_memo_name_placeholder" = "Voice memo name";
