@@ -1160,6 +1160,19 @@ class CloudKitService: ObservableObject {
             record["photo"] = nil
         }
         
+        let photoAssets: [CKAsset] = task.photos.compactMap { p in
+            let url = URL(fileURLWithPath: p.photoPath)
+            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
+        }
+        if !photoAssets.isEmpty {
+            record["photos"] = photoAssets
+            if record["photo"] == nil {
+                record["photo"] = photoAssets.first
+            }
+        } else {
+            record["photos"] = nil
+        }
+        
         return record
     }
     
@@ -1227,6 +1240,24 @@ class CloudKitService: ObservableObject {
             if let data = try? Data(contentsOf: fileURL), let result = AttachmentService.savePhoto(for: uuid, imageData: data) {
                 task.photoPath = result.photoPath
                 task.photoThumbnailPath = result.thumbnailPath
+            }
+        }
+        
+        if let assets = record["photos"] as? [CKAsset], !assets.isEmpty {
+            var imported: [TaskPhoto] = []
+            for asset in assets {
+                if let url = asset.fileURL,
+                   let data = try? Data(contentsOf: url),
+                   let added = AttachmentService.addPhoto(for: uuid, imageData: data) {
+                    imported.append(added)
+                }
+            }
+            if !imported.isEmpty {
+                task.photos = imported
+                if task.photoPath == nil, let first = imported.first {
+                    task.photoPath = first.photoPath
+                    task.photoThumbnailPath = first.thumbnailPath
+                }
             }
         }
         
@@ -1735,6 +1766,19 @@ class CloudKitService: ObservableObject {
             }
         } else {
             existingRecord["photo"] = nil
+        }
+        
+        let photoAssets: [CKAsset] = task.photos.compactMap { p in
+            let url = URL(fileURLWithPath: p.photoPath)
+            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
+        }
+        if !photoAssets.isEmpty {
+            existingRecord["photos"] = photoAssets
+            if existingRecord["photo"] == nil {
+                existingRecord["photo"] = photoAssets.first
+            }
+        } else {
+            existingRecord["photos"] = nil
         }
         
         return existingRecord

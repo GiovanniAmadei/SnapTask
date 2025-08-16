@@ -10,6 +10,8 @@
 	<string>SnapTask needs write access to your calendar to create and update calendar events for your tasks.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow SnapTask to access your photo library to attach images to your tasks.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow SnapTask to use your camera to capture photos for your tasks.</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>

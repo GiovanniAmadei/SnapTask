@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 import Charts
 import PhotosUI
+import UIKit
 
 struct TaskDetailView: View {
     let taskId: UUID
@@ -21,7 +22,9 @@ struct TaskDetailView: View {
     @State private var showingDurationPicker = false
     @State private var showingPerformanceChart = false
     @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var showingFullImage = false
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var fullScreenPhoto: TaskPhoto?
+    @State private var showingCameraPicker = false
 
     private var effectiveDate: Date {
         let calendar = Calendar.current
@@ -39,7 +42,6 @@ struct TaskDetailView: View {
     init(taskId: UUID, targetDate: Date? = nil) {
         self.taskId = taskId
         self.targetDate = targetDate
-        // FIX: Store the EXACT date at initialization time - never changes!
         self.fixedDate = targetDate ?? Date()
     }
     
@@ -91,7 +93,6 @@ struct TaskDetailView: View {
                 TrackingModeSelectionView(task: task) { mode in
                     selectedTrackingMode = mode
                     if mode == .pomodoro {
-                        // For pomodoro mode, set active task and show pomodoro
                         PomodoroViewModel.shared.setActiveTask(task)
                         showingPomodoro = true
                     } else {
@@ -133,24 +134,35 @@ struct TaskDetailView: View {
                 TaskPerformanceChartView(task: task)
             }
         }
-        .sheet(isPresented: $showingFullImage) {
-            if let task = localTask, let path = task.photoPath, let image = AttachmentService.loadImage(from: path) {
-                NavigationStack {
-                    VStack {
-                        Spacer()
+        .sheet(item: $fullScreenPhoto) { photo in
+            NavigationStack {
+                VStack {
+                    Spacer()
+                    if let image = AttachmentService.loadImage(from: photo.photoPath) {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
                             .ignoresSafeArea()
-                        Spacer()
                     }
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Close") {
-                                showingFullImage = false
-                            }
+                    Spacer()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Close") {
+                            fullScreenPhoto = nil
                         }
                     }
+                }
+            }
+        }
+        .sheet(isPresented: $showingCameraPicker) {
+            CameraImagePicker { image in
+                if let task = localTask {
+                    Task {
+                        await handleCapturedImage(image, task: task)
+                    }
+                } else {
+                    showingCameraPicker = false
                 }
             }
         }
@@ -164,7 +176,6 @@ struct TaskDetailView: View {
     
     private func updateLocalTaskFromManager() {
         if let managerTask = taskManager.tasks.first(where: { $0.id == taskId }) {
-            // Only update if the manager task is newer
             if localTask == nil || managerTask.lastModifiedDate > (localTask?.lastModifiedDate ?? Date.distantPast) {
                 localTask = managerTask
             }
@@ -174,7 +185,6 @@ struct TaskDetailView: View {
     private func updateLocalTaskRating(actualDuration: TimeInterval? = nil, difficultyRating: Int? = nil, qualityRating: Int? = nil, notes: String? = nil, updateDuration: Bool = false, updateDifficulty: Bool = false, updateQuality: Bool = false, updateNotes: Bool = false) {
         guard var task = localTask else { return }
         
-        // Get or create completion for this specific date
         var completion = task.completions[completionKey] ?? TaskCompletion(
             isCompleted: false,
             completedSubtasks: [],
@@ -185,7 +195,6 @@ struct TaskDetailView: View {
             notes: nil
         )
         
-        // Update only the fields explicitly requested
         if updateDuration {
             completion.actualDuration = actualDuration == 0 ? nil : actualDuration
         }
@@ -202,19 +211,14 @@ struct TaskDetailView: View {
             completion.notes = notes?.isEmpty == true ? nil : notes
         }
         
-        // Set completion date if not already set and this completion has any data
         if completion.completionDate == nil && (completion.actualDuration != nil || completion.difficultyRating != nil || completion.qualityRating != nil || completion.notes != nil) {
             completion.completionDate = Date()
         }
         
-        // Update the completion in the local task
         task.completions[completionKey] = completion
         task.lastModifiedDate = Date()
-        
-        // Save to local state immediately
         localTask = task
         
-        // FIXED: Use the correct method to save performance data
         if updateDuration {
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
@@ -368,7 +372,6 @@ struct TaskDetailView: View {
             
             photoCard(task)
             
-            // Notes Card - Always visible
             notesCard(task)
             
             postCompletionInsightsCard(task)
@@ -393,7 +396,6 @@ struct TaskDetailView: View {
     private func scheduleCard(_ task: TodoTask) -> some View {
         DetailCard(icon: "clock", title: "time".localized, color: Color.orange) {
             VStack(alignment: .leading, spacing: 8) {
-                // Prima riga: mostra sempre il periodo/scope della task
                 HStack {
                     Text("time_range".localized)
                         .font(.subheadline.weight(.medium))
@@ -404,7 +406,6 @@ struct TaskDetailView: View {
                         .themedPrimaryText()
                 }
                 
-                // Seconda riga: mostra il tempo specifico se disponibile
                 if task.hasSpecificTime {
                     HStack {
                         Text("start_time".localized)
@@ -417,7 +418,6 @@ struct TaskDetailView: View {
                     }
                 }
                 
-                // Notification status (read-only display)
                 if task.hasNotification {
                     HStack {
                         Text("notifications".localized)
@@ -452,7 +452,6 @@ struct TaskDetailView: View {
     private func locationCard(_ location: TaskLocation) -> some View {
         DetailCard(icon: "location", title: "location".localized, color: .green) {
             VStack(alignment: .leading, spacing: 16) {
-                // Map view (already shows name and address below)
                 LocationMapView(location: location, height: 120)
                 
                 Button(action: {
@@ -485,7 +484,6 @@ struct TaskDetailView: View {
         
         return Group {
             if hasActualDuration {
-                // Priority to actual duration
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("actual_duration".localized)
@@ -516,7 +514,6 @@ struct TaskDetailView: View {
                         Spacer()
                     }
                     
-                    // Show comparison with estimated if available
                     if hasEstimatedDuration {
                         HStack {
                             Text("estimation_accuracy".localized)
@@ -542,7 +539,6 @@ struct TaskDetailView: View {
                     }
                 }
             } else if hasEstimatedDuration {
-                // Show estimated duration with option to add actual
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("duration".localized)
@@ -571,7 +567,6 @@ struct TaskDetailView: View {
                     .buttonStyle(BorderlessButtonStyle())
                 }
             } else {
-                // No duration at all - option to add
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("duration".localized)
@@ -1010,9 +1005,102 @@ struct TaskDetailView: View {
     }
     
     private func photoCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "photo", title: "Photo", color: .blue) {
+        DetailCard(icon: "photo", title: "Photos", color: .blue) {
             VStack(alignment: .leading, spacing: 12) {
-                if let thumbPath = task.photoThumbnailPath, let image = AttachmentService.loadImage(from: thumbPath) {
+                if !task.photos.isEmpty {
+                    let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(task.photos) { photo in
+                            ZStack(alignment: .topTrailing) {
+                                if let image = AttachmentService.loadImage(from: photo.thumbnailPath) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(height: 90)
+                                        .frame(maxWidth: .infinity)
+                                        .clipped()
+                                        .cornerRadius(10)
+                                        .onTapGesture {
+                                            fullScreenPhoto = photo
+                                        }
+                                } else {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.gray.opacity(0.1))
+                                        .frame(height: 90)
+                                }
+                                
+                                Button {
+                                    removePhoto(photo, from: task)
+                                } label: {
+                                    Image(systemName: "trash.circle.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.red)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.white)
+                                                .frame(width: 16, height: 16)
+                                                .opacity(0.001)
+                                        )
+                                }
+                                .padding(6)
+                            }
+                        }
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Button {
+                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                showingCameraPicker = true
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 16))
+                                Text("Take Photo")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.blue.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        PhotosPicker(
+                            selection: $selectedPhotoItems,
+                            maxSelectionCount: 10,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 16))
+                                Text("Add Photos")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.blue.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.top, 4)
+                } else if let thumbPath = task.photoThumbnailPath, let image = AttachmentService.loadImage(from: thumbPath) {
                     HStack(spacing: 12) {
                         Image(uiImage: image)
                             .resizable()
@@ -1020,11 +1108,25 @@ struct TaskDetailView: View {
                             .frame(width: 90, height: 90)
                             .clipped()
                             .cornerRadius(10)
-                            .onTapGesture {
-                                showingFullImage = true
-                            }
+//                            .onTapGesture {
+//                                showingFullImage = true
+//                            }
                         
                         VStack(alignment: .leading, spacing: 8) {
+                            Button {
+                                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                    showingCameraPicker = true
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "camera")
+                                        .font(.system(size: 14))
+                                    Text("Take Photo")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundColor(.blue)
+                            }
+                            
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
                                 HStack {
                                     Image(systemName: "pencil")
@@ -1036,7 +1138,7 @@ struct TaskDetailView: View {
                             }
                             
                             Button {
-                                removePhoto(task)
+                                removeLegacyPhoto(task)
                             } label: {
                                 HStack {
                                     Image(systemName: "trash")
@@ -1051,28 +1153,70 @@ struct TaskDetailView: View {
                         Spacer()
                     }
                 } else {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
-                        HStack {
-                            Image(systemName: "plus.circle")
-                                .font(.system(size: 16))
-                                .foregroundColor(.blue)
-                            Text("Add Photo")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                            Spacer()
+                    VStack(spacing: 8) {
+                        Button {
+                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                showingCameraPicker = true
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.blue)
+                                Text("Take Photo")
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.blue.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.blue.opacity(0.05))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                                )
-                        )
+                        .buttonStyle(.plain)
+                        
+                        PhotosPicker(
+                            selection: $selectedPhotoItems,
+                            maxSelectionCount: 10,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.blue)
+                                Text("Add Photos")
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.blue.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                }
+            }
+            .onChange(of: selectedPhotoItems) { _, newItems in
+                if !newItems.isEmpty {
+                    Task {
+                        await handlePickedPhotos(newItems, task: task)
+                        selectedPhotoItems.removeAll()
+                    }
                 }
             }
             .onChange(of: selectedPhotoItem) { _, newItem in
@@ -1092,17 +1236,67 @@ struct TaskDetailView: View {
         var updated = task
         updated.photoPath = result.photoPath
         updated.photoThumbnailPath = result.thumbnailPath
+        if updated.photos.isEmpty, let added = AttachmentService.addPhoto(for: task.id, imageData: data) {
+            updated.photos.append(added)
+        }
         updated.lastModifiedDate = Date()
         localTask = updated
         await TaskManager.shared.updateTask(updated)
         selectedPhotoItem = nil
     }
     
-    private func removePhoto(_ task: TodoTask) {
+    private func handlePickedPhotos(_ items: [PhotosPickerItem], task: TodoTask) async {
+        var updated = task
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let added = AttachmentService.addPhoto(for: task.id, imageData: data) {
+                updated.photos.append(added)
+                if updated.photoPath == nil {
+                    if let legacy = AttachmentService.savePhoto(for: task.id, imageData: data) {
+                        updated.photoPath = legacy.photoPath
+                        updated.photoThumbnailPath = legacy.thumbnailPath
+                    }
+                }
+            }
+        }
+        updated.lastModifiedDate = Date()
+        localTask = updated
+        await TaskManager.shared.updateTask(updated)
+    }
+    
+    private func handleCapturedImage(_ image: UIImage, task: TodoTask) async {
+        guard let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() else { return }
+        if let added = AttachmentService.addPhoto(for: task.id, imageData: data) {
+            var updated = task
+            updated.photos.append(added)
+            if updated.photoPath == nil {
+                if let legacy = AttachmentService.savePhoto(for: task.id, imageData: data) {
+                    updated.photoPath = legacy.photoPath
+                    updated.photoThumbnailPath = legacy.thumbnailPath
+                }
+            }
+            updated.lastModifiedDate = Date()
+            localTask = updated
+            await TaskManager.shared.updateTask(updated)
+        }
+    }
+    
+    private func removeLegacyPhoto(_ task: TodoTask) {
         AttachmentService.deletePhoto(for: task.id)
         var updated = task
         updated.photoPath = nil
         updated.photoThumbnailPath = nil
+        updated.lastModifiedDate = Date()
+        localTask = updated
+        Task {
+            await TaskManager.shared.updateTask(updated)
+        }
+    }
+    
+    private func removePhoto(_ photo: TaskPhoto, from task: TodoTask) {
+        AttachmentService.deletePhoto(for: task.id, photo: photo)
+        var updated = task
+        updated.photos.removeAll { $0.id == photo.id }
         updated.lastModifiedDate = Date()
         localTask = updated
         Task {
@@ -1313,7 +1507,6 @@ private struct TaskPerformanceChartView: View {
     }
     
     private func loadTaskAnalytics() {
-        // Generate analytics for this specific task
         let completionAnalytics = task.completions.compactMap { (date, completion) -> StatisticsViewModel.TaskCompletionAnalytics? in
             guard completion.isCompleted else { return nil }
             
@@ -1323,7 +1516,7 @@ private struct TaskPerformanceChartView: View {
                 difficultyRating: completion.difficultyRating,
                 qualityRating: completion.qualityRating,
                 estimatedDuration: task.hasDuration ? task.duration : nil,
-                wasTracked: false // We can enhance this later
+                wasTracked: false
             )
         }.sorted { $0.date < $1.date }
         
@@ -1347,7 +1540,7 @@ private struct TaskPerformanceChartView: View {
                 averageQuality: avgQuality,
                 averageDuration: avgDuration,
                 estimationAccuracy: nil,
-                improvementTrend: .stable // We can calculate this later
+                improvementTrend: .stable
             )
         }
     }
@@ -1685,23 +1878,22 @@ private struct TaskPerformanceChartView: View {
         
         switch selectedTimeRange {
         case .week:
-            formatter.dateFormat = "E dd"  // "Mon 15"
+            formatter.dateFormat = "E dd"
         case .month:
-            formatter.dateFormat = "dd MMM"  // "15 Dec"
+            formatter.dateFormat = "dd MMM"
         case .year:
-            formatter.dateFormat = "MMM yyyy"  // "Dec 2024"
+            formatter.dateFormat = "MMM yyyy"
         case .all:
-            // Determine best format based on date range
             let calendar = Calendar.current
             let now = Date()
             let daysDiff = calendar.dateComponents([.day], from: date, to: now).day ?? 0
             
             if daysDiff <= 30 {
-                formatter.dateFormat = "dd MMM"  // "15 Dec"
+                formatter.dateFormat = "dd MMM"
             } else if daysDiff <= 365 {
-                formatter.dateFormat = "MMM yyyy"  // "Dec 2024"
+                formatter.dateFormat = "MMM yyyy"
             } else {
-                formatter.dateFormat = "yyyy"  // "2024"
+                formatter.dateFormat = "yyyy"
             }
         }
         

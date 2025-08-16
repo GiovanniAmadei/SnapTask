@@ -43,6 +43,49 @@ enum AttachmentService {
         }
     }
     
+    static func addPhoto(for taskId: UUID, imageData: Data) -> TaskPhoto? {
+        guard let original = UIImage(data: imageData) else { return nil }
+        let scaled = downscale(image: original, maxDimension: 1600)
+        guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
+        
+        let thumb = downscale(image: scaled, maxDimension: 200)
+        guard let thumbJpeg = thumb.jpegData(compressionQuality: 0.8) else { return nil }
+        
+        let folder = taskFolder(for: taskId)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        } catch {
+            return nil
+        }
+        
+        let uid = UUID().uuidString
+        let photoURL = folder.appendingPathComponent("photo_\(uid).jpg")
+        let thumbURL = folder.appendingPathComponent("thumb_\(uid).jpg")
+        
+        do {
+            try jpeg.write(to: photoURL, options: .atomic)
+            try thumbJpeg.write(to: thumbURL, options: .atomic)
+            return TaskPhoto(photoPath: photoURL.path, thumbnailPath: thumbURL.path, createdAt: Date())
+        } catch {
+            return nil
+        }
+    }
+    
+    static func deletePhoto(for taskId: UUID, photo: TaskPhoto) {
+        if FileManager.default.fileExists(atPath: photo.photoPath) {
+            try? FileManager.default.removeItem(atPath: photo.photoPath)
+        }
+        if FileManager.default.fileExists(atPath: photo.thumbnailPath) {
+            try? FileManager.default.removeItem(atPath: photo.thumbnailPath)
+        }
+        
+        // Optionally remove empty folder
+        let folder = taskFolder(for: taskId)
+        if let items = try? FileManager.default.contentsOfDirectory(atPath: folder.path), items.isEmpty {
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+    
     static func deletePhoto(for taskId: UUID) {
         let folder = taskFolder(for: taskId)
         try? FileManager.default.removeItem(at: folder)
