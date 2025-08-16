@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import Charts
+import PhotosUI
 
 struct TaskDetailView: View {
     let taskId: UUID
@@ -19,7 +20,9 @@ struct TaskDetailView: View {
     @State private var selectedTrackingMode: TrackingMode = .simple
     @State private var showingDurationPicker = false
     @State private var showingPerformanceChart = false
-    
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showingFullImage = false
+
     private var effectiveDate: Date {
         let calendar = Calendar.current
         return calendar.startOfDay(for: fixedDate)
@@ -128,6 +131,27 @@ struct TaskDetailView: View {
         .sheet(isPresented: $showingPerformanceChart) {
             if let task = localTask {
                 TaskPerformanceChartView(task: task)
+            }
+        }
+        .sheet(isPresented: $showingFullImage) {
+            if let task = localTask, let path = task.photoPath, let image = AttachmentService.loadImage(from: path) {
+                NavigationStack {
+                    VStack {
+                        Spacer()
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .ignoresSafeArea()
+                        Spacer()
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Close") {
+                                showingFullImage = false
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -341,6 +365,8 @@ struct TaskDetailView: View {
             if let recurrence = task.recurrence {
                 recurrenceCard(task, recurrence)
             }
+            
+            photoCard(task)
             
             // Notes Card - Always visible
             notesCard(task)
@@ -981,6 +1007,107 @@ struct TaskDetailView: View {
         
         mapItem.name = location.name
         mapItem.openInMaps()
+    }
+    
+    private func photoCard(_ task: TodoTask) -> some View {
+        DetailCard(icon: "photo", title: "Photo", color: .blue) {
+            VStack(alignment: .leading, spacing: 12) {
+                if let thumbPath = task.photoThumbnailPath, let image = AttachmentService.loadImage(from: thumbPath) {
+                    HStack(spacing: 12) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 90, height: 90)
+                            .clipped()
+                            .cornerRadius(10)
+                            .onTapGesture {
+                                showingFullImage = true
+                            }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                                HStack {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 14))
+                                    Text("Change Photo")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundColor(.blue)
+                            }
+                            
+                            Button {
+                                removePhoto(task)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 14))
+                                    Text("Remove Photo")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundColor(.red)
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                } else {
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 16))
+                                .foregroundColor(.blue)
+                            Text("Add Photo")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.blue.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                if let item = newItem {
+                    Task {
+                        await handlePickedPhoto(item, task: task)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handlePickedPhoto(_ item: PhotosPickerItem, task: TodoTask) async {
+        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+        guard let result = AttachmentService.savePhoto(for: task.id, imageData: data) else { return }
+        
+        var updated = task
+        updated.photoPath = result.photoPath
+        updated.photoThumbnailPath = result.thumbnailPath
+        updated.lastModifiedDate = Date()
+        localTask = updated
+        await TaskManager.shared.updateTask(updated)
+        selectedPhotoItem = nil
+    }
+    
+    private func removePhoto(_ task: TodoTask) {
+        AttachmentService.deletePhoto(for: task.id)
+        var updated = task
+        updated.photoPath = nil
+        updated.photoThumbnailPath = nil
+        updated.lastModifiedDate = Date()
+        localTask = updated
+        Task {
+            await TaskManager.shared.updateTask(updated)
+        }
     }
 }
 

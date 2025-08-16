@@ -1149,6 +1149,17 @@ class CloudKitService: ObservableObject {
             print("⚠️ Error encoding complex objects for task: \(error)")
         }
         
+        if let photoPath = task.photoPath {
+            let url = URL(fileURLWithPath: photoPath)
+            if FileManager.default.fileExists(atPath: url.path) {
+                record["photo"] = CKAsset(fileURL: url)
+            } else {
+                record["photo"] = nil
+            }
+        } else {
+            record["photo"] = nil
+        }
+        
         return record
     }
     
@@ -1211,6 +1222,13 @@ class CloudKitService: ObservableObject {
         task.completionDates = completionDates
         task.creationDate = creationDate ?? Date()
         task.lastModifiedDate = lastModifiedDate ?? Date()
+        
+        if let asset = record["photo"] as? CKAsset, let fileURL = asset.fileURL {
+            if let data = try? Data(contentsOf: fileURL), let result = AttachmentService.savePhoto(for: uuid, imageData: data) {
+                task.photoPath = result.photoPath
+                task.photoThumbnailPath = result.thumbnailPath
+            }
+        }
         
         syncSubtaskCompletionStates(&task)
         
@@ -1707,6 +1725,17 @@ class CloudKitService: ObservableObject {
         encodeToRecord(existingRecord, key: "subtasks", value: task.subtasks)
         encodeToRecord(existingRecord, key: "completions", value: task.completions)
         encodeToRecord(existingRecord, key: "completionDates", value: task.completionDates)
+        
+        if let photoPath = task.photoPath {
+            let url = URL(fileURLWithPath: photoPath)
+            if FileManager.default.fileExists(atPath: url.path) {
+                existingRecord["photo"] = CKAsset(fileURL: url)
+            } else {
+                existingRecord["photo"] = nil
+            }
+        } else {
+            existingRecord["photo"] = nil
+        }
         
         return existingRecord
     }

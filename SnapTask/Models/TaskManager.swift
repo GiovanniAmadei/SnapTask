@@ -142,6 +142,8 @@ class TaskManager: ObservableObject {
         // Rimuovi tutte le durate tracked di questa task dalle statistiche
         removeTaskFromStatistics(task.id)
         
+        AttachmentService.deletePhoto(for: task.id)
+        
         // Rimuovi la task dall'array locale
         tasks.removeAll { $0.id == task.id }
         
@@ -168,6 +170,8 @@ class TaskManager: ObservableObject {
         
         // Rimuovi tutte le durate tracked di questa task dalle statistiche
         removeTaskFromStatistics(task.id)
+        
+        AttachmentService.deletePhoto(for: task.id)
         
         // Rimuovi la task dall'array locale
         tasks.removeAll { $0.id == task.id }

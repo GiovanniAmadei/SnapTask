@@ -68,6 +68,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
     // Notification properties
     var hasNotification: Bool = false
     var notificationId: String?
+    var photoPath: String? = nil
+    var photoThumbnailPath: String? = nil
     
     var timeScope: TaskTimeScope = .today
     var scopeStartDate: Date? = nil
@@ -94,7 +96,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
         notificationId: String? = nil,
         timeScope: TaskTimeScope = .today,
         scopeStartDate: Date? = nil,
-        scopeEndDate: Date? = nil
+        scopeEndDate: Date? = nil,
+        photoPath: String? = nil,
+        photoThumbnailPath: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -119,6 +123,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.timeScope = timeScope
         self.scopeStartDate = scopeStartDate
         self.scopeEndDate = scopeEndDate
+        self.photoPath = photoPath
+        self.photoThumbnailPath = photoThumbnailPath
     }
     
     var displayPeriod: String {
@@ -346,7 +352,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.notificationId == rhs.notificationId &&
         lhs.timeScope == rhs.timeScope &&
         lhs.scopeStartDate == rhs.scopeStartDate &&
-        lhs.scopeEndDate == rhs.scopeEndDate
+        lhs.scopeEndDate == rhs.scopeEndDate &&
+        lhs.photoPath == rhs.photoPath &&
+        lhs.photoThumbnailPath == rhs.photoThumbnailPath
     }
     
     // MARK: - Completion Key Helper
@@ -542,5 +550,6 @@ extension TodoTask {
         case completionDates, creationDate, lastModifiedDate, hasRewardPoints, rewardPoints
         case totalTrackedTime, lastTrackedDate, hasNotification, notificationId
         case timeScope, scopeStartDate, scopeEndDate
+        case photoPath, photoThumbnailPath
     }
 }
