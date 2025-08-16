@@ -7,6 +7,7 @@ class SettingsViewModel: ObservableObject {
     private let categoryManager = CategoryManager.shared
     @Published private(set) var priorities: [Priority] = []
     private let prioritiesKey = "savedPriorities"
+    private var cancellables = Set<AnyCancellable>()
     
     @Published var autoCompleteTaskWithSubtasks: Bool {
         didSet {
@@ -38,15 +39,14 @@ class SettingsViewModel: ObservableObject {
         }
         
         loadPriorities()
-        // Add default categories if none exist
-        if categories.isEmpty {
-            let defaultCategories = [
-                Category(id: UUID(), name: "Work", color: "#FF6B6B"),
-                Category(id: UUID(), name: "Study", color: "#4ECDC4"),
-                Category(id: UUID(), name: "Sport", color: "#45B7D5")
-            ]
-            defaultCategories.forEach { addCategory($0) }
-        }
+        
+        // Subscribe to CategoryManager changes to keep the view updated
+        categoryManager.$categories
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Categories
@@ -64,6 +64,10 @@ class SettingsViewModel: ObservableObject {
     
     func deleteCategory(_ category: Category) {
         categoryManager.removeCategory(category)
+    }
+    
+    func forceDeleteCategory(_ category: Category) async {
+        await categoryManager.forceRemoveCategory(category)
     }
     
     func removeCategory(at indexSet: IndexSet) {

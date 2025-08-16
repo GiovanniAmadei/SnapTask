@@ -29,20 +29,16 @@ class CategoryManager: ObservableObject {
     }
     
     private func ensureDefaultCategoriesExist() {
+        // Categories will start empty and users can create their own
         if categories.isEmpty {
-            print("CategoryManager: Creating default categories")
-            let defaultCategories = createDefaultCategories()
-            categories = defaultCategories
+            print("CategoryManager: Starting with empty categories - users can create their own")
             saveCategories()
         }
     }
     
     private func createDefaultCategories() -> [Category] {
-        return [
-            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID(), name: "work_category".localized, color: "007AFF"),
-            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002") ?? UUID(), name: "personal_category".localized, color: "34C759"),
-            Category(id: UUID(uuidString: "00000000-0000-0000-0000-000000000003") ?? UUID(), name: "health_category".localized, color: "FF3B30")
-        ]
+        // Return empty array - no default categories
+        return []
     }
     
     func addCategory(_ category: Category) {
@@ -63,11 +59,42 @@ class CategoryManager: ObservableObject {
     func removeCategory(_ category: Category) {
         guard !isUpdatingFromSync else { return }
         
-        // Don't allow removing default categories
-        let defaultIds = createDefaultCategories().map { $0.id }
-        if defaultIds.contains(category.id) {
-            print("CategoryManager: Cannot remove default category: \(category.name)")
+        // Check if there are tasks using this category
+        let tasksUsingCategory = TaskManager.shared.tasks.filter { $0.category?.id == category.id }
+        if !tasksUsingCategory.isEmpty {
+            print("CategoryManager: Category '\(category.name)' is being used by \(tasksUsingCategory.count) task(s)")
+            
+            // Post notification to show confirmation alert to user
+            NotificationCenter.default.post(
+                name: .categoryDeletionWarning, 
+                object: nil, 
+                userInfo: [
+                    "category": category,
+                    "taskCount": tasksUsingCategory.count
+                ]
+            )
             return
+        }
+        
+        // If no tasks are using this category, delete directly
+        categories.removeAll { $0.id == category.id }
+        saveCategories()
+        
+        // Delete from CloudKit
+        CloudKitService.shared.deleteCategory(category)
+        print("CategoryManager: Removed category locally: \(category.name)")
+    }
+    
+    func forceRemoveCategory(_ category: Category) async {
+        // Force removal even if tasks are using it (tasks will lose their category)
+        guard !isUpdatingFromSync else { return }
+        
+        // Remove category reference from all tasks using it
+        let tasksUsingCategory = TaskManager.shared.tasks.filter { $0.category?.id == category.id }
+        for task in tasksUsingCategory {
+            var updatedTask = task
+            updatedTask.category = nil
+            await TaskManager.shared.updateTask(updatedTask)
         }
         
         categories.removeAll { $0.id == category.id }
@@ -75,7 +102,7 @@ class CategoryManager: ObservableObject {
         
         // Delete from CloudKit
         CloudKitService.shared.deleteCategory(category)
-        print("CategoryManager: Removed category locally: \(category.name)")
+        print("CategoryManager: Force removed category and updated \(tasksUsingCategory.count) tasks: \(category.name)")
     }
     
     func updateCategory(_ category: Category) {
@@ -151,27 +178,21 @@ class CategoryManager: ObservableObject {
     }
     
     func resetToDefaults() {
-        print("CategoryManager: Resetting to default categories")
+        print("CategoryManager: Resetting to empty categories")
         
         // Clear all local data
         categories.removeAll()
         UserDefaults.standard.removeObject(forKey: categoriesKey)
         UserDefaults.standard.removeObject(forKey: "deletedCategoryIDs")
         
-        // Create fresh default categories
-        let defaultCategories = createDefaultCategories()
-        categories = defaultCategories
+        // No default categories to create - start empty
+        categories = []
         saveCategories()
         
-        // Force sync with CloudKit
-        for category in defaultCategories {
-            CloudKitService.shared.saveCategory(category)
-        }
-        
-        print("CategoryManager: Reset completed with \(categories.count) default categories")
+        print("CategoryManager: Reset completed with empty categories")
     }
     
-    func performCompleteReset() async {
+    func performCompleteReset() {
         print("CategoryManager: Performing complete reset")
         
         // Clear all local data
@@ -185,28 +206,14 @@ class CategoryManager: ObservableObject {
         let data = try? JSONEncoder().encode(deletionTracker)
         UserDefaults.standard.set(data, forKey: "cloudkit_deleted_items")
         
-        // Wait a moment for cleanup
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        // Create fresh default categories with new UUIDs
-        let defaultCategories = [
-            Category(id: UUID(), name: "work_category".localized, color: "007AFF"),
-            Category(id: UUID(), name: "personal_category".localized, color: "34C759"),
-            Category(id: UUID(), name: "health_category".localized, color: "FF3B30")
-        ]
-        
-        categories = defaultCategories
+        // Start with empty categories - no defaults
+        categories = []
         saveCategories()
-        
-        // Force sync with CloudKit
-        for category in defaultCategories {
-            CloudKitService.shared.saveCategory(category)
-        }
         
         // Trigger full CloudKit sync
         CloudKitService.shared.syncNow()
         
-        print("CategoryManager: Complete reset finished with \(categories.count) fresh categories")
+        print("CategoryManager: Complete reset finished with empty categories")
     }
     
     func debugCategoryStatus() {
@@ -238,4 +245,7 @@ class CategoryManager: ObservableObject {
 
 extension Notification.Name {
     static let categoriesDidUpdate = Notification.Name("categoriesDidUpdate")
+    static let categoryDeletionWarning = Notification.Name("categoryDeletionWarning")
+    static let categoryDeletionBlocked = Notification.Name("categoryDeletionBlocked")
+    static let defaultCategoryDeletionAttempted = Notification.Name("defaultCategoryDeletionAttempted")
 }

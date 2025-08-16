@@ -695,7 +695,7 @@ struct SettingsView: View {
             
             // Reset categories to defaults
             let categoryManager = CategoryManager.shared
-            await categoryManager.performCompleteReset()
+            categoryManager.performCompleteReset()
             
             // Clear time tracking statistics
             UserDefaults.standard.removeObject(forKey: "timeTracking")
