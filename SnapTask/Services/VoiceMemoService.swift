@@ -112,6 +112,12 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
         }
     }
 
+    func renameMemo(_ memo: TaskVoiceMemo, to newName: String) -> TaskVoiceMemo {
+        var updatedMemo = memo
+        updatedMemo.name = newName.isEmpty ? nil : newName
+        return updatedMemo
+    }
+
     private func startRealTimeWaveform() throws {
         audioEngine = AVAudioEngine()
         guard let audioEngine else { return }

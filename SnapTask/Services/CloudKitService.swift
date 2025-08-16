@@ -1272,7 +1272,7 @@ class CloudKitService: ObservableObject {
             for i in 0..<count {
                 if let fileURL = assets[i].fileURL,
                    let data = try? Data(contentsOf: fileURL) {
-                    if let memo = saveVoiceMemoData(taskId: uuid, data: data, id: metas[i].id, duration: metas[i].duration, createdAt: metas[i].createdAt) {
+                    if let memo = saveVoiceMemoData(taskId: uuid, data: data, id: metas[i].id, duration: metas[i].duration, createdAt: metas[i].createdAt, name: metas[i].name) {
                         memos.append(memo)
                     }
                 }
@@ -1298,6 +1298,43 @@ class CloudKitService: ObservableObject {
                 }
             }
             task.subtasks[i].isCompleted = isCompleted
+        }
+    }
+    
+    private struct CloudVoiceMemoMeta: Codable {
+        let id: UUID
+        let duration: TimeInterval
+        let createdAt: Date
+        let name: String?
+    }
+    
+    private func setVoiceMemos(on record: CKRecord, for task: TodoTask) {
+        let assets: [CKAsset] = task.voiceMemos.compactMap { memo in
+            let url = URL(fileURLWithPath: memo.audioPath)
+            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
+        }
+        if !assets.isEmpty {
+            record["voiceMemosAssets"] = assets
+            let metas = task.voiceMemos.map { CloudVoiceMemoMeta(id: $0.id, duration: $0.duration, createdAt: $0.createdAt, name: $0.name) }
+            if let data = try? JSONEncoder().encode(metas) {
+                record["voiceMemosMeta"] = data
+            }
+        } else {
+            record["voiceMemosAssets"] = nil
+            record["voiceMemosMeta"] = nil
+        }
+    }
+    
+    private func saveVoiceMemoData(taskId: UUID, data: Data, id: UUID, duration: TimeInterval, createdAt: Date, name: String? = nil) -> TaskVoiceMemo? {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let folder = docs.appendingPathComponent("Attachments", isDirectory: true).appendingPathComponent(taskId.uuidString, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let fileURL = folder.appendingPathComponent("memo_\(id.uuidString).m4a")
+            try data.write(to: fileURL, options: .atomic)
+            return TaskVoiceMemo(id: id, audioPath: fileURL.path, duration: duration, createdAt: createdAt, name: name)
+        } catch {
+            return nil
         }
     }
     
@@ -1890,43 +1927,6 @@ class CloudKitService: ObservableObject {
 
 // MARK: - Voice Memos Cloud Helpers
 
-private struct CloudVoiceMemoMeta: Codable {
-    let id: UUID
-    let duration: TimeInterval
-    let createdAt: Date
-}
-
-private func setVoiceMemos(on record: CKRecord, for task: TodoTask) {
-    let assets: [CKAsset] = task.voiceMemos.compactMap { memo in
-        let url = URL(fileURLWithPath: memo.audioPath)
-        return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
-    }
-    if !assets.isEmpty {
-        record["voiceMemosAssets"] = assets
-        let metas = task.voiceMemos.map { CloudVoiceMemoMeta(id: $0.id, duration: $0.duration, createdAt: $0.createdAt) }
-        if let data = try? JSONEncoder().encode(metas) {
-            record["voiceMemosMeta"] = data
-        }
-    } else {
-        record["voiceMemosAssets"] = nil
-        record["voiceMemosMeta"] = nil
-    }
-}
-
-private func saveVoiceMemoData(taskId: UUID, data: Data, id: UUID, duration: TimeInterval, createdAt: Date) -> TaskVoiceMemo? {
-    let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-    let folder = docs.appendingPathComponent("Attachments", isDirectory: true).appendingPathComponent(taskId.uuidString, isDirectory: true)
-    do {
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let fileURL = folder.appendingPathComponent("memo_\(id.uuidString).m4a")
-        try data.write(to: fileURL, options: .atomic)
-        return TaskVoiceMemo(id: id, audioPath: fileURL.path, duration: duration, createdAt: createdAt)
-    } catch {
-        return nil
-    }
-}
-
-// MARK: - Legacy Compatibility
 extension CloudKitService {
     func syncTasks() { syncNow() }
     func syncInBackground() { syncNow() }
