@@ -184,8 +184,7 @@ struct SubtaskRow: View {
             
             Text(subtask.name)
                 .font(.subheadline)
-                .foregroundColor(isCompleted ? .secondary : .primary)
-                .strikethrough(isCompleted)
+                .foregroundColor(.primary)
             
             Spacer()
         }

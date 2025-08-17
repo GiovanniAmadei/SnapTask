@@ -4,14 +4,14 @@ import UserNotifications
 import MessageUI
 
 struct SettingsView: View {
-    @StateObject private var viewModel = SettingsViewModel()
+    @StateObject private var viewModel = SettingsViewModel.shared
     @StateObject private var quoteManager = QuoteManager.shared
     @StateObject private var donationService = DonationService.shared
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var taskNotificationManager = TaskNotificationManager.shared
-    
+
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
     @AppStorage("isDarkMode") private var isDarkMode = false

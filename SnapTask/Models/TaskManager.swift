@@ -483,20 +483,6 @@ class TaskManager: ObservableObject {
                 completionDate: currentCompletion?.completionDate
             )
             
-            if isCompleting && !task.subtasks.isEmpty {
-                completion.completedSubtasks = Set(task.subtasks.map { $0.id })
-                for i in 0..<task.subtasks.count {
-                    task.subtasks[i].isCompleted = true
-                }
-                print("✅ Marked all \(task.subtasks.count) subtasks as completed")
-            } else if !isCompleting {
-                completion.completedSubtasks.removeAll()
-                for i in 0..<task.subtasks.count {
-                    task.subtasks[i].isCompleted = false
-                }
-                print("❌ Unmarked all subtasks")
-            }
-            
             task.completions[completionDate] = completion
             
             if completion.isCompleted {
@@ -533,6 +519,7 @@ class TaskManager: ObservableObject {
             print("✅ New completion: \(completion.isCompleted)")
             print("📋 Completions count: \(task.completions.count)")
             print("📅 Completion dates: \(task.completionDates.count)")
+            print("🔄 Subtasks remained independent - not modified by main task toggle")
             
             saveTasks()
             notifyTasksUpdated()

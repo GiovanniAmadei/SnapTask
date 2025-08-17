@@ -10,6 +10,7 @@ struct TaskRowView: View {
     @State private var showingDetailView = false
     let date: Date
     @State private var offset: CGFloat = 0
+    @State private var isHorizontalSwipe = false
     
     private var hasDescription: Bool {
         if let description = task.description {
@@ -116,7 +117,7 @@ struct TaskRowView: View {
                                     .font(.subheadline)
                                 Text(subtask.name)
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.primary)
                             }
                         }
                     }
@@ -134,16 +135,42 @@ struct TaskRowView: View {
                 showingDetailView = true
             }
             .offset(x: offset)
-            .gesture(
-                DragGesture()
+
+            //     DragGesture()
+            //         .onChanged { gesture in
+            //             if gesture.translation.width < 0 {
+            //                 withAnimation(.spring()) {
+            //                     offset = max(-100, gesture.translation.width)
+            //                 }
+            //             }
+            //         }
+            //         .onEnded { gesture in
+            //             withAnimation(.spring()) {
+            //                 if offset < -50 {
+            //                     offset = -100
+            //                 } else {
+            //                     offset = 0
+            //                 }
+            //             }
+            //         }
+            // )
+
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 10)
                     .onChanged { gesture in
+                        if !isHorizontalSwipe {
+                            isHorizontalSwipe = abs(gesture.translation.width) > abs(gesture.translation.height) && abs(gesture.translation.width) > 8
+                        }
+                        guard isHorizontalSwipe else { return }
                         if gesture.translation.width < 0 {
                             withAnimation(.spring()) {
                                 offset = max(-100, gesture.translation.width)
                             }
                         }
                     }
-                    .onEnded { gesture in
+                    .onEnded { _ in
+                        defer { isHorizontalSwipe = false }
+                        guard isHorizontalSwipe else { return }
                         withAnimation(.spring()) {
                             if offset < -50 {
                                 offset = -100
@@ -153,6 +180,7 @@ struct TaskRowView: View {
                         }
                     }
             )
+
             .overlay(
                 HStack(spacing: -8) {
                     Button {

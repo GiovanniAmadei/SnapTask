@@ -702,7 +702,6 @@ struct TaskDetailView: View {
             Text(subtask.name)
                 .font(.body)
                 .themedPrimaryText()
-                .strikethrough(isCompleted)
             
             Spacer()
         }
@@ -1514,7 +1513,12 @@ private struct VoiceMemoRow: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.05))
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.blue.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                )
         )
         .onAppear {
             player.prepare(path: memo.audioPath)

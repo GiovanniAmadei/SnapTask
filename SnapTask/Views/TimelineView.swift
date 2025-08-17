@@ -52,13 +52,7 @@ struct TimelineView: View {
             .themedBackground()
             .navigationBarHidden(true)
             .sheet(isPresented: $showingNewTask) {
-                TaskFormView(
-                    initialDate: viewModel.selectedDate,
-                    initialTimeScope: viewModel.selectedTimeScope,
-                    onSave: { task in
-                        viewModel.addTask(task)
-                    }
-                )
+                TaskCreationOptionsView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingCalendarPicker) {
                 CalendarPickerView(
@@ -1313,6 +1307,7 @@ private struct TimelineTaskCard: View {
     @State private var isDeleting = false
     @State private var deleteOpacity: Double = 1.0
     @State private var deleteScale: CGFloat = 1.0
+    @State private var isHorizontalSwipe = false
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
@@ -1680,21 +1675,24 @@ private struct TimelineTaskCard: View {
         }
         .id(task.id)
         .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 15)
+
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 10)
                 .onChanged { value in
+                    if !isHorizontalSwipe {
+                        isHorizontalSwipe = abs(value.translation.width) > abs(value.translation.height) && abs(value.translation.width) > 8
+                    }
+                    guard isHorizontalSwipe else { return }
                     let translation = value.translation.width
-                    
-                    // Only allow left swipe
                     if translation < 0 {
                         dragOffset = max(translation, maxSwipeDistance)
                     }
                 }
                 .onEnded { value in
+                    defer { isHorizontalSwipe = false }
+                    guard isHorizontalSwipe else { return }
                     let translation = value.translation.width
                     let velocity = value.velocity.width
-                    
-                    // Consider velocity for more responsive swipe detection
                     if translation < -60 || velocity < -500 {
                         viewModel.setOpenSwipeTask(task.id)
                         withAnimation(.interpolatingSpring(stiffness: 400, damping: 30)) {
@@ -1705,6 +1703,7 @@ private struct TimelineTaskCard: View {
                     }
                 }
         )
+
         .onChange(of: viewModel.isSwipeMenuOpen(for: task.id)) { _, isOpen in
             if !isOpen && dragOffset != 0 {
                 resetSwipe()
@@ -1853,7 +1852,6 @@ private struct AddTaskButton: View {
     }
 }
 
-// MARK: - Subtasks Row
 private struct TimelineSubtaskRow: View {
     let subtask: Subtask
     let isCompleted: Bool
@@ -1874,7 +1872,7 @@ private struct TimelineSubtaskRow: View {
             
             Text(subtask.name)
                 .font(.subheadline)
-                .foregroundColor(isCompleted ? .secondary : .primary)
+                .foregroundColor(.primary)
             
             Spacer()
         }
@@ -1922,7 +1920,7 @@ struct CompactTimelineTaskView: View {
                 }
             }
             .buttonStyle(BorderlessButtonStyle())
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
                     if let category = task.category {
