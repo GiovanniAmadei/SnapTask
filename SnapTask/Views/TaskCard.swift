@@ -131,6 +131,10 @@ struct TaskCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showingDetailView = true
+        }
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
         }

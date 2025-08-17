@@ -262,7 +262,6 @@ struct TimelineContentView: View {
                             
                             ForEach(allDayTasks, id: \.id) { task in
                                 CompactTimelineTaskView(task: task, viewModel: viewModel)
-                                    .padding(.horizontal)
                             }
                         }
                         .padding(.vertical, 12)
@@ -523,6 +522,7 @@ struct EnhancedTimelineTaskView: View {
     let task: TodoTask
     @ObservedObject var viewModel: TimelineViewModel
     @State private var showingPomodoro = false
+    @State private var showingDetailView = false
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
@@ -568,18 +568,19 @@ struct EnhancedTimelineTaskView: View {
             let baseColor = Color(hex: category.color)
             return LinearGradient(
                 colors: [
-                    baseColor.opacity(0.15),
-                    baseColor.opacity(0.05),
+                    baseColor.opacity(0.12),
+                    baseColor.opacity(0.06),
+                    baseColor.opacity(0.02),
                     Color.clear
                 ],
-                startPoint: .leading,
-                endPoint: .trailing
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
         } else {
             return LinearGradient(
                 colors: [Color.clear],
-                startPoint: .leading,
-                endPoint: .trailing
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
         }
     }
@@ -604,79 +605,81 @@ struct EnhancedTimelineTaskView: View {
             }
             .buttonStyle(BorderlessButtonStyle())
 
-            // Task content
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .center, spacing: 8) {
-                    // Category indicator
+            // Task content with shared leading column for category dot
+            HStack(alignment: .top, spacing: 8) {
+                // Leading dot column (fixed width)
+                Group {
                     if let category = task.category {
                         Circle()
                             .fill(Color(hex: category.color))
                             .frame(width: 8, height: 8)
+                    } else {
+                        Color.clear.frame(width: 8, height: 8)
                     }
-                    
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
                     Text(task.name)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(isCompleted ? theme.secondaryTextColor : theme.textColor)
-                    
-                    Spacer()
-                    
-                    // Time info
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(taskTime)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(theme.secondaryTextColor)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(theme.surfaceColor)
-                            .cornerRadius(4)
-                        
-                        if let timeInfo = timeUntilTask {
-                            Text(timeInfo)
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundColor(timeInfo == "now" ? .orange : theme.secondaryTextColor)
-                                .fontWeight(.medium)
-                        }
-                    }
-                }
-                
-                // Description
-                if let description = task.description, !description.isEmpty {
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(theme.secondaryTextColor)
-                        .lineLimit(2)
-                }
 
-                // Priority and Pomodoro indicators
-                HStack(spacing: 8) {
-                    Image(systemName: task.priority.icon)
-                        .foregroundColor(Color(hex: task.priority.color))
-                        .font(.system(size: 12))
-                    
-                    if task.pomodoroSettings != nil {
-                        Button(action: {
-                            PomodoroViewModel.shared.setActiveTask(task)
-                            showingPomodoro = true
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "timer")
-                                    .font(.system(size: 10))
-                                Text("Focus")
-                                    .font(.system(.caption2, design: .rounded))
-                            }
-                            .foregroundColor(theme.primaryColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(theme.primaryColor.opacity(0.15))
-                            .cornerRadius(8)
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
+                    if let description = task.description, !description.isEmpty {
+                        Text(description)
+                            .font(.caption)
+                            .foregroundColor(theme.secondaryTextColor)
+                            .lineLimit(2)
                     }
                     
-                    Spacer()
+                    // Priority and Pomodoro indicators
+                    HStack(spacing: 8) {
+                        Image(systemName: task.priority.icon)
+                            .foregroundColor(Color(hex: task.priority.color))
+                            .font(.system(size: 12))
+                        
+                        if task.pomodoroSettings != nil {
+                            Button(action: {
+                                PomodoroViewModel.shared.setActiveTask(task)
+                                showingPomodoro = true
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "timer")
+                                        .font(.system(size: 10))
+                                    Text("Focus")
+                                        .font(.system(.caption2, design: .rounded))
+                                }
+                                .foregroundColor(theme.primaryColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(theme.primaryColor.opacity(0.15))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(BorderlessButtonStyle())
+                        }
+                        
+                        Spacer()
+                    }
                 }
             }
+            // Trailing time info overlay on the whole content row
+            .overlay(
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(taskTime)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(theme.secondaryTextColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(theme.surfaceColor)
+                        .cornerRadius(4)
+                    
+                    if let timeInfo = timeUntilTask {
+                        Text(timeInfo)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundColor(timeInfo == "now" ? .orange : theme.secondaryTextColor)
+                            .fontWeight(.medium)
+                    }
+                }, alignment: .topTrailing
+            )
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -708,6 +711,16 @@ struct EnhancedTimelineTaskView: View {
         .opacity(isCompleted ? 0.7 : 1.0)
         .sheet(isPresented: $showingPomodoro) {
             PomodoroView(task: task)
+        }
+        .sheet(isPresented: $showingDetailView) {
+            NavigationStack {
+                TaskDetailView(taskId: task.id, targetDate: viewModel.selectedDate)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .onTapGesture {
+            showingDetailView = true
         }
     }
 }
@@ -1004,13 +1017,6 @@ struct TaskListView: View {
                                     },
                                     viewModel: viewModel
                                 )
-                                .padding(.horizontal, 4)
-                                .transition(
-                                    .asymmetric(
-                                        insertion: .opacity.combined(with: .move(edge: .top)),
-                                        removal: .opacity.combined(with: .move(edge: .leading))
-                                    )
-                                )
                             }
                         
                         case .sections(let sections):
@@ -1019,8 +1025,6 @@ struct TaskListView: View {
                                     section: section,
                                     viewModel: viewModel
                                 )
-                                .padding(.horizontal, 4)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
                         }
                     }
@@ -1535,12 +1539,11 @@ private struct TimelineTaskCard: View {
                                     }
                                     .frame(width: 24, height: 24)
                                     .contentShape(Rectangle())
-                                    .frame(width: 24, height: 24)
                                 }
                                 .buttonStyle(BorderlessButtonStyle())
                             }
                         }
-                        .padding(.leading, 8)
+                        .padding(.leading, 0)
                         
                         if let description = task.description {
                             Text(description)
@@ -1618,6 +1621,7 @@ private struct TimelineTaskCard: View {
                                     .stroke(theme.primaryColor, lineWidth: 3)
                                     .frame(width: 32, height: 32)
                                     .rotationEffect(.degrees(-90))
+                                    .animation(.easeInOut(duration: 0.35), value: completionProgress)
                             }
                             
                             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
@@ -1711,10 +1715,6 @@ private struct TimelineTaskCard: View {
                 .onEnded { _ in
                     if dragOffset != 0 {
                         resetSwipe()
-                    } else if !task.subtasks.isEmpty {
-                        withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
-                            isExpanded.toggle()
-                        }
                     } else {
                         showingDetailView = true
                     }
@@ -1723,10 +1723,6 @@ private struct TimelineTaskCard: View {
         .onTapGesture {
             if dragOffset != 0 {
                 resetSwipe()
-            } else if !task.subtasks.isEmpty {
-                withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
-                    isExpanded.toggle()
-                }
             } else {
                 showingDetailView = true
             }
@@ -1853,10 +1849,11 @@ private struct AddTaskButton: View {
                 .scaleEffect(isPressed ? 0.95 : 1.0)
                 .animation(.interpolatingSpring(stiffness: 600, damping: 25), value: isPressed)
         }
-        .padding(.horizontal, 20)
+        .buttonStyle(BorderlessButtonStyle())
     }
 }
 
+// MARK: - Subtasks Row
 private struct TimelineSubtaskRow: View {
     let subtask: Subtask
     let isCompleted: Bool
@@ -1865,7 +1862,7 @@ private struct TimelineSubtaskRow: View {
     var body: some View {
         HStack {
             Button(action: {
-                withAnimation(.none) {
+                withAnimation(.easeInOut(duration: 0.3)) {
                     onToggle()
                 }
             }) {
