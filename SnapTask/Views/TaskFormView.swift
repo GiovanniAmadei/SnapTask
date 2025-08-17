@@ -47,7 +47,6 @@ struct TaskFormView: View {
             vm.description = initialTask.description ?? ""
             vm.location = initialTask.location
             vm.startDate = initialTask.startTime
-            vm.hasSpecificTime = initialTask.hasSpecificTime
             vm.hasDuration = initialTask.hasDuration
             vm.duration = initialTask.duration
             vm.selectedCategory = initialTask.category
@@ -56,6 +55,8 @@ struct TaskFormView: View {
             vm.subtasks = initialTask.subtasks
             vm.hasNotification = initialTask.hasNotification
             vm.selectedTimeScope = initialTask.timeScope
+            
+            vm.hasSpecificTime = initialTask.hasSpecificTime
             
             // Set specific period dates based on existing task
             if let scopeStart = initialTask.scopeStartDate {

@@ -32,6 +32,8 @@ struct TaskDetailView: View {
     @State private var showMicDeniedAlert = false
     @State private var meterCancellable: AnyCancellable?
     @State private var isEditingVoiceMemo = false
+    @State private var showPhotoSourceDialog = false
+    @State private var showingPhotoLibraryPicker = false
     
     private var effectiveDate: Date {
         let calendar = Calendar.current
@@ -172,6 +174,28 @@ struct TaskDetailView: View {
                     showingCameraPicker = false
                 }
             }
+        }
+        .sheet(isPresented: $showingPhotoLibraryPicker) {
+            if let task = localTask {
+                PhotoLibraryPicker(selectionLimit: 10) { images in
+                    Task {
+                        await handleCapturedImages(images, task: task)
+                    }
+                }
+            }
+        }
+        .confirmationDialog("add_photos".localized, isPresented: $showPhotoSourceDialog, titleVisibility: .visible) {
+            Button("take_photo".localized) {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    showingCameraPicker = true
+                } else {
+                    showingPhotoLibraryPicker = true
+                }
+            }
+            Button("add_photos".localized) {
+                showingPhotoLibraryPicker = true
+            }
+            Button("cancel".localized, role: .cancel) {}
         }
         .alert("microphone_access_denied_title".localized, isPresented: $showMicDeniedAlert) {
             Button("ok".localized, role: .cancel) {}
@@ -1060,60 +1084,31 @@ struct TaskDetailView: View {
                         }
                     }
                     
-                    HStack(spacing: 8) {
-                        Button {
-                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                                showingCameraPicker = true
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "camera")
-                                    .font(.system(size: 16))
-                                Text("take_photo".localized)
-                                    .font(.subheadline.weight(.medium))
-                            }
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.blue.opacity(0.05))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                                    )
-                            )
+                    // Unified add button
+                    Button {
+                        showPhotoSourceDialog = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 16))
+                                .foregroundColor(.blue)
+                            Text("add_photos".localized)
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Spacer()
                         }
-                        .buttonStyle(.plain)
-                        
-                        PhotosPicker(
-                            selection: $selectedPhotoItems,
-                            maxSelectionCount: 10,
-                            matching: .images,
-                            photoLibrary: .shared()
-                        ) {
-                            HStack {
-                                Image(systemName: "plus.circle")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.blue)
-                                Text("add_photos".localized)
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.blue.opacity(0.05))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.blue.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                     }
+                    .buttonStyle(.plain)
                     .padding(.top, 4)
                 } else if let thumbPath = task.photoThumbnailPath, let image = AttachmentService.loadImage(from: thumbPath) {
                     HStack(spacing: 12) {
@@ -1124,20 +1119,19 @@ struct TaskDetailView: View {
                             .clipped()
                             .cornerRadius(10)
                         VStack(alignment: .leading, spacing: 8) {
+                            // Unified add button (camera or gallery)
                             Button {
-                                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                                    showingCameraPicker = true
-                                }
+                                showPhotoSourceDialog = true
                             } label: {
                                 HStack {
-                                    Image(systemName: "camera")
+                                    Image(systemName: "plus.circle")
                                         .font(.system(size: 14))
-                                    Text("take_photo".localized)
+                                    Text("add_photos".localized)
                                         .font(.subheadline.weight(.medium))
                                 }
                                 .foregroundColor(.blue)
                             }
-                            
+
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
                                 HStack {
                                     Image(systemName: "pencil")
@@ -1147,7 +1141,7 @@ struct TaskDetailView: View {
                                 }
                                 .foregroundColor(.blue)
                             }
-                            
+
                             Button {
                                 removeLegacyPhoto(task)
                             } label: {
@@ -1163,61 +1157,31 @@ struct TaskDetailView: View {
                         Spacer()
                     }
                 } else {
-                    VStack(spacing: 8) {
-                        Button {
-                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                                showingCameraPicker = true
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "camera")
-                                    .font(.system(size: 16))
-                                Text("take_photo".localized)
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.blue.opacity(0.05))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                                    )
-                            )
+                    // No photos yet
+                    Button {
+                        showPhotoSourceDialog = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 16))
+                                .foregroundColor(.blue)
+                            Text("add_photos".localized)
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Spacer()
                         }
-                        .buttonStyle(.plain)
-                        
-                        PhotosPicker(
-                            selection: $selectedPhotoItems,
-                            maxSelectionCount: 10,
-                            matching: .images,
-                            photoLibrary: .shared()
-                        ) {
-                            HStack {
-                                Image(systemName: "plus.circle")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.blue)
-                                Text("add_photos".localized)
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.blue.opacity(0.05))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.blue.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .onChange(of: selectedPhotoItems) { _, newItems in
@@ -1288,6 +1252,25 @@ struct TaskDetailView: View {
             localTask = updated
             await TaskManager.shared.updateTask(updated)
         }
+    }
+    
+    private func handleCapturedImages(_ images: [UIImage], task: TodoTask) async {
+        var updated = task
+        for image in images {
+            guard let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() else { continue }
+            if let added = AttachmentService.addPhoto(for: task.id, imageData: data) {
+                updated.photos.append(added)
+                if updated.photoPath == nil {
+                    if let legacy = AttachmentService.savePhoto(for: task.id, imageData: data) {
+                        updated.photoPath = legacy.photoPath
+                        updated.photoThumbnailPath = legacy.thumbnailPath
+                    }
+                }
+            }
+        }
+        updated.lastModifiedDate = Date()
+        localTask = updated
+        await TaskManager.shared.updateTask(updated)
     }
     
     private func removeLegacyPhoto(_ task: TodoTask) {
@@ -1519,16 +1502,14 @@ private struct VoiceMemoRow: View {
                 }
             }
             
-            if !isEditing {
-                Spacer()
+            Spacer()
 
-                Button {
-                    player.stop()
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
-                }
+            Button {
+                player.stop()
+                onDelete()
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
             }
         }
         .padding(12)
