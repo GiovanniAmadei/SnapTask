@@ -741,11 +741,19 @@ struct TaskFormView: View {
                                                 .font(.subheadline)
                                                 .themedPrimaryText()
                                             Spacer()
+                                            
+                                            Button(action: {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    viewModel.removeSubtask(withId: subtask.id)
+                                                }
+                                            }) {
+                                                Image(systemName: "minus.circle.fill")
+                                                    .font(.system(size: 16))
+                                                    .foregroundColor(.red)
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
                                         }
                                         .padding(.vertical, 4)
-                                    }
-                                    .onDelete { indexSet in
-                                        viewModel.removeSubtask(at: indexSet)
                                     }
                                 }
                                 .transition(.asymmetric(

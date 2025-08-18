@@ -694,16 +694,30 @@ struct TaskDetailView: View {
     private func subtaskRow(_ task: TodoTask, _ subtask: Subtask) -> some View {
         HStack {
             let isCompleted = task.completions[completionKey]?.completedSubtasks.contains(subtask.id) == true
-            
-            Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 16))
-                .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
-            
+
+            Button {
+                TaskManager.shared.toggleSubtask(taskId: task.id, subtaskId: subtask.id, on: fixedDate)
+            } label: {
+                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 16))
+                    .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
+            }
+            .buttonStyle(PlainButtonStyle())
+
             Text(subtask.name)
                 .font(.body)
                 .themedPrimaryText()
-            
+
             Spacer()
+
+            Button(action: {
+                deleteSubtask(subtask, from: task)
+            }) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(.red)
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
     
@@ -1408,6 +1422,22 @@ struct TaskDetailView: View {
             await TaskManager.shared.updateTask(updated)
         }
     }
+    
+    private func deleteSubtask(_ subtask: Subtask, from task: TodoTask) {
+        var updated = task
+        updated.subtasks.removeAll { $0.id == subtask.id }
+        for (date, var completion) in updated.completions {
+            if completion.completedSubtasks.contains(subtask.id) {
+                completion.completedSubtasks.remove(subtask.id)
+                updated.completions[date] = completion
+            }
+        }
+        updated.lastModifiedDate = Date()
+        localTask = updated
+        Task {
+            await TaskManager.shared.updateTask(updated)
+        }
+    }
 }
 
 private struct VoiceMemoRow: View {
@@ -1488,10 +1518,11 @@ private struct VoiceMemoRow: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
+                    let progress = memo.duration > 0 ? (player.currentTime / memo.duration) : 0.0
                     WaveformWithProgress(
                         levels: waveform, 
                         color: .blue, 
-                        progress: memo.duration > 0 ? player.currentTime / memo.duration : 0,
+                        progress: progress,
                         onScrub: { p in
                             let t = max(0, min(memo.duration, p * memo.duration))
                             player.seek(to: t)
@@ -1792,7 +1823,7 @@ private struct TaskPerformanceChartView: View {
             
             switch self {
             case .week:
-                let weekAgo = calendar.date(byAdding: .weekOfYear, value: -1, to: now)!
+                let weekAgo = calendar.date(byAdding: .weekOfMonth, value: -1, to: now)!
                 return completions.filter { $0.date >= weekAgo }
             case .month:
                 let monthAgo = calendar.date(byAdding: .month, value: -1, to: now)!

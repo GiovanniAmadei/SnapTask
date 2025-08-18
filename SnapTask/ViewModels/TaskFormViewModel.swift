@@ -608,6 +608,10 @@ class TaskFormViewModel: ObservableObject {
         subtasks.remove(atOffsets: offsets)
     }
     
+    func removeSubtask(withId id: UUID) {
+        subtasks.removeAll { $0.id == id }
+    }
+    
     func reset() {
         name = ""
         description = ""
