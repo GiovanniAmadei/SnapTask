@@ -65,7 +65,16 @@ struct SettingsView: View {
                             
                             Spacer()
                             
-                            if !subscriptionManager.isSubscribed {
+                            // if !subscriptionManager.isSubscribed {
+                            //     PremiumBadge(size: .small)
+                            // }
+                            
+                            if subscriptionManager.isSubscribed {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundColor(.green)
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .frame(width: 24, height: 24)
+                            } else {
                                 PremiumBadge(size: .small)
                             }
                             
@@ -482,7 +491,11 @@ struct SettingsView: View {
                 }
             }
             .sheet(isPresented: $showingPremiumPaywall) {
-                PremiumPaywallView()
+                if subscriptionManager.isSubscribed {
+                    PremiumStatusView()
+                } else {
+                    PremiumPaywallView()
+                }
             }
             .alert("enable_notifications".localized, isPresented: $showingPermissionAlert) {
                 Button("settings".localized) {
