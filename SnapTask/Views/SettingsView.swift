@@ -411,6 +411,48 @@ struct SettingsView: View {
                         }
                     }
                     .listRowBackground(theme.surfaceColor)
+
+                    NavigationLink {
+                        TermsOfServiceView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "doc.text.fill")
+                                .foregroundColor(.gray)
+                                .frame(width: 24)
+                            
+                            Text("terms_of_service".localized)
+                                .themedPrimaryText()
+                            
+                            Spacer()
+                            
+                            // Image(systemName: "chevron.right")
+                            //     .themedSecondaryText()
+                            //     .font(.caption)
+                            //     .frame(width: 12, height: 12)
+                        }
+                    }
+                    .listRowBackground(theme.surfaceColor)
+
+                    NavigationLink {
+                        PrivacyPolicyView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "lock.shield.fill")
+                                .foregroundColor(.gray)
+                                .frame(width: 24)
+                            
+                            Text("privacy_policy".localized)
+                                .themedPrimaryText()
+                            
+                            Spacer()
+                            
+                            // Image(systemName: "chevron.right")
+                            //     .themedSecondaryText()
+                            //     .font(.caption)
+                            //     .frame(width: 12, height: 12)
+                        }
+                    }
+                    .listRowBackground(theme.surfaceColor)
                 } header: {
                     Text("support".localized)
                         .themedSecondaryText()
@@ -490,12 +532,17 @@ struct SettingsView: View {
                     scheduleDailyQuoteNotification()
                 }
             }
+
             .sheet(isPresented: $showingPremiumPaywall) {
-                if subscriptionManager.isSubscribed {
-                    PremiumStatusView()
-                } else {
-                    PremiumPaywallView()
+                Group {
+                    if subscriptionManager.isSubscribed {
+                        PremiumStatusView()
+                    } else {
+                        PremiumPaywallView()
+                    }
                 }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
             .alert("enable_notifications".localized, isPresented: $showingPermissionAlert) {
                 Button("settings".localized) {

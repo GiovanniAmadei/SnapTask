@@ -13,7 +13,6 @@ struct ThemeSelectionView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 24) {
-                // Current theme section
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("current_theme".localized)
@@ -25,7 +24,6 @@ struct ThemeSelectionView: View {
                     CurrentThemeCard(theme: themeManager.currentTheme)
                 }
                 
-                // Free themes section
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("free_themes".localized)
@@ -51,7 +49,6 @@ struct ThemeSelectionView: View {
                     }
                 }
                 
-                // Premium themes section
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("premium_themes".localized)
@@ -100,7 +97,6 @@ struct ThemeSelectionView: View {
         }
         .alert("dark_mode_theme_warning_title".localized, isPresented: $showingDarkModeWarning) {
             Button("keep_dark_mode".localized) {
-                // Disable dark mode and apply the theme
                 isDarkMode = false
                 if let theme = pendingTheme {
                     applyTheme(theme)
@@ -108,7 +104,6 @@ struct ThemeSelectionView: View {
                 pendingTheme = nil
             }
             Button("keep_simple_theme".localized, role: .cancel) {
-                // Keep current theme and don't change anything
                 pendingTheme = nil
             }
         } message: {
@@ -118,10 +113,8 @@ struct ThemeSelectionView: View {
     
     private func selectTheme(_ selectedTheme: Theme) {
         if themeManager.canUseTheme(selectedTheme) {
-            // Don't do anything if already selected
             guard themeManager.currentTheme.id != selectedTheme.id else { return }
             
-            // Check if we're trying to select a theme with custom colors while dark mode is active
             if selectedTheme.overridesSystemColors && isDarkMode {
                 pendingTheme = selectedTheme
                 showingDarkModeWarning = true
@@ -135,19 +128,15 @@ struct ThemeSelectionView: View {
     }
     
     private func applyTheme(_ selectedTheme: Theme) {
-        // Store the selected theme ID for visual feedback
         justSelectedThemeId = selectedTheme.id
         
-        // Apply theme with animation and haptic feedback
         withAnimation(.easeInOut(duration: 0.4)) {
             themeManager.setTheme(selectedTheme)
         }
         
-        // Provide haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
         
-        // Clear the "just selected" state after animation
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             justSelectedThemeId = nil
         }
@@ -213,10 +202,25 @@ struct ThemeCard: View {
                 ThemePreviewCard(theme: theme, isSelected: isSelected)
                 
                 VStack(spacing: 6) {
-                    Text(theme.name)
-                        .font(.system(.subheadline, design: .rounded, weight: .medium))
-                        .themedPrimaryText()
-                        .lineLimit(1)
+                    Group {
+                        if theme.isPremium {
+                            HStack(spacing: 6) {
+                                Image(systemName: "crown.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.purple)
+                                
+                                Text(theme.name)
+                                    .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                    .lineLimit(1)
+                            }
+                            .themedPrimaryText()
+                        } else {
+                            Text(theme.name)
+                                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                .themedPrimaryText()
+                                .lineLimit(1)
+                        }
+                    }
                     
                     // Only show premium badge for premium themes AND user doesn't have access
                     if theme.isPremium && !canUse {
@@ -228,18 +232,6 @@ struct ThemeCard: View {
                             Text("premium".localized)
                                 .font(.system(.caption2, design: .rounded, weight: .medium))
                                 .foregroundColor(.purple)
-                        }
-                    }
-                    
-                    if theme.overridesSystemColors {
-                        HStack(spacing: 4) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption2)
-                                .foregroundColor(.orange)
-                            
-                            Text("custom_colors".localized)
-                                .font(.system(.caption2, design: .rounded, weight: .medium))
-                                .foregroundColor(.orange)
                         }
                     }
                 }
@@ -261,7 +253,6 @@ struct ThemeCard: View {
             .animation(.easeInOut(duration: 0.2), value: isSelected)
             .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0), value: justSelected)
             .overlay(
-                // Success checkmark when just selected
                 Group {
                     if justSelected {
                         Circle()
@@ -289,7 +280,6 @@ struct ThemePreviewCard: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            // Color palette preview
             HStack(spacing: 6) {
                 Circle()
                     .fill(theme.primaryColor)
@@ -304,7 +294,6 @@ struct ThemePreviewCard: View {
                     .frame(width: 14, height: 14)
             }
             
-            // Mock UI elements
             VStack(spacing: 6) {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(theme.surfaceColor)

@@ -38,13 +38,10 @@ struct Theme: Identifiable, Codable, Equatable {
         self.secondaryTextColor = secondaryTextColor
     }
     
-    // Indica se questo tema sovrascrive i colori di sistema (non compatibile con dark mode)
     var overridesSystemColors: Bool {
-        // I temi che usano colori custom per background e testo non sono compatibili con dark mode
         return id == "midnight" || id == "volcanic" || id == "rose_gold" || id == "ocean" || id == "emerald" || id == "lavender"
     }
     
-    // Helper properties for easier access
     var gradient: LinearGradient {
         LinearGradient(
             gradient: Gradient(colors: [primaryColor, secondaryColor]),
@@ -54,8 +51,6 @@ struct Theme: Identifiable, Codable, Equatable {
     }
     
     var cardBackground: Color {
-        // Usa surfaceColor con un'opacità leggermente ridotta per un effetto più morbido
-        // simile alla schermata Premi
         surfaceColor.opacity(0.9)
     }
     
@@ -64,7 +59,6 @@ struct Theme: Identifiable, Codable, Equatable {
     }
     
     var shadowColor: Color {
-        // Migliora la visibilità delle ombre per temi scuri
         if isDarkBackground {
             return Color.black.opacity(0.3)
         } else {
@@ -72,18 +66,14 @@ struct Theme: Identifiable, Codable, Equatable {
         }
     }
     
-    // IMPORTANT: Smart text colors for buttons and contrasting elements
     var buttonTextColor: Color {
-        // Return white for dark buttons, black for light buttons
         return isDarkPrimary ? .white : .black
     }
     
     var onSurfaceTextColor: Color {
-        // Text color to use on surface color background
         return isDarkSurface ? .white : .black
     }
     
-    // Helper computed properties to determine if colors are dark
     private var isDarkPrimary: Bool {
         let uiColor = UIColor(primaryColor)
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
@@ -100,7 +90,6 @@ struct Theme: Identifiable, Codable, Equatable {
         return luminance < 0.5
     }
     
-    // Public property to determine if the theme has a dark background
     var isDarkTheme: Bool {
         return isDarkBackground
     }
@@ -113,21 +102,10 @@ struct Theme: Identifiable, Codable, Equatable {
         return luminance < 0.5
     }
     
-    var warningColor: Color {
-        .orange
-    }
-    
-    var errorColor: Color {
-        .red
-    }
-    
-    var successColor: Color {
-        .green
-    }
-    
-    var infoColor: Color {
-        .blue
-    }
+    var warningColor: Color { .orange }
+    var errorColor: Color { .red }
+    var successColor: Color { .green }
+    var infoColor: Color { .blue }
 }
 
 // MARK: - Theme Manager
@@ -138,7 +116,6 @@ class ThemeManager: ObservableObject {
     @Published var currentTheme: Theme {
         didSet {
             saveCurrentTheme()
-            // Apply theme to the app
             applyTheme()
         }
     }
@@ -146,14 +123,12 @@ class ThemeManager: ObservableObject {
     private let subscriptionManager = SubscriptionManager.shared
     
     private init() {
-        // Load saved theme or default
         self.currentTheme = ThemeManager.loadSavedTheme() ?? ThemeManager.defaultTheme
         applyTheme()
     }
     
     // MARK: - Available Themes
     static let allThemes: [Theme] = [
-        // Free themes
         Theme(
             id: "default",
             name: "theme_default".localized,
@@ -166,7 +141,6 @@ class ThemeManager: ObservableObject {
             textColor: Color.primary,
             secondaryTextColor: Color.secondary
         ),
-        
         Theme(
             id: "forest",
             name: "theme_forest".localized,
@@ -179,7 +153,6 @@ class ThemeManager: ObservableObject {
             textColor: Color.primary,
             secondaryTextColor: Color.secondary
         ),
-        
         Theme(
             id: "sunset",
             name: "theme_sunset".localized,
@@ -192,34 +165,18 @@ class ThemeManager: ObservableObject {
             textColor: Color.primary,
             secondaryTextColor: Color.secondary
         ),
-        
-        // Premium themes with improved contrast
         Theme(
             id: "midnight",
             name: "theme_midnight".localized,
             isPremium: true,
-            primaryColor: Color(red: 0.5, green: 0.2, blue: 0.8),  // Viola più acceso
-            secondaryColor: Color(red: 0.3, green: 0.2, blue: 0.5),  // Viola scuro
-            accentColor: Color(red: 0.8, green: 0.4, blue: 1.0),     // Viola chiaro
-            backgroundColor: Color(red: 0.05, green: 0.05, blue: 0.1), // Nero con sfumatura bluastra
-            surfaceColor: Color(red: 0.15, green: 0.15, blue: 0.2),  // Grigio scuro con sfumatura bluastra
-            textColor: Color.white,                                   // Testo bianco
-            secondaryTextColor: Color(red: 0.9, green: 0.9, blue: 0.95)  // Grigio molto chiaro per migliore leggibilità
+            primaryColor: Color(red: 0.5, green: 0.2, blue: 0.8),
+            secondaryColor: Color(red: 0.3, green: 0.2, blue: 0.5),
+            accentColor: Color(red: 0.8, green: 0.4, blue: 1.0),
+            backgroundColor: Color(red: 0.05, green: 0.05, blue: 0.1),
+            surfaceColor: Color(red: 0.15, green: 0.15, blue: 0.2),
+            textColor: Color.white,
+            secondaryTextColor: Color(red: 0.9, green: 0.9, blue: 0.95)
         ),
-        
-        Theme(
-            id: "amethyst",
-            name: "theme_amethyst".localized,
-            isPremium: true,
-            primaryColor: Color(red: 0.5, green: 0.2, blue: 0.8),  // Viola più acceso
-            secondaryColor: Color(red: 0.3, green: 0.2, blue: 0.5),  // Viola scuro
-            accentColor: Color(red: 0.8, green: 0.4, blue: 1.0),     // Viola chiaro
-            backgroundColor: Color(red: 0.05, green: 0.05, blue: 0.1), // Nero con sfumatura bluastra
-            surfaceColor: Color(red: 0.15, green: 0.15, blue: 0.2),  // Grigio scuro con sfumatura bluastra
-            textColor: Color.white,                                   // Testo bianco
-            secondaryTextColor: Color(red: 0.9, green: 0.9, blue: 0.95)  // Grigio molto chiaro per migliore leggibilità
-        ),
-        
         Theme(
             id: "rose_gold",
             name: "theme_rose_gold".localized,
@@ -232,7 +189,6 @@ class ThemeManager: ObservableObject {
             textColor: Color.black,
             secondaryTextColor: Color(red: 0.4, green: 0.4, blue: 0.4)
         ),
-        
         Theme(
             id: "ocean",
             name: "theme_ocean".localized,
@@ -245,7 +201,6 @@ class ThemeManager: ObservableObject {
             textColor: Color.black,
             secondaryTextColor: Color(red: 0.2, green: 0.4, blue: 0.6)
         ),
-        
         Theme(
             id: "emerald",
             name: "theme_emerald".localized,
@@ -258,7 +213,6 @@ class ThemeManager: ObservableObject {
             textColor: Color.black,
             secondaryTextColor: Color(red: 0.1, green: 0.5, blue: 0.3)
         ),
-        
         Theme(
             id: "volcanic",
             name: "theme_volcanic".localized,
@@ -269,9 +223,8 @@ class ThemeManager: ObservableObject {
             backgroundColor: Color(red: 0.15, green: 0.1, blue: 0.1),
             surfaceColor: Color(red: 0.2, green: 0.15, blue: 0.15),
             textColor: Color.white,
-            secondaryTextColor: Color(red: 0.9, green: 0.7, blue: 0.7) 
+            secondaryTextColor: Color(red: 0.9, green: 0.7, blue: 0.7)
         ),
-        
         Theme(
             id: "lavender",
             name: "theme_lavender".localized,
@@ -290,7 +243,6 @@ class ThemeManager: ObservableObject {
     
     // MARK: - Public Methods
     func setTheme(_ theme: Theme) {
-        // Check if theme is premium and user has access
         if theme.isPremium && !subscriptionManager.hasAccess(to: .customThemes) {
             print("⚠️ Attempted to set premium theme without subscription: \(theme.name)")
             return
@@ -307,38 +259,24 @@ class ThemeManager: ObservableObject {
         return true
     }
     
-    var availableThemes: [Theme] {
-        return Self.allThemes
-    }
+    var availableThemes: [Theme] { Self.allThemes }
+    var freeThemes: [Theme] { Self.allThemes.filter { !$0.isPremium } }
+    var premiumThemes: [Theme] { Self.allThemes.filter { $0.isPremium } }
     
-    var freeThemes: [Theme] {
-        return Self.allThemes.filter { !$0.isPremium }
-    }
-    
-    var premiumThemes: [Theme] {
-        return Self.allThemes.filter { $0.isPremium }
-    }
-    
-    // Public property to determine if the current theme has a dark background
     var isDarkTheme: Bool {
-        // Solo i temi premium sovrascrivono la dark mode
         if currentTheme.overridesSystemColors {
             return currentTheme.isDarkTheme
         } else {
-            // Per i temi base, usa la dark mode di sistema
             return UIScreen.main.traitCollection.userInterfaceStyle == .dark
         }
     }
     
     // MARK: - Private Methods
     private func applyTheme() {
-        // Update global tint color
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
             windowScene.windows.first?.tintColor = UIColor(currentTheme.accentColor)
         }
         
-        // Configure status bar style based on theme
-        // Solo i temi premium sovrascrivono la status bar
         if currentTheme.overridesSystemColors {
             if currentTheme.isDarkTheme {
                 UIApplication.shared.statusBarStyle = .lightContent
@@ -346,32 +284,23 @@ class ThemeManager: ObservableObject {
                 UIApplication.shared.statusBarStyle = .darkContent
             }
         } else {
-            // Per i temi base, usa lo stile di sistema
             UIApplication.shared.statusBarStyle = .default
         }
         
-        // Configure tab bar appearance
         let tabBarAppearance = UITabBarAppearance()
         tabBarAppearance.configureWithOpaqueBackground()
         tabBarAppearance.backgroundColor = UIColor(currentTheme.backgroundColor)
-        
-        // Configure normal (unselected) tab items
         tabBarAppearance.stackedLayoutAppearance.normal.iconColor = UIColor(currentTheme.secondaryTextColor)
         tabBarAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [
             .foregroundColor: UIColor(currentTheme.secondaryTextColor)
         ]
-        
-        // Configure selected tab items
         tabBarAppearance.stackedLayoutAppearance.selected.iconColor = UIColor(currentTheme.primaryColor)
         tabBarAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [
             .foregroundColor: UIColor(currentTheme.primaryColor)
         ]
-        
-        // Apply the appearance
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
         
-        // Configure navigation bar appearance
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithOpaqueBackground()
         navBarAppearance.backgroundColor = UIColor(currentTheme.backgroundColor)
@@ -381,12 +310,10 @@ class ThemeManager: ObservableObject {
         navBarAppearance.largeTitleTextAttributes = [
             .foregroundColor: UIColor(currentTheme.textColor)
         ]
-        
         UINavigationBar.appearance().standardAppearance = navBarAppearance
         UINavigationBar.appearance().compactAppearance = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
         
-        // Post notification for views to update
         NotificationCenter.default.post(name: .themeChanged, object: currentTheme)
     }
 
@@ -398,12 +325,11 @@ class ThemeManager: ObservableObject {
     
     private static func loadSavedTheme() -> Theme? {
         guard let data = UserDefaults.standard.data(forKey: "currentTheme"),
-              let theme = try? JSONDecoder().decode(Theme.self, from: data) else {
+              let savedTheme = try? JSONDecoder().decode(Theme.self, from: data) else {
             return nil
         }
-        
-        // Make sure the theme still exists in our available themes
-        return allThemes.first { $0.id == theme.id }
+        let migratedId = (savedTheme.id == "amethyst") ? "midnight" : savedTheme.id
+        return allThemes.first { $0.id == migratedId }
     }
 }
 

@@ -1,5 +1,6 @@
 import SwiftUI
 import StoreKit
+import UIKit
 
 struct PremiumPaywallView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
@@ -12,34 +13,43 @@ struct PremiumPaywallView: View {
     @State private var showingTerms = false
     @State private var showingPrivacy = false
     
+    // Metriche responsive per iPhone vs iPad
+    private var isCompactPhone: Bool { UIDevice.current.userInterfaceIdiom == .phone }
+    private var headerIconSize: CGFloat { isCompactPhone ? 44 : 50 }
+    private var headerCrownSize: CGFloat { isCompactPhone ? 18 : 20 }
+    private var featureCardHeight: CGFloat { isCompactPhone ? 46 : 50 }
+    private var lifetimeCardHeight: CGFloat { isCompactPhone ? 114 : 100 }
+    private var planCardHeight: CGFloat { isCompactPhone ? 102 : 95 }
+    private var purchaseButtonHeight: CGFloat { isCompactPhone ? 46 : 50 }
+    
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Header Section
-                headerSection
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                
-                // Premium Features - Compact Grid
-                premiumFeaturesCompact
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                
-                // Subscription Plans
-                subscriptionPlansCompact
-                    .padding(.horizontal, 20)
-                
-                // Purchase Button
-                purchaseButton
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                
-                // Footer actions
-                footerActions
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-                
-                Spacer(minLength: 0)
+            ScrollView {
+                VStack(spacing: 0) {
+                    headerSection
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                    
+                    premiumFeaturesCompact
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    
+                    subscriptionPlansCompact
+                        .padding(.horizontal, 20)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 6) {
+                    purchaseButton
+                        .padding(.horizontal, 20)
+                        .padding(.top, 6)
+                    
+                    footerActions
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 6)
+                }
+                .background(.ultraThinMaterial)
             }
             .navigationTitle("snaptask_pro".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -60,6 +70,13 @@ struct PremiumPaywallView: View {
         .onAppear {
             Task {
                 await subscriptionManager.loadProducts()
+                if selectedProduct == nil {
+                    switch selectedPlan {
+                    case "lifetime": selectedProduct = subscriptionManager.lifetimeProduct
+                    case "yearly": selectedProduct = subscriptionManager.yearlyProduct
+                    default: selectedProduct = subscriptionManager.monthlyProduct
+                    }
+                }
                 print("🔍 Products loaded in PaywallView:")
                 print("   Monthly: \(subscriptionManager.monthlyProduct?.displayPrice ?? "nil")")
                 print("   Yearly: \(subscriptionManager.yearlyProduct?.displayPrice ?? "nil")")
@@ -70,7 +87,7 @@ struct PremiumPaywallView: View {
     
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ZStack {
                 Circle()
                     .fill(
@@ -80,15 +97,15 @@ struct PremiumPaywallView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 50, height: 50)
+                    .frame(width: headerIconSize, height: headerIconSize)
                     .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 3)
                 
                 Image(systemName: "crown.fill")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: headerCrownSize, weight: .bold))
                     .foregroundColor(.white)
             }
             
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Text("unlock_snaptask_pro".localized)
                     .font(.title3.bold())
                     .foregroundColor(.primary)
@@ -117,32 +134,38 @@ struct PremiumPaywallView: View {
                 CompactFeatureCard(
                     icon: "folder.fill",
                     title: "unlimited_categories".localized,
-                    color: .blue
+                    color: .blue,
+                    height: featureCardHeight
                 )
                 CompactFeatureCard(
-                    icon: "star.fill", 
+                    icon: "star.fill",
                     title: "task_evaluation".localized,
-                    color: .yellow
+                    color: .yellow,
+                    height: featureCardHeight
                 )
                 CompactFeatureCard(
                     icon: "gift.fill",
                     title: "unlimited_rewards".localized,
-                    color: .purple
+                    color: .purple,
+                    height: featureCardHeight
                 )
                 CompactFeatureCard(
                     icon: "icloud.fill",
                     title: "cloud_sync".localized,
-                    color: .cyan
+                    color: .cyan,
+                    height: featureCardHeight
                 )
                 CompactFeatureCard(
                     icon: "chart.line.uptrend.xyaxis",
                     title: "advanced_statistics".localized,
-                    color: .green
+                    color: .green,
+                    height: featureCardHeight
                 )
                 CompactFeatureCard(
                     icon: "paintbrush.fill",
                     title: "custom_themes".localized,
-                    color: .pink
+                    color: .pink,
+                    height: featureCardHeight
                 )
             }
         }
@@ -157,7 +180,6 @@ struct PremiumPaywallView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             VStack(spacing: 8) {
-                // Lifetime Option - Most attractive
                 Button(action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         selectedPlan = "lifetime"
@@ -172,13 +194,13 @@ struct PremiumPaywallView: View {
                         isSelected: selectedPlan == "lifetime",
                         badgeColor: .orange,
                         isLifetime: true,
-                        savingsAmount: subscriptionManager.lifetimeSavingsAmount
+                        savingsAmount: subscriptionManager.lifetimeSavingsAmount,
+                        cardHeight: lifetimeCardHeight
                     )
                 }
                 .buttonStyle(.plain)
                 
                 HStack(spacing: 8) {
-                    // Yearly Plan
                     Button(action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             selectedPlan = "yearly"
@@ -193,12 +215,12 @@ struct PremiumPaywallView: View {
                             isSelected: selectedPlan == "yearly",
                             badgeColor: .green,
                             isLifetime: false,
-                            savingsAmount: subscriptionManager.yearlySavingsAmount
+                            savingsAmount: subscriptionManager.yearlySavingsAmount,
+                            cardHeight: planCardHeight
                         )
                     }
                     .buttonStyle(.plain)
                     
-                    // Monthly Plan
                     Button(action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             selectedPlan = "monthly"
@@ -213,7 +235,8 @@ struct PremiumPaywallView: View {
                             isSelected: selectedPlan == "monthly",
                             badgeColor: .purple,
                             isLifetime: false,
-                            savingsAmount: nil
+                            savingsAmount: nil,
+                            cardHeight: planCardHeight
                         )
                     }
                     .buttonStyle(.plain)
@@ -225,9 +248,7 @@ struct PremiumPaywallView: View {
     // MARK: - Purchase Button
     private var purchaseButton: some View {
         Button {
-            Task {
-                await handlePurchase()
-            }
+            Task { await handlePurchase() }
         } label: {
             HStack {
                 if isProcessingPurchase {
@@ -244,6 +265,8 @@ struct PremiumPaywallView: View {
                             Text(String(format: "days_free_then".localized, selectedProduct?.displayPrice ?? "---"))
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                         } else if selectedPlan == "lifetime" {
                             Text("purchase_lifetime_access".localized)
                                 .font(.headline.weight(.semibold))
@@ -256,12 +279,14 @@ struct PremiumPaywallView: View {
                             Text(selectedPlan == "yearly" ? "subscribe_yearly_plan".localized : "subscribe_monthly_plan".localized)
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.9)
                         }
                     }
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: purchaseButtonHeight)
             .background(
                 LinearGradient(
                     colors: selectedPlan == "lifetime" ? [.orange, .red] : [.purple, .pink],
@@ -278,46 +303,42 @@ struct PremiumPaywallView: View {
     
     // MARK: - Footer Actions
     private var footerActions: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             HStack(spacing: 16) {
                 Button {
-                    Task {
-                        await handleRestorePurchases()
-                    }
+                    Task { await handleRestorePurchases() }
                 } label: {
                     Text("restore_purchases".localized)
                         .font(.footnote.weight(.medium))
                         .foregroundColor(.purple)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 .disabled(isProcessingPurchase)
                 
-                Button {
-                    subscriptionManager.manageSubscriptions()
-                } label: {
+                Button { subscriptionManager.manageSubscriptions() } label: {
                     Text("manage_subscriptions".localized)
                         .font(.footnote.weight(.medium))
                         .foregroundColor(.purple)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
             }
             
             HStack(spacing: 16) {
-                Button("terms_of_service".localized) {
-                    showingTerms = true
-                }
+                Button("terms_of_service".localized) { showingTerms = true }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 
-                Button("privacy_policy".localized) {
-                    showingPrivacy = true
-                }
+                Button("privacy_policy".localized) { showingPrivacy = true }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             }
             .font(.caption2)
             .foregroundColor(.secondary)
         }
-        .sheet(isPresented: $showingTerms) {
-            TermsOfServiceView()
-        }
-        .sheet(isPresented: $showingPrivacy) {
-            PrivacyPolicyView()
-        }
+        .sheet(isPresented: $showingTerms) { TermsOfServiceView() }
+        .sheet(isPresented: $showingPrivacy) { PrivacyPolicyView() }
     }
     
     // MARK: - Actions
@@ -380,6 +401,7 @@ struct CompactFeatureCard: View {
     let icon: String
     let title: String
     let color: Color
+    let height: CGFloat
     
     var body: some View {
         VStack(spacing: 4) {
@@ -401,7 +423,7 @@ struct CompactFeatureCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 50)
+        .frame(height: height)
         .padding(.vertical, 6)
         .padding(.horizontal, 4)
         .background(
@@ -426,6 +448,7 @@ struct CompactSubscriptionCard: View {
     let badgeColor: Color
     let isLifetime: Bool
     let savingsAmount: String?
+    let cardHeight: CGFloat
     
     // Calcolo del risparmio
     private var savingsText: String? {
@@ -435,7 +458,7 @@ struct CompactSubscriptionCard: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Badge - spazio fisso
+            // Badge
             VStack {
                 if let badge = badge {
                     Text(badge)
@@ -443,12 +466,8 @@ struct CompactSubscriptionCard: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(badgeColor)
-                        )
+                        .background(RoundedRectangle(cornerRadius: 6).fill(badgeColor))
                 } else {
-                    // Spazio invisibile della stessa altezza del badge
                     Text(" ")
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 8)
@@ -458,9 +477,8 @@ struct CompactSubscriptionCard: View {
             }
             .frame(height: 20)
             
-            Spacer(minLength: 4) // Spazio flessibile dopo il badge
+            Spacer(minLength: 4)
             
-            // Contenuto principale
             VStack(spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -475,9 +493,11 @@ struct CompactSubscriptionCard: View {
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .minimumScaleFactor(0.9)
             }
             
-            Spacer(minLength: 4) // Spazio flessibile prima del savings
+            Spacer(minLength: 4)
             
             // Savings text
             VStack {
@@ -485,19 +505,21 @@ struct CompactSubscriptionCard: View {
                     Text(savingsText)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.green)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 } else {
-                    // Spazio invisibile per mantenere l'allineamento
                     Text(" ")
                         .font(.system(size: 11, weight: .semibold))
                         .opacity(0)
                 }
             }
-            .frame(height: 16)
+            .frame(height: 20)
+            .padding(.bottom, 4)
             
-            Spacer(minLength: 2) // Piccolo spazio finale
+            Spacer(minLength: 8)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: isLifetime ? 100 : 95) // Altezze più ragionevoli
+        .frame(height: cardHeight)
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(
@@ -506,10 +528,10 @@ struct CompactSubscriptionCard: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(
-                            isSelected ? 
+                            isSelected ?
                                 LinearGradient(
-                                    colors: isLifetime ? [.orange, .red] : [.purple, .pink], 
-                                    startPoint: .leading, 
+                                    colors: isLifetime ? [.orange, .red] : [.purple, .pink],
+                                    startPoint: .leading,
                                     endPoint: .trailing
                                 ) :
                                 LinearGradient(colors: [.gray.opacity(0.3)], startPoint: .leading, endPoint: .trailing),
@@ -517,11 +539,9 @@ struct CompactSubscriptionCard: View {
                         )
                 )
                 .shadow(
-                    color: isSelected ? 
-                        (isLifetime ? Color.orange.opacity(0.15) : Color.purple.opacity(0.15)) : 
-                        Color.black.opacity(0.05), 
-                    radius: isSelected ? 8 : 3, 
-                    x: 0, 
+                    color: isSelected ? (isLifetime ? Color.orange.opacity(0.15) : Color.purple.opacity(0.15)) : Color.black.opacity(0.05),
+                    radius: isSelected ? 8 : 3,
+                    x: 0,
                     y: isSelected ? 4 : 2
                 )
         )
@@ -533,21 +553,31 @@ struct CompactSubscriptionCard: View {
 // MARK: - Legal Views 
 struct TermsOfServiceView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var mdText: String = ""
+    
+    private func reload() {
+        let lang = LanguageManager.shared.actualLanguageCode
+        mdText = LegalMarkdownLoader.load(.terms, languageCode: lang) ?? LegalTexts.termsOfServiceEN
+    }
     
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("terms_of_service_title".localized)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("terms_of_service".localized)
                         .font(.title.bold())
+                        .padding(.bottom, 4)
                     
-                    Text("terms_content".localized)
-                        .font(.body)
-                        .foregroundColor(.secondary)
+                    MarkdownView(text: mdText.isEmpty ? LegalTexts.termsOfServiceEN : mdText)
+                        .tint(.blue)
                 }
                 .padding()
             }
-            .navigationTitle("terms".localized)
+            .onAppear { reload() }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LanguageChanged"))) { _ in
+                reload()
+            }
+            .navigationTitle("terms_of_service".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -562,21 +592,31 @@ struct TermsOfServiceView: View {
 
 struct PrivacyPolicyView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var mdText: String = ""
+    
+    private func reload() {
+        let lang = LanguageManager.shared.actualLanguageCode
+        mdText = LegalMarkdownLoader.load(.privacy, languageCode: lang) ?? LegalTexts.privacyPolicyEN
+    }
     
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("privacy_policy_title".localized)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("privacy_policy".localized)
                         .font(.title.bold())
+                        .padding(.bottom, 4)
                     
-                    Text("privacy_content".localized)
-                        .font(.body)
-                        .foregroundColor(.secondary)
+                    MarkdownView(text: mdText.isEmpty ? LegalTexts.privacyPolicyEN : mdText)
+                        .tint(.blue)
                 }
                 .padding()
             }
-            .navigationTitle("privacy".localized)
+            .onAppear { reload() }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LanguageChanged"))) { _ in
+                reload()
+            }
+            .navigationTitle("privacy_policy".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
