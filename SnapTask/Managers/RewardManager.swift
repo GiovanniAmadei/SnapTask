@@ -18,6 +18,11 @@ class RewardManager: ObservableObject {
         loadDailyPointsHistory()
         loadCategoryPointsHistory()
         
+        if !UserDefaults.standard.bool(forKey: "fixed_double_count_points_v1") {
+            recalculatePointsFromTasks()
+            UserDefaults.standard.set(true, forKey: "fixed_double_count_points_v1")
+        }
+        
         // Listen for CloudKit data changes
         NotificationCenter.default.publisher(for: .cloudKitDataChanged)
             .receive(on: DispatchQueue.main)
@@ -117,9 +122,7 @@ class RewardManager: ObservableObject {
         
         print("🎯 Points updated for \(startOfDay): \(currentDailyPoints) + \(points) = \(finalTotal)")
         
-        // Sync with CloudKit
-        let pointsEntry = PointsHistory(date: startOfDay, points: points, frequency: .daily)
-        CloudKitService.shared.savePointsEntry(pointsEntry)
+        // CloudKitService.shared.savePointsEntry(pointsEntry)
         
         objectWillChange.send()
     }
@@ -140,19 +143,16 @@ class RewardManager: ObservableObject {
         
         categoryPointsHistory[categoryId]![startOfDay] = finalTotal
         
-        // Also add to general points for total tracking with same safety
-        let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
-        let newDailyTotal = currentDailyPoints + points
-        dailyPointsHistory[startOfDay] = max(newDailyTotal, 0)
+        // let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
+        // let newDailyTotal = currentDailyPoints + points
+        // dailyPointsHistory[startOfDay] = max(newDailyTotal, 0)
         
         saveDailyPointsHistory()
         saveCategoryPointsHistory()
         
         print("🏷️ Category points updated for \(categoryName ?? "Unknown") on \(startOfDay): \(currentCategoryPoints) + \(points) = \(finalTotal)")
         
-        // Sync with CloudKit
-        let categoryPointsEntry = PointsHistory(date: startOfDay, points: points, frequency: .daily, categoryId: categoryId, categoryName: categoryName)
-        CloudKitService.shared.savePointsEntry(categoryPointsEntry)
+        // CloudKitService.shared.savePointsEntry(categoryPointsEntry)
         
         objectWillChange.send()
     }
@@ -252,8 +252,9 @@ class RewardManager: ObservableObject {
         saveDailyPointsHistory()
         saveCategoryPointsHistory()
         
-        // Note: CloudKit data will be handled by the sync process
-        // We don't delete individual records here to avoid conflicts
+        Task {
+            await CloudKitService.shared.clearAllPointsHistory()
+        }
         
         objectWillChange.send()
         print("🎯 All points reset - new total: \(totalPoints())")
@@ -282,6 +283,8 @@ class RewardManager: ObservableObject {
         if let data = try? JSONEncoder().encode(deletionTracker) {
             UserDefaults.standard.set(data, forKey: "cloudkit_deleted_items")
         }
+        
+        await CloudKitService.shared.clearAllPointsHistory()
         
         // Wait a moment for cleanup
         try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -561,6 +564,34 @@ class RewardManager: ObservableObject {
                 saveCategoryPointsHistory()
             }
         }
+    }
+    
+    func recalculatePointsFromTasks() {
+        print("🧮 Recalculating points history from tasks...")
+        var newDaily: [Date: Int] = [:]
+        var newCategory: [UUID: [Date: Int]] = [:]
+        let calendar = Calendar.current
+        
+        for task in TaskManager.shared.tasks {
+            guard task.hasRewardPoints, task.rewardPoints > 0 else { continue }
+            for completionDate in task.completionDates {
+                let day = calendar.startOfDay(for: completionDate)
+                newDaily[day, default: 0] += task.rewardPoints
+                if let categoryId = task.category?.id {
+                    var hist = newCategory[categoryId] ?? [:]
+                    hist[day, default: 0] += task.rewardPoints
+                    newCategory[categoryId] = hist
+                }
+            }
+        }
+        
+        dailyPointsHistory = newDaily
+        categoryPointsHistory = newCategory
+        saveDailyPointsHistory()
+        saveCategoryPointsHistory()
+        objectWillChange.send()
+        
+        print("✅ Points history recalculated. Days: \(dailyPointsHistory.count), Categories: \(categoryPointsHistory.count)")
     }
 }
 

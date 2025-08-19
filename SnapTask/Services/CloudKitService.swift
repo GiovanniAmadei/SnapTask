@@ -435,6 +435,7 @@ class CloudKitService: ObservableObject {
     func savePointsEntry(_ entry: PointsHistory) {
         guard isCloudKitEnabled else { return }
         
+        // Non più usata dalle chiamate di RewardManager per evitare duplicati.
         Task {
             do {
                 let record = createPointsHistoryRecord(from: entry)
@@ -1922,6 +1923,71 @@ class CloudKitService: ObservableObject {
                 "trackingSessions": deletedItems.trackingSessions.count
             ]
         ]
+    }
+    
+    // MARK: - Clear all PointsHistory records from CloudKit (used by resets)
+    func clearAllPointsHistory() async {
+        guard isCloudKitEnabled else {
+            print("ℹ️ CloudKit disabled, skipping points history clear")
+            return
+        }
+        
+        do {
+            var allIDs: [CKRecord.ID] = []
+            var cursor: CKQueryOperation.Cursor? = nil
+            
+            repeat {
+                let operation: CKQueryOperation
+                if let c = cursor {
+                    operation = CKQueryOperation(cursor: c)
+                } else {
+                    let query = CKQuery(recordType: pointsHistoryRecordType, predicate: NSPredicate(value: true))
+                    operation = CKQueryOperation(query: query)
+                    operation.zoneID = zoneID
+                }
+                
+                operation.resultsLimit = 500
+                operation.recordFetchedBlock = { record in
+                    allIDs.append(record.recordID)
+                }
+                
+                cursor = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<CKQueryOperation.Cursor?, Error>) in
+                    operation.queryCompletionBlock = { nextCursor, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume(returning: nextCursor)
+                        }
+                    }
+                    self.privateDatabase.add(operation)
+                }
+            } while cursor != nil
+            
+            guard !allIDs.isEmpty else {
+                print("ℹ️ No PointsHistory records to clear")
+                return
+            }
+            
+            let batchSize = 200
+            for i in stride(from: 0, to: allIDs.count, by: batchSize) {
+                let chunk = Array(allIDs[i..<min(i + batchSize, allIDs.count)])
+                let op = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: chunk)
+                _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    op.modifyRecordsCompletionBlock = { saved, deleted, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume(returning: ())
+                        }
+                    }
+                    self.privateDatabase.add(op)
+                }
+            }
+            
+            print("🧹 Cleared \(allIDs.count) PointsHistory records from CloudKit")
+        } catch {
+            print("❌ Failed to clear PointsHistory from CloudKit: \(error)")
+        }
     }
 }
 

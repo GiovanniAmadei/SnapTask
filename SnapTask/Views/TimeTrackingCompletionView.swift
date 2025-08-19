@@ -356,6 +356,9 @@ struct TimeTrackingCompletionView: View {
             // Pre-select task category if available
             if let taskCategory = task?.category {
                 selectedCategory = taskCategory
+            } else if let categoryId = session?.categoryId,
+                      let category = CategoryManager.shared.categories.first(where: { $0.id == categoryId }) {
+                selectedCategory = category
             }
         }
     }
@@ -420,7 +423,7 @@ struct TimeTrackingCompletionView: View {
         } else if let category = selectedCategory {
             print(" Saving to category: \(category.name)")
             
-            // Mark task as completed if it exists, but DON'T save as individual task
+            // Mark task as completed if it exists, and SAVE actual duration so it shows in task details
             if let task = task {
                 if TaskManager.shared.tasks.contains(where: { $0.id == task.id }) {
                     let calendar = Calendar.current
@@ -428,10 +431,9 @@ struct TimeTrackingCompletionView: View {
                     
                     TaskManager.shared.toggleTaskCompletion(task.id, on: today)
                     
-                    // Just save basic rating data without duration to avoid syncActualDurationWithStatistics
                     TaskManager.shared.updateTaskRating(
                         taskId: task.id, 
-                        actualDuration: nil, // NO DURATION to prevent double tracking
+                        actualDuration: editedFocusTime, 
                         difficultyRating: nil, 
                         qualityRating: nil, 
                         notes: nil, 
@@ -452,7 +454,7 @@ struct TimeTrackingCompletionView: View {
                         CloudKitService.shared.saveTask(updatedTask)
                     }
                     
-                    print(" Task marked complete but time tracked to category")
+                    print(" Task marked complete and duration saved; time tracked to category")
                 } else {
                     print(" Task no longer exists during category tracking")
                 }

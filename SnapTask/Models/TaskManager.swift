@@ -272,12 +272,10 @@ class TaskManager: ObservableObject {
             print(" [DEBUG] Task timeScope: \(task.timeScope.rawValue)")
             print(" [DEBUG] Total completions in task: \(task.completions.count)")
             
-            // Log all existing completions
             for (dateKey, completion) in task.completions {
                 print(" [DEBUG] Existing completion: \(dateKey) -> isCompleted=\(completion.isCompleted), actualDuration=\(completion.actualDuration ?? -1), difficulty=\(completion.difficultyRating ?? -1), quality=\(completion.qualityRating ?? -1), notes=\(completion.notes ?? "nil")")
             }
             
-            // Get or create completion for this specific date - PRESERVE existing data, only update what's passed
             var completion = task.completions[targetDate] ?? TaskCompletion(
                 isCompleted: false,
                 completedSubtasks: [],
@@ -290,13 +288,16 @@ class TaskManager: ObservableObject {
             
             print(" [DEBUG] Existing completion for \(targetDate): isCompleted=\(completion.isCompleted), actualDuration=\(completion.actualDuration ?? -1), difficulty=\(completion.difficultyRating ?? -1), quality=\(completion.qualityRating ?? -1), notes=\(completion.notes ?? "nil")")
             
-            // Store old values for statistics sync
             let oldActualDuration = completion.actualDuration
             
-            // Update ONLY the ratings that were passed in
             if let actualDuration = actualDuration {
-                completion.actualDuration = actualDuration
-                print(" [DEBUG] Set actualDuration to \(actualDuration)")
+                if actualDuration > 0 {
+                    completion.actualDuration = actualDuration
+                    print(" [DEBUG] Set actualDuration to \(actualDuration)")
+                } else {
+                    completion.actualDuration = nil
+                    print(" [DEBUG] Cleared actualDuration (0 or negative provided)")
+                }
             }
             
             if let difficultyRating = difficultyRating {
@@ -314,7 +315,6 @@ class TaskManager: ObservableObject {
                 print(" [DEBUG] Set notes to \(notes)")
             }
             
-            // Set completion date if not already set and this completion has any data
             if completion.completionDate == nil && (completion.actualDuration != nil || completion.difficultyRating != nil || completion.qualityRating != nil || completion.notes != nil) {
                 completion.completionDate = Date()
                 print(" [DEBUG] Set completionDate to \(Date())")
@@ -322,12 +322,10 @@ class TaskManager: ObservableObject {
             
             print(" [DEBUG] Updated completion object: actualDuration=\(completion.actualDuration ?? -1), difficulty=\(completion.difficultyRating ?? -1), quality=\(completion.qualityRating ?? -1), notes=\(completion.notes ?? "nil")")
             
-            // Update the completion in the task - this should NOT affect other dates
             task.completions[targetDate] = completion
             
             print(" [DEBUG] After assignment - task.completions[\(targetDate)]: actualDuration=\(task.completions[targetDate]?.actualDuration ?? -1), difficulty=\(task.completions[targetDate]?.difficultyRating ?? -1), quality=\(task.completions[targetDate]?.qualityRating ?? -1), notes=\(task.completions[targetDate]?.notes ?? "nil")")
             
-            // Verify other dates are NOT affected
             for (dateKey, otherCompletion) in task.completions {
                 if dateKey != targetDate {
                     print(" [DEBUG] Other completion \(dateKey): actualDuration=\(otherCompletion.actualDuration ?? -1), difficulty=\(otherCompletion.difficultyRating ?? -1), quality=\(otherCompletion.qualityRating ?? -1), notes=\(otherCompletion.notes ?? "nil")")
@@ -337,17 +335,29 @@ class TaskManager: ObservableObject {
             task.lastModifiedDate = Date()
             tasks[index] = task
             
-            // SYNC WITH STATISTICS: If actualDuration was updated, sync with time tracking data
-            if actualDuration != nil && oldActualDuration != completion.actualDuration {
-                syncActualDurationWithStatistics(
-                    taskId: taskId,
-                    taskName: task.name,
-                    categoryId: task.category?.id,
-                    categoryColor: task.category?.color,
-                    oldDuration: oldActualDuration,
-                    newDuration: completion.actualDuration,
-                    for: targetDate
-                )
+            if oldActualDuration != completion.actualDuration {
+                if completion.isCompleted, let newDuration = completion.actualDuration, newDuration > 0 {
+                    syncActualDurationWithStatistics(
+                        taskId: taskId,
+                        taskName: task.name,
+                        categoryId: task.category?.id,
+                        categoryColor: task.category?.color,
+                        oldDuration: oldActualDuration,
+                        newDuration: newDuration,
+                        for: targetDate
+                    )
+                } else {
+                    // Either unchecked or cleared -> ensure removal from stats
+                    syncActualDurationWithStatistics(
+                        taskId: taskId,
+                        taskName: task.name,
+                        categoryId: task.category?.id,
+                        categoryColor: task.category?.color,
+                        oldDuration: oldActualDuration,
+                        newDuration: nil,
+                        for: targetDate
+                    )
+                }
             }
             
             print(" [DEBUG] Final task completions count: \(tasks[index].completions.count)")
@@ -355,8 +365,6 @@ class TaskManager: ObservableObject {
             
             saveTasks()
             notifyTasksUpdated()
-            
-            // Sync with CloudKit
             debouncedSaveTask(task)
             
             print(" Updated ratings for task: \(task.name) on \(targetDate)")
@@ -493,6 +501,33 @@ class TaskManager: ObservableObject {
             } else {
                 task.completionDates.removeAll { $0 == completionDate }
                 print("📅 Removed completion date: \(completionDate)")
+            }
+            
+            let actualForDate = completion.actualDuration
+            if isCompleting {
+                if let ad = actualForDate, ad > 0 {
+                    syncActualDurationWithStatistics(
+                        taskId: taskId,
+                        taskName: task.name,
+                        categoryId: task.category?.id,
+                        categoryColor: task.category?.color,
+                        oldDuration: nil,
+                        newDuration: ad,
+                        for: completionDate
+                    )
+                }
+            } else {
+                if actualForDate != nil {
+                    syncActualDurationWithStatistics(
+                        taskId: taskId,
+                        taskName: task.name,
+                        categoryId: task.category?.id,
+                        categoryColor: task.category?.color,
+                        oldDuration: actualForDate,
+                        newDuration: nil,
+                        for: completionDate
+                    )
+                }
             }
             
             if task.hasRewardPoints && task.subtasks.isEmpty {

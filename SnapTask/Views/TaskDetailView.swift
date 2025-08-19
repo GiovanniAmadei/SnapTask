@@ -232,7 +232,11 @@ struct TaskDetailView: View {
         )
         
         if updateDuration {
-            completion.actualDuration = actualDuration == 0 ? nil : actualDuration
+            if let actualDuration = actualDuration, actualDuration > 0 {
+                completion.actualDuration = actualDuration
+            } else {
+                completion.actualDuration = nil
+            }
         }
         
         if updateDifficulty {
@@ -519,9 +523,9 @@ struct TaskDetailView: View {
     }
     
     private func durationSectionTask(_ task: TodoTask) -> some View {
-        let hasActualDuration = task.completions[completionKey]?.actualDuration != nil
-        let hasEstimatedDuration = task.hasDuration
         let actualDuration = task.completions[completionKey]?.actualDuration
+        let hasActualDuration = (actualDuration ?? 0) > 0
+        let hasEstimatedDuration = task.hasDuration
         let estimatedDuration = task.duration
         
         return Group {
@@ -542,7 +546,7 @@ struct TaskDetailView: View {
                             .foregroundColor(.blue)
                             
                             Button("clear".localized) {
-                                updateLocalTaskRating(actualDuration: 0, updateDuration: true)
+                                updateLocalTaskRating(actualDuration: nil, updateDuration: true)
                             }
                             .font(.caption)
                             .foregroundColor(.red)
@@ -1097,7 +1101,6 @@ struct TaskDetailView: View {
                         }
                     }
                     
-                    // Unified add button
                     Button {
                         showPhotoSourceDialog = true
                     } label: {
@@ -1132,23 +1135,11 @@ struct TaskDetailView: View {
                             .clipped()
                             .cornerRadius(10)
                         VStack(alignment: .leading, spacing: 8) {
-                            // Unified add button (camera or gallery)
                             Button {
                                 showPhotoSourceDialog = true
                             } label: {
                                 HStack {
-                                    Image(systemName: "plus.circle")
-                                        .font(.system(size: 14))
-                                    Text("add_photos".localized)
-                                        .font(.subheadline.weight(.medium))
-                                }
-                                .foregroundColor(.blue)
-                            }
-
-                            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
-                                HStack {
                                     Image(systemName: "pencil")
-                                        .font(.system(size: 14))
                                     Text("change_photo".localized)
                                         .font(.subheadline.weight(.medium))
                                 }
@@ -1160,7 +1151,6 @@ struct TaskDetailView: View {
                             } label: {
                                 HStack {
                                     Image(systemName: "trash")
-                                        .font(.system(size: 14))
                                     Text("remove_photo".localized)
                                         .font(.subheadline.weight(.medium))
                                 }
@@ -1170,7 +1160,6 @@ struct TaskDetailView: View {
                         Spacer()
                     }
                 } else {
-                    // No photos yet
                     Button {
                         showPhotoSourceDialog = true
                     } label: {

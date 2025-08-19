@@ -135,7 +135,9 @@ struct SessionTimeTrackerView: View {
         .sheet(isPresented: $viewModel.showingCompletion) {
             if let completedSession = viewModel.completedSession {
                 TimeTrackingCompletionView(
-                    task: nil,
+                    task: completedSession.taskId.flatMap { id in
+                        TaskManager.shared.tasks.first(where: { $0.id == id })
+                    },
                     session: completedSession,
                     onSave: {
                         viewModel.saveSession(id: sessionId)
