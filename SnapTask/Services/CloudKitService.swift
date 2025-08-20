@@ -455,8 +455,12 @@ class CloudKitService: ObservableObject {
                 var records: [CKRecord] = []
                 
                 for (date, points) in history {
-                    let entry = PointsHistory(date: date, points: points, frequency: .daily)
-                    let record = createPointsHistoryRecord(from: entry)
+                    let startOfDay = Calendar.current.startOfDay(for: date)
+                    let recordID = stablePointsHistoryRecordID(for: startOfDay)
+                    let record = CKRecord(recordType: pointsHistoryRecordType, recordID: recordID)
+                    record["date"] = startOfDay
+                    record["points"] = points
+                    record["frequency"] = RewardFrequency.daily.rawValue
                     records.append(record)
                 }
                 
@@ -1057,7 +1061,7 @@ class CloudKitService: ObservableObject {
         
         for entry in remoteHistory {
             let startOfDay = Calendar.current.startOfDay(for: entry.date)
-            dailyPoints[startOfDay] = (dailyPoints[startOfDay] ?? 0) + entry.points
+            dailyPoints[startOfDay] = max(dailyPoints[startOfDay] ?? 0, entry.points)
         }
         
         let existingPoints = RewardManager.shared.dailyPointsHistory
@@ -1422,12 +1426,13 @@ class CloudKitService: ObservableObject {
         guard let date = record["date"] as? Date,
               let points = record["points"] as? Int,
               let frequencyRaw = record["frequency"] as? String,
-              let frequency = RewardFrequency(rawValue: frequencyRaw),
-              let uuid = UUID(uuidString: record.recordID.recordName) else {
+              let frequency = RewardFrequency(rawValue: frequencyRaw) else {
             return nil
         }
         
-        return PointsHistory(id: uuid, date: date, points: points, frequency: frequency)
+        let id = UUID(uuidString: record.recordID.recordName) ?? UUID()
+        
+        return PointsHistory(id: id, date: date, points: points, frequency: frequency)
     }
     
     private func createSettingsRecord(from settings: [String: Any]) -> CKRecord {
@@ -2013,4 +2018,15 @@ extension CloudKitService {
 extension Notification.Name {
     static let cloudKitDataChanged = Notification.Name("cloudKitDataChanged")
     static let cloudKitSettingsChanged = Notification.Name("cloudKitSettingsChanged")
+}
+
+private func stablePointsHistoryRecordID(for date: Date) -> CKRecord.ID {
+    let df = DateFormatter()
+    df.calendar = Calendar(identifier: .gregorian)
+    df.locale = Locale(identifier: "en_US_POSIX")
+    df.timeZone = TimeZone(secondsFromGMT: 0)
+    df.dateFormat = "yyyy-MM-dd"
+    let key = df.string(from: date)
+    let name = "PH-\(key)"
+    return CKRecord.ID(recordName: name, zoneID: CKRecordZone.ID(zoneName: "SnapTaskZone", ownerName: CKCurrentUserDefaultName))
 }

@@ -1209,6 +1209,13 @@
 "remove_location" = "Remove Location";
 "selected_location" = "Selected Location";
 
+// Premium Subscription
+"premium_plan_active" = "Premium plan active";
+"manage_subscriptions" = "Manage Subscriptions";
+"restore_purchases" = "Restore Purchases";
+"terms_of_service" = "Terms of Service";
+"privacy_policy" = "Privacy Policy";
+
 // Photos & Voice Memos (Task Details)
 "photos" = "Photos";
 "take_photo" = "Take Photo";
@@ -1223,3 +1230,12 @@
 "microphone_access_denied_message" = "Enable microphone access in Settings to record voice memos.";
 "voice_memo" = "Voice memo";
 "voice_memo_name_placeholder" = "Voice memo name";
+
+"how_create_task" = "How do you want to create the task?";
+"choose_from_previous_tasks" = "Choose from previous tasks";
+"search_past_tasks" = "Search your past tasks";
+"no_past_tasks" = "There are no past tasks to show.";
+"create_first_then_see_templates" = "Create a new task, then you'll find it here as a quick template.";
+
+// Premium
+"premium" = "Premium";

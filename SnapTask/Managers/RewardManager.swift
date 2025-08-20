@@ -23,6 +23,11 @@ class RewardManager: ObservableObject {
             UserDefaults.standard.set(true, forKey: "fixed_double_count_points_v1")
         }
         
+        if !UserDefaults.standard.bool(forKey: "points_history_migration_v2") {
+            recalculateDailyPointsFromSources()
+            UserDefaults.standard.set(true, forKey: "points_history_migration_v2")
+        }
+        
         // Listen for CloudKit data changes
         NotificationCenter.default.publisher(for: .cloudKitDataChanged)
             .receive(on: DispatchQueue.main)
@@ -592,6 +597,51 @@ class RewardManager: ObservableObject {
         objectWillChange.send()
         
         print("✅ Points history recalculated. Days: \(dailyPointsHistory.count), Categories: \(categoryPointsHistory.count)")
+    }
+
+    func recalculateDailyPointsFromSources() {
+        print("🧮 Recalculating daily points from tasks and general redemptions...")
+        let calendar = Calendar.current
+        
+        // Base: punti guadagnati dai task
+        var newDaily: [Date: Int] = [:]
+        for task in TaskManager.shared.tasks {
+            guard task.hasRewardPoints, task.rewardPoints > 0 else { continue }
+            for completionDate in task.completionDates {
+                let day = calendar.startOfDay(for: completionDate)
+                newDaily[day, default: 0] += task.rewardPoints
+            }
+        }
+        
+        // Sottrai riscatti delle reward generali nel giorno in cui sono stati riscattati
+        for reward in rewards where reward.isGeneralReward {
+            for redemptionDate in reward.redemptions {
+                let day = calendar.startOfDay(for: redemptionDate)
+                let current = newDaily[day] ?? 0
+                let updated = max(current - reward.pointsCost, 0)
+                newDaily[day] = updated
+            }
+        }
+        
+        // Ricalcola anche i punti per categoria dai task (coerente con recalculatePointsFromTasks)
+        var newCategory: [UUID: [Date: Int]] = [:]
+        for task in TaskManager.shared.tasks {
+            guard task.hasRewardPoints, task.rewardPoints > 0, let categoryId = task.category?.id else { continue }
+            for completionDate in task.completionDates {
+                let day = calendar.startOfDay(for: completionDate)
+                var hist = newCategory[categoryId] ?? [:]
+                hist[day, default: 0] += task.rewardPoints
+                newCategory[categoryId] = hist
+            }
+        }
+        
+        dailyPointsHistory = newDaily
+        categoryPointsHistory = newCategory
+        saveDailyPointsHistory()
+        saveCategoryPointsHistory()
+        objectWillChange.send()
+        
+        print("✅ Daily points normalized. Days: \(dailyPointsHistory.count), Categories: \(categoryPointsHistory.count)")
     }
 }
 

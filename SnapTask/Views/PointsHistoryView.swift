@@ -163,6 +163,9 @@ struct PointsHistoryView: View {
                                 Button("reset_all_points".localized, role: .destructive) {
                                     showingResetAlert = true
                                 }
+                                Button("Ricalcola dai task") {
+                                    rewardManager.recalculatePointsFromTasks()
+                                }
                             } label: {
                                 Image(systemName: "ellipsis.circle")
                                     .themedPrimary()

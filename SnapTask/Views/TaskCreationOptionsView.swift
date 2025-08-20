@@ -67,7 +67,7 @@ struct TaskCreationOptionsView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Scegli tra task precedenti")
+                        Text("choose_from_previous_tasks".localized)
                             .font(.headline)
                             .themedPrimaryText()
                             .padding(.horizontal, 16)
@@ -89,11 +89,11 @@ struct TaskCreationOptionsView: View {
                 }
             }
             .themedBackground()
-            .navigationTitle("Aggiungi Task")
+            .navigationTitle("\(String.add) \(String.task)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Annulla") { dismiss() }
+                    Button(String.cancel) { dismiss() }
                         .themedSecondaryText()
                 }
             }
@@ -124,7 +124,7 @@ struct TaskCreationOptionsView: View {
     private var headerSection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Come vuoi creare la task?")
+                Text("how_create_task".localized)
                     .font(.title3.bold())
                     .themedPrimaryText()
                 Spacer()
@@ -145,7 +145,7 @@ struct TaskCreationOptionsView: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Crea nuova task")
+                        Text(String.newTask)
                             .font(.headline)
                             .themedPrimaryText()
                         Text(scopeSubtitleText())
@@ -176,7 +176,7 @@ struct TaskCreationOptionsView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(theme.secondaryTextColor)
-            TextField("Cerca tra le tue task passate", text: $searchText)
+            TextField("search_past_tasks".localized, text: $searchText)
                 .textFieldStyle(PlainTextFieldStyle())
                 .themedPrimaryText()
             if !searchText.isEmpty {
@@ -206,10 +206,10 @@ struct TaskCreationOptionsView: View {
             Image(systemName: "tray")
                 .font(.system(size: 40))
                 .foregroundColor(theme.secondaryTextColor)
-            Text("Non ci sono task passate da mostrare.")
+            Text("no_past_tasks".localized)
                 .font(.subheadline)
                 .themedSecondaryText()
-            Text("Crea una nuova task, poi la ritroverai qui come template veloce.")
+            Text("create_first_then_see_templates".localized)
                 .font(.caption)
                 .themedSecondaryText()
                 .multilineTextAlignment(.center)
@@ -220,11 +220,11 @@ struct TaskCreationOptionsView: View {
     
     private func scopeSubtitleText() -> String {
         switch viewModel.selectedTimeScope {
-        case .today: return "Oggi • \(DateFormatter.localizedString(from: baseDateForScope, dateStyle: .medium, timeStyle: .none))"
-        case .week: return "Questa settimana"
-        case .month: return "Questo mese"
-        case .year: return "Quest'anno"
-        case .longTerm: return "Obiettivo a lungo termine"
+        case .today: return "\(String.today) • \(DateFormatter.localizedString(from: baseDateForScope, dateStyle: .medium, timeStyle: .none))"
+        case .week: return "this_week".localized
+        case .month: return "this_month".localized
+        case .year: return "this_year".localized
+        case .longTerm: return "long_term_objective".localized
         }
     }
     

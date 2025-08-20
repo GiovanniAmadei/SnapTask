@@ -52,7 +52,9 @@ struct SettingsView: View {
                                 
                                 if subscriptionManager.isSubscribed {
                                     if let expirationDate = subscriptionManager.subscriptionExpirationDate {
-                                        Text("subscription_expires".localized + " " + expirationDate.formatted(date: .abbreviated, time: .omitted))
+                                        Text(expirationDate == .distantFuture
+                                             ? "lifetime_access".localized
+                                             : ("subscription_expires".localized + " " + expirationDate.formatted(date: .abbreviated, time: .omitted)))
                                             .font(.caption)
                                             .themedSecondaryText()
                                     }

@@ -80,6 +80,8 @@ extension String {
     static var weekly: String { "weekly".localized }
     static var monthly: String { "monthly".localized }
     
+    static var today: String { "today".localized }
+    
     // Categories
     static var categories: String { "categories".localized }
     static var addCategory: String { "add_category".localized }
