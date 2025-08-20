@@ -1,3 +1,4 @@
+// Common
 "app_name" = "SnapTask";
 "cancel" = "キャンセル";
 "save" = "保存";
@@ -39,6 +40,64 @@
 "task_completion" = "タスク完了";
 "priority_name" = "優先度名";
 "new_priority" = "新しい優先度";
+"auto_complete_tasks" = "タスクの自動完了";
+"auto_complete_tasks_description" = "すべてのサブタスクが完了したときにメインタスクを完了する";
+
+// Task Notifications
+"task_notifications" = "タスク通知";
+"task_notifications_description" = "スケジュールされたタスクのリマインダーを受け取る";
+"enable_task_notifications" = "タスク通知を有効にする";
+"task_notification_title" = "タスクリマインダー";
+"task_notification_body" = "時間です: %@";
+"notification_permission_required" = "通知の許可が必要です";
+"notification_permission_message" = "タスクリマインダーを受け取るには、設定で通知を有効にしてください。";
+"notification_enabled" = "通知が有効";
+"notification_disabled" = "通知が無効";
+"enable_notification" = "通知を有効にする";
+"disable_notification" = "通知を無効にする";
+"notification_scheduled" = "通知がスケジュールされました";
+"notification_cancelled" = "通知がキャンセルされました";
+"notifications_not_available" = "通知が利用できません";
+"notifications_denied" = "通知が拒否されました";
+"notification_permission_denied_message" = "通知が拒否されています。iOS設定 > プライバシーとセキュリティ > カレンダー > SnapTask で有効にしてください。";
+
+// Accessibility Support
+"completed" = "完了";
+"not_completed" = "未完了";
+"description_label" = "説明:";
+"duration_label" = "期間:";
+"priority_label" = "優先度:";
+"show_voiceover_indicators" = "VoiceOverインジケータを表示";
+
+// Main tabs
+"timeline" = "タイムライン";
+"focus" = "フォーカス";
+"rewards" = "報酬";
+"statistics" = "統計";
+"settings" = "設定";
+
+// Welcome screen
+"welcome_title_1" = "SnapTask Pro Alphaへようこそ！";
+"welcome_subtitle_1" = "ジョバンニ・アマデイからの個人的なメッセージ";
+"welcome_description_1" = "こんにちは！私はジョバンニ、インディー開発者です。妥協のない、実際に機能する生産性アプリが必要だったため、SnapTaskを作成しました。アルファ版のテストを受け入れていただき本当にありがとうございます - あなたのフィードバックはSnapTaskをより良くするために非常に貴重です。";
+
+"welcome_title_2" = "あなたが見つけるもの";
+"welcome_subtitle_2" = "最先端の機能";
+"welcome_description_2" = "高度なポモドーロタイマー、詳細な統計、CloudKit同期、ホーム画面ウィジェットなど、さらに多くの機能があります。すべての詳細は、可能な限り最高の生産性体験を提供するために作り込まれています。";
+
+"welcome_title_3" = "あなたの意見は本当に大切です";
+"welcome_subtitle_3" = "ユーザー主導のプロジェクト";
+"welcome_description_3" = "これはアルファ版なので、いくつかのバグに遭遇する可能性があります。設定のフィードバックセクションを通じて報告してください。SnapTaskはユーザーフィードバックに基づいて進化する長期プロジェクトです - あなたの提案はすべて、完璧な生産性アプリを作成するのに役立ちます。";
+
+"welcome_title_4" = "完全に無料";
+"welcome_subtitle_4" = "あなたのサポートが違いを生みます";
+"welcome_description_4" = "SnapTaskは、これからも無料であり続けます。私が構築しているものを気に入って、このプロジェクトの継続を支援したい場合は、サポートをご検討ください。あなたの貢献により、アプリの改善と新機能の追加により多くの時間を充てることができます。";
+
+"welcome_title_5" = "一緒に始めましょう！";
+"welcome_subtitle_5" = "生産性の準備完了";
+"welcome_description_5" = "SnapTaskがあなたをより整理され生産的にするのにどのように役立つかを見るのが楽しみです。質問や提案がある場合は、フィードバックセクションを通じてお気軽にお問い合わせください。この旅の一部になっていただき、ありがとうございます！";
+
+// Task related
 "task" = "タスク";
 "tasks" = "タスク";
 "new_task" = "新しいタスク";
@@ -57,14 +116,12 @@
 "medium_priority" = "中";
 "low_priority" = "低";
 "no_tasks_today" = "今日のタスクはありません";
-"no_tasks_this_week" = "今週のタスクはありません";
-"no_tasks_this_month" = "今月のタスクはありません";
-"no_tasks_this_year" = "今年のタスクはありません";
-"no_tasks_long_term" = "長期タスクはありません";
 "task_details" = "タスクの詳細";
 "due_tasks" = "期限のタスク";
 "no_tasks_due" = "期限のタスクなし";
 "all_caught_up" = "すべて完了！";
+
+// Days of the week
 "monday" = "月曜日";
 "tuesday" = "火曜日";
 "wednesday" = "水曜日";
@@ -72,14 +129,216 @@
 "friday" = "金曜日";
 "saturday" = "土曜日";
 "sunday" = "日曜日";
+
+// Recurrence
 "daily" = "毎日";
 "weekly" = "毎週";
 "monthly" = "毎月";
 "recurrence_settings" = "繰り返し設定";
 "repeat_settings" = "リピート設定";
 "select_days" = "日を選択";
+// Recurrence adaptation
 "adapted_to_scope" = "選択した範囲に適応";
 "no_recurrence_long_term" = "長期目標には繰り返しなし";
+
+// Contextual recurrence types
+"every_day" = "毎日";
+"every_2_days" = "2日おき";
+"every_3_days" = "3日おき";
+"every_weekday" = "平日毎日";
+"every_weekend" = "週末毎日";
+"every_week" = "毎週";
+"every_2_weeks" = "2週間おき";
+"every_3_weeks" = "3週間おき";
+"every_month" = "毎月";
+"every_2_months" = "2ヶ月おき";
+"every_3_months" = "3ヶ月おき";
+"every_6_months" = "6ヶ月おき";
+"every_year" = "毎年";
+"every_2_years" = "2年おき";
+"every_3_years" = "3年おき";
+
+// Contextual recurrence descriptions
+"recurrence_for" = "繰り返し対象";
+"contextual_to_scope" = "範囲に応じて";
+"choose_how_often_daily_task" = "この日次タスクの繰り返し頻度を選択";
+"choose_how_often_weekly_goal" = "この週次目標の繰り返し頻度を選択";
+"choose_how_often_monthly_goal" = "この月次目標の繰り返し頻度を選択";
+"choose_how_often_yearly_goal" = "この年次目標の繰り返し頻度を選択";
+"long_term_goals_no_recurrence" = "長期目標には繰り返しがありません";
+"recurrence_options" = "繰り返しオプション";
+"optional_specific_time" = "特定の時間を設定（任意）";
+
+// Statistics and Consistency
+"time_spent" = "費やした時間";
+"today" = "今日";
+"week" = "週";
+"month" = "月";
+"year" = "年";
+"weekly_overview" = "週次概要";
+"streak" = "連続記録";
+"current_streak" = "現在の連続記録";
+"best_streak" = "最高連続記録";
+"task_consistency" = "タスクの一貫性";
+"progress_points" = "プログレスポイント";
+"no_category_data" = "カテゴリデータがありません";
+"complete_tasks_see_stats" = "カテゴリ付きタスクを完了すると統計が表示されます";
+"tracking_consistency" = "定期的なタスクの完了の一貫性を追跡";
+"higher_points" = "より高いポイントは時間の経過に伴うより良い一貫性を示します";
+"no_recurring_tasks" = "定期的なタスクが見つかりません";
+"shows_consistency" = "時間の経過に伴う定期的なタスクの一貫性を表示";
+"x_axis_y_axis" = "X軸：日/期間 • Y軸：累積プログレスポイント";
+"how_to_read" = "読み方：↑ タスクが完了すると線が上昇、↓ 逃すと下降";
+"points_explanation" = "各完了タスク = +1ポイント • 各逃したタスク = -1ポイント";
+"track_in_consistency" = "一貫性統計で追跡";
+
+// Short time period labels for UI
+"day" = "日";
+"week_short" = "週";
+"month_short" = "月";
+"year_short" = "年";
+
+// Task Consistency View
+"task_progress_over_time" = "時間経過に伴うタスクプログレス";
+"track_completion_patterns" = "完了パターンと一貫性トレンドを追跡";
+"time_period" = "期間";
+"penalize_missed_tasks" = "逃したタスクのペナルティ";
+"decrease_progress_missed" = "定期的なタスクが未完了の場合プログレスを減少";
+"no_consistency_data" = "一貫性データなし";
+"complete_recurring_see_progress" = "定期的なタスクを完了して、プログレスパターンと一貫性トレンドを時間の経過で確認";
+"each_line_shows_task" = "各線は時間の経過に伴うタスクの完了プログレスを表示";
+"higher_points_better" = "より高いポイントはより良い一貫性を示します";
+"tap_legend_highlight" = "凡例項目をタップして特定のタスクをハイライト";
+"completed_tasks" = "完了したタスク";
+"date" = "日付";
+
+// Categories
+"categories" = "カテゴリ";
+"add_category" = "カテゴリを追加";
+"edit_category" = "カテゴリを編集";
+"new_category" = "新しいカテゴリ";
+"category_name" = "カテゴリ名";
+"category_color" = "色";
+"add_new_category" = "新しいカテゴリを追加";
+"select_category" = "カテゴリを選択";
+"select_color" = "色を選択";
+"category_name_placeholder" = "カテゴリ名";
+
+// Customization View
+"visual_themes" = "視覚テーマ";
+"choose_visual_theme" = "アプリの視覚テーマを選択";
+"category_gradients_description" = "カテゴリのカラフルなグラデーションを表示";
+"customize_task_priorities" = "タスク優先度をカスタマイズ";
+"customize_timer_colors" = "ポモドーロタイマーの色をカスタマイズ";
+"priority_details" = "優先度の詳細";
+"auto_complete_tasks_footer" = "すべてのサブタスクが完了したときにメインタスクを自動完了";
+"manage_priorities" = "優先度を管理";
+"new_priority" = "新しい優先度";
+
+// Settings
+"language" = "言語";
+"system" = "システム";
+"english" = "English";
+"italiano" = "Italian";
+"español" = "Spanish";
+"français" = "French";
+"review_welcome_message" = "ウェルカムメッセージを確認";
+"quote_of_the_day" = "今日の名言";
+"new_quote" = "新しい名言";
+"customization" = "カスタマイゼーション";
+"appearance" = "外観";
+"dark_mode" = "ダークモード";
+"priorities" = "優先度";
+"add_priority" = "優先度を追加";
+"performance" = "パフォーマンス";
+"biohacking" = "バイオハッキング";
+"icloud_sync" = "iCloud同期";
+"calendar_integration" = "カレンダー統合";
+"synchronization" = "同期";
+"manage_data_sync" = "デバイス間のデータ同期とカレンダー統合を管理";
+"community" = "コミュニティ";
+"support" = "サポート";
+"sync_error" = "同期エラー";
+"last_synced" = "最後の同期";
+"try_sign_out_in" = "iCloudからサインアウト/サインインを試してください";
+
+// Behavior Settings
+"smart_notifications" = "スマート通知";
+"smart_notifications_description" = "タスクの優先度と締切に基づいてリマインダーを送信";
+"smart_notifications_footer" = "近日公開：スケジュールとタスクの重要性に適応するスマート通知";
+"auto_reschedule_overdue" = "期限切れの自動再スケジュール";
+"auto_reschedule_overdue_description" = "未完了のタスクを自動的に翌日に移動";
+"auto_reschedule_overdue_footer" = "近日公開：未完了のタスクが蓄積されるのを防ぐための自動再スケジュールオプション";
+"celebrate_completions" = "完了を祝う";
+"celebrate_completions_description" = "タスクを完了したときにアニメーションとエフェクトを表示";
+"celebrate_completions_footer" = "近日公開：タスク完了をより報酬的にするカスタマイズ可能な祝福エフェクト";
+"focus_mode_suggestions" = "フォーカスモードの提案";
+"focus_mode_suggestions_description" = "あなたの習慣に基づいて最適なフォーカスセッションの提案を受信";
+"focus_mode_suggestions_footer" = "近日公開：より効果的に作業するのに役立つAI搭載の提案";
+
+// Calendar Integration
+"enable_calendar_integration" = "カレンダー統合を有効にする";
+"integration" = "統合";
+"sync_tasks_calendar_automatically" = "タスクをカレンダーアプリと自動同期";
+"calendar_provider" = "カレンダープロバイダー";
+"apple_calendar" = "Appleカレンダー";
+"google_calendar" = "Googleカレンダー";
+"calendar_selection" = "カレンダー選択";
+"selected_calendar" = "選択したカレンダー";
+"sync_options" = "同期オプション";
+"auto_sync_task_creation" = "タスク作成時の自動同期";
+"auto_sync_task_updates" = "タスク更新時の自動同期";
+"sync_completed_tasks" = "完了したタスクを同期";
+"sync_recurring_tasks" = "定期的なタスクを同期";
+"provider_status" = "プロバイダーステータス";
+"sync_status" = "同期ステータス";
+"synced_events" = "同期されたイベント";
+"sync_all_tasks_now" = "すべてのタスクを今すぐ同期";
+"delete_all_synced_tasks" = "同期されたすべてのタスクを削除";
+"syncing" = "同期中...";
+"connected" = "接続済み";
+"not_connected" = "未接続";
+"select_calendar" = "カレンダーを選択";
+
+// Calendar Integration Alerts
+"enable_calendar_access" = "カレンダーアクセスを有効にする";
+"calendar_access_required" = "カレンダーアクセスが必要です";
+"open_settings" = "設定を開く";
+"calendar_access_message" = "SnapTaskはタスクを同期し、カレンダーイベントを自動的に作成するためにカレンダーへのアクセスが必要です。";
+"calendar_access_required_message" = "タスクを同期するにはカレンダーアクセスが必要です。設定でSnapTaskのカレンダーアクセスを有効にしてください。";
+"calendar_access_denied_message" = "カレンダーアクセスが拒否されています。iOS設定 > プライバシーとセキュリティ > カレンダー > SnapTask でカレンダーアクセスを有効にしてください。";
+
+// Calendar Integration Sync Status
+"sync_ready" = "準備完了";
+"sync_syncing" = "同期中...";
+"sync_success" = "正常に同期されました";
+"sync_error_prefix" = "エラー";
+
+// Pomodoro
+"pomodoro" = "ポモドーロ";
+"pomodoro_settings" = "ポモドーロ設定";
+"work_duration" = "作業時間";
+"short_break" = "短い休憩";
+"long_break" = "長い休憩";
+"sessions_before_long_break" = "長い休憩までのセッション数";
+"work_session" = "作業セッション";
+"break" = "休憩";
+"session_configuration" = "セッション設定";
+"number_of_sessions" = "セッション数";
+"total_duration" = "総時間";
+"total_sessions" = "総セッション数";
+"estimated_sessions" = "推定セッション数";
+"estimated_duration" = "推定時間";
+"session_breakdown" = "セッション内訳";
+"work_time" = "作業時間";
+"break_time" = "休憩時間";
+"total_time" = "総時間";
+"summary" = "概要";
+"sessions_until_long_break" = "長い休憩までのセッション数";
+"focus_time" = "フォーカス時間";
+"colors" = "色";
+
+// Timeline specific
 "list" = "リスト";
 "next_task_in_1_hour" = "1時間後に次のタスク";
 "next_task_in_hours" = "%d時間後に次のタスク";
@@ -94,6 +353,8 @@
 "by_time" = "時間順";
 "by_category" = "カテゴリ順";
 "by_priority" = "優先度順";
+
+// Task Form specific
 "enter_task_name" = "タスク名を入力...";
 "add_description" = "説明を追加...";
 "add_location" = "場所を追加";
@@ -117,16 +378,417 @@
 "complex_tasks_2_4_hours" = "長時間タスク (2-4時間)";
 "save_task" = "タスクを保存";
 "choose_icon" = "アイコンを選択";
+
+// Rewards View
 "available_points" = "利用可能なポイント";
 "available_rewards" = "利用可能な報酬";
 "no_rewards_yet" = "まだ報酬がありません";
 "create_first_reward_motivation" = "最初の報酬を作成してやる気を出そう！";
 "redeem" = "引き換え";
 "general" = "一般";
-"tap_for_details" = "タップして詳細表示";
+"tap_for_details" = "タップして\n詳細表示";
 "filter_by_frequency" = "頻度で絞り込み";
 "pts_available" = "利用可能ポイント";
-"untitled_task" = "無題タスク";
+"points_history" = "ポイント履歴";
+"redeemed_rewards" = "引き換えた報酬";
+"need_more_points" = "あと{points}ポイント必要";
+"rewards_count" = "報酬";
+
+// Reward Form View
+"reward_details" = "報酬の詳細";
+"reward_name" = "報酬名";
+"enter_reward_name" = "報酬名を入力";
+"description" = "説明";
+"use_specific_category" = "特定のカテゴリを使用";
+"use_points_from_specific_category" = "特定のカテゴリからポイントを使用";
+"no_categories_available" = "利用可能なカテゴリがありません";
+"cost" = "コスト";
+"quick_rewards_worth" = "小さな報酬";
+"regular_rewards_worth" = "通常の報酬";
+"complex_rewards_worth" = "重要な報酬";
+"premium_rewards_worth" = "プレミアム報酬";
+"point_accumulation_period" = "ポイント蓄積期間";
+"daily_rewards_reset" = "日次報酬は毎日00:00にリセットされます";
+"weekly_rewards_accumulate" = "週次報酬は週を通してポイントを蓄積します";
+"monthly_rewards_accumulate" = "月次報酬は月を通してポイントを蓄積します";
+"yearly_rewards_accumulate" = "年次報酬は年を通してポイントを蓄積します";
+"onetime_rewards_once" = "一度限りの報酬は一回のみ引き換え可能です";
+"available_category_points" = "利用可能な{category}ポイント";
+"available_total_points" = "利用可能な総ポイント";
+"save_reward" = "報酬を保存";
+"new_reward" = "新しい報酬";
+"edit_reward" = "報酬を編集";
+
+// Points History View
+"entries" = "エントリ";
+"entry" = "エントリ";
+"all_time" = "全期間";
+"this_week" = "今週";
+"this_month" = "今月";
+"this_year" = "今年";
+"no_points_for" = "{period}のポイントなし";
+"complete_tasks_points_enabled" = "報酬ポイントが有効なタスクを完了すると、ここに履歴が表示されます。";
+"points_per_completion" = "完了あたりのポイント";
+"times" = "回";
+"recent_completions" = "最近の完了:";
+"reset_all_points" = "すべてのポイントをリセット";
+"remove_selected" = "選択を削除";
+"reset_all_points_alert" = "これにより獲得したすべてのポイントが永久に削除されます。この操作は元に戻せません。";
+"remove_selected_points" = "選択したポイントを削除";
+"remove_selected_alert" = "これにより選択したタスクから獲得したポイントが削除されます。この操作は元に戻せません。";
+"remove" = "削除";
+"stats_for" = "統計対象";
+"tasks" = "タスク";
+"completions" = "完了数";
+"avg_day" = "1日平均";
+"no_points_this" = "ポイントなし";
+
+// Redeemed Rewards View
+"reward" = "報酬";
+"no_rewards_redeemed_for" = "{period}の引き換えた報酬なし";
+"start_earning_redeem_first" = "ポイントを獲得して最初の報酬を引き換えましょう！";
+"last_redeemed" = "最後に引き換えた:";
+
+// Points Overview/Breakdown View
+"points_overview" = "ポイント概要";
+"total_available_points" = "利用可能な総ポイント";
+"top_categories" = "トップカテゴリ";
+"points_by_period" = "期間別ポイント";
+"points_by_category" = "カテゴリ別ポイント";
+"create_categories_organize_rewards" = "報酬を整理するためのカテゴリを作成";
+"daily" = "毎日";
+"yearly" = "毎年";
+
+// Task Performance Analytics
+"task_performance" = "タスクパフォーマンス";
+"top_performers" = "トップパフォーマー";
+"needs_improvement" = "改善が必要";
+"all_tasks" = "すべてのタスク";
+"no_high_quality_completions" = "まだ高品質な完了がありません";
+
+// Timeline Organization View
+"organization_mode_title" = "整理モード";
+"sort_by_time_description" = "スケジュールされた時間でタスクを並べ替え";
+"group_by_category_description" = "カテゴリでタスクをグループ化";
+"group_by_priority_description" = "優先度レベルでタスクをグループ化";
+"time_sort_order_title" = "時間並び順";
+
+// What's New View
+"whats_cooking_title" = "開発中";
+"recent_tab" = "最新";
+"coming_soon_tab" = "近日公開";
+"roadmap_tab" = "ロードマップ";
+"empty_news_coming_soon_title" = "お楽しみに！";
+"empty_news_coming_soon_message" = "新機能と改善が予定されています。また近日中に確認してください！";
+"empty_news_roadmap_title" = "未来は明るい！";
+"empty_news_roadmap_message" = "ロードマップを計画中です。エキサイティングな将来の計画をここで共有します！";
+"unknown_version" = "不明なバージョン";
+
+// New Onboarding Strings
+"onboarding_title_1" = "SnapTaskへようこそ";
+"onboarding_subtitle_1" = "あなたの生産性、ついに整理されました";
+"onboarding_description_1" = "高度にカスタマイズ可能なタスクを作成し、時間（今日、週、月、年、長期）で目標を整理し、すべての活動を具体的な成功に変換します。";
+
+"onboarding_title_2" = "プロフェッショナルポモドーロタイマー";
+"onboarding_subtitle_2" = "邪魔されることなくフォーカス";
+"onboarding_description_2" = "カスタマイズ可能なセッション、詳細な時間統計、フォーカスパフォーマンスの自動追跡を備えたポモドーロタイマー。";
+
+"onboarding_title_3" = "やる気を起こす報酬システム";
+"onboarding_subtitle_3" = "生産性をゲームに変換";
+"onboarding_description_3" = "タスクを完了してポイントを獲得し、パーソナライズされた報酬を引き換えます。やる気を維持し、達成した目標すべてに対して報酬を与えるシステム。";
+
+"onboarding_title_4" = "あなたを導く統計";
+"onboarding_subtitle_4" = "成功パターンを発見";
+"onboarding_description_4" = "詳細なチャートでパフォーマンスを分析し、最も生産的な時間を発見し、より良い結果のために時間を最適化します。";
+
+"onboarding_title_5" = "常に同期";
+"onboarding_subtitle_5" = "どこにいてもあなたのデータ";
+"onboarding_description_5" = "iCloudとの自動同期。iPhone、iPad、Macでタスク、統計、報酬が常に更新されます。";
+
+// Onboarding Actions
+"onboarding_continue" = "続ける";
+"onboarding_skip" = "スキップ";
+"onboarding_get_started" = "開始";
+"onboarding_try_premium" = "プレミアムを試す";
+"onboarding_start_free" = "無料で開始";
+"onboarding_unlock_potential" = "可能性をアンロック";
+
+// Feedback View
+"community_title" = "コミュニティ";
+"community_feedback_title" = "コミュニティフィードバック";
+"search_feedback_placeholder" = "フィードバックを検索...";
+"delete_feedback_alert_title" = "フィードバックを削除";
+"delete_feedback_alert_message" = "このフィードバックを削除してもよろしいですか？この操作は元に戻せません。";
+"no_feedback_found_title" = "フィードバックが見つかりません";
+"be_the_first_to_share_ideas" = "アイデアを共有する最初の人になりましょう！";
+"all_category_filter" = "すべて";
+
+// New Feedback View
+"share_your_feedback_title" = "フィードバックを共有";
+"feedback_category_title" = "カテゴリ";
+"feedback_title_placeholder" = "フィードバックの簡単な概要";
+"feedback_description_placeholder" = "フィードバックを詳しく説明してください...";
+"author_info_title" = "作成者情報";
+"submit_anonymously_toggle" = "匿名で送信";
+"author_name_placeholder" = "あなたの名前（任意）";
+"submit_feedback_button" = "フィードバックを送信";
+"submitting_button" = "送信中...";
+"feedback_submitted_alert_title" = "フィードバックが送信されました";
+"feedback_submitted_alert_message" = "フィードバックをありがとうございます！あなたのご意見を大切にしています。";
+"feedback_submission_failed_alert_title" = "送信に失敗しました";
+"fill_required_fields_alert_message" = "すべての必須フィールドを入力してください。";
+"title_description_empty_alert_message" = "タイトルと説明は空にできません。";
+"close_button" = "閉じる";
+
+// Feedback Categories
+"feature_request_category" = "機能リクエスト";
+"bug_report_category" = "バグ報告";
+"general_category" = "一般";
+"all_tasks_performing_well" = "すべてのタスクが良好にパフォーマンスしています！";
+"no_performance_data" = "パフォーマンスデータなし";
+"complete_tasks_quality_difficulty_analytics" = "品質と難易度の評価でタスクを完了すると分析が表示されます";
+"performance_summary" = "パフォーマンス概要";
+"quality" = "品質";
+"difficulty" = "難易度";
+"quality_trend" = "品質トレンド";
+"difficulty_trend" = "難易度トレンド";
+"duration_trend" = "期間トレンド";
+"estimation_accuracy" = "推定精度";
+"excellent_estimation_skills" = "優秀な推定スキル！時間の予測が非常に正確です。";
+"good_estimation_skills" = "良い推定スキル。小さな改善の余地があります。";
+"fair_estimation_skills" = "普通の推定スキル。改善のためにより多く追跡することを検討してください。";
+"consider_breaking_tasks" = "タスクを分割するか、推定を改善するためにより多く追跡することを検討してください。";
+"completion" = "完了";
+"duration_min" = "期間（分）";
+"trend" = "トレンド";
+
+// Statistics View - Performance Section
+"performance_analytics" = "パフォーマンス分析";
+"quality_progression" = "品質進歩";
+"difficulty_assessment" = "難易度評価";
+"tasks_with_performance_data" = "パフォーマンスデータ付きタスク";
+"no_quality_data_available" = "品質データがありません";
+"no_difficulty_data_available" = "難易度データがありません";
+"incomplete" = "未完了";
+"completions_period" = "完了数 ({period})";
+"no_quality_ratings_in_period" = "{period}に品質評価なし";
+"no_difficulty_ratings_in_period" = "{period}に難易度評価なし";
+"no_completions_in_period" = "{period}に完了なし";
+"complete_tasks_add_quality_ratings" = "タスクを完了し品質評価を追加してトレンドを確認";
+"complete_tasks_add_difficulty_ratings" = "タスクを完了し難易度評価を追加してトレンドを確認";
+"complete_this_task_start_tracking" = "このタスクを完了してパフォーマンス追跡を開始";
+"no_completion_data" = "完了データなし";
+"complete_tasks_completion_rate_trends" = "タスクを完了して完了率トレンドを確認";
+"complete_recurring_tasks_performance" = "定期的なタスクを完了してパフォーマンス分析を確認";
+
+// Time period filters for task completion
+"seven_days" = "7日";
+"thirty_days" = "30日";
+"one_year" = "1年";
+
+// Statistics View
+"overview" = "概要";
+"streaks" = "連続記録";
+"consistency" = "一貫性";
+"time_distribution" = "時間配分";
+"total" = "合計";
+"task_completion_rate" = "タスク完了率";
+"overall_streak" = "全体の連続記録";
+"current" = "現在";
+"best" = "最高";
+"no_streaks_yet" = "まだ連続記録がありません";
+"complete_recurring_tasks_streaks" = "定期的なタスクを完了して連続記録を作り、一貫性を追跡しましょう";
+"completed" = "完了";
+"total_available" = "利用可能な合計";
+"no_time_data" = "時間データなし";
+"complete_tasks_time_distribution" = "期間付きタスクを完了するかポモドーロセッションを使用して時間配分を確認";
+"by_category" = "カテゴリ別";
+"no_data" = "データなし";
+"complete" = "完了";
+"task_performance" = "タスクパフォーマンス";
+"quality_rating" = "品質評価";
+"difficulty_rating" = "難易度評価";
+"performance_charts" = "パフォーマンスチャート";
+
+// Settings View
+"daily_notifications" = "日次通知";
+"daily_quote_reminder" = "毎日の名言リマインダー";
+"notification_time" = "通知時間";
+"enable_in_settings" = "設定で有効にする";
+"app_behavior" = "アプリの動作";
+"auto_complete_on" = "自動完了";
+"manual" = "手動";
+"sync" = "同期";
+"feedback_suggestions" = "フィードバックと提案";
+"whats_cooking" = "開発中";
+"support_snaptask" = "SnapTaskをサポート";
+"loading_inspiration" = "インスピレーションを読み込み中...";
+"choose_language" = "言語を選択";
+"enable_notifications" = "通知を有効にする";
+"notification_permission_message" = "毎日の名言リマインダーを受け取るには、設定 > SnapTask > 通知 で通知を有効にしてください。";
+"your_daily_motivation" = "あなたの毎日のモチベーション";
+"help_continue_improving" = "SnapTaskの継続的な改善にご協力ください";
+"support_development" = "開発をサポート";
+"data_management" = "データ管理";
+"delete_all_data" = "すべてのデータを削除";
+"delete_all_data_description" = "すべてのタスク、カテゴリ、統計、報酬を削除";
+"delete_all_data_footer" = "この操作により、すべてのタスク、カスタムカテゴリ、報酬、統計、追跡データが永久に削除されます。デフォルトカテゴリのみが残ります。";
+"delete_all_data_confirmation_title" = "すべてのデータを削除しますか？";
+"delete_all_data_confirmation_message" = "この操作は元に戻せません。すべてのタスク、カスタムカテゴリ、報酬、ポイント、統計、追跡セッションが永久に削除されます。デフォルトカテゴリ（仕事、個人、健康）のみが残ります。";
+"delete_all_data_button" = "すべてのデータを削除";
+
+// Focus Tab View
+"focus_mode" = "フォーカスモード";
+"simple_timer" = "シンプルタイマー";
+"freeform_focus_session" = "手動タイミングの自由形式フォーカスセッション";
+"pomodoro_technique" = "ポモドーロテクニック";
+"25min_work_sessions_5min_breaks" = "25分作業セッション、5分休憩";
+"coming_soon" = "近日公開";
+"more_focus_methods" = "より多くのフォーカス方法を追加予定";
+"timers" = "タイマー";
+"paused" = "一時停止";
+"running" = "実行中";
+"pomodoro_timer" = "ポモドーロタイマー";
+"todays_focus" = "今日のフォーカス";
+"recent_sessions" = "最近のセッション";
+"no_sessions_yet" = "まだセッションがありません";
+"pomodoro_session" = "ポモドーロセッション";
+"general_focus" = "一般的なフォーカス";
+
+// Pomodoro View
+"session" = "セッション";
+"left" = "残り";
+"progress" = "進捗";
+"session_overview" = "セッション概要";
+"finishes_at" = "終了時刻";
+"focus_session" = "フォーカスセッション";
+
+// Donation View
+"donations" = "寄付";
+"support_snaptask_pro" = "SnapTask Proをサポート";
+"help_continue_development" = "新機能での継続開発をサポートしてください";
+"beta_mode" = "ベータモード";
+"testflight_notice" = "まだTestFlightにいるため、アプリ内寄付はシミュレーションのみです。";
+"after_appstore_release" = "App Store リリース後は正常に動作します。";
+"paypal_alternative" = "PayPal代替";
+"support_now_paypal" = "PayPal経由で今すぐサポートできます：";
+"donate_with_paypal" = "PayPalで寄付";
+"opens_paypal_browser" = "ブラウザでPayPalを開きます";
+"loading_donation_options" = "寄付オプションを読み込み中...";
+"cannot_load_donation_options" = "寄付オプションを読み込めません";
+"check_internet_retry" = "インターネット接続を確認して再試行してください";
+"paypal_alternative_title" = "PayPal代替";
+"if_iap_not_working" = "アプリ内寄付が動作しない場合、直接サポートできます：";
+"prefer_paypal" = "PayPalを希望？";
+"donate_via_paypal" = "PayPal経由で寄付";
+"donations_help_me" = "あなたの寄付により以下が可能になります：";
+"develop_new_features" = "新機能の開発";
+"maintain_sync_servers" = "同期サーバーの維持";
+"continue_free_updates" = "無料アップデートの継続";
+"thanks_previous_support" = "これまでのサポートをありがとうございます！";
+"last_donation" = "最後の寄付：";
+"thanks_so_much" = "本当にありがとうございます！";
+"donation_help_help_development" = "あなたの寄付はSnapTask Proの継続開発に役立ちます。サポートを本当に感謝しています！";
+"coffee_for_giovanni" = "ジョバンニにコーヒーを";
+"small_coffee" = "小さなコーヒー";
+"pizza_for_giovanni" = "ジョバンニにピザを";
+"pizza_for_dinner" = "夕食にピザ";
+"dinner_for_giovanni" = "ジョバンニに夕食を";
+"nice_dinner" = "素敵な夕食";
+
+// Update Banner 0.2.2
+"whats_new" = "新機能";
+"version_update" = "バージョン";
+"got_it" = "了解！";
+"view_all_updates" = "すべての更新を表示";
+
+// Version 0.2.2 Features
+"task_quality_rating" = "タスクの品質と難易度評価";
+"task_quality_rating_desc" = "より良い洞察のため、完了したタスクの品質と難易度を評価";
+"manual_time_tracking" = "手動時間追跡";
+"manual_time_tracking_desc" = "タスク詳細から直接、タスクに費やした時間を手動入力";
+"enhanced_statistics" = "強化された統計";
+"enhanced_statistics_desc" = "詳細な分析で品質と難易度のトレンドを時間の経過で追跡";
+"task_comments" = "タスクコメント";
+"task_comments_desc" = "より良い追跡のためにタスクにコメントとメモを追加";
+"data_reset_option" = "完全データリセット";
+"data_reset_option_desc" = "必要時にすべてのデータを削除し新規開始するオプション";
+"general_improvements" = "一般的なバグ修正";
+"general_improvements_desc" = "フィードバックに基づく様々なバグ修正とパフォーマンス改善";
+
+// CloudKit Sync
+"sync_now" = "今すぐ同期";
+"sync_data_description" = "あなたのデータはすべてのデバイスで自動的に同期されます";
+"enable_icloud_sync_description" = "デバイス間でタスク、カテゴリ、報酬を同期するために有効にする";
+"what_gets_synced" = "同期される内容";
+"auto_sync" = "自動同期";
+"auto_sync_description" = "変更時に自動的に同期";
+"view_sync_status" = "同期ステータスを表示";
+"sync_details" = "同期詳細";
+"reset_sync_data" = "同期データをリセット";
+"advanced" = "詳細";
+"reset_sync_description" = "すべての同期データをクリアし、完全再同期を強制";
+"storage" = "ストレージ";
+"privacy" = "プライバシー";
+"end_to_end_encrypted" = "エンドツーエンド暗号化";
+"information" = "情報";
+"icloud_sync_device_support" = "iPhone、iPad、Macでシームレスに動作";
+"reset_sync_data_alert_title" = "同期データをリセットしますか？";
+"reset_sync_data_alert_message" = "これによりすべてのローカル同期データがクリアされ、新しい同期がトリガーされます。iCloudのデータは影響を受けません。";
+
+// Sync Data Options
+"tasks_sync_description" = "すべてのタスクと完了ステータス";
+"rewards_sync_description" = "カスタム報酬と引き換え履歴";
+"points_history_sync_description" = "完了したタスクから獲得したポイント";
+"categories_sync_description" = "カスタムタスクカテゴリ";
+"app_settings_sync_description" = "設定とアプリ設定";
+"synchronized_data" = "同期されたデータ";
+"all_data_types_synced" = "すべてのデータタイプが自動的に同期されます";
+"sync_options_title" = "同期オプション";
+
+// Sync Details View
+"current_status" = "現在のステータス";
+"account_information" = "アカウント情報";
+"service" = "サービス";
+"encryption" = "暗号化";
+"zone" = "ゾーン";
+"common_solutions" = "一般的な解決策";
+"check_internet_connection" = "インターネット接続を確認";
+"verify_icloud_enabled" = "SnapTaskでiCloudが有効になっていることを確認";
+"ensure_icloud_storage" = "iCloudストレージ容量があることを確認";
+
+// Sync Status
+"sync_idle" = "準備完了";
+"sync_syncing" = "同期中...";
+"sync_success" = "最新";
+"sync_error" = "エラー";
+"sync_disabled" = "無効";
+"enabled" = "有効";
+"disabled" = "無効";
+
+// Backup and Restore
+"backup_restore" = "バックアップと復元";
+"backup" = "バックアップ";
+"restore" = "復元";
+"create_backup" = "バックアップを作成";
+"restore_backup" = "バックアップから復元";
+"backup_created" = "バックアップが作成されました";
+"backup_restored" = "バックアップが復元されました";
+"backup_failed" = "バックアップに失敗しました";
+"restore_failed" = "復元に失敗しました";
+"select_backup_file" = "バックアップファイルを選択";
+"backup_description" = "すべてのデータのバックアップを作成";
+"restore_description" = "以前のバックアップから復元";
+"backup_warning" = "これにより現在のデータが上書きされます";
+"restore_warning" = "これにより現在のデータがバックアップで上書きされます";
+"backup_success_message" = "データが正常にバックアップされました";
+"restore_success_message" = "データが正常に復元されました";
+"backup_error_message" = "バックアップの作成に失敗しました。再試行してください。";
+"restore_error_message" = "バックアップの復元に失敗しました。再試行してください。";
+"logout" = "ログアウト";
+"logout_confirmation" = "ログアウトしてもよろしいですか？";
+"logout_success" = "正常にログアウトしました";
+"logout_failed" = "ログアウトに失敗しました";
 
 // Themes
 "themes" = "テーマ";
@@ -156,12 +818,257 @@
 "cloud_sync_desc" = "すべてのデバイスでデータを同期";
 "advanced_statistics" = "高度な統計";
 "advanced_statistics_desc" = "詳細分析のため、全ての統計セクションにアクセス";
-"custom_themes" = "カスタムテーマ";
-"custom_themes_desc" = "限定テーマでアプリの外観をカスタマイズ";
 
-// Premium Paywall
+// Subscription
 "snaptask_pro" = "SnapTask Pro";
-"premium_plan_active" = "プレミアムプランが有効";
+"upgrade_to_pro" = "Proにアップグレード";
+"monthly_subscription" = "月額サブスクリプション";
+"yearly_subscription" = "年額サブスクリプション";
+"monthly_price" = "€3.99/月";
+"yearly_price" = "€34.99/年";
+"yearly_savings" = "27%節約";
+"subscribe" = "登録する";
+"restore_purchases" = "購入を復元";
+"subscription_terms" = "サブスクリプション規約";
+"privacy_policy" = "プライバシーポリシー";
+"terms_of_service" = "利用規約";
+"manage_subscription" = "サブスクリプションを管理";
+"manage_subscriptions" = "サブスクリプションを管理";
+"cancel_subscription" = "サブスクリプションをキャンセル";
+"subscription_active" = "サブスクリプション有効";
+"subscription_expires" = "有効期限";
+"subscription_expired" = "サブスクリプションの有効期限切れ";
+"premium_required" = "プレミアムが必要";
+"premium_feature_locked" = "この機能はSnapTask Proでのみ利用可能です";
+"premium_upgrade_message" = "すべてのプレミアム機能をアンロックするためにSnapTask Proにアップグレード";
+"free_plan_limits" = "無料プランの制限";
+"categories_limit_reached" = "カテゴリの上限に達しました";
+"categories_limit_message" = "無料プランでは最大4つのカテゴリを作成できます。Proにアップグレードすると無制限になります。";
+"rewards_limit_reached" = "報酬の上限に達しました";
+"rewards_limit_message" = "無料プランでは最大3つの報酬を作成できます。Proにアップグレードすると無制限になります。";
+"premium_badge" = "PRO";
+"by_purchasing_you_agree" = "購入または無料トライアルの使用により、SnapTaskの利用規約とプライバシーポリシーに同意したことになります。";
+"you_save" = "節約額";
+"savings_amount" = "節約額 %@";
+
+// Settings
+"contact_support" = "サポートに連絡";
+"contact_support_message" = "ヘルプが必要、提案、バグ報告がある場合は、お気軽にご連絡ください。皆さまのフィードバックは貴重です！";
+"themes_and_customization" = "テーマとカスタマイズ";
+"themes" = "テーマ";
+"manage_categories" = "カテゴリを管理";
+"category_gradients" = "カテゴリのグラデーション";
+"timer_colors" = "タイマーの色";
+
+// Themes
+"current_theme" = "現在のテーマ";
+"free_themes" = "無料テーマ";
+"premium_themes" = "プレミアムテーマ";
+"unlock_premium_themes" = "プレミアムテーマをアンロック";
+
+"theme_default" = "デフォルト";
+"theme_ocean" = "オーシャン";
+"theme_forest" = "フォレスト";
+"theme_sunset" = "サンセット";
+"theme_amethyst" = "アメジスト";
+"theme_carbon" = "カーボン";
+"theme_midnight" = "ミッドナイト";
+"theme_rose_gold" = "ローズゴールド";
+"theme_emerald" = "エメラルド";
+"theme_volcanic" = "ボルカニック";
+"theme_lavender" = "ラベンダー";
+
+// Premium limits
+"premium_limit_info" = "無料プランの制限";
+"premium_limit_description" = "無料プランには最大3つのカスタム報酬が含まれます。";
+"rewards_limit_reached" = "報酬の上限に達しました";
+"rewards_limit_message" = "無料プランでは最大3つの報酬を作成できます。Proにアップグレードすると無制限になります。";
+"premium_badge" = "PRO";
+
+// Dark Mode Theme Warning
+"dark_mode_theme_warning_title" = "カスタムカラーのテーマ";
+"dark_mode_theme_warning_message" = "このテーマはシステムカラーを上書きするためダークモードと互換性がありません。ダークモードを使用するには『デフォルト』『フォレスト』『サンセット』などのシンプルなテーマを選択してください。";
+"switch_to_simple_theme" = "シンプルなテーマを使用";
+"keep_current_theme" = "現在のテーマを維持";
+"custom_colors" = "カスタムカラー";
+"keep_dark_mode" = "ダークモードを無効にする";
+"keep_simple_theme" = "現在のテーマを維持";
+"theme_dark_mode_warning_message" = "このテーマはカスタムカラーを使用しているためダークモードと互換性がありません。このテーマを使用するためにダークモードを無効にしますか？";
+
+// Apple Watch specific strings
+"no_pomodoro_tasks" = "ポモドーロタスクがありません";
+"stats" = "統計";
+"todays_progress" = "今日の進捗";
+"top_streaks" = "トップ連続記録";
+"no_active_streakss" = "アクティブな連続記録がありません";
+"tasks_simplified" = "タスク（簡略版）";
+"no_tasks_today_simplified" = "今日のタスクがありません（簡略表示）";
+"tasks_simplified_view" = "タスク（簡略表示）:";
+"edit_task" = "タスクを編集";
+"delete_task" = "タスクを削除";
+"task_not_found" = "タスクが見つかりません";
+"select_date" = "日付を選択";
+"select_task" = "タスクを選択";
+"start_pomodoro" = "ポモドーロを開始";
+"pomodoro_enabled" = "ポモドーロ有効";
+"no_pomodoro_settings" = "ポモドーロ設定なし";
+"add_first_reward" = "最初の報酬を追加";
+"add_more_rewards" = "さらに報酬を追加";
+"add_rewards_motivate" = "やる気を出すために報酬を追加しましょう！";
+"your_points" = "あなたのポイント";
+"connection" = "接続";
+"iphone_connected" = "iPhone接続済み";
+"iphone_disconnected" = "iPhone未接続";
+"last_sync" = "最後の同期";
+"force_sync_iphone" = "iPhoneと強制同期";
+"sync_cloudkit" = "CloudKitと同期";
+"local_tasks" = "ローカルタスク";
+"received_tasks" = "受信したタスク";
+"sync_status" = "同期ステータス";
+"tap_view_details" = "タップして詳細を表示";
+"version" = "バージョン";
+"reset_all_data" = "すべてのデータをリセット";
+"reset_all_data_alert_title" = "すべてのデータをリセット";
+"reset_all_data_alert_message" = "これによりすべてのローカルデータが削除されます。CloudKitデータはそのまま残ります。";
+"cloudkit_sync" = "CloudKit同期";
+"data_syncs_automatically" = "データはiPhoneと自動同期されます";
+"sync_automatically_message" = "タスク、カテゴリ、報酬はiPhoneとApple Watch間で自動同期されます。";
+"both_devices_connected" = "最良の結果を得るために、両方のデバイスがインターネットに接続されていることを確認してください。";
+"general_timer" = "一般タイマー";
+"complete" = "完了";
+"task_completion" = "タスク完了";
+"task_stats" = "タスク統計";
+"completion_rate" = "完了率";
+"points_summary" = "ポイント概要";
+"weekly_overview" = "週次概要";
+"week_pts" = "週: {points} ポイント";
+"focus_time" = "フォーカス: {time}";
+"mark_incomplete" = "未完了にマーク";
+"mark_complete" = "完了にマーク";
+"recurring_task" = "定期的なタスク";
+"has_duration" = "期間あり";
+"use_pomodoro" = "ポモドーロを使用";
+"work_min" = "作業: {minutes}分";
+"break_min" = "休憩: {minutes}分";
+"date_time" = "日付と時間";
+"points_cost" = "ポイントコスト";
+"name" = "名前";
+"reward_details" = "報酬の詳細";
+"reward_name" = "報酬名";
+"type" = "タイプ";
+"custom" = "カスタム";
+"min" = "分";
+
+// Additional missing strings for app
+"start" = "開始";
+"pause" = "一時停止";
+"resume" = "再開";
+"stop" = "停止";
+"stopped" = "停止中";
+"session_number" = "セッション {number}";
+"time_range" = "時間範囲";
+"today_colon" = "今日: ";
+"week_colon" = "週: ";
+"total_colon" = "合計: ";
+"running" = "実行中";
+"configure_by" = "設定方法";
+"custom_themes" = "カスタムテーマ";
+"custom_themes_desc" = "専用テーマでアプリの外観をカスタマイズ";
+
+// Time Scope Strings
+"time_scope" = "時間範囲";
+"task_happens_today" = "今日のタスク";
+"task_happens_this_week" = "今週の目標";
+"task_happens_this_month" = "今月の目標";
+"task_happens_this_year" = "今年の目標";
+"long_term_goal" = "長期目標";
+"long_term_goals" = "長期目標";
+"no_tasks" = "タスクなし";
+"no_tasks_this_week" = "今週のタスクはありません";
+"no_tasks_this_month" = "今月のタスクはありません";
+"no_tasks_this_year" = "今年のタスクはありません";
+"no_tasks_long_term" = "長期タスクはありません";
+"ready_to_start" = "開始準備完了";
+"break_time" = "休憩時間";
+"reset" = "リセット";
+"complete_session" = "セッション完了";
+"choose_task_focus_on" = "フォーカスするタスクを選択";
+"select_task_enable_pomodoro" = "タスクを選択してポモドーロを有効にする";
+"selected_task_no_pomodoro" = "選択したタスクにポモドーロ設定がありません";
+
+// Existing code...
+"yesterday" = "昨日";
+"tomorrow" = "明日";
+
+"scope_today" = "今日";
+"scope_week" = "週";
+"scope_month" = "月";
+"scope_year" = "年";
+"scope_long_term" = "長期";
+"this_week" = "今週";
+"this_month" = "今月";
+"this_year" = "今年";
+"long_term_objective" = "長期目標";
+"weekly_objectives" = "週次目標";
+"week_short_format" = "週";
+"long_term_objectives" = "長期目標";
+
+// Difficulty and Quality Rating
+"tap_to_rate_difficulty" = "タップして難易度を評価";
+"tap_to_rate_quality" = "タップして品質を評価";
+"very_easy" = "非常に簡単";
+"easy" = "簡単";
+"moderate" = "普通";
+"challenging" = "挑戦的";
+"hard" = "困難";
+"extremely_hard" = "非常に困難";
+"poor_quality" = "品質が悪い";
+"below_average" = "平均以下";
+"average" = "平均";
+"good" = "良い";
+"excellent" = "優秀";
+"perfect" = "完璧";
+
+// Duration Picker
+"how_long_did_it_take" = "どのくらい時間がかかりましたか？";
+"actual_duration" = "実際の時間";
+"hours" = "時間";
+"minutes" = "分";
+
+// Notes Section
+"notes" = "メモ";
+"add_your_thoughts_completion" = "この完了について思ったことを追加...";
+"clear" = "クリア";
+
+// Tracking Mode Selection
+"start_focus_session" = "フォーカスセッションを開始";
+"choose_tracking_mode" = "追跡モードを選択";
+"select_mode" = "モードを選択";
+"simple_timer_session" = "シンプルタイマーセッション";
+
+// Time Tracking Completion
+"focus_session_complete" = "フォーカスセッション完了！";
+"focused_for" = "フォーカス時間";
+"session_details" = "セッション詳細";
+"mode" = "モード";
+"original_category" = "元のカテゴリ";
+"track_time_in" = "時間を記録";
+"this_task_only" = "このタスクのみ";
+"save_and_finish" = "保存して終了";
+
+// Additional missing strings
+"icloud" = "iCloud";
+"pts" = "ポイント";
+"task_name_placeholder" = "タスク名を入力";
+
+// Missing Time Scope Strings
+"select_week" = "週を選択";
+"week_range" = "週の範囲";
+"select_month" = "月を選択";
+"select_year" = "年を選択";
+"selected_period" = "選択した期間";
+
+// Missing Premium Paywall Strings
 "unlock_snaptask_pro" = "SnapTask Proをアンロック";
 "maximize_your_productivity" = "生産性を最大化";
 "everything_you_get" = "含まれるすべて";
@@ -169,28 +1076,46 @@
 "lifetime_access" = "買い切り（無期限アクセス）";
 "one_time_no_subscription" = "買い切り、サブスクリプションなし";
 "best_value" = "最もお得";
-"yearly" = "年額";
-"monthly" = "月額";
-"total_flexibility" = "柔軟性";
-"free_trial" = "無料トライアル";
 "days_free_then" = "3日間無料、その後 %@";
+"total_flexibility" = "柔軟性";
 "start_free_trial" = "無料トライアルを開始";
 "purchase_lifetime_access" = "買い切りを購入";
 "one_time_payment" = "買い切り";
 "subscribe_yearly_plan" = "年額プランに登録";
 "subscribe_monthly_plan" = "月額プランに登録";
+"premium_plan" = "プレミアムプラン";
+"premium_features" = "プレミアム機能";
+
+// Subscription
+"snaptask_pro" = "SnapTask Pro";
+"upgrade_to_pro" = "Proにアップグレード";
+"monthly_subscription" = "月額サブスクリプション";
+"yearly_subscription" = "年額サブスクリプション";
+"monthly_price" = "€3.99/月";
+"yearly_price" = "€34.99/年";
+"yearly_savings" = "27%節約";
+"subscribe" = "登録する";
 "restore_purchases" = "購入を復元";
-"manage_subscriptions" = "サブスクリプションを管理";
-"savings_amount" = "節約額 %@";
-"subscription" = "サブスクリプション";
-"terms_of_service" = "利用規約";
+"subscription_terms" = "サブスクリプション規約";
 "privacy_policy" = "プライバシーポリシー";
-"welcome_snaptask_pro_lifetime" = "SnapTask Pro 買い切りへようこそ！無期限で無制限にご利用いただけます。";
-"free_trial_activated" = "無料トライアルが有効になりました！SnapTask Proを3日間お試しください。";
-"welcome_snaptask_pro" = "SnapTask Proへようこそ！すべてのプレミアム機能をお楽しみください。";
-"purchase_not_completed" = "購入を完了できませんでした。もう一度お試しください。";
-"purchases_restored_successfully" = "購入を正常に復元しました！";
-"no_purchases_to_restore" = "復元する購入は見つかりませんでした。";
+"terms_of_service" = "利用規約";
+"manage_subscription" = "サブスクリプションを管理";
+"cancel_subscription" = "サブスクリプションをキャンセル";
+"subscription_active" = "サブスクリプション有効";
+"subscription_expires" = "有効期限";
+"subscription_expired" = "サブスクリプションの有効期限切れ";
+"premium_required" = "プレミアムが必要";
+"premium_feature_locked" = "この機能はSnapTask Proでのみ利用可能です";
+"premium_upgrade_message" = "すべてのプレミアム機能をアンロックするためにSnapTask Proにアップグレード";
+"free_plan_limits" = "無料プランの制限";
+"categories_limit_reached" = "カテゴリの上限に達しました";
+"categories_limit_message" = "無料プランでは最大4つのカテゴリを作成できます。Proにアップグレードすると無制限になります。";
+"rewards_limit_reached" = "報酬の上限に達しました";
+"rewards_limit_message" = "無料プランでは最大3つの報酬を作成できます。Proにアップグレードすると無制限になります。";
+"premium_badge" = "PRO";
+"by_purchasing_you_agree" = "購入または無料トライアルの使用により、SnapTaskの利用規約とプライバシーポリシーに同意したことになります。";
+"you_save" = "節約額";
+"savings_amount" = "節約額 %@";
 
 // Subscription Manager Strings
 "not_subscribed" = "未登録";
@@ -205,22 +1130,111 @@
 "unknown_error" = "不明なエラー";
 "per_month" = "/月";
 
-// Settings
-"premium_plan" = "プレミアムプラン";
-"premium_features" = "プレミアム機能";
-"contact_support" = "サポートに連絡";
-"contact_support_message" = "ヘルプが必要、提案、バグ報告がある場合は、お気軽にご連絡ください。皆さまのフィードバックは貴重です！";
-"manage_categories" = "カテゴリを管理";
-"category_gradients" = "カテゴリのグラデーション";
-"timer_colors" = "タイマーの色";
-"premium_limit_info" = "無料プランの制限";
-"premium_limit_description" = "無料プランでは最大3つのカスタム報酬が含まれます。";
-"rewards_limit_reached" = "報酬の上限に達しました";
-"rewards_limit_message" = "無料プランでは最大3つの報酬を作成できます。Proにアップグレードすると無制限になります。";
-"premium_badge" = "PRO";
+// EnhancedRecurrenceSettingsView Strings
+"recurrence_type" = "繰り返しタイプ";
+"daily_enum" = "毎日";
+"weekly_enum" = "毎週";
+"monthly_enum" = "毎月";
+"yearly_enum" = "毎年";
+"days_enum" = "日";
+"patterns_enum" = "パターン";
+"daily_recurrence" = "日次繰り返し";
+"task_repeat_every_day" = "タスクは毎日繰り返されます";
+"weekly_recurrence" = "週次繰り返し";
+"monthly_recurrence" = "月次繰り返し";
+"yearly_recurrence" = "年次繰り返し";
+"select_days_of_month" = "月の日を選択";
+"select_patterns_ordinal" = "パターンを選択（序数）";
+"monthly_patterns" = "月次パターン";
+"none_selected" = "選択なし";
+"select_day_of_year" = "年の日を選択";
+"repeat_on" = "繰り返し";
+"task_repeat_yearly_on" = "タスクは年次で繰り返されます";
+"end_date" = "終了日";
+"set_end_date" = "終了日を設定";
+"open_in_maps" = "マップで開く";
+"session_complete" = "セッション完了";
+"tracking_sessions" = "追跡セッション";
+"new_feedback" = "新しいフィードバック";
+"sync_details" = "同期詳細";
+"sync_status" = "同期ステータス";
+"last_sync" = "最後の同期";
+"auto_sync" = "自動同期";
+"account" = "アカウント";
+"service" = "サービス";
+"zone" = "ゾーン";
+"encryption" = "暗号化";
+"data_types" = "データタイプ";
+"error_details" = "エラー詳細";
+"tasks" = "タスク";
+"rewards" = "報酬";
+"categories" = "カテゴリ";
+"points_history" = "ポイント履歴";
+"app_settings" = "アプリ設定";
+"all_devices" = "すべてのデバイス";
+"completed" = "完了";
+"running" = "実行中";
+"paused" = "一時停止";
+"sync_error" = "同期エラー";
+"try_again" = "再試行";
+"last_synced" = "最後の同期";
+"syncing" = "同期中...";
+"up_to_date" = "最新";
+"tap_to_sync" = "タップして同期";
+"sync_disabled" = "同期無効";
+"check_internet_connection" = "インターネット接続を確認して再試行してください。";
+"icloud_storage_full" = "iCloudストレージがいっぱいです。設定で容量を空けてください。";
+"sign_in_icloud" = "設定でiCloudにサインインして同期を有効にしてください。";
+"setting_up_sync" = "初回同期を設定中...";
+"check_icloud_connection" = "iCloud接続を確認して再試行してください。";
 
-// Dark Mode Theme Warning
-"dark_mode_theme_warning_title" = "カスタムカラーのテーマ";
-"dark_mode_theme_warning_message" = "このテーマはシステムカラーを上書きするためダークモードと互換性がありません。ダークモードを使用するには『デフォルト』『フォレスト』『サンセット』などのシンプルなテーマを選択してください。";
-"switch_to_simple_theme" = "シンプルなテーマを使用";
-"keep_current_theme
+// OrdinalPatternPickerView Strings
+"select_patterns_description" = "月次繰り返しの特定のパターンを選択";
+"first" = "最初";
+"second" = "2番目";
+"third" = "3番目";
+"fourth" = "4番目";
+"last" = "最後";
+"clear_all" = "すべてクリア";
+
+// Long-term info
+"long_term_info" = "長期目標には特定のタイムラインがありません";
+"complete" = "完了";
+
+// Location selection/search
+"select_location" = "場所を選択";
+"search_location" = "場所を検索";
+"search_for_a_place" = "場所を検索";
+"remove_location" = "場所を削除";
+"selected_location" = "選択した場所";
+
+// Premium Subscription
+"premium_plan_active" = "プレミアムプラン有効";
+"manage_subscriptions" = "サブスクリプションを管理";
+"restore_purchases" = "購入を復元";
+"terms_of_service" = "利用規約";
+"privacy_policy" = "プライバシーポリシー";
+
+// Photos & Voice Memos (Task Details)
+"photos" = "写真";
+"take_photo" = "写真を撮る";
+"add_photos" = "写真を追加";
+"change_photo" = "写真を変更";
+"remove_photo" = "写真を削除";
+"voice_memos" = "ボイスメモ";
+"record" = "録音";
+"recording" = "録音中...";
+"no_voice_memos_yet" = "まだボイスメモがありません。";
+"microphone_access_denied_title" = "マイクアクセスが拒否されました";
+"microphone_access_denied_message" = "ボイスメモを録音するには、設定でマイクアクセスを有効にしてください。";
+"voice_memo" = "ボイスメモ";
+"voice_memo_name_placeholder" = "ボイスメモ名";
+
+"how_create_task" = "どのようにタスクを作成しますか？";
+"choose_from_previous_tasks" = "以前のタスクから選択";
+"search_past_tasks" = "過去のタスクを検索";
+"no_past_tasks" = "表示する過去のタスクがありません。";
+"create_first_then_see_templates" = "新しいタスクを作成すると、クイックテンプレートとしてここに表示されます。";
+
+// Premium
+"premium" = "プレミアム";
