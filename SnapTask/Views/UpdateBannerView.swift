@@ -5,137 +5,159 @@ struct UpdateBannerView: View {
     @Binding var isPresented: Bool
     @Environment(\.colorScheme) private var colorScheme
     
-    private let currentVersion = "0.3" // Updated version
+    private let currentVersion = "1.0"
     
     var body: some View {
-        VStack(spacing: 0) {
-            if showBanner {
-                VStack {
-                    Spacer()
-                    
-                    VStack(spacing: 20) {
-                        VStack(spacing: 8) {
-                            HStack {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [.purple, .pink],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                
-                                Text("whats_new".localized)
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                Button {
-                                    dismissBanner()
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            HStack {
-                                Text("version_update".localized + " \(currentVersion)")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                
-                                Spacer()
-                            }
-                        }
+        GeometryReader { geo in
+            ZStack {
+                if showBanner {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        
+                        let cardMaxWidth = min(geo.size.width - 40, 600)
+                        let cardMaxHeight = min(geo.size.height * 0.85, 700)
+                        let featuresMaxHeight = min(geo.size.height * 0.45, 420)
                         
                         VStack(spacing: 16) {
-                            UpdateFeatureRow(
-                                icon: "star.fill",
-                                iconColor: .orange,
-                                title: "Quality & Difficulty Rating",
-                                description: "task_quality_rating_desc".localized
-                            )
+                            VStack(spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "party.popper.fill")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text("version_1_0_launch".localized + " 🚀")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.9)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    
+                                    Spacer(minLength: 8)
+                                    
+                                    Button {
+                                        dismissBanner()
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Text("official_launch".localized)
+                                    .font(.footnote.weight(.medium))
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                             
-                            UpdateFeatureRow(
-                                icon: "stopwatch",
-                                iconColor: .blue,
-                                title: "Manual Time Tracking",
-                                description: "manual_time_tracking_desc".localized
-                            )
+                            // REMOVE: Long marketing description to keep the message concise
                             
-                            UpdateFeatureRow(
-                                icon: "chart.line.uptrend.xyaxis",
-                                iconColor: .green,
-                                title: "Enhanced Statistics",
-                                description: "enhanced_statistics_desc".localized
-                            )
-                            
-                            UpdateFeatureRow(
-                                icon: "text.bubble",
-                                iconColor: .purple,
-                                title: "Task Comments",
-                                description: "task_comments_desc".localized
-                            )
-                            
-                            UpdateFeatureRow(
-                                icon: "trash.slash",
-                                iconColor: .red,
-                                title: "Complete Data Reset",
-                                description: "data_reset_option_desc".localized
-                            )
-                            
-                            UpdateFeatureRow(
-                                icon: "wrench.and.screwdriver",
-                                iconColor: .gray,
-                                title: "General Bug Fixes",
-                                description: "general_improvements_desc".localized
-                            )
-                        }
-                        
-                        Button {
-                            dismissBanner()
-                        } label: {
-                            Text("got_it".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(
-                                    LinearGradient(
-                                        colors: [.purple, .pink],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
+                            ScrollView {
+                                VStack(spacing: 12) {
+                                    UpdateFeatureRow(
+                                        icon: "target",
+                                        iconColor: .blue,
+                                        title: "smart_goal_system".localized,
+                                        description: "weekly_monthly_yearly_goals_desc".localized
                                     )
-                                )
-                                .cornerRadius(12)
+                                    
+                                    UpdateFeatureRow(
+                                        icon: "camera.fill",
+                                        iconColor: .green,
+                                        title: "rich_task_media".localized,
+                                        description: "photos_audio_tasks_desc".localized
+                                    )
+                                    
+                                    UpdateFeatureRow(
+                                        icon: "bell.badge.fill",
+                                        iconColor: .red,
+                                        title: "smart_notifications".localized,
+                                        description: "task_notifications_desc".localized
+                                    )
+                                    
+                                    UpdateFeatureRow(
+                                        icon: "location.fill",
+                                        iconColor: .purple,
+                                        title: "location_based_tasks".localized,
+                                        description: "location_tasks_desc".localized
+                                    )
+                                    
+                                    UpdateFeatureRow(
+                                        icon: "paintbrush.fill",
+                                        iconColor: .orange,
+                                        title: "custom_themes".localized,
+                                        description: "custom_themes_desc".localized
+                                    )
+                                    
+                                    UpdateFeatureRow(
+                                        icon: "globe",
+                                        iconColor: .indigo,
+                                        title: "multi_language_support".localized,
+                                        description: "multi_language_desc".localized
+                                    )
+                                    
+                                    UpdateFeatureRow(
+                                        icon: "wrench.and.screwdriver.fill",
+                                        iconColor: .gray,
+                                        title: "major_improvements".localized,
+                                        description: "major_bug_fixes_desc".localized
+                                    )
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxHeight: featuresMaxHeight)
+                            
+                            Button {
+                                dismissBanner()
+                            } label: {
+                                Text("lets_get_started".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [.orange, .red, .purple],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(12)
+                                    .shadow(
+                                        color: .orange.opacity(0.3),
+                                        radius: 8,
+                                        x: 0,
+                                        y: 4
+                                    )
+                            }
                         }
+                        .padding(20)
+                        .frame(maxWidth: cardMaxWidth)
+                        .frame(maxHeight: cardMaxHeight)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(.ultraThinMaterial)
+                                .shadow(
+                                    color: .black.opacity(0.15),
+                                    radius: 20,
+                                    x: 0,
+                                    y: 10
+                                )
+                        )
+                        .padding(.horizontal, 20)
+                        
+                        Spacer(minLength: 0)
                     }
-                    .padding(24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(.ultraThinMaterial)
-                            .shadow(
-                                color: .black.opacity(0.15),
-                                radius: 20,
-                                x: 0,
-                                y: 10
-                            )
-                    )
-                    .padding(.horizontal, 20)
-                    
-                    Spacer()
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.9)).combined(with: .move(edge: .bottom)),
+                        removal: .opacity.combined(with: .scale(scale: 0.95)).combined(with: .move(edge: .bottom))
+                    ))
+                    .zIndex(999)
                 }
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .scale(scale: 0.8)).combined(with: .move(edge: .bottom)),
-                    removal: .opacity.combined(with: .scale(scale: 0.9)).combined(with: .move(edge: .bottom))
-                ))
-                .zIndex(999)
             }
-        }
-        .onAppear {
-            showBannerWithDelay()
+            .onAppear {
+                showBannerWithDelay()
+            }
         }
     }
     
@@ -180,6 +202,9 @@ struct UpdateFeatureRow: View {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                 
                 Text(description)
                     .font(.system(size: 14))
@@ -187,38 +212,34 @@ struct UpdateFeatureRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
 
 struct UpdateBannerManager {
-    private static let currentVersion = "0.3" // Updated version
+    private static let currentVersion = "1.0"
     private static let lastShownVersionKey = "lastShownUpdateVersion"
-    private static let bannerShownKey = "update_banner_0_3_shown"
+    private static let bannerShownKey = "update_banner_1_0_shown"
     
     static func shouldShowUpdateBanner() -> Bool {
         let bannerShown = UserDefaults.standard.bool(forKey: bannerShownKey)
         
         if !bannerShown {
-            print("🎉 Should show update banner - Banner not shown yet")
             return true
         }
         
-        print("📱 Update banner already shown")
         return false
     }
     
     static func markBannerAsShown() {
         UserDefaults.standard.set(true, forKey: bannerShownKey)
         UserDefaults.standard.set(currentVersion, forKey: lastShownVersionKey)
-        print("✅ Marked update banner as shown")
     }
     
     static func resetBannerForTesting() {
         UserDefaults.standard.removeObject(forKey: bannerShownKey)
         UserDefaults.standard.removeObject(forKey: lastShownVersionKey)
-        print("🧪 Reset banner for testing - next app launch will show banner")
     }
     
     static func getCurrentVersion() -> String {
@@ -228,11 +249,4 @@ struct UpdateBannerManager {
     static func getLastShownVersion() -> String? {
         return UserDefaults.standard.string(forKey: lastShownVersionKey)
     }
-}
-
-#Preview {
-    UpdateBannerView(isPresented: .constant(true))
-        .onAppear {
-            // Preview will show banner immediately
-        }
 }

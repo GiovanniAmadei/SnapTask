@@ -1903,7 +1903,7 @@ struct CompactTimelineTaskView: View {
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Button(action: {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     viewModel.toggleTaskCompletion(task.id)
@@ -1920,9 +1920,9 @@ struct CompactTimelineTaskView: View {
                 }
             }
             .buttonStyle(BorderlessButtonStyle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
                     if let category = task.category {
                         Circle()
                             .fill(Color(hex: category.color))
@@ -1931,59 +1931,10 @@ struct CompactTimelineTaskView: View {
                     
                     Text(task.name)
                         .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(theme.textColor)
-                    
-                    Spacer()
-                    // Only show time indicator for today scope
-                    if task.timeScope == .today {
-                        if task.hasSpecificTime {
-                            Text(taskTime)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(theme.secondaryTextColor)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(theme.surfaceColor)
-                                .cornerRadius(4)
-                        } else {
-                            Text("all_day".localized)
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundColor(.blue)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(4)
-                        }
-                    }
-                    Image(systemName: task.priority.icon)
-                        .foregroundColor(Color(hex: task.priority.color))
-                        .font(.system(size: 12))
-                    
-                    if task.pomodoroSettings != nil {
-                        Button(action: {
-                            PomodoroViewModel.shared.setActiveTask(task)
-                            showingPomodoro = true
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(theme.accentColor.opacity(0.15))
-                                    .frame(width: 36, height: 36)
-                                
-                                Image(systemName: "timer")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(task.category.map { Color(hex: $0.color) } ?? theme.accentColor)
-                            }
-                            .overlay(
-                                Circle()
-                                    .strokeBorder(theme.accentColor.opacity(0.5), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
-                    }
-                    
-                    Spacer()
+                        .fontWeight(.semibold)
+                        .foregroundColor(isCompleted ? theme.secondaryTextColor : theme.textColor)
+                        .lineLimit(1)
                 }
-                .padding(.leading, 8)
                 
                 if let description = task.description, !description.isEmpty {
                     Text(description)
@@ -1992,17 +1943,31 @@ struct CompactTimelineTaskView: View {
                         .lineLimit(1)
                 }
             }
+            
+            Spacer()
+            
+            HStack(spacing: 8) {
+                if task.hasSpecificTime {
+                    Text(taskTime)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(theme.secondaryTextColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(theme.surfaceColor)
+                        .cornerRadius(4)
+                }
+                
+                Image(systemName: task.priority.icon)
+                    .foregroundColor(Color(hex: task.priority.color))
+                    .font(.system(size: 12))
+            }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(theme.surfaceColor)
-                .shadow(color: theme.shadowColor, radius: 1, x: 0, y: 1)
+                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
         )
-        .opacity(isCompleted ? 0.6 : 1.0)
-        .sheet(isPresented: $showingPomodoro) {
-            PomodoroView(task: task)
-        }
     }
 }

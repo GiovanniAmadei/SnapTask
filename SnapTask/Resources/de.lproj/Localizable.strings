@@ -839,6 +839,7 @@
 "manage_subscriptions" = "Abonnements verwalten";
 "cancel_subscription" = "Abonnement kündigen";
 "subscription_active" = "Abonnement aktiv";
+"premium_plan_active" = "Premium‑Plan aktiv";
 "subscription_expires" = "Läuft ab";
 "subscription_expired" = "Abonnement abgelaufen";
 "premium_required" = "Premium erforderlich";
@@ -1164,3 +1165,24 @@
 
 // Premium
 "premium" = "Premium";
+
+// Update Banner Version 1.0 - OFFIZIELLER START! 🎉
+"official_launch" = "Offizieller Start! 🎉";
+"version_1_0_launch" = "SnapTask v1.0 – Endlich da!";
+"version_1_0_description" = "Willkommen bei der finalen Version von SnapTask! Nach Monaten der Entwicklung und Community‑Feedback sind wir bereit, deine Produktivität zu revolutionieren.";
+
+// Version 1.0 – Neue Funktionen
+"weekly_monthly_yearly_goals_desc" = "Erstelle smarte Ziele für Wochen, Monate, Jahre und langfristig mit erweitertem Tracking";
+"photos_audio_tasks_desc" = "Füge Aufgaben Fotos und Sprachaufnahmen für vollen Kontext hinzu";
+"task_notifications_desc" = "Erhalte smarte Benachrichtigungen, damit du keine wichtige Aufgabe verpasst";
+"location_tasks_desc" = "Verknüpfe Orte mit Aufgaben und erhalte standortbasierte Erinnerungen";
+"multi_language_desc" = "Vollständige Unterstützung für Italienisch, Englisch, Spanisch, Französisch, Deutsch, Portugiesisch und Japanisch";
+"major_bug_fixes_desc" = "Hunderte Verbesserungen, Optimierungen und Fehlerbehebungen für ein reibungsloses Erlebnis";
+"lets_get_started" = "Los geht's! 🚀";
+
+// Update Banner v1.0 - Funktions-Titel
+"smart_goal_system" = "Smartes Zielsystem";
+"rich_task_media" = "Umfangreiche Aufgabenmedien";
+"location_based_tasks" = "Standortbasierte Aufgaben";
+"multi_language_support" = "Mehrsprachige Unterstützung";
+"major_improvements" = "Große Verbesserungen";

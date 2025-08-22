@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>SnapTask</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCalendarUsageDescription</key>
 	<string>Snaptask needs write access to sync your tasks and create calendar events automatically.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>

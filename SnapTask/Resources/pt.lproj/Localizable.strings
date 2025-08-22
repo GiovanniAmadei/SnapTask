@@ -1239,3 +1239,24 @@
 
 // Premium
 "premium" = "Premium";
+
+// Banner de atualização Versão 1.0 - LANÇAMENTO OFICIAL! 🎉
+"official_launch" = "Lançamento oficial! 🎉";
+"version_1_0_launch" = "SnapTask v1.0 - Finalmente aqui!";
+"version_1_0_description" = "Bem-vindo à versão definitiva do SnapTask! Após meses de desenvolvimento e feedback da comunidade, estamos prontos para revolucionar sua produtividade.";
+
+// Novidades da versão 1.0
+"weekly_monthly_yearly_goals_desc" = "Crie metas inteligentes para semanas, meses, anos e longo prazo com acompanhamento avançado";
+"photos_audio_tasks_desc" = "Adicione fotos e gravações de voz às suas tarefas para um contexto completo";
+"task_notifications_desc" = "Receba notificações inteligentes para nunca perder uma tarefa importante";
+"location_tasks_desc" = "Associe locais às tarefas e receba lembretes baseados em localização";
+"multi_language_desc" = "Suporte completo para italiano, inglês, espanhol, francês, alemão, português e japonês";
+"major_bug_fixes_desc" = "Centenas de melhorias, otimizações e correções para uma experiência fluida";
+"lets_get_started" = "Vamos começar! 🚀";
+
+// Títulos de recursos - Banner v1.0
+"smart_goal_system" = "Sistema de metas inteligente";
+"rich_task_media" = "Mídia rica nas tarefas";
+"location_based_tasks" = "Tarefas baseadas em localização";
+"multi_language_support" = "Suporte multilíngue";
+"major_improvements" = "Grandes melhorias";

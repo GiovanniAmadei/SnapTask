@@ -191,8 +191,10 @@ struct RewardsView: View {
                                 Image(systemName: frequency.iconName)
                                     .font(.system(size: 14, weight: .medium))
                                 
-                                Text(frequency.displayName.localized)
+                                Text(frequency.shortDisplayName.localized)
                                     .font(.system(size: 10, weight: .medium))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
@@ -496,19 +498,38 @@ struct CompactPointsChip: View {
     let color: Color
     @Environment(\.theme) private var theme
     
+    private func abbreviated(_ n: Int) -> String {
+        let v = Double(n)
+        if v >= 1_000_000 {
+            return String(format: "%.1fM", v / 1_000_000).replacingOccurrences(of: ".0", with: "")
+        } else if v >= 1_000 {
+            return String(format: "%.1fk", v / 1_000).replacingOccurrences(of: ".0", with: "")
+        } else {
+            return "\(n)"
+        }
+    }
+    
     var body: some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(color)
                 .frame(width: 6, height: 6)
             
-            Text("\(points)")
+            Text(abbreviated(points))
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .allowsTightening(true)
+                .fixedSize(horizontal: true, vertical: false)
             
             Text(title.localized)
                 .font(.system(size: 11, weight: .medium))
                 .themedSecondaryText()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .allowsTightening(true)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
@@ -796,6 +817,8 @@ struct RewardCard: View {
                             Text(String(format: "need_%d_more".localized, missingPoints))
                                 .font(.system(size: 11))
                                 .themedSecondaryText()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
                         }
                     }
                     
@@ -885,6 +908,8 @@ struct RewardCard: View {
             Text("redeemed".localized)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(.green)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
@@ -909,7 +934,7 @@ struct RewardCard: View {
                 .foregroundColor(.green)
         }
         .padding(.horizontal, 6)
-        .padding(.vertical,3)
+        .padding(.vertical, 3)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.green.opacity(0.15))
@@ -925,9 +950,11 @@ struct RewardCard: View {
             Image(systemName: reward.isGeneralReward ? "star.fill" : "folder.fill")
                 .font(.system(size: 8))
                 .foregroundColor(reward.isGeneralReward ? theme.primaryColor : categoryColor)
-            Text(reward.isGeneralReward ? "general".localized : reward.frequency.displayName)
+            Text(reward.isGeneralReward ? "general".localized : reward.frequency.shortDisplayName.localized)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(reward.isGeneralReward ? theme.primaryColor : categoryColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)

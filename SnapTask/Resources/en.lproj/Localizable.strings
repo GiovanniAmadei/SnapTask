@@ -393,6 +393,7 @@
 "points_history" = "Points History";
 "redeemed_rewards" = "Redeemed Rewards";
 "need_more_points" = "Need {points} more points";
+"need_%d_more" = "Need %d more";
 "rewards_count" = "rewards";
 
 // Reward Form View
@@ -1239,3 +1240,25 @@
 
 // Premium
 "premium" = "Premium";
+
+// Update Banner Version 1.0 - OFFICIAL LAUNCH! 🎉
+"official_launch" = "Official Launch! 🎉";
+"version_1_0_launch" = "SnapTask v1.0 - Finally Here!";
+"version_1_0_description" = "Welcome to the definitive version of SnapTask! After months of development and community feedback, we're ready to revolutionize your productivity.";
+
+// Version 1.0 New Features
+"weekly_monthly_yearly_goals_desc" = "Create smart goals for weeks, months, years and long-term with advanced tracking";
+"photos_audio_tasks_desc" = "Add photos and voice recordings to your tasks for complete context";
+"task_notifications_desc" = "Receive smart notifications so you never miss an important task";
+"location_tasks_desc" = "Associate locations with tasks and get location-based reminders";
+"custom_themes_desc" = "Completely customize the app appearance with exclusive themes and unique colors";
+"multi_language_desc" = "Full support for Italian, English, Spanish, French, German, Portuguese and Japanese";
+"major_bug_fixes_desc" = "Hundreds of improvements, optimizations and fixes for a smooth experience";
+"lets_get_started" = "Let's Get Started! 🚀";
+
+// Update Banner v1.0 - Feature Titles
+"smart_goal_system" = "Smart Goal System";
+"rich_task_media" = "Rich Task Media";
+"location_based_tasks" = "Location-Based Tasks";
+"multi_language_support" = "Multi-Language Support";
+"major_improvements" = "Major Improvements";

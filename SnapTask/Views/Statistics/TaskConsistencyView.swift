@@ -268,7 +268,7 @@ private struct ModernConsistencyChart: View {
                     }
                 }
             }
-            .chartYScale(domain: 0...getMaxYValue())
+            .chartYScale(domain: 0...getCappedYMax())
             .chartYAxisLabel("completed_tasks".localized, position: .leading)
             .chartXAxisLabel("date".localized, position: .bottom)
             .chartPlotStyle { plotArea in
@@ -279,7 +279,9 @@ private struct ModernConsistencyChart: View {
         }
         .padding(.horizontal, 16)
     }
-    
+
+    // ... (rest of the code remains the same)
+
     private func getMaxYValue() -> Int {
         let allPoints = tasks.compactMap { task in
             getRealConsistencyPoints(for: task, timeRange: timeRange)
@@ -289,6 +291,36 @@ private struct ModernConsistencyChart: View {
         return max(maxValue, 1)
     }
     
+    // Expanded Y range to make lines visually less steep without changing data values
+    private func getScaledMaxYValue() -> Int {
+        let baseMax = Double(getMaxYValue())
+        let scaled = ceil(baseMax * yScaleMultiplier())
+        return max(Int(scaled), 1)
+    }
+    
+    private func yScaleMultiplier() -> Double {
+        switch timeRange {
+        case .week:
+            return 1.4
+        case .month:
+            return 2.0
+        case .year:
+            return 2.5
+        }
+    }
+
+    private func getCappedYMax() -> Int {
+        let scaled = getScaledMaxYValue()
+        switch timeRange {
+        case .week:
+            return scaled
+        case .month:
+            return min(scaled, 31)
+        case .year:
+            return min(scaled, 365)
+        }
+    }
+
     private var chartBackground: some View {
         RoundedRectangle(cornerRadius: 14)
             .fill(
@@ -321,31 +353,42 @@ private struct ModernConsistencyChart: View {
         let calendar = Calendar.current
         let today = Date()
         
-        let daysToAnalyze: Int
-        let interval: Int
-        
-        switch timeRange {
-        case .week:
-            daysToAnalyze = 7
-            interval = 1
-        case .month:
-            daysToAnalyze = 30
-            interval = 4
-        case .year:
-            daysToAnalyze = 365
-            interval = 30
-        }
-        
         var dates: [Date] = []
         
-        for dayOffset in stride(from: 1-daysToAnalyze, through: 0, by: interval) {
-            if let date = calendar.date(byAdding: .day, value: dayOffset, to: today) {
-                dates.append(calendar.startOfDay(for: date))
+        switch timeRange {
+        case .week, .month:
+            let daysToAnalyze: Int
+            let interval: Int
+            
+            switch timeRange {
+            case .week:
+                daysToAnalyze = 7
+                interval = 1
+            case .month:
+                daysToAnalyze = 30
+                interval = 4
+            default:
+                daysToAnalyze = 0
+                interval = 0
             }
-        }
-        
-        if !dates.contains(where: { calendar.isDate($0, inSameDayAs: today) }) {
-            dates.append(calendar.startOfDay(for: today))
+            
+            for dayOffset in stride(from: 1-daysToAnalyze, through: 0, by: interval) {
+                if let date = calendar.date(byAdding: .day, value: dayOffset, to: today) {
+                    dates.append(calendar.startOfDay(for: date))
+                }
+            }
+            
+            if !dates.contains(where: { calendar.isDate($0, inSameDayAs: today) }) {
+                dates.append(calendar.startOfDay(for: today))
+            }
+        case .year:
+            // Generate the first day of each month for the last 12 months including current
+            let startOfCurrentMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today))!
+            for monthsBack in stride(from: 11, through: 0, by: -1) {
+                if let monthDate = calendar.date(byAdding: .month, value: -monthsBack, to: startOfCurrentMonth) {
+                    dates.append(monthDate)
+                }
+            }
         }
         
         return dates.sorted()
@@ -360,7 +403,8 @@ private struct ModernConsistencyChart: View {
         case .month:
             formatter.dateFormat = "dd MMM"
         case .year:
-            formatter.dateFormat = "MMM yyyy"
+            // Shorter monthly label to avoid crowding
+            formatter.dateFormat = "MMM"
         }
         
         return formatter.string(from: date)
@@ -372,9 +416,9 @@ private struct ModernConsistencyChart: View {
         let taskColor = getTaskColor(for: task, at: index)
         let isSelected = selectedTaskId == nil || selectedTaskId == task.id
         let opacity = isSelected ? 0.9 : 0.3
-        let lineWidth: Double = isSelected ? 3.5 : 2
-        let symbolSize: Double = isSelected ? 80 : 50
-        
+        let lineWidth = getLineWidth(isSelected: isSelected)
+        let symbolSize = getSymbolSize(isSelected: isSelected)
+
         if !points.isEmpty {
             ForEach(Array(points.enumerated()), id: \.offset) { pointIndex, point in
                 LineMark(
@@ -391,6 +435,28 @@ private struct ModernConsistencyChart: View {
         }
     }
     
+    private func getLineWidth(isSelected: Bool) -> Double {
+        switch timeRange {
+        case .week:
+            return isSelected ? 3.0 : 2.0
+        case .month:
+            return isSelected ? 2.0 : 1.5
+        case .year:
+            return isSelected ? 1.2 : 0.8
+        }
+    }
+    
+    private func getSymbolSize(isSelected: Bool) -> Double {
+        switch timeRange {
+        case .week:
+            return isSelected ? 36 : 24
+        case .month:
+            return isSelected ? 14 : 10
+        case .year:
+            return isSelected ? 2 : 1
+        }
+    }
+
     private func getRealConsistencyPoints(for task: TodoTask, timeRange: ConsistencyTimeRange) -> [(Date, Int)] {
         guard let recurrence = task.recurrence else {
             return []

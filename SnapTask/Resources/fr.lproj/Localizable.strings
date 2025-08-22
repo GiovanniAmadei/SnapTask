@@ -1067,3 +1067,120 @@
 "restore_purchases" = "Restaurer les achats";
 "terms_of_service" = "Conditions d’utilisation";
 "privacy_policy" = "Politique de confidentialité";
+
+// Bannière de mise à jour Version 1.0 - LANCEMENT OFFICIEL ! 🎉
+"official_launch" = "Lancement officiel ! 🎉";
+"version_1_0_launch" = "SnapTask v1.0 - Enfin là !";
+"version_1_0_description" = "Bienvenue dans la version définitive de SnapTask ! Après des mois de développement et de retours de la communauté, nous sommes prêts à révolutionner votre productivité.";
+
+// Nouveautés de la version 1.0
+"weekly_monthly_yearly_goals_desc" = "Créez des objectifs intelligents pour les semaines, les mois, les années et le long terme avec un suivi avancé";
+"photos_audio_tasks_desc" = "Ajoutez des photos et des enregistrements vocaux à vos tâches pour un contexte complet";
+"task_notifications_desc" = "Recevez des notifications intelligentes pour ne manquer aucune tâche importante";
+"location_tasks_desc" = "Associez des lieux aux tâches et recevez des rappels basés sur la localisation";
+// \"custom_themes_desc\" existe déjà
+"multi_language_desc" = "Prise en charge complète de l’italien, de l’anglais, de l’espagnol, du français, de l’allemand, du portugais et du japonais";
+"major_bug_fixes_desc" = "Des centaines d’améliorations, d’optimisations et de corrections pour une expérience fluide";
+"lets_get_started" = "C’est parti ! 🚀";
+
+// Titres des fonctionnalités - Bannière v1.0
+"smart_goal_system" = "Système d’objectifs intelligents";
+"rich_task_media" = "Médias riches pour les tâches";
+"location_based_tasks" = "Tâches basées sur la localisation";
+"multi_language_support" = "Prise en charge multilingue";
+"major_improvements" = "Améliorations majeures";
+
+// Paywall - Additional Required Keys
+"snaptask_pro" = "SnapTask Pro";
+"close" = "Fermer";
+"subscription" = "Abonnement";
+"ok" = "OK";
+"yearly" = "Annuel";
+"monthly" = "Mensuel";
+"free_trial" = "Essai gratuit";
+"savings_amount" = "Vous économisez %@";
+"welcome_snaptask_pro_lifetime" = "Bienvenue dans SnapTask Pro (à vie) !";
+"free_trial_activated" = "Essai gratuit activé";
+"welcome_snaptask_pro" = "Bienvenue dans SnapTask Pro !";
+"purchase_not_completed" = "Achat non terminé";
+"purchases_restored_successfully" = "Achats restaurés avec succès";
+"no_purchases_to_restore" = "Aucun achat à restaurer";
+
+// === Missing keys synced from English base ===
+"account" = "Compte";
+"add_photos" = "Ajouter des photos";
+"all_devices" = "Tous les appareils";
+"app_settings" = "Réglages de l’app";
+"by_purchasing_you_agree" = "En achetant ou en utilisant l’essai gratuit, vous acceptez les Conditions d’utilisation et la Politique de confidentialité de SnapTask.";
+"cancel_subscription" = "Annuler l’abonnement";
+"categories_limit_message" = "Vous pouvez créer jusqu’à 4 catégories avec le plan gratuit. Passez à Pro pour des catégories illimitées.";
+"categories_limit_reached" = "Limite de catégories atteinte";
+"category_gradients" = "Dégradés de catégorie";
+"change_photo" = "Changer la photo";
+"check_icloud_connection" = "Vérifiez votre connexion iCloud et réessayez.";
+"choose_from_previous_tasks" = "Choisir parmi les tâches précédentes";
+"clear_all" = "Tout effacer";
+"contact_support" = "Contacter le support";
+"contact_support_message" = "Si vous avez besoin d’aide, des suggestions ou souhaitez signaler un bug, n’hésitez pas à me contacter. Vos retours sont précieux !";
+"create_first_then_see_templates" = "Créez une nouvelle tâche, puis vous la retrouverez ici comme modèle rapide.";
+"data_types" = "Types de données";
+"error_details" = "Détails de l’erreur";
+"first" = "Premier";
+"fourth" = "Quatrième";
+"free_plan_limits" = "Limites du plan gratuit";
+"how_create_task" = "Comment voulez-vous créer la tâche ?";
+"icloud_storage_full" = "Votre stockage iCloud est plein. Libérez de l’espace dans Réglages.";
+"last" = "Dernier";
+"long_term_info" = "Les objectifs à long terme n’ont pas d’échéance précise";
+"manage_categories" = "Gérer les catégories";
+"manage_subscription" = "Gérer l’abonnement";
+"microphone_access_denied_message" = "Activez l’accès au micro dans Réglages pour enregistrer des mémos vocaux.";
+"microphone_access_denied_title" = "Accès au micro refusé";
+"monthly_price" = "3,99 €/mois";
+"monthly_subscription" = "Abonnement mensuel";
+"new_feedback" = "Nouveau retour";
+"no_past_tasks" = "Aucune tâche passée à afficher.";
+"no_voice_memos_yet" = "Pas encore de mémo vocal.";
+"photos" = "Photos";
+"premium_badge" = "PRO";
+"premium_feature_locked" = "Cette fonctionnalité est disponible uniquement avec SnapTask Pro";
+"premium_limit_description" = "Le plan gratuit inclut jusqu’à 3 récompenses personnalisées.";
+"premium_limit_info" = "Limite du plan gratuit";
+"premium_required" = "Premium requis";
+"premium_upgrade_message" = "Passez à SnapTask Pro pour débloquer toutes les fonctionnalités premium";
+"record" = "Enregistrer";
+"recording" = "Enregistrement…";
+"remove_location" = "Supprimer la localisation";
+"remove_photo" = "Supprimer la photo";
+"rewards_limit_message" = "Vous pouvez créer jusqu’à 3 récompenses avec le plan gratuit. Passez à Pro pour des récompenses illimitées.";
+"rewards_limit_reached" = "Limite de récompenses atteinte";
+"search_for_a_place" = "Rechercher un lieu";
+"search_location" = "Rechercher un lieu";
+"search_past_tasks" = "Rechercher dans vos tâches passées";
+"second" = "Deuxième";
+"select_location" = "Sélectionner l’emplacement";
+"select_patterns_description" = "Sélectionner des modèles spécifiques pour la récurrence mensuelle";
+"selected_location" = "Emplacement sélectionné";
+"session_complete" = "Session terminée";
+"setting_up_sync" = "Configuration initiale de la synchronisation…";
+"sign_in_icloud" = "Connectez-vous à iCloud dans Réglages pour activer la synchronisation.";
+"subscribe" = "S’abonner";
+"subscription_active" = "Abonnement actif";
+"subscription_expires" = "Expire";
+"subscription_terms" = "Conditions d’abonnement";
+"take_photo" = "Prendre une photo";
+"tap_to_sync" = "Appuyer pour synchroniser";
+"theme_amethyst" = "Améthyste";
+"theme_carbon" = "Carbone";
+"third" = "Troisième";
+"timer_colors" = "Couleurs du minuteur";
+"tracking_sessions" = "Suivi des sessions";
+"up_to_date" = "À jour";
+"upgrade_to_pro" = "Passer à Pro";
+"voice_memo" = "Mémo vocal";
+"voice_memo_name_placeholder" = "Nom du mémo vocal";
+"voice_memos" = "Mémos vocaux";
+"yearly_price" = "34,99 €/an";
+"yearly_savings" = "Économisez 27 %";
+"yearly_subscription" = "Abonnement annuel";
+"you_save" = "Vous économisez";

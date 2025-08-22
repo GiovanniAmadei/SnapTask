@@ -395,6 +395,7 @@ private struct QualityChart: View {
             Text("quality_rating".localized)
                 .themedSecondaryText()
         }
+        .animation(.smooth(duration: 0.8), value: data)
     }
     
     private var flattenedQualityData: [FlatChartPoint] {
@@ -484,6 +485,7 @@ private struct DifficultyChart: View {
             Text("difficulty_rating".localized)
                 .themedSecondaryText()
         }
+        .animation(.smooth(duration: 0.8), value: data)
     }
     
     private var flattenedDifficultyData: [FlatChartPoint] {
@@ -519,12 +521,18 @@ private struct PerformanceTab: View {
     @State private var highlightedTaskId: String?
     @Environment(\.theme) private var theme
     
+    private var tasksWithPerformanceData: [StatisticsViewModel.TaskPerformanceAnalytics] {
+        viewModel.taskPerformanceAnalytics.filter { task in
+            task.averageDifficulty != nil || task.averageQuality != nil
+        }
+    }
+    
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 timeRangeSelector
                 
-                if !viewModel.taskPerformanceAnalytics.isEmpty {
+                if !tasksWithPerformanceData.isEmpty {
                     overallMetricsSection
                     qualityProgressionChart
                     difficultyAssessmentChart
@@ -559,10 +567,9 @@ private struct PerformanceTab: View {
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible()),
-                GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 8) {
-                ForEach(StatisticsViewModel.TimeRange.allCases, id: \.self) { range in
+                ForEach(StatisticsViewModel.TimeRange.allCases.filter { $0 != .today }, id: \.self) { range in
                     TimeRangeButton(
                         range: range,
                         isSelected: viewModel.selectedTimeRange == range,
@@ -588,16 +595,15 @@ private struct PerformanceTab: View {
                 Spacer()
             }
             
-            let tasksWithRatings = viewModel.taskPerformanceAnalytics
-            let avgQuality = tasksWithRatings.compactMap { $0.averageQuality }.isEmpty ? 0 :
-                tasksWithRatings.compactMap { $0.averageQuality }.reduce(0, +) / Double(tasksWithRatings.compactMap { $0.averageQuality }.count)
-            let avgDifficulty = tasksWithRatings.compactMap { $0.averageDifficulty }.isEmpty ? 0 :
-                tasksWithRatings.compactMap { $0.averageDifficulty }.reduce(0, +) / Double(tasksWithRatings.compactMap { $0.averageDifficulty }.count)
+            let avgQuality = tasksWithPerformanceData.compactMap { $0.averageQuality }.isEmpty ? 0 :
+                tasksWithPerformanceData.compactMap { $0.averageQuality }.reduce(0, +) / Double(tasksWithPerformanceData.compactMap { $0.averageQuality }.count)
+            let avgDifficulty = tasksWithPerformanceData.compactMap { $0.averageDifficulty }.isEmpty ? 0 :
+                tasksWithPerformanceData.compactMap { $0.averageDifficulty }.reduce(0, +) / Double(tasksWithPerformanceData.compactMap { $0.averageDifficulty }.count)
             
             HStack(spacing: 12) {
                 PerformanceStatCard(
                     title: "tasks".localized,
-                    value: "\(tasksWithRatings.count)",
+                    value: "\(tasksWithPerformanceData.count)",
                     color: .blue
                 )
                 
@@ -720,7 +726,7 @@ private struct PerformanceTab: View {
             }
             
             LazyVStack(spacing: 8) {
-                ForEach(viewModel.taskPerformanceAnalytics) { task in
+                ForEach(tasksWithPerformanceData) { task in
                     TaskPerformanceRowCard(task: task) {
                         self.selectedTaskForSheet = task
                     }
@@ -1143,28 +1149,28 @@ private struct CategoryCompletionBreakdown: View {
         }
     }
     
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
+    var body: some View { 
+        VStack(spacing: 8) { 
+            HStack { 
                 Text("by_category".localized)
                     .font(.system(.caption, design: .rounded, weight: .semibold))
                     .foregroundColor(theme.textColor)
-                Spacer()
-            }
-            if categoryCompletionStats.isEmpty {
+                Spacer() 
+            } 
+            if categoryCompletionStats.isEmpty { 
                 Text("no_data".localized)
                     .font(.system(.caption2, design: .rounded))
                     .foregroundColor(theme.secondaryTextColor)
                     .padding(.vertical, 4)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
+            } else { 
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) { 
                     ForEach(categoryCompletionStats, id: \.name) { stat in
                         CompactCategoryItem(stat: stat)
-                    }
-                }
-            }
-        }
-    }
+                    } 
+                } 
+            } 
+        } 
+    } 
 }
 
 private struct CompactCategoryItem: View {
@@ -1172,7 +1178,7 @@ private struct CompactCategoryItem: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 6) { 
             Circle()
                 .fill(Color(hex: stat.color))
                 .frame(width: 8, height: 8)
@@ -1180,7 +1186,7 @@ private struct CompactCategoryItem: View {
                 .font(.system(.caption2, design: .rounded, weight: .medium))
                 .foregroundColor(theme.textColor)
                 .lineLimit(1)
-        }
+        } 
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .background(
@@ -1523,11 +1529,29 @@ private struct TaskPerformanceDetailView: View {
                 GridItem(.flexible())
             ], spacing: 8) {
                 ForEach(TaskPerformanceDetailView.TaskPerformanceTimeRange.allCases, id: \.self) { range in
-                    TimeRangeButton(range: .today, isSelected: false) {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             selectedTimeRange = range
                         }
+                    } label: {
+                        Text(range.displayName)
+                            .font(.system(.caption, design: .rounded, weight: selectedTimeRange == range ? .semibold : .medium))
+                            .foregroundColor(selectedTimeRange == range ? theme.accentColor : theme.textColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 28)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(selectedTimeRange == range ? theme.accentColor.opacity(0.15) : theme.surfaceColor.opacity(0.7))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .strokeBorder(selectedTimeRange == range ? theme.accentColor : Color.clear, lineWidth: 1)
+                                    )
+                            )
                     }
+                    .buttonStyle(.plain)
+                    .animation(.easeInOut(duration: 0.2), value: selectedTimeRange == range)
                 }
             }
         }

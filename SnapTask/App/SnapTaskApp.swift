@@ -179,6 +179,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler([.banner, .sound])
         } else if notification.request.identifier.hasPrefix("task_") {
             completionHandler([.banner, .sound, .badge])
+        } else if notification.request.identifier == "dailyQuote" {
+            completionHandler([.banner, .sound])
         } else {
             completionHandler([.alert, .badge, .sound])
         }

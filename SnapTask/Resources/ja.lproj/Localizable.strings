@@ -1238,3 +1238,25 @@
 
 // Premium
 "premium" = "プレミアム";
+
+  // アップデートバナー バージョン1.0 - 正式リリース！🎉
+  "official_launch" = "正式リリース！ 🎉";
+  "version_1_0_launch" = "SnapTask v1.0 – ついに登場！";
+  "version_1_0_description" = "SnapTask の決定版へようこそ！ 数ヶ月の開発とコミュニティのフィードバックを経て、生産性を革新します。";
+  
+  // バージョン1.0の新機能
+  "weekly_monthly_yearly_goals_desc" = "週・月・年・長期のスマート目標を作成し、高度にトラッキング";
+  "photos_audio_tasks_desc" = "タスクに写真や音声録音を追加して、十分な文脈を付与";
+  "task_notifications_desc" = "重要なタスクを逃さないスマート通知を受け取る";
+  "location_tasks_desc" = "タスクに場所を関連付け、位置情報に基づくリマインダーを受け取る";
+  // \"custom_themes_desc\" は既に存在します
+  "multi_language_desc" = "イタリア語・英語・スペイン語・フランス語・ドイツ語・ポルトガル語・日本語に完全対応";
+  "major_bug_fixes_desc" = "数百におよぶ改善・最適化・不具合修正でスムーズな体験を実現";
+  "lets_get_started" = "さあ始めましょう！ 🚀";
+  
+  // 機能タイトル - バナー v1.0
+  "smart_goal_system" = "スマート目標システム";
+  "rich_task_media" = "タスクのリッチメディア";
+  "location_based_tasks" = "位置情報ベースのタスク";
+  "multi_language_support" = "多言語対応";
+  "major_improvements" = "大幅な改善";

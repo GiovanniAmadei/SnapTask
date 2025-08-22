@@ -231,6 +231,10 @@ extension TaskNotificationManager: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        if notification.request.identifier == "dailyQuote" {
+            completionHandler([.banner, .sound])
+            return
+        }
         // Show notification even when app is in foreground
         completionHandler([.banner, .badge, .sound])
     }

@@ -1,4 +1,4 @@
-// Common
+  // Common
 "app_name" = "SnapTask";
 "cancel" = "Annulla";
 "save" = "Salva";
@@ -577,7 +577,7 @@
 "complete_tasks_add_difficulty_ratings" = "Completa attività e aggiungi valutazioni difficoltà per vedere i trend";
 "complete_this_task_start_tracking" = "Completa questa attività per iniziare il tracciamento prestazioni";
 "no_completion_data" = "Nessun dato di completamento";
-"complete_tasks_completion_rate_trends" = "Completa attività per vedere l'andamento del tasso di completamento";
+"complete_tasks_completion_rate_trends" = "Completa attività per vedere l'andamento delasso di completamento";
 "complete_recurring_tasks_performance" = "Completa ricorrenti per vedere le analisi prestazionali";
 
 // Time period filters for task completion
@@ -694,13 +694,13 @@
 "dinner_for_giovanni" = "Cena per Giovanni";
 "nice_dinner" = "Una bella cena ";
 
-// Update Banner 0.2.2
+// Update Banner 1.0 - OFFICIAL LAUNCH! 🎉
 "whats_new" = "Novità";
 "version_update" = "Versione";
 "got_it" = "Ho capito!";
 "view_all_updates" = "Vedi tutti gli aggiornamenti";
 
-// Version 0.2.2 Features
+// Version 1.0 Features
 "task_quality_rating" = "Valutazione Qualità e Difficoltà Attività";
 "task_quality_rating_desc" = "Valuta qualità e difficoltà delle attività completate per migliori approfondimenti";
 "manual_time_tracking" = "Tracciamento manuale del tempo";
@@ -834,6 +834,7 @@
 "manage_subscriptions" = "Gestisci abbonamenti";
 "cancel_subscription" = "Annulla abbonamento";
 "subscription_active" = "Abbonamento attivo";
+"premium_plan_active" = "Piano Premium attivo";
 "subscription_expires" = "Scade";
 "subscription_expired" = "Abbonamento scaduto";
 "premium_required" = "Richiede Premium";
@@ -1089,11 +1090,14 @@
 "purchase_failed" = "Acquisto non riuscito";
 "restore_failed" = "Ripristino non riuscito";
 "unknown_error" = "Errore sconosciuto";
+
+// Missing additions aligned with English source
+// Subscription Manager minor unit
 "per_month" = "/mese";
 
-// EnhancedRecurrenceSettingsView Strings
+// EnhancedRecurrenceSettingsView
 "recurrence_type" = "Tipo di ricorrenza";
-"daily_enum" = "Giornaliero";
+"daily_enum" = "Giornaliera";
 "weekly_enum" = "Settimanale";
 "monthly_enum" = "Mensile";
 "yearly_enum" = "Annuale";
@@ -1107,42 +1111,41 @@
 "select_days_of_month" = "Seleziona i giorni del mese";
 "select_patterns_ordinal" = "Seleziona gli schemi (Ordinale)";
 "monthly_patterns" = "Schemi mensili";
-"none_selected" = "Nessuno selezionato";
+"none_selected" = "Nessuna selezione";
 "select_day_of_year" = "Seleziona il giorno dell'anno";
 "repeat_on" = "Ripeti il";
 "task_repeat_yearly_on" = "L'attività si ripeterà ogni anno il";
 "end_date" = "Data di fine";
 "set_end_date" = "Imposta data di fine";
 "open_in_maps" = "Apri in Mappe";
+
+// Additional status/messages
 "session_complete" = "Sessione completata";
 "tracking_sessions" = "Sessioni di tracciamento";
 "new_feedback" = "Nuovo feedback";
-"sync_details" = "Dettagli sincronizzazione";
-"sync_status" = "Stato sincronizzazione";
-"last_sync" = "Ultima sincronizzazione";
-"auto_sync" = "Sync automatico";
 "account" = "Account";
-"service" = "Servizio";
-"zone" = "Zona";
-"encryption" = "Crittografia";
 "data_types" = "Tipi di dati";
 "error_details" = "Dettagli errore";
+"up_to_date" = "Aggiornato";
+"tap_to_sync" = "Tocca per sincronizzare";
+"icloud_storage_full" = "Il tuo spazio iCloud è pieno. Libera spazio nelle Impostazioni.";
+"sign_in_icloud" = "Accedi a iCloud nelle Impostazioni per abilitare la sincronizzazione.";
+"setting_up_sync" = "Configurazione iniziale della sincronizzazione...";
+"check_icloud_connection" = "Controlla la connessione iCloud e riprova.";
+"auto_sync" = "Sync automatico";
 "tasks" = "Attività";
 "rewards" = "Premi";
 "categories" = "Categorie";
 "points_history" = "Cronologia punti";
 "app_settings" = "Impostazioni app";
 "all_devices" = "Tutti i dispositivi";
-"up_to_date" = "Aggiornato";
-"tap_to_sync" = "Tocca per sincronizzare";
-"sync_disabled" = "Sync disabilitato";
-"check_internet_connection" = "Controlla la connessione internet e riprova.";
-"icloud_storage_full" = "Il tuo spazio iCloud è pieno. Libera spazio nelle Impostazioni.";
-"sign_in_icloud" = "Accedi a iCloud nelle Impostazioni per abilitare la sincronizzazione.";
-"setting_up_sync" = "Configurazione della sync per la prima volta...";
-"check_icloud_connection" = "Controlla la connessione iCloud e riprova.";
+"completed" = "Completate";
+"paused" = "In pausa";
+"try_again" = "Riprova";
+"last_synced" = "Ultima sincronizzazione";
+"syncing" = "Sincronizzazione...";
 
-// OrdinalPatternPickerView Strings
+// OrdinalPatternPickerView
 "select_patterns_description" = "Seleziona schemi specifici per la ricorrenza mensile";
 "first" = "Primo";
 "second" = "Secondo";
@@ -1153,7 +1156,6 @@
 
 // Long-term info
 "long_term_info" = "Gli obiettivi a lungo termine non hanno una timeline specifica";
-"complete" = "Completa";
 
 // Location selection/search
 "select_location" = "Seleziona posizione";
@@ -1162,14 +1164,7 @@
 "remove_location" = "Rimuovi posizione";
 "selected_location" = "Posizione selezionata";
 
-// Premium Subscription
-"premium_plan_active" = "Piano Premium attivo";
-"manage_subscriptions" = "Gestisci abbonamenti";
-"restore_purchases" = "Ripristina acquisti";
-"terms_of_service" = "Termini di servizio";
-"privacy_policy" = "Informativa sulla privacy";
-
-// Photos & Voice Memos (Task Details)
+// Photos & Voice Memos
 "photos" = "Foto";
 "take_photo" = "Scatta foto";
 "add_photos" = "Aggiungi foto";
@@ -1177,16 +1172,40 @@
 "remove_photo" = "Rimuovi foto";
 "voice_memos" = "Memo vocali";
 "record" = "Registra";
-"recording" = "Registrazione in corso...";
+"recording" = "Registrazione...";
 "no_voice_memos_yet" = "Ancora nessun memo vocale.";
 "microphone_access_denied_title" = "Accesso al microfono negato";
 "microphone_access_denied_message" = "Abilita l'accesso al microfono nelle Impostazioni per registrare memo vocali.";
 "voice_memo" = "Memo vocale";
 "voice_memo_name_placeholder" = "Nome memo vocale";
 
-// TaskCreationOptionsView (new)
-"how_create_task" = "Come vuoi creare la task?";
-"choose_from_previous_tasks" = "Scegli tra task precedenti";
-"search_past_tasks" = "Cerca tra le tue task passate";
-"no_past_tasks" = "Non ci sono task passate da mostrare.";
-"create_first_then_see_templates" = "Crea una nuova task, poi la ritroverai qui come template veloce.";
+// Task creation from past templates
+"how_create_task" = "Come vuoi creare l'attività?";
+"choose_from_previous_tasks" = "Scegli dalle attività precedenti";
+"search_past_tasks" = "Cerca tra le attività passate";
+"no_past_tasks" = "Non ci sono attività passate da mostrare.";
+"create_first_then_see_templates" = "Crea una nuova attività, poi la troverai qui come modello rapido.";
+
+// Premium label
+"premium" = "Premium";
+
+// Update Banner Version 1.0 - LANCIO UFFICIALE! 🎉
+"official_launch" = "Lancio ufficiale! 🎉";
+"version_1_0_launch" = "SnapTask v1.0 - Finalmente qui!";
+"version_1_0_description" = "Benvenuto nella versione definitiva di SnapTask! Dopo mesi di sviluppo e feedback della community, siamo pronti a rivoluzionare la tua produttività.";
+
+// Versione 1.0 - Nuove funzioni
+"weekly_monthly_yearly_goals_desc" = "Crea obiettivi intelligenti per settimane, mesi, anni e lungo termine con tracciamento avanzato";
+"photos_audio_tasks_desc" = "Aggiungi foto e registrazioni vocali alle tue attività per un contesto completo";
+"task_notifications_desc" = "Ricevi notifiche intelligenti per non perdere mai un'attività importante";
+"location_tasks_desc" = "Associa posizioni alle attività e ricevi promemoria basati sulla posizione";
+"multi_language_desc" = "Supporto completo per Italiano, Inglese, Spagnolo, Francese, Tedesco, Portoghese e Giapponese";
+"major_bug_fixes_desc" = "Centinaia di miglioramenti, ottimizzazioni e correzioni per un'esperienza fluida";
+"lets_get_started" = "Iniziamo! 🚀";
+
+// Update Banner v1.0 - Titoli delle funzioni
+"smart_goal_system" = "Sistema Obiettivi Intelligenti";
+"rich_task_media" = "Media Ricchi per le Attività";
+"location_based_tasks" = "Attività Basate sulla Posizione";
+"multi_language_support" = "Supporto Multilingua";
+"major_improvements" = "Grandi Miglioramenti";
