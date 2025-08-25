@@ -4,11 +4,13 @@ struct ThemesAndCustomizationView: View {
     @ObservedObject var viewModel: SettingsViewModel
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.theme) private var theme
+    @StateObject private var appIconManager = AppIconManager.shared
     
     var body: some View {
         List {
-            // Themes Section
+            // Personalizzazione Section (grouped)
             Section {
+                // Temi
                 NavigationLink {
                     ThemeSelectionView()
                 } label: {
@@ -24,15 +26,79 @@ struct ThemesAndCustomizationView: View {
                     }
                 }
                 .listRowBackground(theme.surfaceColor)
+
+                // Icona app (with preview)
+                NavigationLink {
+                    AppIconSelectionView()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "app.fill")
+                            .foregroundColor(.indigo)
+                            .frame(width: 24)
+                        
+                        Text("Icona app")
+                            .themedPrimaryText()
+                        
+                        Spacer()
+                        
+                        Group {
+                            if let img = appIconManager.previewImageForCurrent() {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFit()
+                            } else {
+                                Image(systemName: "square.app.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .foregroundColor(theme.primaryColor)
+                            }
+                        }
+                        .frame(width: 28, height: 28)
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(theme.borderColor.opacity(0.2), lineWidth: 1)
+                        )
+                    }
+                }
+                .listRowBackground(theme.surfaceColor)
+
+                // Colori timer (Pomodoro)
+                NavigationLink(destination: PomodoroColorsView()) {
+                    HStack {
+                        Image(systemName: "timer.circle.fill")
+                            .foregroundColor(.orange)
+                            .frame(width: 24)
+                        
+                        Text("timer_colors".localized)
+                            .themedPrimaryText()
+                        
+                        Spacer()
+                    }
+                }
+                .listRowBackground(theme.surfaceColor)
+
+                // Gradienti categorie
+                HStack {
+                    Image(systemName: "paintpalette.fill")
+                        .foregroundColor(.cyan)
+                        .frame(width: 24)
+                    
+                    Text("category_gradients".localized)
+                        .themedPrimaryText()
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $viewModel.showCategoryGradients)
+                        .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                }
+                .listRowBackground(theme.surfaceColor)
             } header: {
-                Text("visual_themes".localized)
-                    .themedSecondaryText()
-            } footer: {
-                Text("choose_visual_theme".localized)
+                Text("Personalizzazione")
                     .themedSecondaryText()
             }
             
-            // Categories Section
+            // Categories Section (without gradients toggle)
             Section {
                 NavigationLink {
                     CategoriesView(viewModel: viewModel)
@@ -49,26 +115,8 @@ struct ThemesAndCustomizationView: View {
                     }
                 }
                 .listRowBackground(theme.surfaceColor)
-                
-                HStack {
-                    Image(systemName: "paintpalette.fill")
-                        .foregroundColor(.cyan)
-                        .frame(width: 24)
-                    
-                    Text("category_gradients".localized)
-                        .themedPrimaryText()
-                    
-                    Spacer()
-                    
-                    Toggle("", isOn: $viewModel.showCategoryGradients)
-                        .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
-                }
-                .listRowBackground(theme.surfaceColor)
             } header: {
                 Text("categories".localized)
-                    .themedSecondaryText()
-            } footer: {
-                Text("category_gradients_description".localized)
                     .themedSecondaryText()
             }
             
@@ -97,28 +145,9 @@ struct ThemesAndCustomizationView: View {
                     .themedSecondaryText()
             }
             
-            // Timer Customization Section
-            Section {
-                NavigationLink(destination: PomodoroColorsView()) {
-                    HStack {
-                        Image(systemName: "timer.circle.fill")
-                            .foregroundColor(.orange)
-                            .frame(width: 24)
-                        
-                        Text("timer_colors".localized)
-                            .themedPrimaryText()
-                        
-                        Spacer()
-                    }
-                }
-                .listRowBackground(theme.surfaceColor)
-            } header: {
-                Text("pomodoro".localized)
-                    .themedSecondaryText()
-            } footer: {
-                Text("customize_timer_colors".localized)
-                    .themedSecondaryText()
-            }
+            
+
+            
             
             // Task Completion Section
             Section {
@@ -151,6 +180,7 @@ struct ThemesAndCustomizationView: View {
         }
         .themedBackground()
         .scrollContentBackground(.hidden)
+        .onAppear { appIconManager.refresh() }
         .navigationTitle("themes_and_customization".localized)
         .navigationBarTitleDisplayMode(.inline)
     }

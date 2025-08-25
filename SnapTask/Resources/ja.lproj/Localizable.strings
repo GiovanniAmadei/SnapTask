@@ -942,7 +942,7 @@
 "points_summary" = "ポイント概要";
 "weekly_overview" = "週次概要";
 "week_pts" = "週: {points} ポイント";
-"focus_time" = "フォーカス: {time}";
+"focus_time" = "フォーカス時間";
 "mark_incomplete" = "未完了にマーク";
 "mark_complete" = "完了にマーク";
 "recurring_task" = "定期的なタスク";

@@ -7,10 +7,11 @@ struct FocusTabView: View {
     @State private var selectedTrackingMode: TrackingMode = .simple
     @State private var showingPomodoro = false
     @State private var showingTaskPomodoro = false
+    @State private var showingPomodoroFullScreen = false // used when reopening from widget in general mode
     @State private var showingSessionConflict = false
     @State private var pendingSessionType: SessionType?
     @State private var showingWidgetTimer = false
-    @State private var showingWidgetPomodoro = false
+    // Removed dedicated widget sheet for Pomodoro; reuse existing sheets
     @State private var selectedSessionId: UUID?
 
     @Environment(\.theme) private var theme
@@ -72,7 +73,19 @@ struct FocusTabView: View {
                                             // Show pomodoro if active
                                             if pomodoroViewModel.hasActiveTask {
                                                 MiniPomodoroWidget(viewModel: pomodoroViewModel) {
-                                                    showingWidgetPomodoro = true
+                                                    // Present on next run loop to stabilize sheet presentation
+                                                    DispatchQueue.main.async {
+                                                        if pomodoroViewModel.activeTask != nil {
+                                                            showingTaskPomodoro = true
+                                                        } else {
+                                                            // Ensure a general session is initialized before presenting
+                                                            if pomodoroViewModel.state == .notStarted {
+                                                                pomodoroViewModel.initializeGeneralSession()
+                                                            }
+                                                            // Use fullScreenCover to avoid sheet rendering glitches
+                                                            showingPomodoroFullScreen = true
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -142,6 +155,11 @@ struct FocusTabView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
+                .fullScreenCover(isPresented: $showingPomodoroFullScreen) {
+                    NavigationStack {
+                        PomodoroTabView()
+                    }
+                }
                 .sheet(isPresented: $showingPomodoro) {
                     NavigationStack {
                         PomodoroTabView()
@@ -149,13 +167,11 @@ struct FocusTabView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
-                .sheet(isPresented: $showingTaskPomodoro) {
-                    if let activeTask = pomodoroViewModel.activeTask {
+                .fullScreenCover(isPresented: $showingTaskPomodoro) {
+                    if pomodoroViewModel.activeTask != nil {
                         NavigationStack {
-                            PomodoroView(task: activeTask, presentationStyle: .fullscreen)
+                            PomodoroTabView()
                         }
-                        .presentationDetents([.large])
-                        .presentationDragIndicator(.visible)
                     }
                 }
                 .sheet(isPresented: $showingWidgetTimer) {
@@ -171,15 +187,7 @@ struct FocusTabView: View {
                         .presentationDragIndicator(.visible)
                     }
                 }
-                .sheet(isPresented: $showingWidgetPomodoro) {
-                    if let activeTask = pomodoroViewModel.activeTask {
-                        NavigationStack {
-                            PomodoroView(task: activeTask, presentationStyle: .sheet)
-                        }
-                        .presentationDetents([.medium])
-                        .presentationDragIndicator(.visible)
-                    }
-                }
+                // Removed separate widget sheet; handled by showingPomodoro/showingTaskPomodoro
                 .sheet(isPresented: $showingSessionConflict) {
                     SessionConflictView(
                         currentSession: getCurrentSessionName(),
@@ -338,7 +346,17 @@ struct FocusTabView: View {
                     viewModel: pomodoroViewModel,
                     theme: theme
                 ) {
-                    showingWidgetPomodoro = true
+                    // Present on next run loop to stabilize presentation
+                    DispatchQueue.main.async {
+                        if pomodoroViewModel.activeTask != nil {
+                            showingTaskPomodoro = true
+                        } else {
+                            if pomodoroViewModel.state == .notStarted {
+                                pomodoroViewModel.initializeGeneralSession()
+                            }
+                            showingPomodoroFullScreen = true
+                        }
+                    }
                 }
             }
         }

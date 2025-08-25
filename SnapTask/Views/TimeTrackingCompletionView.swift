@@ -290,7 +290,7 @@ struct TimeTrackingCompletionView: View {
                     )
                     .cornerRadius(16)
                 }
-                .disabled(!trackAsTask && selectedCategory == nil)
+                // Allow saving without selecting an option; defaults will apply in logic
                 
                 HStack(spacing: 12) {
                     // Continue button
@@ -348,7 +348,7 @@ struct TimeTrackingCompletionView: View {
                     }
                 }
                 .font(.body.weight(.medium))
-                .disabled(!trackAsTask && selectedCategory == nil)
+                // Allow saving without selecting an option; defaults will apply in logic
             }
         }
         .onAppear {
@@ -393,6 +393,39 @@ struct TimeTrackingCompletionView: View {
                     notes: nil, 
                     for: today
                 )
+
+                // If the task has NO category, adjust statistics to show this specific task
+                if currentTask.category == nil {
+                    let trackingKey = "timeTracking"
+                    var timeTrackingData = UserDefaults.standard.dictionary(forKey: trackingKey) as? [String: [String: Double]] ?? [:]
+                    let dateKey = ISO8601DateFormatter().string(from: today)
+                    // Ensure day entry exists
+                    if timeTrackingData[dateKey] == nil { timeTrackingData[dateKey] = [:] }
+                    let addedHours = editedFocusTime / 3600.0
+                    // Remove from uncategorized if present (since updateTaskRating saved it there)
+                    if let existing = timeTrackingData[dateKey]?["uncategorized"], existing > 0 {
+                        let updated = max(0, existing - addedHours)
+                        if updated > 0 {
+                            timeTrackingData[dateKey]?["uncategorized"] = updated
+                        } else {
+                            timeTrackingData[dateKey]?.removeValue(forKey: "uncategorized")
+                        }
+                    }
+                    // Add to per-task key so stats can display the task name
+                    let taskKey = "task_\(task.id.uuidString)"
+                    let current = timeTrackingData[dateKey]?[taskKey] ?? 0.0
+                    timeTrackingData[dateKey]?[taskKey] = current + addedHours
+                    UserDefaults.standard.set(timeTrackingData, forKey: trackingKey)
+                    // Store task metadata (name and color) for display
+                    var taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
+                    taskMetadata[taskKey] = [
+                        "name": editedTaskName,
+                        "color": task.category?.color ?? "#6366F1"
+                    ]
+                    UserDefaults.standard.set(taskMetadata, forKey: "taskMetadata")
+                    UserDefaults.standard.synchronize()
+                    NotificationCenter.default.post(name: Notification.Name.timeTrackingUpdated, object: nil)
+                }
                 
                 if let session = session {
                     var updatedSession = session
@@ -463,6 +496,44 @@ struct TimeTrackingCompletionView: View {
             // Save time tracking data to statistics ONLY for the selected category
             await saveToStatistics(categoryId: category.id, timeSpent: editedFocusTime)
             print(" Successfully saved to category only")
+        } else {
+            // No selection made: default to Uncategorized behavior
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            if let task = task, TaskManager.shared.tasks.contains(where: { $0.id == task.id }) {
+                // Mark complete and set actual duration; statistics sync will add to 'uncategorized'
+                TaskManager.shared.toggleTaskCompletion(task.id, on: today)
+                TaskManager.shared.updateTaskRating(
+                    taskId: task.id,
+                    actualDuration: editedFocusTime,
+                    difficultyRating: nil,
+                    qualityRating: nil,
+                    notes: nil,
+                    for: today
+                )
+                if let session = session {
+                    var updatedSession = session
+                    updatedSession.categoryId = nil
+                    updatedSession.categoryName = nil
+                    updatedSession.totalDuration = editedFocusTime
+                    updatedSession.elapsedTime = editedFocusTime
+                    updatedSession.lastModifiedDate = Date()
+                    TaskManager.shared.saveTrackingSession(updatedSession)
+                }
+                print(" Saved with default: Uncategorized")
+            } else {
+                // General session without task: save directly to 'uncategorized'
+                let trackingKey = "timeTracking"
+                var timeTrackingData = UserDefaults.standard.dictionary(forKey: trackingKey) as? [String: [String: Double]] ?? [:]
+                let dateKey = ISO8601DateFormatter().string(from: today)
+                if timeTrackingData[dateKey] == nil { timeTrackingData[dateKey] = [:] }
+                let current = timeTrackingData[dateKey]?["uncategorized"] ?? 0.0
+                timeTrackingData[dateKey]?["uncategorized"] = current + (editedFocusTime / 3600.0)
+                UserDefaults.standard.set(timeTrackingData, forKey: trackingKey)
+                UserDefaults.standard.synchronize()
+                NotificationCenter.default.post(name: Notification.Name.timeTrackingUpdated, object: nil)
+                print(" General session saved as Uncategorized")
+            }
         }
     }
     

@@ -907,7 +907,7 @@
 "points_summary" = "Resumen de puntos";
 "weekly_overview" = "Resumen semanal";
 "week_pts" = "Semana: {points} pts";
-"focus_time" = "Enfoque: {time}";
+"focus_time" = "Tiempo de enfoque";
 "mark_incomplete" = "Marcar como incompleta";
 "mark_complete" = "Marcar como completa";
 "recurring_task" = "Tarea recurrente";
@@ -1360,7 +1360,7 @@
 "points_summary" = "Resumen de puntos";
 "weekly_overview" = "Resumen semanal";
 "week_pts" = "Semana: {points} pts";
-"focus_time" = "Enfoque: {time}";
+"focus_time" = "Tiempo de enfoque";
 "mark_incomplete" = "Marcar como incompleta";
 "mark_complete" = "Marcar como completa";
 "recurring_task" = "Tarea recurrente";

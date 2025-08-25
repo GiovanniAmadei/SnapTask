@@ -307,7 +307,9 @@ class PomodoroViewModel: ObservableObject {
     
     // Check if a task is currently active
     var hasActiveTask: Bool {
-        return activeTask != nil && (state == .working || state == .onBreak || state == .paused)
+        // Consider any running/paused Pomodoro session as active, even in general focus mode
+        // This keeps the UI widgets and sheets visible when running without a specific task
+        return (state == .working || state == .onBreak || state == .paused)
     }
     
     func start() {

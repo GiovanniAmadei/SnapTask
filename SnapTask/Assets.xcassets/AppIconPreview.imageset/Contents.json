@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "AppIcon~ios-marketing.png",
       "idiom" : "universal",
       "scale" : "1x"
     },

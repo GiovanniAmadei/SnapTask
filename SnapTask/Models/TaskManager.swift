@@ -296,17 +296,17 @@ class TaskManager: ObservableObject {
                     print(" [DEBUG] Set actualDuration to \(actualDuration)")
                 } else {
                     completion.actualDuration = nil
-                    print(" [DEBUG] Cleared actualDuration (0 or negative provided)")
+                    print(" [DEBUG] Cleared actualDuration via 0")
                 }
             }
             
             if let difficultyRating = difficultyRating {
-                completion.difficultyRating = difficultyRating
+                completion.difficultyRating = difficultyRating == 0 ? nil : difficultyRating
                 print(" [DEBUG] Set difficultyRating to \(difficultyRating)")
             }
             
             if let qualityRating = qualityRating {
-                completion.qualityRating = qualityRating
+                completion.qualityRating = qualityRating == 0 ? nil : qualityRating
                 print(" [DEBUG] Set qualityRating to \(qualityRating)")
             }
             
@@ -326,12 +326,6 @@ class TaskManager: ObservableObject {
             
             print(" [DEBUG] After assignment - task.completions[\(targetDate)]: actualDuration=\(task.completions[targetDate]?.actualDuration ?? -1), difficulty=\(task.completions[targetDate]?.difficultyRating ?? -1), quality=\(task.completions[targetDate]?.qualityRating ?? -1), notes=\(task.completions[targetDate]?.notes ?? "nil")")
             
-            for (dateKey, otherCompletion) in task.completions {
-                if dateKey != targetDate {
-                    print(" [DEBUG] Other completion \(dateKey): actualDuration=\(otherCompletion.actualDuration ?? -1), difficulty=\(otherCompletion.difficultyRating ?? -1), quality=\(otherCompletion.qualityRating ?? -1), notes=\(otherCompletion.notes ?? "nil")")
-                }
-            }
-            
             task.lastModifiedDate = Date()
             tasks[index] = task
             
@@ -347,7 +341,6 @@ class TaskManager: ObservableObject {
                         for: targetDate
                     )
                 } else {
-                    // Either unchecked or cleared -> ensure removal from stats
                     syncActualDurationWithStatistics(
                         taskId: taskId,
                         taskName: task.name,
@@ -383,7 +376,19 @@ class TaskManager: ObservableObject {
         var timeTrackingData = UserDefaults.standard.dictionary(forKey: trackingKey) as? [String: [String: Double]] ?? [:]
         
         let dateKey = ISO8601DateFormatter().string(from: targetDate)
-        let taskKey = "task_\(taskId.uuidString)"
+        
+        // Usa la categoria invece del task per le statistiche
+        let categoryKey: String
+        let categoryName: String
+        
+        if let categoryId = categoryId {
+            categoryKey = "category_\(categoryId.uuidString)"
+            // Trova il nome della categoria attuale
+            categoryName = CategoryManager.shared.categories.first(where: { $0.id == categoryId })?.name ?? "Unknown Category"
+        } else {
+            categoryKey = "uncategorized"
+            categoryName = "Uncategorized"
+        }
         
         // Initialize date entry if needed
         if timeTrackingData[dateKey] == nil {
@@ -392,29 +397,69 @@ class TaskManager: ObservableObject {
         
         // Update the statistics entry
         if let newDuration = newDuration, newDuration > 0 {
-            // Set or update the time entry
+            // Aggiungi o aggiorna l'entry per la categoria
             let newHours = newDuration / 3600.0
-            timeTrackingData[dateKey]?[taskKey] = newHours
-            print(" [STATS SYNC] Set statistics entry: \(newHours) hours")
+            let existingHours = timeTrackingData[dateKey]?[categoryKey] ?? 0.0
+            timeTrackingData[dateKey]?[categoryKey] = existingHours + newHours
+            print(" [STATS SYNC] Added to category '\(categoryName)': \(newHours) hours (total: \(existingHours + newHours))")
             
-            // Store task metadata for display
-            var taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
-            taskMetadata[taskKey] = [
-                "name": taskName,
+            // Se c'era una durata precedente, rimuovila
+            if let oldDuration = oldDuration, oldDuration > 0 {
+                let oldHours = oldDuration / 3600.0
+                let updatedHours = max(0, (timeTrackingData[dateKey]?[categoryKey] ?? 0.0) - oldHours)
+                if updatedHours > 0 {
+                    timeTrackingData[dateKey]?[categoryKey] = updatedHours
+                } else {
+                    timeTrackingData[dateKey]?.removeValue(forKey: categoryKey)
+                }
+                print(" [STATS SYNC] Removed old duration: \(oldHours) hours")
+            }
+            
+            // Store category metadata for display
+            var categoryMetadata = UserDefaults.standard.dictionary(forKey: "categoryMetadata") as? [String: [String: String]] ?? [:]
+            categoryMetadata[categoryKey] = [
+                "name": categoryName,
                 "color": categoryColor ?? "#6366F1"
             ]
-            UserDefaults.standard.set(taskMetadata, forKey: "taskMetadata")
+            UserDefaults.standard.set(categoryMetadata, forKey: "categoryMetadata")
             
         } else {
-            // Clear the time entry if duration is 0 or nil
-            timeTrackingData[dateKey]?.removeValue(forKey: taskKey)
-            print(" [STATS SYNC] Removed statistics entry")
+            // Rimuovi la durata se è stata cancellata o settata a 0
+            if let oldDuration = oldDuration, oldDuration > 0 {
+                let oldHours = oldDuration / 3600.0
+                let existingHours = timeTrackingData[dateKey]?[categoryKey] ?? 0.0
+                let updatedHours = max(0, existingHours - oldHours)
+                
+                if updatedHours > 0 {
+                    timeTrackingData[dateKey]?[categoryKey] = updatedHours
+                } else {
+                    timeTrackingData[dateKey]?.removeValue(forKey: categoryKey)
+                }
+                print(" [STATS SYNC] Removed from category '\(categoryName)': \(oldHours) hours")
+            }
             
             // Clean up empty date entries
             if timeTrackingData[dateKey]?.isEmpty == true {
                 timeTrackingData.removeValue(forKey: dateKey)
             }
         }
+        
+        // Pulisci i vecchi metadata dei task (per retrocompatibilità)
+        let oldTaskKey = "task_\(taskId.uuidString)"
+        for (dateKey, var dayData) in timeTrackingData {
+            if dayData.keys.contains(oldTaskKey) {
+                dayData.removeValue(forKey: oldTaskKey)
+                if dayData.isEmpty {
+                    timeTrackingData.removeValue(forKey: dateKey)
+                } else {
+                    timeTrackingData[dateKey] = dayData
+                }
+            }
+        }
+        
+        var taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
+        taskMetadata.removeValue(forKey: oldTaskKey)
+        UserDefaults.standard.set(taskMetadata, forKey: "taskMetadata")
         
         // Save back to UserDefaults
         UserDefaults.standard.set(timeTrackingData, forKey: trackingKey)
@@ -488,7 +533,8 @@ class TaskManager: ObservableObject {
                 actualDuration: currentCompletion?.actualDuration,
                 difficultyRating: currentCompletion?.difficultyRating,
                 qualityRating: currentCompletion?.qualityRating,
-                completionDate: currentCompletion?.completionDate
+                completionDate: currentCompletion?.completionDate,
+                notes: currentCompletion?.notes
             )
             
             task.completions[completionDate] = completion
@@ -812,14 +858,18 @@ class TaskManager: ObservableObject {
     }
     
     func resetUserDefaults() {
+        // Remove persisted data
         UserDefaults.standard.removeObject(forKey: tasksKey)
         UserDefaults.standard.removeObject(forKey: trackingSessionsKey)
         
-        loadTasks()
-        loadTrackingSessions()
+        // Also clear in-memory state to ensure UI updates immediately
+        tasks = []
+        trackingSessions = []
+        
         notifyTasksUpdated()
         objectWillChange.send()
         
+        // Trigger a sync to propagate deletions
         CloudKitService.shared.syncNow()
     }
     

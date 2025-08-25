@@ -104,8 +104,10 @@ struct TaskView: View {
                 .fill(colorScheme == .dark ? Color(.systemGray6) : .white)
                 .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
         )
-        .sheet(isPresented: $showingPomodoro) {
-            PomodoroView(task: task)
+        .fullScreenCover(isPresented: $showingPomodoro) {
+            NavigationStack {
+                PomodoroTabView()
+            }
         }
         .onChange(of: task.completions) { oldValue, newValue in
             Task {

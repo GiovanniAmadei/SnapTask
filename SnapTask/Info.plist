@@ -2,28 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDisplayName</key>
-	<string>SnapTask</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>NSCalendarUsageDescription</key>
 	<string>Snaptask needs write access to sync your tasks and create calendar events automatically.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>SnapTask needs write access to your calendar to create and update calendar events for your tasks.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Allow SnapTask to access your photo library to attach images to your tasks.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Allow SnapTask to use your camera to capture photos for your tasks.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Allow SnapTask to use your microphone to record voice memos for your tasks.</string>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>armv7</string>
-	</array>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>SnapTask needs notification access to send alerts when your focus sessions complete and provide live timer updates.</string>
-	<key>UIStatusBarStyle</key>
-	<string>UIStatusBarStyleDefault</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 </dict>

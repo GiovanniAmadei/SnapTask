@@ -31,8 +31,7 @@ struct SettingsView: View {
     @State private var showingThemeWarning = false
     @State private var showingTaskNotificationPermissionAlert = false
     @State private var showingEmailNotAvailableAlert = false
-    @State private var isSeedingDemo = false
-    @State private var showingSeedConfirm = false
+
 
     var body: some View {
         NavigationStack {
@@ -462,54 +461,6 @@ struct SettingsView: View {
                         .themedSecondaryText()
                 }
 
-                #if DEBUG
-                Section {
-                    Button {
-                        showingSeedConfirm = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "sparkles")
-                                .foregroundColor(.purple)
-                                .frame(width: 24)
-                            Text("Populate demo content (English)")
-                                .themedPrimaryText()
-                            Spacer()
-                            if isSeedingDemo {
-                                ProgressView().scaleEffect(0.8)
-                            }
-                        }
-                    }
-                    .disabled(isSeedingDemo)
-                    .listRowBackground(theme.surfaceColor)
-
-                    Button {
-                        Task {
-                            await seedDemo(replace: false)
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus.app.fill")
-                                .foregroundColor(.blue)
-                                .frame(width: 24)
-                            Text("Append demo content (English)")
-                                .themedPrimaryText()
-                            Spacer()
-                            if isSeedingDemo {
-                                ProgressView().scaleEffect(0.8)
-                            }
-                        }
-                    }
-                    .disabled(isSeedingDemo)
-                    .listRowBackground(theme.surfaceColor)
-                } header: {
-                    Text("Demo / Screenshots")
-                        .themedSecondaryText()
-                } footer: {
-                    Text("Debug-only tools for preparing App Store screenshots.")
-                        .themedSecondaryText()
-                }
-                #endif
-
                 // Data Management Section
                 Section {
                     Button(action: {
@@ -646,14 +597,6 @@ struct SettingsView: View {
             .navigationBarTitle("settings".localized)
             .navigationBarTitleDisplayMode(.large)
             .navigationBarHidden(false)
-            .alert("Populate demo content?", isPresented: $showingSeedConfirm) {
-                Button("Cancel", role: .cancel) { }
-                Button("Continue") {
-                    Task { await seedDemo(replace: true) }
-                }
-            } message: {
-                Text("This will clear current data and populate demo tasks, rewards, and tracking sessions.")
-            }
         }
     }
     
@@ -885,12 +828,6 @@ struct SettingsView: View {
         } else {
             showingEmailNotAvailableAlert = true
         }
-    }
-
-    private func seedDemo(replace: Bool) async {
-        isSeedingDemo = true
-        defer { isSeedingDemo = false }
-        await DemoDataSeeder.shared.seedDemoContent(replace: replace)
     }
 }
 

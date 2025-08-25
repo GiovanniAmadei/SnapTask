@@ -881,7 +881,7 @@
 "points_summary" = "Résumé des points";
 "weekly_overview" = "Aperçu hebdomadaire";
 "week_pts" = "Semaine : {points} pts";
-"focus_time" = "Focus : {time}";
+"focus_time" = "Temps de focus";
 "mark_incomplete" = "Marquer comme incomplet";
 "mark_complete" = "Marquer comme terminé";
 "recurring_task" = "Tâche récurrente";

@@ -322,25 +322,36 @@ struct TaskDetailAnalyticsView: View {
             icon: "star.fill",
             color: .yellow
         ) {
-            Chart {
-                ForEach(Array(task.completions.enumerated()), id: \.offset) { index, completion in
-                    if let quality = completion.qualityRating {
-                        LineMark(
-                            x: .value("completion".localized, index),
-                            y: .value("quality".localized, quality)
-                        )
-                        .foregroundStyle(.yellow)
-                        
-                        PointMark(
-                            x: .value("completion".localized, index),
-                            y: .value("quality".localized, quality)
-                        )
-                        .foregroundStyle(.yellow)
-                    }
+            let points = qualityPoints()
+            Chart(points) { p in
+                LineMark(
+                    x: .value("date".localized, p.date),
+                    y: .value("quality".localized, p.value)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(.yellow)
+                
+                if viewModel.selectedTimeRange == .week {
+                    PointMark(
+                        x: .value("date".localized, p.date),
+                        y: .value("quality".localized, p.value)
+                    )
+                    .foregroundStyle(.yellow)
                 }
             }
             .frame(height: 200)
             .chartYScale(domain: 1...10)
+            .chartXAxis {
+                AxisMarks(values: xAxisValues()) { v in
+                    AxisValueLabel() {
+                        if let d = v.as(Date.self) {
+                            Text(formatDate(d))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -350,25 +361,36 @@ struct TaskDetailAnalyticsView: View {
             icon: "bolt.fill",
             color: .orange
         ) {
-            Chart {
-                ForEach(Array(task.completions.enumerated()), id: \.offset) { index, completion in
-                    if let difficulty = completion.difficultyRating {
-                        LineMark(
-                            x: .value("completion".localized, index),
-                            y: .value("difficulty".localized, difficulty)
-                        )
-                        .foregroundStyle(.orange)
-                        
-                        PointMark(
-                            x: .value("completion".localized, index),
-                            y: .value("difficulty".localized, difficulty)
-                        )
-                        .foregroundStyle(.orange)
-                    }
+            let points = difficultyPoints()
+            Chart(points) { p in
+                LineMark(
+                    x: .value("date".localized, p.date),
+                    y: .value("difficulty".localized, p.value)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(.orange)
+                
+                if viewModel.selectedTimeRange == .week {
+                    PointMark(
+                        x: .value("date".localized, p.date),
+                        y: .value("difficulty".localized, p.value)
+                    )
+                    .foregroundStyle(.orange)
                 }
             }
             .frame(height: 200)
             .chartYScale(domain: 1...10)
+            .chartXAxis {
+                AxisMarks(values: xAxisValues()) { v in
+                    AxisValueLabel() {
+                        if let d = v.as(Date.self) {
+                            Text(formatDate(d))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -396,6 +418,107 @@ struct TaskDetailAnalyticsView: View {
                 }
             }
             .frame(height: 200)
+        }
+    }
+
+    // MARK: - Chart helpers (single-task)
+    private func xAxisValues() -> AxisMarkValues {
+        switch viewModel.selectedTimeRange {
+        case .week:
+            return .automatic(desiredCount: 7)
+        case .month:
+            return .stride(by: .day, count: 7)
+        case .year, .today:
+            return .stride(by: .month, count: 2)
+        }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        switch viewModel.selectedTimeRange {
+        case .week:
+            f.dateFormat = "dd MMM"
+        case .month:
+            f.dateFormat = "d MMM"
+        case .year, .today:
+            f.dateFormat = "MMM"
+        }
+        return f.string(from: date)
+    }
+    
+    private struct ChartPoint: Identifiable {
+        let id = UUID()
+        let date: Date
+        let value: Double
+    }
+    
+    private func qualityPoints() -> [ChartPoint] {
+        // 1) media giornaliera
+        let calendar = Calendar.current
+        var daily: [Date: [Double]] = [:]
+        for c in task.completions {
+            if let q = c.qualityRating {
+                let day = c.date.startOfDay
+                daily[day, default: []].append(Double(q))
+            }
+        }
+        let dailyAvg = daily.keys.sorted().map { day -> ChartPoint in
+            let values = daily[day] ?? []
+            let avg = values.reduce(0, +) / Double(max(values.count, 1))
+            return ChartPoint(date: day, value: avg)
+        }
+        return aggregate(dailyAvg)
+    }
+    
+    private func difficultyPoints() -> [ChartPoint] {
+        // 1) media giornaliera
+        let calendar = Calendar.current
+        var daily: [Date: [Double]] = [:]
+        for c in task.completions {
+            if let d = c.difficultyRating {
+                let day = c.date.startOfDay
+                daily[day, default: []].append(Double(d))
+            }
+        }
+        let dailyAvg = daily.keys.sorted().map { day -> ChartPoint in
+            let values = daily[day] ?? []
+            let avg = values.reduce(0, +) / Double(max(values.count, 1))
+            return ChartPoint(date: day, value: avg)
+        }
+        return aggregate(dailyAvg)
+    }
+    
+    private func aggregate(_ points: [ChartPoint]) -> [ChartPoint] {
+        let calendar = Calendar.current
+        switch viewModel.selectedTimeRange {
+        case .week, .today:
+            return points
+        case .month:
+            guard let start = calendar.date(byAdding: .month, value: -1, to: Date())?.startOfDay else { return points }
+            var buckets: [Date: [Double]] = [:]
+            for p in points {
+                let days = calendar.dateComponents([.day], from: start, to: p.date.startOfDay).day ?? 0
+                let binIndex = max(0, days / 3)
+                let binStart = calendar.date(byAdding: .day, value: binIndex * 3, to: start) ?? p.date.startOfDay
+                buckets[binStart, default: []].append(p.value)
+            }
+            return buckets.keys.sorted().map { key in
+                let values = buckets[key] ?? []
+                let avg = values.reduce(0, +) / Double(max(values.count, 1))
+                return ChartPoint(date: key, value: avg)
+            }.sorted { $0.date < $1.date }
+        case .year:
+            var buckets: [Date: [Double]] = [:]
+            for p in points {
+                let comps = calendar.dateComponents([.year, .month], from: p.date)
+                let monthStart = calendar.date(from: comps) ?? p.date.startOfDay
+                buckets[monthStart, default: []].append(p.value)
+            }
+            return buckets.keys.sorted().map { key in
+                let values = buckets[key] ?? []
+                let avg = values.reduce(0, +) / Double(max(values.count, 1))
+                return ChartPoint(date: key, value: avg)
+            }.sorted { $0.date < $1.date }
         }
     }
     

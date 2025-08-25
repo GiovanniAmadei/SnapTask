@@ -5,7 +5,7 @@ enum ConsistencyTimeRange: String, CaseIterable {
     case week = "Week"
     case month = "Month"
     case year = "Year"
-    // Existing code...
+    
     var displayName: String {
         switch self {
         case .week: return "week".localized
@@ -26,13 +26,11 @@ struct TaskConsistencyView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HeaderSection()
-            // Existing code...
             if viewModel.consistency.isEmpty {
                 EmptyConsistencyView()
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     TimeRangeSection(timeRange: $timeRange)
-                    PenaltyToggleSection(penalizeMissedTasks: $penalizeMissedTasks)
                 }
                 ModernConsistencyChart(
                     tasks: viewModel.consistency,
@@ -48,6 +46,7 @@ struct TaskConsistencyView: View {
                     selectedTaskId: $selectedTaskId
                 )
                 HelpTextSection()
+                PenaltyToggleSection(penalizeMissedTasks: $penalizeMissedTasks)
             }
         }
         .padding(.vertical, 16)
@@ -228,96 +227,66 @@ private struct ModernConsistencyChart: View {
     let penalizeMissedTasks: Bool
     @ObservedObject var viewModel: StatisticsViewModel
     @Environment(\.theme) private var theme
-    
+    @State private var previousTimeRange: ConsistencyTimeRange? = nil
+    @State private var crossfadeProgress: Double = 1.0
+
     private let distinctColors: [Color] = [
         .red, .blue, .green, .purple, .orange, .cyan,
         .pink, .yellow, .mint, .indigo, .teal, .brown
     ]
-    
+
     var body: some View {
         VStack(spacing: 10) {
-            Chart {
-                ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
-                    createTaskLines(for: task, at: index)
+            ZStack {
+                if let prev = previousTimeRange {
+                    chartView(for: prev)
+                        .opacity(1 - crossfadeProgress)
                 }
+                chartView(for: timeRange)
+                    .opacity(crossfadeProgress)
             }
-            .frame(height: 320)
-            .chartXAxis {
-                AxisMarks(position: .bottom, values: getXAxisDateValues()) { value in
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
-                    AxisValueLabel() {
-                        if let dateValue = value.as(Date.self) {
-                            Text(formatDateLabel(dateValue))
-                                .font(.system(.caption2, design: .rounded, weight: .medium))
-                                .themedSecondaryText()
-                        }
-                    }
-                }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                        .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
-                    AxisValueLabel() {
-                        if let intValue = value.as(Int.self) {
-                            Text("\(intValue)")
-                                .font(.system(.caption2, design: .rounded, weight: .medium))
-                                .themedSecondaryText()
-                        }
-                    }
-                }
-            }
-            .chartYScale(domain: 0...getCappedYMax())
-            .chartYAxisLabel("completed_tasks".localized, position: .leading)
-            .chartXAxisLabel("date".localized, position: .bottom)
-            .chartPlotStyle { plotArea in
-                plotArea.background(chartBackground)
-            }
-            .animation(.smooth(duration: 0.8), value: selectedTaskId)
-            .animation(.smooth(duration: 0.8), value: timeRange)
         }
         .padding(.horizontal, 16)
+        .onChange(of: timeRange) { oldRange, newRange in
+            previousTimeRange = oldRange
+            crossfadeProgress = 0
+            withAnimation(.easeInOut(duration: 0.28)) {
+                crossfadeProgress = 1
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                previousTimeRange = nil
+            }
+        }
     }
 
-    // ... (rest of the code remains the same)
+    private func getScaledMaxYValue(for range: ConsistencyTimeRange) -> Int {
+        let baseMax = Double(getMaxYValue(for: range))
+        let scaled = ceil(baseMax * yScaleMultiplier(for: range))
+        return max(Int(scaled), 1)
+    }
+    
+    private func yScaleMultiplier(for range: ConsistencyTimeRange) -> Double {
+        switch range {
+        case .week: return 1.4
+        case .month: return 2.0
+        case .year: return 2.5
+        }
+    }
 
-    private func getMaxYValue() -> Int {
+    private func getMaxYValue(for range: ConsistencyTimeRange) -> Int {
         let allPoints = tasks.compactMap { task in
-            getRealConsistencyPoints(for: task, timeRange: timeRange)
+            getRealConsistencyPoints(for: task, timeRange: range)
         }.flatMap { $0 }
-        
         let maxValue = allPoints.map { $0.1 }.max() ?? 1
         return max(maxValue, 1)
     }
     
-    // Expanded Y range to make lines visually less steep without changing data values
-    private func getScaledMaxYValue() -> Int {
-        let baseMax = Double(getMaxYValue())
-        let scaled = ceil(baseMax * yScaleMultiplier())
-        return max(Int(scaled), 1)
-    }
-    
-    private func yScaleMultiplier() -> Double {
-        switch timeRange {
-        case .week:
-            return 1.4
-        case .month:
-            return 2.0
-        case .year:
-            return 2.5
-        }
-    }
-
-    private func getCappedYMax() -> Int {
-        let scaled = getScaledMaxYValue()
-        switch timeRange {
-        case .week:
-            return scaled
-        case .month:
-            return min(scaled, 31)
-        case .year:
-            return min(scaled, 365)
+    private func getCappedYMax(for range: ConsistencyTimeRange) -> Int {
+        let scaled = getScaledMaxYValue(for: range)
+        switch range {
+        case .week: return scaled
+        case .month: return min(scaled, 31)
+        case .year: return min(scaled, 365)
         }
     }
 
@@ -349,18 +318,18 @@ private struct ModernConsistencyChart: View {
             )
     }
     
-    private func getXAxisDateValues() -> [Date] {
+    private func getXAxisDateValues(for range: ConsistencyTimeRange) -> [Date] {
         let calendar = Calendar.current
         let today = Date()
         
         var dates: [Date] = []
         
-        switch timeRange {
+        switch range {
         case .week, .month:
             let daysToAnalyze: Int
             let interval: Int
             
-            switch timeRange {
+            switch range {
             case .week:
                 daysToAnalyze = 7
                 interval = 1
@@ -394,16 +363,15 @@ private struct ModernConsistencyChart: View {
         return dates.sorted()
     }
     
-    private func formatDateLabel(_ date: Date) -> String {
+    private func formatDateLabel(_ date: Date, for range: ConsistencyTimeRange) -> String {
         let formatter = DateFormatter()
         
-        switch timeRange {
+        switch range {
         case .week:
             formatter.dateFormat = "E dd"
         case .month:
             formatter.dateFormat = "dd MMM"
         case .year:
-            // Shorter monthly label to avoid crowding
             formatter.dateFormat = "MMM"
         }
         
@@ -411,49 +379,43 @@ private struct ModernConsistencyChart: View {
     }
     
     @ChartContentBuilder
-    private func createTaskLines(for task: TodoTask, at index: Int) -> some ChartContent {
-        let points = getRealConsistencyPoints(for: task, timeRange: timeRange)
+    private func createTaskLines(for task: TodoTask, at index: Int, range: ConsistencyTimeRange, opacityFactor: Double) -> some ChartContent {
+        let points = getRealConsistencyPoints(for: task, timeRange: range)
         let taskColor = getTaskColor(for: task, at: index)
         let isSelected = selectedTaskId == nil || selectedTaskId == task.id
-        let opacity = isSelected ? 0.9 : 0.3
-        let lineWidth = getLineWidth(isSelected: isSelected)
-        let symbolSize = getSymbolSize(isSelected: isSelected)
+        let opacity = (isSelected ? 0.9 : 0.3) * opacityFactor
+        let lineWidth = getLineWidth(isSelected: isSelected, for: range)
+        let symbolSize = getSymbolSize(isSelected: isSelected, for: range)
 
         if !points.isEmpty {
-            ForEach(Array(points.enumerated()), id: \.offset) { pointIndex, point in
-                LineMark(
-                    x: .value("date".localized, point.0),
+            ForEach(points, id: \.0) { point in
+                 LineMark(
+                     x: .value("date".localized, point.0),
                     y: .value("progress".localized, point.1),
-                    series: .value("task".localized, task.name)
-                )
-                .foregroundStyle(taskColor.opacity(opacity))
-                .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
-                .symbol(.circle)
-                .symbolSize(symbolSize)
-                .interpolationMethod(.linear)
-            }
+                     series: .value("task".localized, task.name)
+                 )
+                 .foregroundStyle(taskColor.opacity(opacity))
+                 .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                 .symbol(.circle)
+                 .symbolSize(symbolSize)
+                 .interpolationMethod(.linear)
+             }
         }
     }
     
-    private func getLineWidth(isSelected: Bool) -> Double {
-        switch timeRange {
-        case .week:
-            return isSelected ? 3.0 : 2.0
-        case .month:
-            return isSelected ? 2.0 : 1.5
-        case .year:
-            return isSelected ? 1.2 : 0.8
+    private func getLineWidth(isSelected: Bool, for range: ConsistencyTimeRange) -> Double {
+        switch range {
+        case .week: return isSelected ? 3.0 : 2.0
+        case .month: return isSelected ? 2.0 : 1.5
+        case .year: return isSelected ? 1.2 : 0.8
         }
     }
     
-    private func getSymbolSize(isSelected: Bool) -> Double {
-        switch timeRange {
-        case .week:
-            return isSelected ? 36 : 24
-        case .month:
-            return isSelected ? 14 : 10
-        case .year:
-            return isSelected ? 2 : 1
+    private func getSymbolSize(isSelected: Bool, for range: ConsistencyTimeRange) -> Double {
+        switch range {
+        case .week: return isSelected ? 36 : 24
+        case .month: return isSelected ? 14 : 10
+        case .year: return isSelected ? 2 : 1
         }
     }
 
@@ -547,6 +509,50 @@ private struct ModernConsistencyChart: View {
         } else {
             let colorIndex = index % distinctColors.count
             return distinctColors[colorIndex]
+        }
+    }
+
+    private func chartView(for range: ConsistencyTimeRange) -> some View {
+        Chart {
+            ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
+                createTaskLines(for: task, at: index, range: range, opacityFactor: 1.0)
+            }
+        }
+        .frame(height: 320)
+        .chartXAxis {
+            AxisMarks(position: .bottom, values: getXAxisDateValues(for: range)) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
+                AxisValueLabel() {
+                    if let dateValue = value.as(Date.self) {
+                        Text(formatDateLabel(dateValue, for: range))
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                            .themedSecondaryText()
+                    }
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                    .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
+                AxisValueLabel() {
+                    if let intValue = value.as(Int.self) {
+                        Text("\(intValue)")
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                            .themedSecondaryText()
+                    }
+                }
+            }
+        }
+        .chartYScale(domain: 0...getCappedYMax(for: range))
+        .chartYAxisLabel("completed_tasks".localized, position: .leading)
+        .chartXAxisLabel("date".localized, position: .bottom)
+        .chartPlotStyle { plotArea in
+            plotArea.background(chartBackground)
+        }
+        .transaction { t in
+            t.animation = nil
         }
     }
 }

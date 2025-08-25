@@ -81,7 +81,6 @@ struct CategoryPickerView: View {
                                 )
                         )
                     }
-                    .disabled(!canAddMoreCategories)
                     .buttonStyle(BorderlessButtonStyle())
                 }
                 .padding()

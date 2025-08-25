@@ -18,7 +18,7 @@ struct PremiumPaywallView: View {
     private var headerIconSize: CGFloat { isCompactPhone ? 44 : 50 }
     private var headerCrownSize: CGFloat { isCompactPhone ? 18 : 20 }
     private var featureCardHeight: CGFloat { isCompactPhone ? 46 : 50 }
-    private var lifetimeCardHeight: CGFloat { isCompactPhone ? 114 : 100 }
+    private var lifetimeCardHeight: CGFloat { isCompactPhone ? 104 : 96 }
     private var planCardHeight: CGFloat { isCompactPhone ? 102 : 95 }
     private var purchaseButtonHeight: CGFloat { isCompactPhone ? 46 : 50 }
     
@@ -194,7 +194,7 @@ struct PremiumPaywallView: View {
                         isSelected: selectedPlan == "lifetime",
                         badgeColor: .orange,
                         isLifetime: true,
-                        savingsAmount: subscriptionManager.lifetimeSavingsAmount,
+                        savingsAmount: nil,
                         cardHeight: lifetimeCardHeight
                     )
                 }
@@ -210,8 +210,8 @@ struct PremiumPaywallView: View {
                         CompactSubscriptionCard(
                             title: "yearly".localized,
                             price: subscriptionManager.yearlyProduct?.displayPrice ?? "---",
-                            subtitle: subscriptionManager.hasUsedTrial ? subscriptionManager.monthlyEquivalentForYearly + "per_month".localized : String(format: "days_free_then".localized, subscriptionManager.yearlyProduct?.displayPrice ?? "---"),
-                            badge: subscriptionManager.hasUsedTrial ? nil : "free_trial".localized,
+                            subtitle: String(format: "days_free_then".localized, subscriptionManager.yearlyProduct?.displayPrice ?? "---"),
+                            badge: "free_trial".localized,
                             isSelected: selectedPlan == "yearly",
                             badgeColor: .green,
                             isLifetime: false,
@@ -257,7 +257,7 @@ struct PremiumPaywallView: View {
                         .scaleEffect(0.8)
                 } else {
                     VStack(spacing: 2) {
-                        if selectedPlan == "yearly" && !subscriptionManager.hasUsedTrial {
+                        if selectedPlan == "yearly" {
                             Text("start_free_trial".localized)
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
@@ -276,7 +276,7 @@ struct PremiumPaywallView: View {
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
                         } else {
-                            Text(selectedPlan == "yearly" ? "subscribe_yearly_plan".localized : "subscribe_monthly_plan".localized)
+                            Text("subscribe_monthly_plan".localized)
                                 .font(.headline.weight(.semibold))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
@@ -394,6 +394,11 @@ struct PremiumPaywallView: View {
         
         isProcessingPurchase = false
     }
+
+    private func hasIntroOffer(for product: Product?) -> Bool {
+        guard let p = product, let sub = p.subscription else { return false }
+        return sub.introductoryOffer != nil
+    }
 }
 
 // MARK: - Compact Feature Card
@@ -499,7 +504,7 @@ struct CompactSubscriptionCard: View {
             
             Spacer(minLength: 4)
             
-            // Savings text
+            // Savings text (collapse space when absent)
             VStack {
                 if let savingsText = savingsText {
                     Text(savingsText)
@@ -507,14 +512,10 @@ struct CompactSubscriptionCard: View {
                         .foregroundColor(.green)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                } else {
-                    Text(" ")
-                        .font(.system(size: 11, weight: .semibold))
-                        .opacity(0)
                 }
             }
-            .frame(height: 20)
-            .padding(.bottom, 4)
+            .frame(height: savingsText == nil ? 0 : 20)
+            .padding(.bottom, savingsText == nil ? 0 : 4)
             
             Spacer(minLength: 8)
         }
@@ -525,25 +526,25 @@ struct CompactSubscriptionCard: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(
-                            isSelected ?
-                                LinearGradient(
-                                    colors: isLifetime ? [.orange, .red] : [.purple, .pink],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ) :
-                                LinearGradient(colors: [.gray.opacity(0.3)], startPoint: .leading, endPoint: .trailing),
-                            lineWidth: isSelected ? 2 : 1
-                        )
+        )
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    isSelected ?
+                        LinearGradient(
+                            colors: isLifetime ? [.orange, .red] : [.purple, .pink],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ) :
+                        LinearGradient(colors: [.gray.opacity(0.3)], startPoint: .leading, endPoint: .trailing),
+                    lineWidth: isSelected ? 2 : 1
                 )
-                .shadow(
-                    color: isSelected ? (isLifetime ? Color.orange.opacity(0.15) : Color.purple.opacity(0.15)) : Color.black.opacity(0.05),
-                    radius: isSelected ? 8 : 3,
-                    x: 0,
-                    y: isSelected ? 4 : 2
-                )
+        )
+        .shadow(
+            color: isSelected ? (isLifetime ? Color.orange.opacity(0.15) : Color.purple.opacity(0.15)) : Color.black.opacity(0.05),
+            radius: isSelected ? 8 : 3,
+            x: 0,
+            y: isSelected ? 4 : 2
         )
         .scaleEffect(isSelected ? 1.02 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)

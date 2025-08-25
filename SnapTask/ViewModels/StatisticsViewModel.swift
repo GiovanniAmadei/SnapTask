@@ -311,7 +311,8 @@ class StatisticsViewModel: ObservableObject {
         print("📊 Available categories: \(categories.map { "\($0.name) (ID: \($0.id.uuidString.prefix(8)))" })")
         
         let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
-        let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
+        let categoryMetadata = UserDefaults.standard.dictionary(forKey: "categoryMetadata") as? [String: [String: String]] ?? [:]
+        let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:] // Per retrocompatibilità
         
         var categoryStatsList: [CategoryStat] = []
         
@@ -330,6 +331,7 @@ class StatisticsViewModel: ObservableObject {
             
             print("📊 Category '\(category.name)': found \(categoryTasks.count) tasks")
             
+            // Calcola ore dalle durate dei task completati
             let taskHours = categoryTasks.reduce(0.0) { total, task in
                 let completionHours = task.completions
                     .compactMap { (date, completion) -> Double? in
@@ -372,40 +374,66 @@ class StatisticsViewModel: ObservableObject {
                 return total + completionHours
             }
             
-        let calendar = Calendar.current
-        var trackedHours = 0.0
+            // Calcola ore dalle sessioni di time tracking (nuovi category metadata)
+            let calendar = Calendar.current
+            var trackedHours = 0.0
+            let categoryKey = "category_\(category.id.uuidString)"
             
+            var currentDate = startDate
+            while currentDate <= endDate {
+                let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
+                if let dayData = timeTrackingData[dateKey],
+                   let categoryHours = dayData[categoryKey] {
+                    trackedHours += categoryHours
+                    print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from time tracking")
+                }
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+            }
+            
+            let totalHours = taskHours + trackedHours
+            
+            if totalHours > 0 {
+                categoryStatsList.append(CategoryStat(
+                    name: category.name,
+                    color: category.color,
+                    hours: totalHours
+                ))
+                print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from time tracking = \(String(format: "%.2f", totalHours))h total")
+            } else {
+                print("📊 Category \(category.name): 0 hours (no tasks with duration or time tracking sessions)")
+            }
+        }
+        
+        // Gestisci anche le vecchie entry "uncategorized" dal time tracking
+        let calendar = Calendar.current
         var currentDate = startDate
+        var uncategorizedHours = 0.0
+        
         while currentDate <= endDate {
             let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
             if let dayData = timeTrackingData[dateKey],
-               let categoryHours = dayData[category.id.uuidString] {
-                trackedHours += categoryHours
-                print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from Pomodoro tracking")
+               let uncategorizedTime = dayData["uncategorized"] {
+                uncategorizedHours += uncategorizedTime
             }
             currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
         }
-            
-        let totalHours = taskHours + trackedHours
-            
-        if totalHours > 0 {
+        
+        if uncategorizedHours > 0 {
             categoryStatsList.append(CategoryStat(
-                name: category.name,
-                color: category.color,
-                hours: totalHours
+                name: "Uncategorized",
+                color: "#9CA3AF",
+                hours: uncategorizedHours
             ))
-            print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from Pomodoro = \(String(format: "%.2f", totalHours))h total")
-        } else {
-            print("📊 Category \(category.name): 0 hours (no tasks with duration or Pomodoro sessions)")
-        }
+            print("📊 Uncategorized: \(String(format: "%.2f", uncategorizedHours))h from time tracking")
         }
         
-        let calendar = Calendar.current
-        var currentDate = startDate
+        // Per retrocompatibilità: gestisci i vecchi task metadata (che verranno progressivamente rimossi)
+        let calendar2 = Calendar.current
+        var currentDate2 = startDate
         var taskTracking: [String: Double] = [:]
         
-        while currentDate <= endDate {
-            let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
+        while currentDate2 <= endDate {
+            let dateKey = ISO8601DateFormatter().string(from: calendar2.startOfDay(for: currentDate2))
             if let dayData = timeTrackingData[dateKey] {
                 for (key, hours) in dayData {
                     if key.hasPrefix("task_") {
@@ -413,9 +441,10 @@ class StatisticsViewModel: ObservableObject {
                     }
                 }
             }
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+            currentDate2 = calendar2.date(byAdding: .day, value: 1, to: currentDate2) ?? endDate.addingTimeInterval(86400)
         }
         
+        // Aggiungi solo i task metadata che non sono stati già migrati alle categorie
         for (taskKey, hours) in taskTracking {
             if hours > 0, let metadata = taskMetadata[taskKey] {
                 categoryStatsList.append(CategoryStat(
@@ -423,7 +452,7 @@ class StatisticsViewModel: ObservableObject {
                     color: metadata["color"] ?? "#6366F1",
                     hours: hours
                 ))
-                print("📊 Individual task \(metadata["name"] ?? "Unknown"): \(String(format: "%.2f", hours))h from Pomodoro tracking")
+                print("📊 Legacy task \(metadata["name"] ?? "Unknown"): \(String(format: "%.2f", hours))h from old time tracking format")
             }
         }
         

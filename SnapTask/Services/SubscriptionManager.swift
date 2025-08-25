@@ -302,9 +302,12 @@ class SubscriptionManager: ObservableObject {
                     } else {
                         activeSubscription = transaction
                         
-                        // Check if it's a trial period
-                        if let subscription = await getSubscriptionStatus(for: transaction.productID) {
-                            isInTrialPeriod = subscription.state == .inBillingRetryPeriod || subscription.state == .inGracePeriod
+                        if transaction.offerType == .introductory {
+                            isInTrialPeriod = true
+                        } else if let status = await getSubscriptionStatus(for: transaction.productID),
+                                  case .verified(let statusTx) = status.transaction,
+                                  statusTx.offerType == .introductory {
+                            isInTrialPeriod = true
                         }
                     }
                 }
@@ -453,25 +456,8 @@ extension SubscriptionManager {
             return "---"
         }
         
-        let monthlyPrice = yearly.price / 12
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale.current
-        
-        return formatter.string(from: NSNumber(value: Double(truncating: monthlyPrice as NSNumber))) ?? "---"
-    }
-    
-    var yearlySavingsPercentage: Int {
-        guard let monthly = monthlyProduct,
-              let yearly = yearlyProduct else {
-            return 48 // Updated default percentage
-        }
-        
-        let monthlyYearlyPrice = monthly.price * 12
-        let savings = monthlyYearlyPrice - yearly.price
-        let percentage = (savings / monthlyYearlyPrice) * 100
-        
-        return Int(NSDecimalNumber(decimal: percentage).doubleValue)
+        let monthlyPrice: Decimal = yearly.price / 12
+        return monthlyPrice.formatted(yearly.priceFormatStyle)
     }
     
     var yearlySavingsAmount: String {
@@ -480,14 +466,9 @@ extension SubscriptionManager {
             return "---"
         }
         
-        let monthlyYearlyPrice = monthly.price * 12
-        let savings = monthlyYearlyPrice - yearly.price
-        
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale.current
-        
-        return formatter.string(from: NSNumber(value: Double(truncating: savings as NSNumber))) ?? "---"
+        let monthlyYearlyPrice: Decimal = monthly.price * 12
+        let savings: Decimal = monthlyYearlyPrice - yearly.price
+        return savings.formatted(yearly.priceFormatStyle)
     }
     
     var lifetimeSavingsAmount: String {
@@ -496,15 +477,9 @@ extension SubscriptionManager {
             return "---"
         }
         
-        // Assumiamo 24 mesi per calcolare il risparmio lifetime
-        let monthly24Price = monthly.price * 24
-        let savings = monthly24Price - lifetime.price
-        
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale.current
-        
-        return formatter.string(from: NSNumber(value: Double(truncating: savings as NSNumber))) ?? "---"
+        let monthly24Price: Decimal = monthly.price * 24
+        let savings: Decimal = monthly24Price - lifetime.price
+        return savings.formatted(lifetime.priceFormatStyle)
     }
     
     // Premium feature limits for free users

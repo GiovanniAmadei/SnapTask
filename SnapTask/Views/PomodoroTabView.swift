@@ -282,7 +282,10 @@ struct PomodoroTabView: View {
                     task: generalPomodoroTask, 
                     focusTimeCompleted: completedFocusTime
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color(.systemBackground))
             }
+            .ignoresSafeArea(edges: .bottom)
         }
     }
     

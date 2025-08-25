@@ -67,12 +67,12 @@ final class DemoDataSeeder {
         var existingByName = Dictionary(uniqueKeysWithValues: CategoryManager.shared.categories.map { ($0.name.lowercased(), $0) })
 
         let desired: [(String, String)] = [
-            ("Work", "#6366F1"),
-            ("Personal", "#F59E0B"),
-            ("Health", "#10B981"),
-            ("Home", "#EC4899"),
-            ("Learning", "#3B82F6"),
-            ("Finance", "#22C55E")
+            ("Work", "#3B82F6"),         // Blue - Professional tasks
+            ("Health & Fitness", "#10B981"), // Green - Wellness activities  
+            ("Personal", "#F59E0B"),     // Orange - Personal development
+            ("Home & Family", "#EC4899"), // Pink - Domestic and family tasks
+            ("Learning", "#8B5CF6"),     // Purple - Educational activities
+            ("Finance", "#059669")       // Teal - Money management
         ]
 
         var map: [String: Category] = [:]
@@ -100,23 +100,25 @@ final class DemoDataSeeder {
         }
 
         let general: [Reward] = [
-            Reward(name: "Coffee Break", description: "Enjoy a nice coffee", pointsCost: 50, frequency: .daily, icon: "cup.and.saucer"),
-            Reward(name: "Movie Night", description: "Watch your favorite movie", pointsCost: 200, frequency: .monthly, icon: "film"),
-            Reward(name: "Takeout Dinner", description: "Order your favorite food", pointsCost: 150, frequency: .weekly, icon: "takeoutbag.and.cup.and.straw"),
-            Reward(name: "Weekend Treat", description: "Small gift or dessert", pointsCost: 80, frequency: .weekly, icon: "gift"),
-            Reward(name: "Yearly Getaway", description: "Plan a short weekend trip", pointsCost: 1200, frequency: .yearly, icon: "airplane")
+            Reward(name: "Coffee Break", description: "Enjoy your favorite coffee", pointsCost: 50, frequency: .daily, icon: "cup.and.saucer"),
+            Reward(name: "Movie Night", description: "Watch a movie with friends", pointsCost: 200, frequency: .weekly, icon: "tv"),
+            Reward(name: "Favorite Meal", description: "Order from your favorite restaurant", pointsCost: 150, frequency: .weekly, icon: "fork.knife"),
+            Reward(name: "Social Media Time", description: "30 minutes of guilt-free scrolling", pointsCost: 30, frequency: .daily, icon: "iphone"),
+            Reward(name: "Weekend Trip", description: "Plan a short getaway", pointsCost: 1000, frequency: .monthly, icon: "car.fill")
         ]
 
         for r in general { ensureReward(r) }
 
-        if let health = categories["Health"] {
-            ensureReward(Reward(name: "New Running Socks", description: "Treat yourself to new gear", pointsCost: 300, frequency: .monthly, icon: "figure.run", categoryId: health.id, categoryName: health.name))
+        if let health = categories["Health & Fitness"] {
+            ensureReward(Reward(name: "New Workout Gear", description: "Treat yourself to fitness equipment", pointsCost: 400, frequency: .monthly, icon: "dumbbell.fill", categoryId: health.id, categoryName: health.name))
+            ensureReward(Reward(name: "Protein Smoothie", description: "Post-workout nutrition treat", pointsCost: 80, frequency: .weekly, icon: "drop.fill", categoryId: health.id, categoryName: health.name))
         }
         if let learning = categories["Learning"] {
-            ensureReward(Reward(name: "Buy a Book", description: "Get a new book to study", pointsCost: 250, frequency: .monthly, icon: "book.fill", categoryId: learning.id, categoryName: learning.name))
+            ensureReward(Reward(name: "New Book", description: "Buy a book you've been wanting", pointsCost: 250, frequency: .monthly, icon: "book.fill", categoryId: learning.id, categoryName: learning.name))
+            ensureReward(Reward(name: "Online Course", description: "Enroll in a new course", pointsCost: 500, frequency: .monthly, icon: "graduationcap.fill", categoryId: learning.id, categoryName: learning.name))
         }
         if let work = categories["Work"] {
-            ensureReward(Reward(name: "Desk Accessory", description: "Upgrade your workspace", pointsCost: 400, frequency: .monthly, icon: "tray.fill", categoryId: work.id, categoryName: work.name))
+            ensureReward(Reward(name: "Desk Upgrade", description: "Improve your workspace", pointsCost: 300, frequency: .monthly, icon: "desktopcomputer", categoryId: work.id, categoryName: work.name))
         }
 
         // Build map by name
@@ -178,150 +180,267 @@ final class DemoDataSeeder {
             return task.id
         }
 
-        // Daily recurrences (timeScope .today per chiave giornaliera coerente con stats)
-        let dailyRec = Recurrence(type: .daily, startDate: dailyStart, endDate: nil, trackInStatistics: true)
-
-        // Weekly recurrences (usa weekly in Recurrence ma timeScope .today)
-        let weeklyRec: Recurrence = {
-            let days: Set<Int> = [2, 4, 7] // Mon, Wed, Sat
+        // Daily recurrences - 7:00 AM
+        let dailyMorning = Recurrence(type: .daily, startDate: dailyStart, endDate: nil, trackInStatistics: true)
+        
+        // Weekly recurrences - Monday, Wednesday, Friday
+        let weeklyMWF: Recurrence = {
+            let days: Set<Int> = [2, 4, 6] // Mon, Wed, Fri
+            return Recurrence(type: .weekly(days: days), startDate: dailyStart, endDate: nil, trackInStatistics: true)
+        }()
+        
+        // Weekly recurrences - Tuesday, Thursday  
+        let weeklyTuTh: Recurrence = {
+            let days: Set<Int> = [3, 5] // Tue, Thu
             return Recurrence(type: .weekly(days: days), startDate: dailyStart, endDate: nil, trackInStatistics: true)
         }()
 
-        // Monthly recurrences (1° del mese)
+        // Weekend tasks - Saturday, Sunday
+        let weekendRec: Recurrence = {
+            let days: Set<Int> = [1, 7] // Sun, Sat
+            return Recurrence(type: .weekly(days: days), startDate: dailyStart, endDate: nil, trackInStatistics: true)
+        }()
+
+        // Monthly recurrences (1st of month)
         let monthlyRec = Recurrence(type: .monthly(days: [1]), startDate: dailyStart, endDate: nil, trackInStatistics: true)
 
-        // Yearly recurrence (una volta l'anno, giorno di oggi)
-        let yearlyRec = Recurrence(type: .yearly, startDate: dailyStart, endDate: nil, trackInStatistics: true)
+        // Quarterly recurrences (1st of quarter)
+        let quarterlyRec = Recurrence(type: .monthly(days: [1]), startDate: dailyStart, endDate: nil, trackInStatistics: true)
 
-        // Daily tasks (con subtasks su alcuni)
+        // =================
+        // DAILY TASKS (7:00 AM - 8:30 AM)
+        // =================
+        
         ids["Morning Workout"] = await makeTask(
             name: "Morning Workout",
             icon: "figure.run",
-            categoryName: "Health",
+            categoryName: "Health & Fitness",
             priority: .high,
             minutes: 45,
-            points: 15,
-            recurrence: dailyRec,
-            startAt: dailyStart,
-            subtasks: ["Warm-up", "Workout", "Stretching"]
+            points: 20,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 7, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["5min warm-up", "30min main workout", "10min cool-down"]
         )
 
-        ids["Plan the Day"] = await makeTask(
-            name: "Plan the Day",
-            icon: "list.bullet",
+        ids["Review Daily Goals"] = await makeTask(
+            name: "Review Daily Goals",
+            icon: "target",
             categoryName: "Personal",
             priority: .medium,
             minutes: 15,
-            points: 5,
-            recurrence: dailyRec,
-            startAt: dailyStart
+            points: 10,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 8, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Check calendar", "Set 3 priorities", "Quick meditation"]
         )
 
-        ids["Inbox Zero"] = await makeTask(
-            name: "Inbox Zero",
-            icon: "envelope.badge.fill",
+        ids["Check Emails"] = await makeTask(
+            name: "Check Emails",
+            icon: "envelope.fill",
             categoryName: "Work",
             priority: .medium,
             minutes: 20,
             points: 10,
-            recurrence: dailyRec,
-            startAt: dailyStart
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 9, minute: 0, second: 0, of: dailyStart) ?? dailyStart
         )
 
-        ids["Read 20 Pages"] = await makeTask(
-            name: "Read 20 Pages",
+        ids["Read 15 Minutes"] = await makeTask(
+            name: "Read 15 Minutes",
             icon: "book.fill",
             categoryName: "Learning",
             priority: .low,
-            minutes: 30,
-            points: 10,
-            recurrence: dailyRec,
-            startAt: dailyStart
+            minutes: 15,
+            points: 15,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 21, minute: 30, second: 0, of: dailyStart) ?? dailyStart
         )
 
-        // Weekly tasks (con subtasks)
-        ids["Weekly Meal Prep"] = await makeTask(
-            name: "Weekly Meal Prep",
-            icon: "cart.fill",
-            categoryName: "Home",
-            priority: .medium,
-            minutes: 90,
-            points: 20,
-            recurrence: weeklyRec,
-            startAt: dailyStart,
-            subtasks: ["Plan menu", "Buy groceries", "Cook 3 meals"]
-        )
-
-        ids["Family Call"] = await makeTask(
-            name: "Family Call",
-            icon: "phone.fill",
+        ids["Evening Reflection"] = await makeTask(
+            name: "Evening Reflection",
+            icon: "moon.stars.fill",
             categoryName: "Personal",
             priority: .low,
-            minutes: 30,
+            minutes: 10,
             points: 10,
-            recurrence: weeklyRec,
-            startAt: dailyStart
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 22, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["What went well?", "What to improve?", "Tomorrow's focus"]
         )
 
-        ids["House Cleaning"] = await makeTask(
-            name: "House Cleaning",
-            icon: "homekit",
-            categoryName: "Home",
+        // =================
+        // WORK TASKS (MWF)
+        // =================
+        
+        ids["Team Standup"] = await makeTask(
+            name: "Team Standup",
+            icon: "person.3.fill",
+            categoryName: "Work",
+            priority: .high,
+            minutes: 30,
+            points: 15,
+            recurrence: weeklyMWF,
+            startAt: cal.date(bySettingHour: 9, minute: 30, second: 0, of: dailyStart) ?? dailyStart
+        )
+
+        ids["Deep Work Session"] = await makeTask(
+            name: "Deep Work Session",
+            icon: "brain.head.profile",
+            categoryName: "Work",
+            priority: .high,
+            minutes: 90,
+            points: 25,
+            recurrence: weeklyMWF,
+            startAt: cal.date(bySettingHour: 10, minute: 30, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Turn off notifications", "Pick 1 complex task", "Work for 90 minutes"]
+        )
+
+        // =================
+        // FITNESS TASKS (Tue/Thu)
+        // =================
+        
+        ids["Strength Training"] = await makeTask(
+            name: "Strength Training",
+            icon: "dumbbell.fill",
+            categoryName: "Health & Fitness",
             priority: .medium,
             minutes: 60,
-            points: 15,
-            recurrence: weeklyRec,
-            startAt: dailyStart,
-            subtasks: ["Tidy living room", "Clean kitchen", "Vacuum"]
+            points: 20,
+            recurrence: weeklyTuTh,
+            startAt: cal.date(bySettingHour: 18, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Upper body", "Core exercises", "Stretching"]
         )
 
-        // Monthly tasks (con subtasks)
-        ids["Monthly Budget Review"] = await makeTask(
-            name: "Monthly Budget Review",
-            icon: "creditcard.fill",
-            categoryName: "Finance",
+        ids["Prepare Healthy Meals"] = await makeTask(
+            name: "Prepare Healthy Meals",
+            icon: "leaf.fill",
+            categoryName: "Health & Fitness",
             priority: .medium,
             minutes: 45,
-            points: 30,
-            recurrence: monthlyRec,
-            startAt: dailyStart,
-            subtasks: ["Check expenses", "Update spreadsheet", "Plan savings"]
+            points: 15,
+            recurrence: weeklyTuTh,
+            startAt: cal.date(bySettingHour: 19, minute: 30, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Plan 3 meals", "Prep ingredients", "Cook and store"]
         )
 
-        ids["Digital Photo Cleanup"] = await makeTask(
-            name: "Digital Photo Cleanup",
-            icon: "photo.fill.on.rectangle.fill",
+        // =================
+        // WEEKEND TASKS
+        // =================
+        
+        ids["House Cleaning"] = await makeTask(
+            name: "House Cleaning",
+            icon: "house.fill",
+            categoryName: "Home & Family",
+            priority: .medium,
+            minutes: 90,
+            points: 25,
+            recurrence: weekendRec,
+            startAt: cal.date(bySettingHour: 10, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Kitchen deep clean", "Vacuum all rooms", "Bathroom cleaning", "Laundry"]
+        )
+
+        ids["Family Time"] = await makeTask(
+            name: "Family Time",
+            icon: "heart.fill",
+            categoryName: "Home & Family",
+            priority: .high,
+            minutes: 120,
+            points: 30,
+            recurrence: weekendRec,
+            startAt: cal.date(bySettingHour: 14, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Quality conversation", "Shared activity", "Plan next week together"]
+        )
+
+        ids["Hobby Time"] = await makeTask(
+            name: "Hobby Time",
+            icon: "paintbrush.fill",
             categoryName: "Personal",
             priority: .low,
-            minutes: 30,
-            points: 10,
-            recurrence: monthlyRec,
-            startAt: dailyStart
-        )
-
-        // Yearly task
-        ids["Annual Medical Check-up"] = await makeTask(
-            name: "Annual Medical Check-up",
-            icon: "stethoscope",
-            categoryName: "Health",
-            priority: .medium,
             minutes: 60,
-            points: 50,
-            recurrence: yearlyRec,
-            startAt: dailyStart
+            points: 20,
+            recurrence: weekendRec,
+            startAt: cal.date(bySettingHour: 16, minute: 30, second: 0, of: dailyStart) ?? dailyStart
         )
 
-        // Long-term objective (con subtasks)
-        ids["Declutter Home"] = await makeTask(
-            name: "Declutter Home",
-            icon: "tray.full.fill",
-            categoryName: "Home",
+        // =================
+        // MONTHLY TASKS
+        // =================
+        
+        ids["Budget Review"] = await makeTask(
+            name: "Budget Review",
+            icon: "chart.pie.fill",
+            categoryName: "Finance",
+            priority: .high,
+            minutes: 60,
+            points: 40,
+            recurrence: monthlyRec,
+            startAt: cal.date(bySettingHour: 19, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Review expenses", "Check savings goal", "Plan next month", "Update investments"]
+        )
+
+        ids["Skill Learning"] = await makeTask(
+            name: "Skill Learning",
+            icon: "graduationcap.fill",
+            categoryName: "Learning",
+            priority: .medium,
+            minutes: 90,
+            points: 35,
+            recurrence: monthlyRec,
+            startAt: cal.date(bySettingHour: 20, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Choose new skill", "Find resources", "Practice 1 hour", "Set learning goals"]
+        )
+
+        ids["Digital Declutter"] = await makeTask(
+            name: "Digital Declutter",
+            icon: "trash.fill",
+            categoryName: "Personal",
+            priority: .low,
+            minutes: 45,
+            points: 20,
+            recurrence: monthlyRec,
+            startAt: cal.date(bySettingHour: 18, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Clean photo library", "Organize files", "Unsubscribe from emails", "Clear downloads"]
+        )
+
+        // =================
+        // QUARTERLY GOALS (Long-term objectives)
+        // =================
+        
+        ids["Career Development"] = await makeTask(
+            name: "Career Development",
+            icon: "arrow.up.circle.fill",
+            categoryName: "Work",
+            priority: .high,
+            minutes: 0,
+            points: 100,
+            recurrence: quarterlyRec,
+            startAt: cal.date(bySettingHour: 19, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Update resume", "Network with peers", "Learn new technology", "Set career goals", "Seek feedback"]
+        )
+
+        ids["Health Goals"] = await makeTask(
+            name: "Health Goals",
+            icon: "heart.text.square.fill",
+            categoryName: "Health & Fitness",
+            priority: .high,
+            minutes: 0,
+            points: 80,
+            recurrence: quarterlyRec,
+            startAt: cal.date(bySettingHour: 8, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Schedule health checkup", "Review fitness progress", "Update nutrition plan", "Set new fitness goals"]
+        )
+
+        ids["Financial Independence"] = await makeTask(
+            name: "Financial Independence",
+            icon: "banknote.fill",
+            categoryName: "Finance",
             priority: .medium,
             minutes: 0,
-            points: 40,
-            recurrence: Recurrence(type: .daily, startDate: dailyStart, endDate: nil, trackInStatistics: true),
-            startAt: dailyStart,
-            subtasks: ["Sort clothes", "Clean drawers", "Donate items", "Organize cables"]
+            points: 120,
+            recurrence: quarterlyRec,
+            startAt: cal.date(bySettingHour: 20, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Review investment portfolio", "Increase emergency fund", "Research new opportunities", "Optimize tax strategy", "Track net worth"]
         )
 
         return ids
@@ -336,16 +455,49 @@ final class DemoDataSeeder {
 
         func rand(_ min: Int, _ max: Int) -> Int { Int.random(in: min...max) }
 
-        let dailyProb = 0.85
-        let weeklyProb = 0.75
-        let monthlyProb = 0.85
+        // Completion rates based on task type and human nature
+        let dailyRates: [String: Double] = [
+            "Morning Workout": 0.75,      // High motivation but some skip days
+            "Review Daily Goals": 0.85,   // Quick and easy, high completion
+            "Check Emails": 0.95,         // Work necessity, very high completion
+            "Read 15 Minutes": 0.60,      // Good intention but often skipped
+            "Evening Reflection": 0.45    // Often forgotten at end of day
+        ]
+        
+        let weeklyRates: [String: Double] = [
+            "Team Standup": 0.90,         // Work requirement
+            "Deep Work Session": 0.70,    // Challenging but valuable
+            "Strength Training": 0.65,    // Requires motivation
+            "Prepare Healthy Meals": 0.80, // Practical necessity
+            "House Cleaning": 0.85,       // Necessary for living
+            "Family Time": 0.95,          // High priority for relationships
+            "Hobby Time": 0.55           // Often deprioritized
+        ]
+        
+        let monthlyRates: [String: Double] = [
+            "Budget Review": 0.90,        // Important financial habit
+            "Skill Learning": 0.60,       // Good intentions, harder execution
+            "Digital Declutter": 0.70     // Satisfying when done
+        ]
 
-        let nameToId = tasks
+        func variedRating(base: Int, variance: Int = 2) -> Int {
+            let noise = rand(-variance, variance)
+            return min(10, max(1, base + noise))
+        }
 
-        func variedRating(base: Int, weekday: Int, weekendBoost: Int = 0) -> Int {
-            let noise = rand(-2, 2)
-            let weekend = (weekday == 1 || weekday == 7) ? weekendBoost : 0
-            return min(10, max(1, base + noise + weekend))
+        func shouldComplete(taskName: String, date: Date, baseRate: Double) -> Bool {
+            let weekday = cal.component(.weekday, from: date)
+            let isWeekend = weekday == 1 || weekday == 7
+            
+            // Slight adjustment for weekends
+            var adjustedRate = baseRate
+            if ["Morning Workout", "Read 15 Minutes"].contains(taskName) && isWeekend {
+                adjustedRate *= 1.1 // Slightly better on weekends
+            } else if ["Check Emails", "Review Daily Goals"].contains(taskName) && isWeekend {
+                adjustedRate *= 0.8 // Less likely on weekends
+            }
+            
+            return Double.random(in: 0...1) < adjustedRate
         }
 
         func completeTaskForDay(taskId: UUID, on date: Date, estimatedMinutes: Int, baseDifficulty: Int, baseQuality: Int) {
@@ -355,10 +507,11 @@ final class DemoDataSeeder {
             } else {
                 TaskManager.shared.toggleTaskCompletion(taskId, on: startOfDay)
             }
-            let weekday = cal.component(.weekday, from: date)
-            let diff = variedRating(base: baseDifficulty, weekday: weekday)
-            let qual = variedRating(base: baseQuality, weekday: weekday, weekendBoost: 1)
-            let actual = Double(max(5, estimatedMinutes + rand(-6, 12))) * 60.0
+            
+            let diff = variedRating(base: baseDifficulty)
+            let qual = variedRating(base: baseQuality)
+            let actualMinutes = max(5, estimatedMinutes + rand(-10, 15))
+            let actual = Double(actualMinutes) * 60.0
             tm.updateTaskRating(taskId: taskId, actualDuration: actual, difficultyRating: diff, qualityRating: qual, notes: nil, for: startOfDay)
         }
 
@@ -366,198 +519,310 @@ final class DemoDataSeeder {
         while day <= today {
             let weekday = cal.component(.weekday, from: day)
 
-            for (name, baseMinutes, baseDiff, baseQual) in [
-                ("Morning Workout", 45, 5, 7),
-                ("Plan the Day", 15, 2, 7),
-                ("Inbox Zero", 20, 4, 6),
-                ("Read 20 Pages", 30, 3, 7)
+            // Daily tasks
+            for (name, estimatedMinutes, baseDiff, baseQual) in [
+                ("Morning Workout", 45, 6, 8),
+                ("Review Daily Goals", 15, 3, 7),
+                ("Check Emails", 20, 4, 6),
+                ("Read 15 Minutes", 15, 2, 8),
+                ("Evening Reflection", 10, 2, 7)
             ] {
-                if Double.random(in: 0...1) < dailyProb, let id = nameToId[name] {
-                    completeTaskForDay(taskId: id, on: day, estimatedMinutes: baseMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
+                if let rate = dailyRates[name],
+                   shouldComplete(taskName: name, date: day, baseRate: rate),
+                   let id = tasks[name] {
+                    completeTaskForDay(taskId: id, on: day, estimatedMinutes: estimatedMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
                 }
             }
 
-            if [2,4,7].contains(weekday) {
-                for (name, baseMinutes, baseDiff, baseQual) in [
-                    ("Weekly Meal Prep", 90, 4, 7),
-                    ("Family Call", 30, 2, 8),
-                    ("House Cleaning", 60, 4, 7)
+            // Weekly tasks - MWF
+            if [2, 4, 6].contains(weekday) {
+                for (name, estimatedMinutes, baseDiff, baseQual) in [
+                    ("Team Standup", 30, 3, 7),
+                    ("Deep Work Session", 90, 7, 8)
                 ] {
-                    if Double.random(in: 0...1) < weeklyProb, let id = nameToId[name] {
-                        completeTaskForDay(taskId: id, on: day, estimatedMinutes: baseMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
+                    if let rate = weeklyRates[name],
+                       shouldComplete(taskName: name, date: day, baseRate: rate),
+                       let id = tasks[name] {
+                        completeTaskForDay(taskId: id, on: day, estimatedMinutes: estimatedMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
+                    }
+                }
+            }
+            
+            // Weekly tasks - Tue/Thu
+            if [3, 5].contains(weekday) {
+                for (name, estimatedMinutes, baseDiff, baseQual) in [
+                    ("Strength Training", 60, 6, 7),
+                    ("Prepare Healthy Meals", 45, 4, 8)
+                ] {
+                    if let rate = weeklyRates[name],
+                       shouldComplete(taskName: name, date: day, baseRate: rate),
+                       let id = tasks[name] {
+                        completeTaskForDay(taskId: id, on: day, estimatedMinutes: estimatedMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
                     }
                 }
             }
 
+            // Weekend tasks
+            if [1, 7].contains(weekday) {
+                for (name, estimatedMinutes, baseDiff, baseQual) in [
+                    ("House Cleaning", 90, 5, 6),
+                    ("Family Time", 120, 2, 9),
+                    ("Hobby Time", 60, 3, 8)
+                ] {
+                    if let rate = weeklyRates[name],
+                       shouldComplete(taskName: name, date: day, baseRate: rate),
+                       let id = tasks[name] {
+                        completeTaskForDay(taskId: id, on: day, estimatedMinutes: estimatedMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
+                    }
+                }
+            }
+
+            // Monthly tasks (1st of month)
             let dom = cal.component(.day, from: day)
             if dom == 1 {
-                for (name, baseMinutes, baseDiff, baseQual) in [
-                    ("Monthly Budget Review", 45, 5, 7),
-                    ("Digital Photo Cleanup", 30, 2, 6)
+                for (name, estimatedMinutes, baseDiff, baseQual) in [
+                    ("Budget Review", 60, 5, 8),
+                    ("Skill Learning", 90, 6, 7),
+                    ("Digital Declutter", 45, 3, 6)
                 ] {
-                    if Double.random(in: 0...1) < monthlyProb, let id = nameToId[name] {
-                        completeTaskForDay(taskId: id, on: day, estimatedMinutes: baseMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
+                    if let rate = monthlyRates[name],
+                       shouldComplete(taskName: name, date: day, baseRate: rate),
+                       let id = tasks[name] {
+                        completeTaskForDay(taskId: id, on: day, estimatedMinutes: estimatedMinutes, baseDifficulty: baseDiff, baseQuality: baseQual)
                     }
                 }
             }
 
-            if cal.component(.month, from: day) == cal.component(.month, from: today),
-               cal.component(.day, from: day) == cal.component(.day, from: today),
-               let id = nameToId["Annual Medical Check-up"] {
-                completeTaskForDay(taskId: id, on: day, estimatedMinutes: 60, baseDifficulty: 6, baseQuality: 8)
-            }
-
-            if dom == 15, let id = nameToId["Declutter Home"] {
-                if let subIds = taskSubtasks[id], !subIds.isEmpty {
-                    for sid in subIds { TaskManager.shared.toggleSubtask(taskId: id, subtaskId: sid, on: day) }
+            // Quarterly tasks (1st of quarter: Jan 1, Apr 1, Jul 1, Oct 1)
+            let month = cal.component(.month, from: day)
+            if dom == 1 && [1, 4, 7, 10].contains(month) {
+                for (name, estimatedMinutes, baseDiff, baseQual) in [
+                    ("Career Development", 0, 6, 8),      // No set duration - project-based
+                    ("Health Goals", 0, 5, 8),
+                    ("Financial Independence", 0, 7, 9)
+                ] {
+                    if Double.random(in: 0...1) < 0.75,   // 75% completion rate for quarterly goals
+                       let id = tasks[name] {
+                        if let subIds = taskSubtasks[id], !subIds.isEmpty {
+                            // Complete some subtasks (not necessarily all)
+                            let numToComplete = rand(2, subIds.count)
+                            for sid in subIds.prefix(numToComplete) {
+                                TaskManager.shared.toggleSubtask(taskId: id, subtaskId: sid, on: cal.startOfDay(for: day))
+                            }
+                        }
+                        tm.updateTaskRating(taskId: id, actualDuration: Double(estimatedMinutes) * 60.0, difficultyRating: baseDiff, qualityRating: baseQual, notes: nil, for: day)
+                    }
                 }
-                tm.updateTaskRating(taskId: id, actualDuration: 45*60, difficultyRating: 5, qualityRating: 7, notes: nil, for: day)
             }
 
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
             day = next
         }
 
-        let todayNames = ["Morning Workout", "Plan the Day", "Inbox Zero", "Read 20 Pages"]
-        for (name, est) in zip(todayNames, [45, 15, 25, 30]) {
-            if let id = nameToId[name] {
-                completeTaskForDay(taskId: id, on: today, estimatedMinutes: est, baseDifficulty: 4, baseQuality: 8)
+        // Ensure today has some completions for demo purposes
+        let todayTasks = [
+            ("Morning Workout", 45, 6, 8),
+            ("Review Daily Goals", 15, 3, 7), 
+            ("Check Emails", 25, 4, 6)
+        ]
+        
+        for (name, est, diff, qual) in todayTasks {
+            if let id = tasks[name] {
+                completeTaskForDay(taskId: id, on: today, estimatedMinutes: est, baseDifficulty: diff, baseQuality: qual)
             }
         }
     }
 
-    // MARK: - Tracking Sessions (sparse across the year)
+    // MARK: - Tracking Sessions (realistic distribution across year)
     private func seedTrackingSessionsForYear(_ tasks: [String: UUID], categories: [String: Category]) async {
         let tm = TaskManager.shared
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         guard let start = cal.date(byAdding: .day, value: -180, to: today) else { return }
 
-        func sessionDate(_ base: Date, hour: Int) -> Date {
+        func sessionDate(_ base: Date, hour: Int, minute: Int = 0) -> Date {
             var comps = cal.dateComponents([.year, .month, .day], from: base)
             comps.hour = hour
-            comps.minute = 0
+            comps.minute = minute
             return cal.date(from: comps) ?? base
+        }
+
+        func createSession(taskName: String, taskId: UUID, categoryName: String?, date: Date, hour: Int, durationMinutes: Int) {
+            let categoryId = categories[categoryName ?? ""]?.id
+            let sess = TrackingSession(
+                id: UUID(),
+                taskId: taskId,
+                taskName: taskName,
+                mode: .simple,
+                categoryId: categoryId,
+                categoryName: categoryName,
+                startTime: sessionDate(date, hour: hour),
+                elapsedTime: TimeInterval(durationMinutes * 60),
+                isRunning: false,
+                isPaused: false
+            )
+            tm.saveTrackingSession(sess)
         }
 
         var day = start
         while day <= today {
-            // Un paio di volte a settimana Work, un paio Health
             let weekday = cal.component(.weekday, from: day)
-            if [2,4].contains(weekday), let workId = tasks["Inbox Zero"] {
-                var sess = TrackingSession(
-                    id: UUID(),
-                    taskId: workId,
-                    taskName: "Inbox Zero",
-                    mode: .simple,
-                    categoryId: categories["Work"]?.id,
-                    categoryName: categories["Work"]?.name,
-                    startTime: sessionDate(day, hour: 10),
-                    elapsedTime: TimeInterval(Int.random(in: 30...70) * 60),
-                    isRunning: false,
-                    isPaused: false
-                )
-                tm.saveTrackingSession(sess)
+            
+            // Work sessions (Mon-Fri, 2-3 times per week)
+            if (2...6).contains(weekday) && Double.random(in: 0...1) < 0.4 {
+                if let deepWorkId = tasks["Deep Work Session"] {
+                    createSession(
+                        taskName: "Deep Work Session",
+                        taskId: deepWorkId,
+                        categoryName: "Work",
+                        date: day,
+                        hour: 10,
+                        durationMinutes: Int.random(in: 75...105)
+                    )
+                }
             }
-            if [3,6].contains(weekday), let healthId = tasks["Morning Workout"] {
-                var sess = TrackingSession(
-                    id: UUID(),
-                    taskId: healthId,
-                    taskName: "Morning Workout",
-                    mode: .simple,
-                    categoryId: categories["Health"]?.id,
-                    categoryName: categories["Health"]?.name,
-                    startTime: sessionDate(day, hour: 7),
-                    elapsedTime: TimeInterval(Int.random(in: 30...55) * 60),
-                    isRunning: false,
-                    isPaused: false
-                )
-                tm.saveTrackingSession(sess)
+            
+            // Morning workout tracking (3-4 times per week)
+            if Double.random(in: 0...1) < 0.5 {
+                if let workoutId = tasks["Morning Workout"] {
+                    createSession(
+                        taskName: "Morning Workout",
+                        taskId: workoutId,
+                        categoryName: "Health & Fitness",
+                        date: day,
+                        hour: 7,
+                        durationMinutes: Int.random(in: 35...50)
+                    )
+                }
             }
+            
+            // Strength training (Tue/Thu)
+            if [3, 5].contains(weekday) && Double.random(in: 0...1) < 0.7 {
+                if let strengthId = tasks["Strength Training"] {
+                    createSession(
+                        taskName: "Strength Training",
+                        taskId: strengthId,
+                        categoryName: "Health & Fitness",
+                        date: day,
+                        hour: 18,
+                        durationMinutes: Int.random(in: 50...70)
+                    )
+                }
+            }
+            
+            // Learning sessions (weekends mostly)
+            if [1, 7].contains(weekday) && Double.random(in: 0...1) < 0.3 {
+                if let readId = tasks["Read 15 Minutes"] {
+                    createSession(
+                        taskName: "Read 15 Minutes",
+                        taskId: readId,
+                        categoryName: "Learning",
+                        date: day,
+                        hour: 20,
+                        durationMinutes: Int.random(in: 15...45)
+                    )
+                }
+            }
+
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
             day = next
         }
 
-        if let workId = tasks["Inbox Zero"] {
-            var sess = TrackingSession(
-                id: UUID(),
-                taskId: workId,
-                taskName: "Inbox Zero",
-                mode: .simple,
-                categoryId: categories["Work"]?.id,
-                categoryName: categories["Work"]?.name,
-                startTime: sessionDate(today, hour: 11),
-                elapsedTime: TimeInterval(35 * 60),
-                isRunning: false,
-                isPaused: false
-            )
-            tm.saveTrackingSession(sess)
-        }
-        if let healthId = tasks["Morning Workout"] {
-            var sess = TrackingSession(
-                id: UUID(),
-                taskId: healthId,
+        // Add some sessions for today
+        if let workoutId = tasks["Morning Workout"] {
+            createSession(
                 taskName: "Morning Workout",
-                mode: .simple,
-                categoryId: categories["Health"]?.id,
-                categoryName: categories["Health"]?.name,
-                startTime: sessionDate(today, hour: 7),
-                elapsedTime: TimeInterval(40 * 60),
-                isRunning: false,
-                isPaused: false
+                taskId: workoutId,
+                categoryName: "Health & Fitness",
+                date: today,
+                hour: 7,
+                durationMinutes: 42
             )
-            tm.saveTrackingSession(sess)
+        }
+        
+        if let deepWorkId = tasks["Deep Work Session"] {
+            createSession(
+                taskName: "Deep Work Session",
+                taskId: deepWorkId,
+                categoryName: "Work",
+                date: today,
+                hour: 10,
+                durationMinutes: 87
+            )
         }
     }
 
-    // MARK: - Reward Redemptions across months
+    // MARK: - Reward Redemptions (realistic spending patterns)
     private func seedRewardRedemptions(_ rewardsByName: [String: Reward]) async {
         let rm = RewardManager.shared
         let cal = Calendar.current
         let today = Date()
 
+        func daysAgo(_ n: Int) -> Date {
+            return cal.date(byAdding: .day, value: -n, to: today) ?? today
+        }
+
         func monthsAgo(_ n: Int) -> Date {
             return cal.date(byAdding: .month, value: -n, to: today) ?? today
         }
 
-        // Settimanali (2-3 settimane fa e 6-7 settimane fa)
-        if let weekend = rewardsByName["Weekend Treat"] {
-            for w in [2, 3, 6, 7] {
-                if let day = cal.date(byAdding: .day, value: -(w*7) + 6, to: today) {
-                    rm.redeemReward(weekend, on: day)
-                }
-            }
-        }
-
-        // Mensili (ultimi 2-3 mesi)
-        if let movie = rewardsByName["Movie Night"] {
-            rm.redeemReward(movie, on: monthsAgo(1))
-            rm.redeemReward(movie, on: monthsAgo(3))
-        }
-        if let socks = rewardsByName["New Running Socks"] {
-            rm.redeemReward(socks, on: monthsAgo(2))
-        }
-        if let book = rewardsByName["Buy a Book"] {
-            rm.redeemReward(book, on: monthsAgo(4))
-        }
-        if let desk = rewardsByName["Desk Accessory"] {
-            rm.redeemReward(desk, on: monthsAgo(5))
-        }
-
-        // Giornalieri (ultimi 7-10 giorni)
+        // Daily rewards - realistic coffee habits (not every day)
         if let coffee = rewardsByName["Coffee Break"] {
-            for d in [1,2,3,5,7,10] {
-                if let day = cal.date(byAdding: .day, value: -d, to: today) {
-                    rm.redeemReward(coffee, on: day)
-                }
+            for d in [1, 3, 5, 7, 10, 12, 15, 18, 22, 25] {
+                rm.redeemReward(coffee, on: daysAgo(d))
+            }
+        }
+        
+        // Social media time (very frequent, modern habit)
+        if let social = rewardsByName["Social Media Time"] {
+            for d in Array(1...30).filter({ _ in Double.random(in: 0...1) < 0.6 }) {
+                rm.redeemReward(social, on: daysAgo(d))
             }
         }
 
-        // Annuale (lo scorso anno)
-        if let getaway = rewardsByName["Yearly Getaway"] {
-            if let lastYear = cal.date(byAdding: .year, value: -1, to: today) {
-                rm.redeemReward(getaway, on: lastYear)
+        // Weekly rewards - realistic entertainment spending
+        if let movie = rewardsByName["Movie Night"] {
+            for w in [1, 3, 6, 8] { // About once per week
+                rm.redeemReward(movie, on: daysAgo(w * 7))
             }
+        }
+        
+        if let meal = rewardsByName["Favorite Meal"] {
+            for w in [2, 4, 7, 9, 11] { // Bit more frequent
+                rm.redeemReward(meal, on: daysAgo(w * 7 - 2))
+            }
+        }
+        
+        if let smoothie = rewardsByName["Protein Smoothie"] {
+            for w in [1, 2, 4, 6, 8, 10] { // Post-workout treats
+                rm.redeemReward(smoothie, on: daysAgo(w * 7 + 1))
+            }
+        }
+
+        // Monthly rewards - bigger purchases
+        if let book = rewardsByName["New Book"] {
+            rm.redeemReward(book, on: monthsAgo(1))
+            rm.redeemReward(book, on: monthsAgo(3))
+            rm.redeemReward(book, on: monthsAgo(5))
+        }
+        
+        if let gear = rewardsByName["New Workout Gear"] {
+            rm.redeemReward(gear, on: monthsAgo(2))
+            rm.redeemReward(gear, on: monthsAgo(6))
+        }
+        
+        if let course = rewardsByName["Online Course"] {
+            rm.redeemReward(course, on: monthsAgo(4))
+        }
+        
+        if let desk = rewardsByName["Desk Upgrade"] {
+            rm.redeemReward(desk, on: monthsAgo(3))
+        }
+
+        // Bigger rewards - less frequent
+        if let trip = rewardsByName["Weekend Trip"] {
+            rm.redeemReward(trip, on: monthsAgo(2))
+            rm.redeemReward(trip, on: monthsAgo(8))
         }
     }
 

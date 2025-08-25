@@ -135,8 +135,10 @@ struct TaskCard: View {
         .onTapGesture {
             showingDetailView = true
         }
-        .sheet(isPresented: $showingPomodoro) {
-            PomodoroView(task: task)
+        .fullScreenCover(isPresented: $showingPomodoro) {
+            NavigationStack {
+                PomodoroTabView()
+            }
         }
         .navigationDestination(isPresented: $showingDetailView) {
             TaskDetailView(taskId: task.id, targetDate: nil)

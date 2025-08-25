@@ -944,7 +944,7 @@
 "points_summary" = "Points Summary";
 "weekly_overview" = "Weekly Overview";
 "week_pts" = "Week: {points} pts";
-"focus_time" = "Focus: {time}";
+"focus_time" = "Focus Time";
 "mark_incomplete" = "Mark Incomplete";
 "mark_complete" = "Mark Complete";
 "recurring_task" = "Recurring Task";

@@ -165,13 +165,13 @@ private struct OverviewTab: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
+            LazyVStack(spacing: 14) {
                 TimeDistributionCard(viewModel: viewModel)
                 TaskCompletionCard(viewModel: viewModel)
                 OverallStreakCard(viewModel: viewModel)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
         }
     }
 }
@@ -337,6 +337,7 @@ private struct TaskLegendButton: View {
 
 private struct QualityChart: View {
     let data: [TaskChartData]
+    let timeRange: StatisticsViewModel.TimeRange
     @Binding var highlightedTaskId: String?
     @Environment(\.theme) private var theme
     
@@ -346,23 +347,26 @@ private struct QualityChart: View {
                 x: .value("date".localized, point.date),
                 y: .value("quality".localized, point.value)
             )
+            .interpolationMethod(.catmullRom)
             .foregroundStyle(by: .value("task".localized, point.taskName))
             .opacity(lineOpacity(for: point.taskName))
             
-            PointMark(
-                x: .value("date".localized, point.date),
-                y: .value("quality".localized, point.value)
-            )
-            .foregroundStyle(by: .value("task".localized, point.taskName))
-            .opacity(lineOpacity(for: point.taskName))
-            .symbol(.circle)
+            if timeRange != .year {
+                PointMark(
+                    x: .value("date".localized, point.date),
+                    y: .value("quality".localized, point.value)
+                )
+                .foregroundStyle(by: .value("task".localized, point.taskName))
+                .opacity(lineOpacity(for: point.taskName))
+                .symbol(.circle)
+            }
         }
         .frame(height: 200)
         .chartYScale(domain: 0...10)
         .chartForegroundStyleScale(range: data.map { Color(hex: $0.color) })
         .chartLegend(.hidden)
         .chartXAxis {
-            AxisMarks(position: .bottom) { value in
+            AxisMarks(values: xAxisValues) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                     .foregroundStyle(theme.borderColor.opacity(0.3))
                 AxisValueLabel() {
@@ -412,6 +416,17 @@ private struct QualityChart: View {
         }
     }
     
+    private var xAxisValues: AxisMarkValues {
+        switch timeRange {
+        case .week:
+            return .automatic(desiredCount: 7)
+        case .month:
+            return .stride(by: .day, count: 7)
+        case .year, .today:
+            return .stride(by: .month, count: 2)
+        }
+    }
+    
     private func lineOpacity(for taskName: String) -> Double {
         guard let highlightedTaskId = highlightedTaskId else { return 0.8 }
         let taskId = data.first { $0.taskName == taskName }?.taskId ?? ""
@@ -420,13 +435,21 @@ private struct QualityChart: View {
     
     private func formatDateForChart(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM"
+        switch timeRange {
+        case .week:
+            formatter.dateFormat = "dd MMM"
+        case .month:
+            formatter.dateFormat = "d MMM"
+        case .year, .today:
+            formatter.dateFormat = "MMM"
+        }
         return formatter.string(from: date)
     }
 }
 
 private struct DifficultyChart: View {
     let data: [TaskChartData]
+    let timeRange: StatisticsViewModel.TimeRange
     @Binding var highlightedTaskId: String?
     @Environment(\.theme) private var theme
     
@@ -436,23 +459,26 @@ private struct DifficultyChart: View {
                 x: .value("date".localized, point.date),
                 y: .value("difficulty".localized, point.value)
             )
+            .interpolationMethod(.catmullRom)
             .foregroundStyle(by: .value("task".localized, point.taskName))
             .opacity(lineOpacity(for: point.taskName))
             
-            PointMark(
-                x: .value("date".localized, point.date),
-                y: .value("difficulty".localized, point.value)
-            )
-            .foregroundStyle(by: .value("task".localized, point.taskName))
-            .opacity(lineOpacity(for: point.taskName))
-            .symbol(.circle)
+            if timeRange != .year {
+                PointMark(
+                    x: .value("date".localized, point.date),
+                    y: .value("difficulty".localized, point.value)
+                )
+                .foregroundStyle(by: .value("task".localized, point.taskName))
+                .opacity(lineOpacity(for: point.taskName))
+                .symbol(.circle)
+            }
         }
         .frame(height: 200)
         .chartYScale(domain: 0...10)
         .chartForegroundStyleScale(range: data.map { Color(hex: $0.color) })
         .chartLegend(.hidden)
         .chartXAxis {
-            AxisMarks(position: .bottom) { value in
+            AxisMarks(values: xAxisValues) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                     .foregroundStyle(theme.borderColor.opacity(0.3))
                 AxisValueLabel() {
@@ -502,6 +528,17 @@ private struct DifficultyChart: View {
         }
     }
     
+    private var xAxisValues: AxisMarkValues {
+        switch timeRange {
+        case .week:
+            return .automatic(desiredCount: 7)
+        case .month:
+            return .stride(by: .day, count: 7)
+        case .year, .today:
+            return .stride(by: .month, count: 2)
+        }
+    }
+    
     private func lineOpacity(for taskName: String) -> Double {
         guard let highlightedTaskId = highlightedTaskId else { return 0.8 }
         let taskId = data.first { $0.taskName == taskName }?.taskId ?? ""
@@ -510,7 +547,14 @@ private struct DifficultyChart: View {
     
     private func formatDateForChart(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM"
+        switch timeRange {
+        case .week:
+            formatter.dateFormat = "dd MMM"
+        case .month:
+            formatter.dateFormat = "d MMM"
+        case .year, .today:
+            formatter.dateFormat = "MMM"
+        }
         return formatter.string(from: date)
     }
 }
@@ -642,7 +686,7 @@ private struct PerformanceTab: View {
             let qualityData = generateQualityData()
             
             if !qualityData.isEmpty {
-                QualityChart(data: qualityData, highlightedTaskId: $highlightedTaskId)
+                QualityChart(data: qualityData, timeRange: viewModel.selectedTimeRange, highlightedTaskId: $highlightedTaskId)
                 
                 TaskLegendView(
                     tasks: qualityData.map { ($0.taskId, $0.taskName, $0.color) },
@@ -673,7 +717,7 @@ private struct PerformanceTab: View {
             let difficultyData = generateDifficultyData()
             
             if !difficultyData.isEmpty {
-                DifficultyChart(data: difficultyData, highlightedTaskId: $highlightedTaskId)
+                DifficultyChart(data: difficultyData, timeRange: viewModel.selectedTimeRange, highlightedTaskId: $highlightedTaskId)
                 
                 TaskLegendView(
                     tasks: difficultyData.map { ($0.taskId, $0.taskName, $0.color) },
@@ -691,26 +735,70 @@ private struct PerformanceTab: View {
     }
     
     private func generateQualityData() -> [TaskChartData] {
-        viewModel.taskPerformanceAnalytics.compactMap { task in
-            let qualityPoints = task.completions.compactMap { completion -> ChartPoint? in
+        let (startDate, _) = viewModel.selectedTimeRange.dateRange
+        return viewModel.taskPerformanceAnalytics.compactMap { task in
+            let rawPoints = task.completions.compactMap { completion -> ChartPoint? in
                 guard let rating = completion.qualityRating else { return nil }
                 return ChartPoint(value: Double(rating), date: completion.date)
             }.sorted { $0.date < $1.date }
             
-            guard !qualityPoints.isEmpty else { return nil }
-            return TaskChartData(taskId: task.taskId.uuidString, taskName: task.taskName, color: task.categoryColor ?? "#6366F1", points: qualityPoints)
+            let points = aggregate(points: rawPoints, startDate: startDate, for: viewModel.selectedTimeRange)
+            guard !points.isEmpty else { return nil }
+            return TaskChartData(taskId: task.taskId.uuidString, taskName: task.taskName, color: task.categoryColor ?? "#6366F1", points: points)
         }
     }
     
     private func generateDifficultyData() -> [TaskChartData] {
-        viewModel.taskPerformanceAnalytics.compactMap { task in
-            let difficultyPoints = task.completions.compactMap { completion -> ChartPoint? in
+        let (startDate, _) = viewModel.selectedTimeRange.dateRange
+        return viewModel.taskPerformanceAnalytics.compactMap { task in
+            let rawPoints = task.completions.compactMap { completion -> ChartPoint? in
                 guard let rating = completion.difficultyRating else { return nil }
                 return ChartPoint(value: Double(rating), date: completion.date)
             }.sorted { $0.date < $1.date }
             
-            guard !difficultyPoints.isEmpty else { return nil }
-            return TaskChartData(taskId: task.taskId.uuidString, taskName: task.taskName, color: task.categoryColor ?? "#6366F1", points: difficultyPoints)
+            let points = aggregate(points: rawPoints, startDate: startDate, for: viewModel.selectedTimeRange)
+            guard !points.isEmpty else { return nil }
+            return TaskChartData(taskId: task.taskId.uuidString, taskName: task.taskName, color: task.categoryColor ?? "#6366F1", points: points)
+        }
+    }
+
+    // Aggregates raw daily points into fewer buckets to improve readability
+    private func aggregate(points: [ChartPoint], startDate: Date, for range: StatisticsViewModel.TimeRange) -> [ChartPoint] {
+        let calendar = Calendar.current
+        switch range {
+        case .week, .today:
+            // Keep daily points
+            return points
+        case .month:
+            // 3-day bins across the last month
+            var buckets: [Date: [Double]] = [:]
+            for p in points {
+                let days = calendar.dateComponents([.day], from: startDate.startOfDay, to: p.date.startOfDay).day ?? 0
+                let binIndex = max(0, days / 3)
+                let binStart = calendar.date(byAdding: .day, value: binIndex * 3, to: startDate.startOfDay) ?? p.date.startOfDay
+                let key = binStart
+                buckets[key, default: []].append(p.value)
+            }
+            let result = buckets.keys.sorted().map { key in
+                let values = buckets[key] ?? []
+                let avg = values.reduce(0, +) / Double(max(values.count, 1))
+                return ChartPoint(value: avg, date: key)
+            }
+            return result.sorted { $0.date < $1.date }
+        case .year:
+            // Monthly averages
+            var buckets: [Date: [Double]] = [:]
+            for p in points {
+                let comps = calendar.dateComponents([.year, .month], from: p.date)
+                let monthStart = calendar.date(from: comps) ?? p.date.startOfDay
+                buckets[monthStart, default: []].append(p.value)
+            }
+            let result = buckets.keys.sorted().map { key in
+                let values = buckets[key] ?? []
+                let avg = values.reduce(0, +) / Double(max(values.count, 1))
+                return ChartPoint(value: avg, date: key)
+            }
+            return result.sorted { $0.date < $1.date }
         }
     }
     
@@ -889,8 +977,8 @@ private struct TimeDistributionCard: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 16) {
+        VStack(spacing: 18) {
+            VStack(spacing: 14) {
                 HStack {
                     Text("time_distribution".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
@@ -911,7 +999,7 @@ private struct TimeDistributionCard: View {
                     }
                 }
             }
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 if viewModel.categoryStats.isEmpty {
                     EmptyTimeDistributionView()
                 } else {
@@ -920,7 +1008,7 @@ private struct TimeDistributionCard: View {
                             .cornerRadius(3)
                             .foregroundStyle(Color(hex: stat.color))
                     }
-                    .frame(height: 200)
+                    .frame(height: 180)
                     .animation(hasAnimated ? nil : .smooth(duration: 0.8), value: viewModel.categoryStats)
                     .onAppear {
                         if !viewModel.categoryStats.isEmpty && !hasAnimated {
@@ -941,7 +1029,7 @@ private struct TimeDistributionCard: View {
                 }
             }
         }
-        .padding(20)
+        .padding(18)
         .background(cardBackground)
     }
 }
@@ -982,8 +1070,8 @@ private struct TaskCompletionCard: View {
     }
     
     var body: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 12) {
+        VStack(spacing: 14) {
+            VStack(spacing: 10) {
                 HStack {
                     Text("task_completion_rate".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
@@ -1003,7 +1091,7 @@ private struct TaskCompletionCard: View {
                     }
                 }
             }
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 if hasTaskData {
                     Chart(completionStats) { stat in
                         BarMark(
@@ -1021,7 +1109,7 @@ private struct TaskCompletionCard: View {
                         .foregroundStyle(theme.secondaryTextColor.opacity(0.3))
                         .cornerRadius(4)
                     }
-                    .frame(height: 140)
+                    .frame(height: 120)
                     .chartXAxis {
                         AxisMarks(position: .bottom) { _ in
                             AxisValueLabel().font(.caption2).foregroundStyle(theme.textColor)
@@ -1201,7 +1289,7 @@ private struct OverallStreakCard: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             HStack {
                 Text("overall_streak".localized)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
@@ -1209,18 +1297,18 @@ private struct OverallStreakCard: View {
                 Spacer()
             }
             HStack(spacing: 30) {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     Text("\(viewModel.currentStreak)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(.orange)
                     Text("current".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundColor(theme.secondaryTextColor)
                 }
-                Divider().frame(height: 60)
-                VStack(spacing: 8) {
+                Divider().frame(height: 50)
+                VStack(spacing: 6) {
                     Text("\(viewModel.bestStreak)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(.red)
                     Text("best".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
@@ -1229,7 +1317,7 @@ private struct OverallStreakCard: View {
                 Spacer()
             }
         }
-        .padding(20)
+        .padding(18)
         .background(cardBackground)
     }
 }

@@ -630,9 +630,9 @@
 "data_management" = "Gestione dati";
 "delete_all_data" = "Elimina tutti i dati";
 "delete_all_data_description" = "Elimina attività, categorie, statistiche e premi";
-"delete_all_data_footer" = "Questa azione eliminerà definitivamente attività, categorie personalizzate, premi, statistiche e dati di tracciamento. Resteranno solo le categorie predefinite.";
+"delete_all_data_footer" = "Questa azione eliminerà definitivamente attività, categorie personalizzate, premi, statistiche e dati di tracciamento.";
 "delete_all_data_confirmation_title" = "Eliminare tutti i dati?";
-"delete_all_data_confirmation_message" = "Azione irreversibile. Verranno eliminati attività, categorie personalizzate, premi, punti, statistiche e sessioni di tracciamento. Resteranno solo le categorie predefinite (Lavoro, Personale, Salute).";
+"delete_all_data_confirmation_message" = "Azione irreversibile. Verranno eliminati attività, categorie personalizzate, premi, punti, statistiche e sessioni di tracciamento.";
 "delete_all_data_button" = "Elimina tutti i dati";
 
 // Focus Tab View
@@ -936,7 +936,7 @@
 "points_summary" = "Riepilogo punti";
 "weekly_overview" = "Panoramica settimanale";
 "week_pts" = "Settimana: {points} pt";
-"focus_time" = "Focus: {time}";
+"focus_time" = "Tempo di focus";
 "mark_incomplete" = "Segna incompleta";
 "mark_complete" = "Segna completa";
 "recurring_task" = "Attività ricorrente";
@@ -1061,6 +1061,15 @@
 "select_year" = "Seleziona anno";
 "selected_period" = "Periodo selezionato";
 
+// Paywall - Additional Required Keys
+"subscription" = "Abbonamento";
+"welcome_snaptask_pro_lifetime" = "Benvenuto in SnapTask Pro (a vita)!";
+"free_trial_activated" = "Prova gratuita attivata";
+"welcome_snaptask_pro" = "Benvenuto in SnapTask Pro!";
+"purchase_not_completed" = "Acquisto non completato";
+"purchases_restored_successfully" = "Acquisti ripristinati con successo";
+"no_purchases_to_restore" = "Nessun acquisto da ripristinare";
+
 // Missing Premium Paywall Strings
 "unlock_snaptask_pro" = "Sblocca SnapTask Pro";
 "maximize_your_productivity" = "Massimizza la tua produttività";
@@ -1069,6 +1078,7 @@
 "lifetime_access" = "Accesso a vita";
 "one_time_no_subscription" = "Pagamento una tantum, nessun abbonamento";
 "best_value" = "Miglior offerta";
+"free_trial" = "Prova gratuita";
 "days_free_then" = "3 giorni gratis, poi %@";
 "total_flexibility" = "Massima flessibilità";
 "start_free_trial" = "Inizia prova gratuita";

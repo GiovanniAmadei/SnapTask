@@ -90,10 +90,10 @@ struct TaskDetailView: View {
                 })
             }
         }
-        .sheet(isPresented: $showingPomodoro) {
-            if let task = localTask {
+        .fullScreenCover(isPresented: $showingPomodoro) {
+            if let _ = localTask {
                 NavigationStack {
-                    PomodoroView(task: task)
+                    PomodoroTabView()
                 }
             }
         }
@@ -132,7 +132,22 @@ struct TaskDetailView: View {
                             return task.completions[completionKey]?.actualDuration ?? 0 
                         },
                         set: { newDuration in
-                            updateLocalTaskRating(actualDuration: newDuration, updateDuration: true)
+                            if newDuration > 0 {
+                                TaskManager.shared.updateTaskRating(
+                                    taskId: task.id,
+                                    actualDuration: newDuration,
+                                    for: fixedDate
+                                )
+                            } else {
+                                TaskManager.shared.updateTaskRating(
+                                    taskId: task.id,
+                                    actualDuration: 0,
+                                    for: fixedDate
+                                )
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                updateLocalTaskFromManager()
+                            }
                         }
                     )
                 )
@@ -212,9 +227,7 @@ struct TaskDetailView: View {
     
     private func updateLocalTaskFromManager() {
         if let managerTask = taskManager.tasks.first(where: { $0.id == taskId }) {
-            if localTask == nil || managerTask.lastModifiedDate > (localTask?.lastModifiedDate ?? Date.distantPast) {
-                localTask = managerTask
-            }
+            localTask = managerTask
         }
     }
     
@@ -232,42 +245,24 @@ struct TaskDetailView: View {
         )
         
         if updateDuration {
-            if let actualDuration = actualDuration, actualDuration > 0 {
-                completion.actualDuration = actualDuration
-            } else {
-                completion.actualDuration = nil
-            }
-        }
-        
-        if updateDifficulty {
-            completion.difficultyRating = difficultyRating == 0 ? nil : difficultyRating
-        }
-        
-        if updateQuality {
-            completion.qualityRating = qualityRating == 0 ? nil : qualityRating
-        }
-        
-        if updateNotes {
-            completion.notes = notes?.isEmpty == true ? nil : notes
-        }
-        
-        if completion.completionDate == nil && (completion.actualDuration != nil || completion.difficultyRating != nil || completion.qualityRating != nil || completion.notes != nil) {
-            completion.completionDate = Date()
-        }
-        
-        task.completions[completionKey] = completion
-        task.lastModifiedDate = Date()
-        localTask = task
-        
-        if updateDuration {
+            completion.actualDuration = (actualDuration != nil && actualDuration! > 0) ? actualDuration : nil
+            task.completions[completionKey] = completion
+            task.lastModifiedDate = Date()
+            localTask = task
+            
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
-                actualDuration: actualDuration, 
+                actualDuration: completion.actualDuration, 
                 for: fixedDate
             )
         }
         
         if updateDifficulty {
+            completion.difficultyRating = difficultyRating == 0 ? nil : difficultyRating
+            task.completions[completionKey] = completion
+            task.lastModifiedDate = Date()
+            localTask = task
+            
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
                 difficultyRating: difficultyRating, 
@@ -276,6 +271,11 @@ struct TaskDetailView: View {
         }
         
         if updateQuality {
+            completion.qualityRating = qualityRating == 0 ? nil : qualityRating
+            task.completions[completionKey] = completion
+            task.lastModifiedDate = Date()
+            localTask = task
+            
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
                 qualityRating: qualityRating, 
@@ -284,6 +284,11 @@ struct TaskDetailView: View {
         }
         
         if updateNotes {
+            completion.notes = notes?.isEmpty == true ? nil : notes
+            task.completions[completionKey] = completion
+            task.lastModifiedDate = Date()
+            localTask = task
+            
             TaskManager.shared.updateTaskRating(
                 taskId: task.id, 
                 notes: notes, 
@@ -486,42 +491,6 @@ struct TaskDetailView: View {
         }
     }
     
-    private func descriptionCard(_ description: String) -> some View {
-        DetailCard(icon: "doc.text", title: "description".localized, color: .blue) {
-            Text(description)
-                .font(.body)
-                .themedPrimaryText()
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-    
-    private func locationCard(_ location: TaskLocation) -> some View {
-        DetailCard(icon: "location", title: "location".localized, color: .green) {
-            VStack(alignment: .leading, spacing: 16) {
-                LocationMapView(location: location, height: 120)
-                
-                Button(action: {
-                    openInMaps(location: location)
-                }) {
-                    HStack {
-                        Image(systemName: "map")
-                            .font(.system(size: 16))
-                            .foregroundColor(.blue)
-                        Text("open_in_maps".localized)
-                            .font(.body.weight(.medium))
-                            .foregroundColor(.blue)
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 12))
-                            .foregroundColor(.blue)
-                    }
-                    .padding(.vertical, 8)
-                }
-                .buttonStyle(BorderlessButtonStyle())
-            }
-        }
-    }
-    
     private func durationSectionTask(_ task: TodoTask) -> some View {
         let actualDuration = task.completions[completionKey]?.actualDuration
         let hasActualDuration = (actualDuration ?? 0) > 0
@@ -546,7 +515,16 @@ struct TaskDetailView: View {
                             .foregroundColor(.blue)
                             
                             Button("clear".localized) {
-                                updateLocalTaskRating(actualDuration: nil, updateDuration: true)
+                                Task {
+                                    TaskManager.shared.updateTaskRating(
+                                        taskId: task.id,
+                                        actualDuration: 0,
+                                        for: fixedDate
+                                    )
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        updateLocalTaskFromManager()
+                                    }
+                                }
                             }
                             .font(.caption)
                             .foregroundColor(.red)
@@ -638,6 +616,42 @@ struct TaskDetailView: View {
                     }
                     .buttonStyle(BorderlessButtonStyle())
                 }
+            }
+        }
+    }
+    
+    private func descriptionCard(_ description: String) -> some View {
+        DetailCard(icon: "doc.text", title: "description".localized, color: .blue) {
+            Text(description)
+                .font(.body)
+                .themedPrimaryText()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+    
+    private func locationCard(_ location: TaskLocation) -> some View {
+        DetailCard(icon: "location", title: "location".localized, color: .green) {
+            VStack(alignment: .leading, spacing: 16) {
+                LocationMapView(location: location, height: 120)
+                
+                Button(action: {
+                    openInMaps(location: location)
+                }) {
+                    HStack {
+                        Image(systemName: "map")
+                            .font(.system(size: 16))
+                            .foregroundColor(.blue)
+                        Text("open_in_maps".localized)
+                            .font(.body.weight(.medium))
+                            .foregroundColor(.blue)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 12))
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(BorderlessButtonStyle())
             }
         }
     }
@@ -824,7 +838,14 @@ struct TaskDetailView: View {
 
                         if let difficultyRating = task.completions[completionKey]?.difficultyRating, difficultyRating > 0 {
                             Button("clear".localized) {
-                                updateLocalTaskRating(difficultyRating: 0, updateDifficulty: true)
+                                Task {
+                                    TaskManager.shared.updateTaskRating(
+                                        taskId: task.id,
+                                        difficultyRating: 0,
+                                        for: fixedDate
+                                    )
+                                    updateLocalTaskFromManager()
+                                }
                             }
                             .font(.caption)
                             .foregroundColor(.red)
@@ -840,7 +861,11 @@ struct TaskDetailView: View {
                         rating: Binding(
                             get: { task.completions[completionKey]?.difficultyRating ?? 0 },
                             set: { newValue in
-                                updateLocalTaskRating(difficultyRating: newValue == 0 ? nil : newValue, updateDifficulty: true)
+                                if newValue == 0 {
+                                    updateLocalTaskRating(difficultyRating: nil, updateDifficulty: true)
+                                } else {
+                                    updateLocalTaskRating(difficultyRating: newValue, updateDifficulty: true)
+                                }
                             }
                         )
                     )
@@ -975,6 +1000,10 @@ struct TaskDetailView: View {
                     .font(.system(size: 16, weight: .medium))
                 Text(isCompleted ? "mark_incomplete".localized : "done".localized)
                     .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .allowsTightening(true)
+                    .truncationMode(.tail)
             }
             .themedButtonText()
             .frame(maxWidth: .infinity)

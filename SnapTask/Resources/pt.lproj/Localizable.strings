@@ -943,7 +943,7 @@
 "points_summary" = "Resumo de pontos";
 "weekly_overview" = "Visão semanal";
 "week_pts" = "Semana: {points} pts";
-"focus_time" = "Foco: {time}";
+"focus_time" = "Tempo de foco";
 "mark_incomplete" = "Marcar como incompleta";
 "mark_complete" = "Marcar como concluída";
 "recurring_task" = "Tarefa recorrente";

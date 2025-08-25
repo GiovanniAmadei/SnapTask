@@ -926,7 +926,7 @@
 "points_summary" = "Punkteübersicht";
 "weekly_overview" = "Wochenübersicht";
 "week_pts" = "Woche: {points} Pkt";
-"focus_time" = "Fokus: {time}";
+"focus_time" = "Fokuszeit";
 "mark_incomplete" = "Als unvollständig markieren";
 "mark_complete" = "Als vollständig markieren";
 "recurring_task" = "Wiederkehrende Aufgabe";

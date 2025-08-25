@@ -703,8 +703,10 @@ struct EnhancedTimelineTaskView: View {
             .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
         )
         .opacity(isCompleted ? 0.7 : 1.0)
-        .sheet(isPresented: $showingPomodoro) {
-            PomodoroView(task: task)
+        .fullScreenCover(isPresented: $showingPomodoro) {
+            NavigationStack {
+                PomodoroTabView()
+            }
         }
         .sheet(isPresented: $showingDetailView) {
             NavigationStack {
@@ -969,6 +971,7 @@ struct TaskListView: View {
     @StateObject private var timeTrackerViewModel = TimeTrackerViewModel.shared
     @StateObject private var cloudKitService = CloudKitService.shared
     @State private var showingActivePomodoroSession = false
+    @State private var showingGeneralPomodoroFullScreen = false
     @State private var showingActiveTimeTrackerSession = false
     @State private var selectedSessionId: UUID?
     @State private var isRefreshing = false
@@ -1056,7 +1059,17 @@ struct TaskListView: View {
                             
                             if pomodoroViewModel.hasActiveTask {
                                 MiniPomodoroWidget(viewModel: pomodoroViewModel) {
-                                    showingActivePomodoroSession = true
+                                    // Present on next run loop to stabilize presentation
+                                    DispatchQueue.main.async {
+                                        if pomodoroViewModel.activeTask != nil {
+                                            showingActivePomodoroSession = true
+                                        } else {
+                                            if pomodoroViewModel.state == .notStarted {
+                                                pomodoroViewModel.initializeGeneralSession()
+                                            }
+                                            showingGeneralPomodoroFullScreen = true
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1075,13 +1088,16 @@ struct TaskListView: View {
                 .padding(.bottom, 16)
             }
         }
-        .sheet(isPresented: $showingActivePomodoroSession) {
+        .fullScreenCover(isPresented: $showingActivePomodoroSession) {
             if pomodoroViewModel.activeTask != nil {
                 NavigationStack {
-                    PomodoroView(task: pomodoroViewModel.activeTask!, presentationStyle: .sheet)
+                    PomodoroTabView()
                 }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+            }
+        }
+        .fullScreenCover(isPresented: $showingGeneralPomodoroFullScreen) {
+            NavigationStack {
+                PomodoroTabView()
             }
         }
         .sheet(isPresented: $showingActiveTimeTrackerSession) {
@@ -1733,8 +1749,10 @@ private struct TimelineTaskCard: View {
                 }
             })
         }
-        .sheet(isPresented: $showingPomodoro) {
-            PomodoroView(task: task)
+        .fullScreenCover(isPresented: $showingPomodoro) {
+            NavigationStack {
+                PomodoroTabView()
+            }
         }
         .sheet(isPresented: $showingDetailView) {
             NavigationStack {

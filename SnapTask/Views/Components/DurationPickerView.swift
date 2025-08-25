@@ -56,6 +56,31 @@ struct DurationPickerView: View {
                 }
                 .padding(.horizontal)
                 
+                // Add clear button
+                Button(action: {
+                    duration = 0
+                    dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: "trash")
+                            .font(.system(size: 16))
+                        Text("clear_duration".localized)
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundColor(.red)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.red.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                }
+                .padding(.top, 10)
+                
                 Spacer()
             }
             .navigationTitle("actual_duration".localized)
@@ -73,7 +98,6 @@ struct DurationPickerView: View {
                         dismiss()
                     }
                     .fontWeight(.semibold)
-                    .disabled(hours == 0 && minutes == 0)
                 }
             }
         }
