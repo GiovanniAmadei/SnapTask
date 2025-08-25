@@ -486,11 +486,11 @@
 // New Onboarding Strings
 "onboarding_title_1" = "Benvenuto in SnapTask";
 "onboarding_subtitle_1" = "La tua produttività, finalmente organizzata";
-"onboarding_description_1" = "Crea attività altamente personalizzabili, organizza i tuoi obiettivi per tempo (oggi, settimana, mese, anno, lungo termine) e trasforma ogni attività in un successo.";
+"onboarding_description_1" = "Crea attività altamente personalizzabili con temi, priorità e ricorrenze. Organizza i tuoi obiettivi per oggi, settimana, mese, anno e lungo termine. Aggiungi foto, memo vocali, note e valutazioni per dare contesto e trasformare le idee in risultati.";
 
-"onboarding_title_2" = "Timer Pomodoro professionale";
-"onboarding_subtitle_2" = "Concentrati senza distrazioni";
-"onboarding_description_2" = "Timer Pomodoro con sessioni personalizzabili, statistiche dettagliate sul tempo trascorso e tracciamento automatico delle prestazioni di focus.";
+"onboarding_title_2" = "Sistema Focus & Tracking";
+"onboarding_subtitle_2" = "Concentrazione misurabile, risultati reali";
+"onboarding_description_2" = "Pomodoro professionale, sessioni libere e tracciamento del tempo automatico o manuale: misura i tuoi progressi, resta nel flow e migliora ogni giorno con statistiche chiare e motivanti.";
 
 "onboarding_title_3" = "Sistema di ricompense motivante";
 "onboarding_subtitle_3" = "Trasforma la produttività in un gioco";
@@ -503,6 +503,10 @@
 "onboarding_title_5" = "Sempre sincronizzato";
 "onboarding_subtitle_5" = "I tuoi dati ovunque";
 "onboarding_description_5" = "Sincronizzazione automatica con iCloud. Le tue attività, statistiche e premi sempre aggiornati su iPhone, iPad e Mac.";
+
+"onboarding_title_6" = "Supporto a lungo termine";
+"onboarding_subtitle_6" = "Aggiornamenti continui: la tua voce conta";
+"onboarding_description_6" = "SnapTask è un progetto che cresce nel tempo. Nelle Impostazioni trovi la sezione Feedback e suggerimenti per richiedere nuove funzionalità e inviare idee: le tue proposte guidano la roadmap.";
 
 // Onboarding Actions
 "onboarding_continue" = "Continua";

@@ -239,7 +239,7 @@ class ThemeManager: ObservableObject {
         )
     ]
     
-    static let defaultTheme = allThemes.first { $0.id == "default" }!
+    static let defaultTheme = allThemes.first { $0.id == "sunset" }!
     
     // MARK: - Public Methods
     func setTheme(_ theme: Theme) {

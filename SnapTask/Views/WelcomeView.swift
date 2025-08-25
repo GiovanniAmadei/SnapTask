@@ -37,6 +37,14 @@ struct WelcomeView: View {
             description: "onboarding_description_4".localized,
             color: .green
         ),
+        // Support & Feedback just before Cloud
+        OnboardingStep(
+            icon: "bubble.left.and.bubble.right.fill",
+            title: "onboarding_title_6".localized,
+            subtitle: "onboarding_subtitle_6".localized,
+            description: "onboarding_description_6".localized,
+            color: .teal
+        ),
         OnboardingStep(
             icon: "icloud.fill",
             title: "onboarding_title_5".localized,
@@ -235,7 +243,7 @@ struct WelcomeView: View {
         }
         .onChange(of: currentStep) { oldValue, newValue in
             if newValue == onboardingSteps.count - 1 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     showingPaywall = true
                 }
             }

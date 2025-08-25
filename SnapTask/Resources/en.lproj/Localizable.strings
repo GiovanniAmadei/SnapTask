@@ -489,11 +489,11 @@
 // New Onboarding Strings
 "onboarding_title_1" = "Welcome to SnapTask";
 "onboarding_subtitle_1" = "Your productivity, finally organized";
-"onboarding_description_1" = "Create highly customizable tasks, organize your goals by time (today, week, month, year, long-term) and transform every activity into concrete success.";
+"onboarding_description_1" = "Create highly customizable tasks with themes, priorities, and recurrences. Organize your goals by today, week, month, year, and long‑term. Add photos, voice memos, notes, and ratings to turn ideas into results.";
 
-"onboarding_title_2" = "Professional Pomodoro Timer";
-"onboarding_subtitle_2" = "Focus without distractions";
-"onboarding_description_2" = "Pomodoro timer with customizable sessions, detailed time spent statistics and automatic tracking of your focus performance.";
+"onboarding_title_2" = "Focus & Tracking System";
+"onboarding_subtitle_2" = "Measurable focus, real results";
+"onboarding_description_2" = "Pro‑level Pomodoro, freeform sessions, and automatic or manual time tracking: measure progress, get in the flow, and improve every day with clear, motivating insights.";
 
 "onboarding_title_3" = "Motivating Reward System";
 "onboarding_subtitle_3" = "Turn productivity into a game";
@@ -506,6 +506,10 @@
 "onboarding_title_5" = "Always Synchronized";
 "onboarding_subtitle_5" = "Your data wherever you are";
 "onboarding_description_5" = "Automatic synchronization with iCloud. Your tasks, statistics and rewards always updated on iPhone, iPad and Mac.";
+
+"onboarding_title_6" = "Long‑term Support";
+"onboarding_subtitle_6" = "Continuous updates — your voice matters";
+"onboarding_description_6" = "SnapTask is a long‑term project that grows over time. In Settings, use the Feedback & Suggestions section to request features and share ideas — your input guides the roadmap.";
 
 // Onboarding Actions
 "onboarding_continue" = "Continue";
