@@ -481,10 +481,10 @@
 // New Onboarding Strings
 "onboarding_title_1" = "Bienvenue dans SnapTask";
 "onboarding_subtitle_1" = "Votre productivité, enfin organisée";
-"onboarding_description_1" = "Créez des tâches hautement personnalisables, organisez vos objectifs par temps (aujourd'hui, semaine, mois, année, long terme) et transformez chaque activité en succès concret.";
-"onboarding_title_2" = "Timer Pomodoro professionnel";
-"onboarding_subtitle_2" = "Focus sans distractions";
-"onboarding_description_2" = "Timer Pomodoro avec sessions personnalisables, statistiques détaillées du temps passé et suivi automatique de vos performances de focus.";
+"onboarding_description_1" = "Créez des tâches hautement personnalisables avec thèmes, priorités et récurrences. Organisez vos objectifs par aujourd'hui, semaine, mois, année et long terme. Ajoutez photos, mémos vocaux, notes et évaluations pour transformer les idées en résultats.";
+"onboarding_title_2" = "Système Focus & Tracking";
+"onboarding_subtitle_2" = "Focus mesurable, résultats réels";
+"onboarding_description_2" = "Pomodoro pro, sessions libres et suivi du temps automatique ou manuel : mesurez vos progrès, entrez dans le flow et progressez chaque jour avec des insights clairs et motivants.";
 "onboarding_title_3" = "Système de récompenses motivant";
 "onboarding_subtitle_3" = "Transformez la productivité en jeu";
 "onboarding_description_3" = "Gagnez des points en terminant des tâches et échangez des récompenses personnalisées. Un système qui vous maintient motivé et vous récompense pour chaque objectif atteint.";
@@ -494,6 +494,9 @@
 "onboarding_title_5" = "Toujours synchronisé";
 "onboarding_subtitle_5" = "Vos données où que vous soyez";
 "onboarding_description_5" = "Synchronisation automatique avec iCloud. Vos tâches, statistiques et récompenses toujours à jour sur iPhone, iPad et Mac.";
+"onboarding_title_6" = "Support à long terme";
+"onboarding_subtitle_6" = "Mises à jour continues — votre voix compte";
+"onboarding_description_6" = "SnapTask est un projet qui grandit dans le temps. Dans Réglages, utilisez la section Feedback & Suggestions pour demander des fonctionnalités et partager vos idées — vos retours guident la feuille de route.";
 
 // Onboarding Actions
 "onboarding_continue" = "Continuer";

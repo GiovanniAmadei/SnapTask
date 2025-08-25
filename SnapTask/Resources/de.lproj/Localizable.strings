@@ -481,10 +481,10 @@
 // New Onboarding Strings
 "onboarding_title_1" = "Willkommen bei SnapTask";
 "onboarding_subtitle_1" = "Ihre Produktivität, endlich organisiert";
-"onboarding_description_1" = "Erstellen Sie hochgradig anpassbare Aufgaben, organisieren Sie Ziele nach Zeit (heute, Woche, Monat, Jahr, langfristig) und verwandeln Sie Aktivitäten in Erfolg.";
-"onboarding_title_2" = "Professioneller Pomodoro‑Timer";
-"onboarding_subtitle_2" = "Fokus ohne Ablenkungen";
-"onboarding_description_2" = "Pomodoro‑Timer mit anpassbaren Sitzungen, detaillierten Zeitstatistiken und automatischem Leistungs‑Tracking.";
+"onboarding_description_1" = "Erstellen Sie hochgradig anpassbare Aufgaben mit Themes, Prioritäten und Wiederholungen. Organisieren Sie Ihre Ziele nach Heute, Woche, Monat, Jahr und Langfristig. Fügen Sie Fotos, Sprachmemos, Notizen und Bewertungen hinzu, um Ideen in Ergebnisse zu verwandeln.";
+"onboarding_title_2" = "Fokus‑ & Tracking‑System";
+"onboarding_subtitle_2" = "Messbarer Fokus, echte Ergebnisse";
+"onboarding_description_2" = "Pomodoro Pro, freie Sitzungen und Zeit‑Tracking automatisch oder manuell: Messen Sie Ihren Fortschritt, kommen Sie in den Flow und verbessern Sie sich täglich mit klaren, motivierenden Einblicken.";
 "onboarding_title_3" = "Motivierendes Belohnungssystem";
 "onboarding_subtitle_3" = "Produktivität als Spiel";
 "onboarding_description_3" = "Punkte verdienen, Aufgaben abschließen und personalisierte Belohnungen einlösen. Ein System, das motiviert und Erfolge belohnt.";
@@ -494,6 +494,9 @@
 "onboarding_title_5" = "Immer synchronisiert";
 "onboarding_subtitle_5" = "Ihre Daten überall";
 "onboarding_description_5" = "Automatische iCloud‑Synchronisation. Aufgaben, Statistiken und Belohnungen auf iPhone, iPad und Mac.";
+"onboarding_title_6" = "Langfristiger Support";
+"onboarding_subtitle_6" = "Kontinuierliche Updates — Ihre Stimme zählt";
+"onboarding_description_6" = "SnapTask ist ein Projekt, das mit der Zeit wächst. In den Einstellungen finden Sie den Bereich Feedback & Vorschläge, um Funktionswünsche zu senden und Ideen zu teilen — Ihr Feedback steuert die Roadmap.";
 
 // Onboarding Actions
 "onboarding_continue" = "Weiter";

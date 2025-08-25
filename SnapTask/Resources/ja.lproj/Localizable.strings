@@ -487,11 +487,11 @@
 // New Onboarding Strings
 "onboarding_title_1" = "SnapTaskへようこそ";
 "onboarding_subtitle_1" = "あなたの生産性、ついに整理されました";
-"onboarding_description_1" = "高度にカスタマイズ可能なタスクを作成し、時間（今日、週、月、年、長期）で目標を整理し、すべての活動を具体的な成功に変換します。";
+"onboarding_description_1" = "テーマ、優先度、繰り返しで高度にカスタマイズ可能なタスクを作成。目標を『今日・週・月・年・長期』で整理。写真・ボイスメモ・ノート・評価を添えて、アイデアを成果に。";
 
-"onboarding_title_2" = "プロフェッショナルポモドーロタイマー";
-"onboarding_subtitle_2" = "邪魔されることなくフォーカス";
-"onboarding_description_2" = "カスタマイズ可能なセッション、詳細な時間統計、フォーカスパフォーマンスの自動追跡を備えたポモドーロタイマー。";
+"onboarding_title_2" = "フォーカス＆トラッキング システム";
+"onboarding_subtitle_2" = "測れるフォーカス、確かな成果";
+"onboarding_description_2" = "Pomodoro Pro、自由セッション、時間計測は自動／手動に対応。進捗を測り、フローに入り、明確でモチベーションにつながるインサイトで毎日改善。";
 
 "onboarding_title_3" = "やる気を起こす報酬システム";
 "onboarding_subtitle_3" = "生産性をゲームに変換";
@@ -504,6 +504,10 @@
 "onboarding_title_5" = "常に同期";
 "onboarding_subtitle_5" = "どこにいてもあなたのデータ";
 "onboarding_description_5" = "iCloudとの自動同期。iPhone、iPad、Macでタスク、統計、報酬が常に更新されます。";
+
+"onboarding_title_6" = "長期的なサポート";
+"onboarding_subtitle_6" = "継続的なアップデート — あなたの声が力に";
+"onboarding_description_6" = "SnapTaskは時間とともに成長するプロジェクトです。設定内の『フィードバック／提案』から機能リクエストやアイデアをお送りください。あなたのフィードバックがロードマップを導きます。";
 
 // Onboarding Actions
 "onboarding_continue" = "続ける";
