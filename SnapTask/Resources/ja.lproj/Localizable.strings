@@ -1264,3 +1264,10 @@
   "location_based_tasks" = "位置情報ベースのタスク";
   "multi_language_support" = "多言語対応";
   "major_improvements" = "大幅な改善";
+
+// Premium Paywall - Trial
+"free_trial" = "無料トライアル";
+"start_free_trial" = "無料トライアルを開始";
+"free_trial_activated" = "無料トライアルが有効になりました";
+"welcome_snaptask_pro" = "SnapTask Proへようこそ！";
+"welcome_snaptask_pro_lifetime" = "SnapTask Pro（生涯版）へようこそ！";

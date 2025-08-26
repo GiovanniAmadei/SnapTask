@@ -1085,12 +1085,16 @@
 "days_free_then" = "3 days free, then %@";
 "total_flexibility" = "Total flexibility";
 "start_free_trial" = "Start Free Trial";
+"free_trial" = "Free Trial";
 "purchase_lifetime_access" = "Purchase Lifetime Access";
 "one_time_payment" = "One-time payment";
 "subscribe_yearly_plan" = "Subscribe to Yearly Plan";
 "subscribe_monthly_plan" = "Subscribe to Monthly Plan";
 "premium_plan" = "Premium Plan";
 "premium_features" = "Premium Features";
+"welcome_snaptask_pro" = "Welcome to SnapTask Pro!";
+"welcome_snaptask_pro_lifetime" = "Welcome to SnapTask Pro (lifetime)!";
+"free_trial_activated" = "Free trial activated";
 
 // Subscription
 "snaptask_pro" = "SnapTask Pro";

@@ -12,7 +12,8 @@ struct PremiumPaywallView: View {
     @State private var selectedPlan: String = "yearly"
     @State private var showingTerms = false
     @State private var showingPrivacy = false
-    
+    @Environment(\.openURL) private var openURL
+
     // Metriche responsive per iPhone vs iPad
     private var isCompactPhone: Bool { UIDevice.current.userInterfaceIdiom == .phone }
     private var headerIconSize: CGFloat { isCompactPhone ? 44 : 50 }
@@ -47,7 +48,7 @@ struct PremiumPaywallView: View {
                     
                     footerActions
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 6)
+                    .padding(.bottom, 6)
                 }
                 .background(.ultraThinMaterial)
             }
@@ -333,6 +334,14 @@ struct PremiumPaywallView: View {
                 Button("privacy_policy".localized) { showingPrivacy = true }
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                
+                Button("EULA") {
+                    if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                        openURL(url)
+                    }
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             }
             .font(.caption2)
             .foregroundColor(.secondary)
@@ -340,7 +349,7 @@ struct PremiumPaywallView: View {
         .sheet(isPresented: $showingTerms) { TermsOfServiceView() }
         .sheet(isPresented: $showingPrivacy) { PrivacyPolicyView() }
     }
-    
+
     // MARK: - Actions
     private func handlePurchase() async {
         guard let product = selectedProduct else { return }

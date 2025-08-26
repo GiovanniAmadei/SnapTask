@@ -1472,3 +1472,10 @@
 "location_based_tasks" = "Tareas basadas en la ubicación";
 "multi_language_support" = "Compatibilidad multilingüe";
 "major_improvements" = "Mejoras importantes";
+
+// Premium Paywall - Trial
+"free_trial" = "Prueba gratuita";
+"start_free_trial" = "Empezar prueba gratuita";
+"free_trial_activated" = "Prueba gratuita activada";
+"welcome_snaptask_pro" = "¡Bienvenido a SnapTask Pro!";
+"welcome_snaptask_pro_lifetime" = "¡Bienvenido a SnapTask Pro (de por vida)!";
