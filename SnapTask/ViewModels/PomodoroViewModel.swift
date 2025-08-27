@@ -60,9 +60,35 @@ class PomodoroViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // Persistence keys
+    private let persistedKey = "pomodoro_persisted_state"
+    private struct PersistedState: Codable {
+        let timestamp: TimeInterval
+        let state: String
+        let timeRemaining: TimeInterval
+        let currentSession: Int
+        let context: String
+        let activeTaskId: String?
+        let sessionStartTime: TimeInterval?
+        let pauseStartTime: TimeInterval?
+        let totalPausedTime: TimeInterval
+    }
+    
+    // Helpers to encode/decode PomodoroContext since it has no rawValue
+    private func encodeContext(_ ctx: PomodoroContext) -> String {
+        switch ctx {
+        case .general: return "general"
+        case .task: return "task"
+        }
+    }
+    private func decodeContext(_ string: String) -> PomodoroContext {
+        return string == "task" ? .task : .general
+    }
+    
     private init() {
         self.timeRemaining = PomodoroSettings.defaultSettings.workDuration
         setupBackgroundHandling()
+        restorePersistedStateIfNeeded()
         
         NotificationCenter.default.publisher(for: .pomodoroSettingsUpdated)
             .sink { [weak self] notification in
@@ -95,6 +121,7 @@ class PomodoroViewModel: ObservableObject {
         
         // Salva lo stato attuale per calcolare il tempo al ritorno
         saveBackgroundState()
+        persistState()
         
         // Programma notifica per la fine della sessione corrente
         Task {
@@ -107,6 +134,7 @@ class PomodoroViewModel: ObservableObject {
         
         // Calcola il tempo trascorso in background
         calculateBackgroundProgress()
+        persistState()
         
         // Riavvia il timer se necessario
         if state == .working || state == .onBreak {
@@ -123,6 +151,78 @@ class PomodoroViewModel: ObservableObject {
         UserDefaults.standard.set(state.rawValue, forKey: "pomodoro_state")
         UserDefaults.standard.set(currentSession, forKey: "pomodoro_current_session")
         UserDefaults.standard.set(totalPausedTime, forKey: "pomodoro_total_paused_time")
+    }
+
+    private func persistState() {
+        // Persist also when paused so we can resume later
+        let payload = PersistedState(
+            timestamp: Date().timeIntervalSince1970,
+            state: stateRawValue,
+            timeRemaining: timeRemaining,
+            currentSession: currentSession,
+            context: encodeContext(context),
+            activeTaskId: activeTask?.id.uuidString,
+            sessionStartTime: sessionStartTime?.timeIntervalSince1970,
+            pauseStartTime: pauseStartTime?.timeIntervalSince1970,
+            totalPausedTime: totalPausedTime
+        )
+        do {
+            let data = try JSONEncoder().encode(payload)
+            UserDefaults.standard.set(data, forKey: persistedKey)
+        } catch {
+            Logger.pomodoro("Failed encoding persisted state: \(error)", level: .error)
+        }
+    }
+
+    private func restorePersistedStateIfNeeded() {
+        guard let data = UserDefaults.standard.data(forKey: persistedKey) else { return }
+        do {
+            let saved = try JSONDecoder().decode(PersistedState.self, from: data)
+            // Restore context
+            if saved.context == "task",
+               let idStr = saved.activeTaskId,
+               let uuid = UUID(uuidString: idStr) {
+                // Try to attach existing task
+                if let task = TaskManager.shared.tasks.first(where: { $0.id == uuid }) {
+                    self.activeTask = task
+                    self.context = .task
+                } else {
+                    // Fallback to general if task not found
+                    self.activeTask = nil
+                    self.context = .general
+                }
+            } else {
+                self.activeTask = nil
+                self.context = decodeContext(saved.context)
+            }
+            
+            self.currentSession = saved.currentSession
+            self.totalPausedTime = saved.totalPausedTime
+            self.sessionStartTime = saved.sessionStartTime != nil ? Date(timeIntervalSince1970: saved.sessionStartTime!) : nil
+            self.pauseStartTime = saved.pauseStartTime != nil ? Date(timeIntervalSince1970: saved.pauseStartTime!) : nil
+            
+            // Map state
+            self.state = PomodoroState(rawValue: saved.state) ?? .notStarted
+            
+            // If working/onBreak, compute elapsed time since saved timestamp
+            let now = Date().timeIntervalSince1970
+            let delta = max(0, now - saved.timestamp)
+            if self.state == .working || self.state == .onBreak {
+                let newRemaining = max(0, saved.timeRemaining - delta)
+                self.timeRemaining = newRemaining
+                if newRemaining <= 0 {
+                    handleSessionCompletion()
+                } else {
+                    startDate = Date()
+                    startTimer()
+                }
+            } else {
+                // paused/notStarted/completed
+                self.timeRemaining = saved.timeRemaining
+            }
+        } catch {
+            Logger.pomodoro("Failed decoding persisted state: \(error)", level: .error)
+        }
     }
     
     private func calculateBackgroundProgress() {
@@ -277,6 +377,7 @@ class PomodoroViewModel: ObservableObject {
             self.sessionStartTime = nil
             self.pauseStartTime = nil
             self.totalPausedTime = 0
+            persistState()
         }
     }
     
@@ -298,6 +399,7 @@ class PomodoroViewModel: ObservableObject {
         self.sessionStartTime = nil
         self.pauseStartTime = nil
         self.totalPausedTime = 0
+        persistState()
     }
     
     // Check if a specific task is the active one
@@ -333,6 +435,7 @@ class PomodoroViewModel: ObservableObject {
         Task {
             await scheduleSessionEndNotification()
         }
+        persistState()
     }
     
     private func startTimer() {
@@ -356,6 +459,7 @@ class PomodoroViewModel: ObservableObject {
         
         // Remove notifications
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        persistState()
     }
     
     func resume() {
@@ -378,6 +482,7 @@ class PomodoroViewModel: ObservableObject {
             completedBreakSessions.insert(currentSession - 1)
             completeBreakSession()
         }
+        persistState()
     }
     
     func stop() {
@@ -404,6 +509,7 @@ class PomodoroViewModel: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "pomodoro_time_remaining")
         UserDefaults.standard.removeObject(forKey: "pomodoro_state")
         UserDefaults.standard.removeObject(forKey: "pomodoro_current_session")
+        UserDefaults.standard.removeObject(forKey: persistedKey)
     }
     
     private func updateTimer() {
@@ -428,6 +534,8 @@ class PomodoroViewModel: ObservableObject {
         if currentSession >= settings.totalSessions {
             state = .completed
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            // Clear persisted state when cycle is completed
+            UserDefaults.standard.removeObject(forKey: persistedKey)
             return
         }
         
@@ -444,6 +552,8 @@ class PomodoroViewModel: ObservableObject {
         Task {
             await scheduleSessionEndNotification()
         }
+        // Persist after transitioning to break
+        persistState()
     }
     
     private func completeBreakSession() {
@@ -457,6 +567,8 @@ class PomodoroViewModel: ObservableObject {
         if currentSession > settings.totalSessions {
             state = .completed
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            // Clear persisted state when cycle is completed
+            UserDefaults.standard.removeObject(forKey: persistedKey)
             return
         }
         
@@ -472,6 +584,8 @@ class PomodoroViewModel: ObservableObject {
         Task {
             await scheduleSessionEndNotification()
         }
+        // Persist after transitioning back to work
+        persistState()
     }
     
     private func applySettingsToCurrentSession() {

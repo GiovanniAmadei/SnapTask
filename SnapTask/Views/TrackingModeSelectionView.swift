@@ -16,7 +16,7 @@ struct TrackingModeSelectionView: View {
                 // Header
                 VStack(spacing: 8) {
                     if let task = task {
-                        Text("Track: \(task.name)")
+                        Text(String(format: "track_task_format".localized, task.name))
                             .font(.title2)
                             .fontWeight(.semibold)
                     } else {

@@ -7,9 +7,9 @@ enum TrackingMode: String, CaseIterable, Codable {
     var displayName: String {
         switch self {
         case .simple:
-            return "Simple Timer"
+            return "simple_timer".localized
         case .pomodoro:
-            return "Pomodoro Mode"
+            return "pomodoro_mode".localized
         }
     }
     
@@ -25,9 +25,9 @@ enum TrackingMode: String, CaseIterable, Codable {
     var description: String {
         switch self {
         case .simple:
-            return "Track time continuously"
+            return "simple_timer_description".localized
         case .pomodoro:
-            return "Work in focused intervals"
+            return "pomodoro_mode_description".localized
         }
     }
 }

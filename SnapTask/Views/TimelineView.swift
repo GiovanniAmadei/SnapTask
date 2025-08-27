@@ -1103,9 +1103,8 @@ struct TaskListView: View {
         .sheet(isPresented: $showingActiveTimeTrackerSession) {
             if let sessionId = selectedSessionId {
                 NavigationStack {
-                    SessionTimeTrackerView(
+                    TimeTrackerView(
                         sessionId: sessionId,
-                        viewModel: timeTrackerViewModel,
                         presentationStyle: .sheet
                     )
                 }
@@ -1778,7 +1777,8 @@ private struct TimelineTaskCard: View {
                     task: task,
                     mode: selectedTrackingMode,
                     taskManager: TaskManager.shared,
-                    presentationStyle: .sheet
+                    presentationStyle: .sheet,
+                    allowExpand: false
                 )
             }
             .presentationDetents([.medium])

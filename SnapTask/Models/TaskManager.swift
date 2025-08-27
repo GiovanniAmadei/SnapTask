@@ -933,13 +933,9 @@ class TaskManager: ObservableObject {
                 print("❌ Failed to schedule notification for task: \(task.name)")
             }
         } else {
-            if let notificationId = task.notificationId {
-                notificationManager.cancelNotification(withIdentifier: notificationId)
-                task.notificationId = nil
-                print("🗑️ Notification cancelled for task: \(task.name)")
-            } else {
-                notificationManager.cancelAllNotificationsForTask(task.id)
-            }
+            notificationManager.cancelAllNotificationsForTask(task.id)
+            task.notificationId = nil
+            print("🗑️ Notification(s) cancelled for task: \(task.name)")
         }
         
         task.lastModifiedDate = Date()
@@ -976,15 +972,12 @@ class TaskManager: ObservableObject {
         if oldTask.hasNotification == newTask.hasNotification &&
            oldTask.startTime == newTask.startTime &&
            oldTask.recurrence == newTask.recurrence &&
-           oldTask.name == newTask.name {
+           oldTask.name == newTask.name &&
+           oldTask.notificationLeadTimeMinutes == newTask.notificationLeadTimeMinutes {
             return
         }
         
-        if let oldNotificationId = oldTask.notificationId {
-            notificationManager.cancelNotification(withIdentifier: oldNotificationId)
-        } else {
-            notificationManager.cancelAllNotificationsForTask(oldTask.id)
-        }
+        notificationManager.cancelAllNotificationsForTask(oldTask.id)
         
         if newTask.hasNotification && newTask.hasSpecificTime {
             await handleTaskNotification(newTask, isNew: false)

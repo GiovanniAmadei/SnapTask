@@ -117,7 +117,8 @@ struct TaskDetailView: View {
                         task: task,
                         mode: selectedTrackingMode,
                         taskManager: TaskManager.shared,
-                        presentationStyle: .sheet
+                        presentationStyle: .sheet,
+                        allowExpand: false
                     )
                 }
                 .presentationDetents([.medium])
@@ -486,9 +487,30 @@ struct TaskDetailView: View {
                     }
                 }
                 
+                if task.hasNotification, task.hasSpecificTime {
+                    HStack {
+                        Text("Preavviso")
+                            .font(.subheadline.weight(.medium))
+                            .themedSecondaryText()
+                        Spacer()
+                        Text(leadTimeLabel(task.notificationLeadTimeMinutes))
+                            .font(.subheadline)
+                            .themedPrimaryText()
+                    }
+                }
+                
                 durationSectionTask(task)
             }
         }
+    }
+    
+    private func leadTimeLabel(_ minutes: Int) -> String {
+        if minutes <= 0 { return "All'ora esatta" }
+        let h = minutes / 60
+        let m = minutes % 60
+        if h > 0 && m > 0 { return "\(h)h \(m)m prima" }
+        if h > 0 { return "\(h)h prima" }
+        return "\(m) min prima"
     }
     
     private func durationSectionTask(_ task: TodoTask) -> some View {

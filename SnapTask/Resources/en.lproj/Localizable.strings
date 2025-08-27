@@ -47,6 +47,8 @@
 "task_notifications" = "Task Notifications";
 "task_notifications_description" = "Receive reminders for scheduled tasks";
 "enable_task_notifications" = "Enable Task Notifications";
+"task_notifications_master" = "Task reminders";
+"task_notifications_master_description" = "Notifications for your tasks";
 "task_notification_title" = "Task Reminder";
 "task_notification_body" = "It's time for: %@";
 "notification_permission_required" = "Notification Permission Required";
@@ -263,6 +265,9 @@
 "last_synced" = "Last synced";
 "try_sign_out_in" = "Try signing out and back into iCloud";
 
+// Premium / Offer Codes
+"redeem_offer_code" = "Redeem Offer Code";
+
 // Behavior Settings
 "smart_notifications" = "Smart Notifications";
 "smart_notifications_description" = "Send reminders based on task priority and deadlines";
@@ -338,6 +343,12 @@
 "sessions_until_long_break" = "Sessions until long break";
 "focus_time" = "Focus Time";
 "colors" = "Colors";
+"about" = "About";
+"min_unit" = "min";
+"general_pomodoro_settings" = "General Pomodoro Settings";
+"task_pomodoro_settings" = "Task Pomodoro Settings";
+"general_focus_sessions_description" = "Configure your default Pomodoro workflow. Adjust work duration, breaks, and total time to match your focus style.";
+"task_pomodoro_sessions_description" = "Customize Pomodoro settings for this task only. These settings override your general Pomodoro preferences.";
 
 // Timeline specific
 "list" = "List";
@@ -379,6 +390,32 @@
 "complex_tasks_2_4_hours" = "Complex tasks (2-4 hours)";
 "save_task" = "Save Task";
 "choose_icon" = "Choose Icon";
+
+// Notification Timing (When to notify)
+"when_to_notify" = "When to notify";
+"at_exact_time" = "At exact time";
+"notify_5_min_before" = "5 min before";
+"notify_10_min_before" = "10 min before";
+"notify_15_min_before" = "15 min before";
+"notify_30_min_before" = "30 min before";
+"notify_60_min_before" = "60 min before";
+"notify_custom" = "Custom...";
+
+// Custom Notification Sheet
+"custom_notification_title" = "Custom Notification";
+"custom_notify_before" = "Before";
+"custom_notify_after" = "After";
+"custom_time_offset" = "Time offset";
+"hours" = "hours";
+"minutes" = "minutes";
+"custom_notification_preview" = "Notification preview";
+"set_custom_notification" = "Set";
+
+// Notification lead time formats
+"lead_time_hours_minutes_before_format" = "%dh %dm before";
+"lead_time_hours_before_format" = "%dh before";
+"lead_time_minutes_before_format" = "%d min before";
+"lead_time_short_exact" = "At time";
 
 // Rewards View
 "available_points" = "Available Points";
@@ -1051,6 +1088,9 @@
 "choose_tracking_mode" = "Choose your tracking mode";
 "select_mode" = "Select Mode";
 "simple_timer_session" = "Simple Timer Session";
+"simple_timer_description" = "Track time continuously";
+"pomodoro_mode_description" = "Work in focused intervals";
+"track_task_format" = "Track: %@";
 
 // Time Tracking Completion
 "focus_session_complete" = "Focus Session Complete!";

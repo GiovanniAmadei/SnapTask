@@ -46,6 +46,8 @@
 // Task Notifications
 "task_notifications" = "Notificaciones de tareas";
 "task_notifications_description" = "Recibir recordatorios de tareas programadas";
+"task_notifications_master" = "Notificaciones globales de tareas";
+"task_notifications_master_description" = "Interruptor principal para todos los recordatorios de tareas";
 "enable_task_notifications" = "Habilitar notificaciones de tareas";
 "task_notification_title" = "Recordatorio de tarea";
 "task_notification_body" = "Es hora de: %@";
@@ -261,6 +263,9 @@
 "last_synced" = "Última sincronización";
 "try_sign_out_in" = "Intenta cerrar sesión y volver a entrar en iCloud";
 
+// Premium / Códigos de oferta
+"redeem_offer_code" = "Canjear código de oferta";
+
 // Behavior Settings
 "smart_notifications" = "Notificaciones inteligentes";
 "smart_notifications_description" = "Enviar recordatorios basados en prioridad y plazos";
@@ -336,6 +341,12 @@
 "sessions_until_long_break" = "Sesiones hasta el descanso largo";
 "focus_time" = "Tiempo de enfoque";
 "colors" = "Colores";
+"about" = "Acerca de";
+"min_unit" = "min";
+"general_pomodoro_settings" = "Ajustes generales de Pomodoro";
+"task_pomodoro_settings" = "Ajustes de Pomodoro para esta tarea";
+"general_focus_sessions_description" = "Configura tu flujo Pomodoro predeterminado. Ajusta la duración de trabajo, los descansos y el tiempo total según tu estilo de concentración.";
+"task_pomodoro_sessions_description" = "Personaliza los ajustes de Pomodoro solo para esta tarea. Estos ajustes reemplazan tus preferencias generales de Pomodoro.";
 
 // Timeline specific
 "list" = "Lista";
@@ -377,6 +388,32 @@
 "complex_tasks_2_4_hours" = "Tareas complejas (2‑4 horas)";
 "save_task" = "Guardar tarea";
 "choose_icon" = "Elegir icono";
+
+// Notification Timing (Cuándo notificar)
+"when_to_notify" = "Cuándo notificar";
+"at_exact_time" = "A la hora exacta";
+"notify_5_min_before" = "5 min antes";
+"notify_10_min_before" = "10 min antes";
+"notify_15_min_before" = "15 min antes";
+"notify_30_min_before" = "30 min antes";
+"notify_60_min_before" = "60 min antes";
+"notify_custom" = "Personalizado…";
+
+// Custom Notification Sheet
+"custom_notification_title" = "Notificación personalizada";
+"custom_notify_before" = "Antes";
+"custom_notify_after" = "Después";
+"custom_time_offset" = "Desfase de tiempo";
+"hours" = "horas";
+"minutes" = "minutos";
+"custom_notification_preview" = "Vista previa de la notificación";
+"set_custom_notification" = "Establecer";
+
+// Notification lead time formats
+"lead_time_hours_minutes_before_format" = "%dh %d min antes";
+"lead_time_hours_before_format" = "%dh antes";
+"lead_time_minutes_before_format" = "%d min antes";
+"lead_time_short_exact" = "A la hora";
 
 // Rewards View
 "available_points" = "Puntos disponibles";
@@ -1012,6 +1049,9 @@
 "choose_tracking_mode" = "Elige tu modo de seguimiento";
 "select_mode" = "Seleccionar modo";
 "simple_timer_session" = "Sesión de temporizador simple";
+"simple_timer_description" = "Registrar el tiempo de forma continua";
+"pomodoro_mode_description" = "Trabajar en intervalos enfocados";
+"track_task_format" = "Seguimiento: %@";
 
 // Time Tracking Completion
 "focus_session_complete" = "¡Sesión de enfoque completada!";

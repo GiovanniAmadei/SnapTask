@@ -177,9 +177,8 @@ struct FocusTabView: View {
                 .sheet(isPresented: $showingWidgetTimer) {
                     if let sessionId = selectedSessionId {
                         NavigationStack {
-                            SessionTimeTrackerView(
+                            TimeTrackerView(
                                 sessionId: sessionId,
-                                viewModel: timeTrackerViewModel,
                                 presentationStyle: .sheet
                             )
                         }

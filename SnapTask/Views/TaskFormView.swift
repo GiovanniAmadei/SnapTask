@@ -10,6 +10,7 @@ struct TaskFormView: View {
     @State private var newSubtaskName = ""
     @State private var showingPomodoroSettings = false
     @State private var showDurationPicker = false
+    @State private var showLeadTimePicker = false
     @State private var showDayPicker = false
     @State private var hasAppeared = false
     @FocusState private var focusedField: FocusedField?
@@ -55,8 +56,8 @@ struct TaskFormView: View {
             vm.subtasks = initialTask.subtasks
             vm.hasNotification = initialTask.hasNotification
             vm.selectedTimeScope = initialTask.timeScope
-            
             vm.hasSpecificTime = initialTask.hasSpecificTime
+            vm.notificationLeadTimeMinutes = initialTask.notificationLeadTimeMinutes
             
             // Set specific period dates based on existing task
             if let scopeStart = initialTask.scopeStartDate {
@@ -276,7 +277,7 @@ struct TaskFormView: View {
                                     ))
                                     
                                     // Notification toggle (available for all tasks with specific time)
-                                    if taskNotificationManager.areNotificationsEnabled {
+                                    if taskNotificationManager.areTaskNotificationsEnabled {
                                         HStack {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text("enable_notification".localized)
@@ -293,6 +294,10 @@ struct TaskFormView: View {
                                             insertion: .opacity,
                                             removal: .opacity.animation(.easeInOut(duration: 0.3))
                                         ))
+                                        
+                                        if viewModel.hasNotification {
+                                            leadTimeSelector
+                                        }
                                     } else if viewModel.hasNotification {
                                         // Show notification disabled warning
                                         HStack {
@@ -453,7 +458,7 @@ struct TaskFormView: View {
                                         ))
                                         
                                         // Notification toggle (available for all tasks with specific time)
-                                        if taskNotificationManager.areNotificationsEnabled {
+                                        if taskNotificationManager.areTaskNotificationsEnabled {
                                             HStack {
                                                 VStack(alignment: .leading, spacing: 4) {
                                                     Text("enable_notification".localized)
@@ -470,6 +475,10 @@ struct TaskFormView: View {
                                                 insertion: .opacity,
                                                 removal: .opacity.animation(.easeInOut(duration: 0.3))
                                             ))
+                                            
+                                            if viewModel.hasNotification {
+                                                leadTimeSelector
+                                            }
                                         } else if viewModel.hasNotification {
                                             // Show notification disabled warning
                                             HStack {
@@ -941,6 +950,9 @@ struct TaskFormView: View {
             .sheet(isPresented: $showDurationPicker) {
                 DurationPickerView(duration: $viewModel.duration)
             }
+            .sheet(isPresented: $showLeadTimePicker) {
+                NotificationLeadTimePickerView(leadMinutes: $viewModel.notificationLeadTimeMinutes)
+            }
             .onAppear {
                 taskNotificationManager.checkAuthorizationStatus()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -953,6 +965,89 @@ struct TaskFormView: View {
     private func saveTask(_ task: TodoTask) async {
         onSave(task)
         dismiss()
+    }
+    
+    private var leadTimeSelector: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("when_to_notify".localized)
+                    .font(.subheadline.weight(.medium))
+                    .themedPrimaryText()
+                Text(leadTimeDescription(viewModel.notificationLeadTimeMinutes))
+                    .font(.caption)
+                    .themedSecondaryText()
+            }
+            Spacer()
+            Menu {
+                Button(action: { viewModel.notificationLeadTimeMinutes = 0 }) {
+                    Label("at_exact_time".localized, systemImage: "alarm")
+                }
+                Divider()
+                ForEach([5, 10, 15, 30, 60], id: \.self) { m in
+                    Button(action: { viewModel.notificationLeadTimeMinutes = m }) {
+                        let title: String = {
+                            switch m {
+                            case 5: return "notify_5_min_before".localized
+                            case 10: return "notify_10_min_before".localized
+                            case 15: return "notify_15_min_before".localized
+                            case 30: return "notify_30_min_before".localized
+                            case 60: return "notify_60_min_before".localized
+                            default: return "lead_time_minutes_before_format".localized(m)
+                            }
+                        }()
+                        Label(title, systemImage: "bell.and.waveform")
+                    }
+                }
+                Divider()
+                Button(action: { showLeadTimePicker = true }) {
+                    Label("notify_custom".localized, systemImage: "slider.horizontal.3")
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "bell.badge")
+                        .font(.system(size: 12))
+                        .foregroundColor(.blue)
+                    Text(leadTimeShort(viewModel.notificationLeadTimeMinutes))
+                        .font(.subheadline.weight(.semibold))
+                        .themedPrimaryText()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10))
+                        .themedSecondaryText()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(theme.surfaceColor)
+                )
+            }
+        }
+        .transition(.asymmetric(
+            insertion: .opacity,
+            removal: .opacity.animation(.easeInOut(duration: 0.3))
+        ))
+    }
+    
+    private func leadTimeDescription(_ minutes: Int) -> String {
+        if minutes <= 0 { return "at_exact_time".localized }
+        let h = minutes / 60
+        let m = minutes % 60
+        if h > 0 && m > 0 { return "lead_time_hours_minutes_before_format".localized(h, m) }
+        if h > 0 { return "lead_time_hours_before_format".localized(h) }
+        return "lead_time_minutes_before_format".localized(m)
+    }
+    
+    private func leadTimeShort(_ minutes: Int) -> String {
+        if minutes <= 0 { return "lead_time_short_exact".localized }
+        if minutes % 60 == 0 { return "lead_time_hours_before_format".localized(minutes/60) }
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            return "lead_time_hours_minutes_before_format".localized(h, m)
+        }
+        return "lead_time_minutes_before_format".localized(minutes)
     }
 }
 

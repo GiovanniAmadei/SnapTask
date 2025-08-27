@@ -76,7 +76,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var timeScope: TaskTimeScope = .today
     var scopeStartDate: Date? = nil
     var scopeEndDate: Date? = nil
-
+    var notificationLeadTimeMinutes: Int = 0
+    
     init(
         id: UUID = UUID(),
         name: String,
@@ -102,7 +103,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         photoPath: String? = nil,
         photoThumbnailPath: String? = nil,
         photos: [TaskPhoto] = [],
-        voiceMemos: [TaskVoiceMemo] = []
+        voiceMemos: [TaskVoiceMemo] = [],
+        notificationLeadTimeMinutes: Int = 0
     ) {
         self.id = id
         self.name = name
@@ -131,6 +133,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.photoThumbnailPath = photoThumbnailPath
         self.photos = photos
         self.voiceMemos = voiceMemos
+        self.notificationLeadTimeMinutes = notificationLeadTimeMinutes
     }
     
     var displayPeriod: String {
@@ -362,7 +365,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.photoPath == rhs.photoPath &&
         lhs.photoThumbnailPath == rhs.photoThumbnailPath &&
         lhs.photos == rhs.photos &&
-        lhs.voiceMemos == rhs.voiceMemos
+        lhs.voiceMemos == rhs.voiceMemos &&
+        lhs.notificationLeadTimeMinutes == rhs.notificationLeadTimeMinutes
     }
     
     // MARK: - Completion Key Helper
@@ -561,5 +565,42 @@ extension TodoTask {
         case photoPath, photoThumbnailPath
         case photos
         case voiceMemos
+        case notificationLeadTimeMinutes
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        location = try c.decodeIfPresent(TaskLocation.self, forKey: .location)
+        startTime = try c.decodeIfPresent(Date.self, forKey: .startTime) ?? Date()
+        hasSpecificTime = try c.decodeIfPresent(Bool.self, forKey: .hasSpecificTime) ?? true
+        duration = try c.decodeIfPresent(TimeInterval.self, forKey: .duration) ?? 0
+        hasDuration = try c.decodeIfPresent(Bool.self, forKey: .hasDuration) ?? false
+        category = try c.decodeIfPresent(Category.self, forKey: .category)
+        priority = try c.decodeIfPresent(Priority.self, forKey: .priority) ?? .medium
+        icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? "circle"
+        recurrence = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence)
+        pomodoroSettings = try c.decodeIfPresent(PomodoroSettings.self, forKey: .pomodoroSettings)
+        completions = try c.decodeIfPresent([Date: TaskCompletion].self, forKey: .completions) ?? [:]
+        subtasks = try c.decodeIfPresent([Subtask].self, forKey: .subtasks) ?? []
+        completionDates = try c.decodeIfPresent([Date].self, forKey: .completionDates) ?? []
+        creationDate = try c.decodeIfPresent(Date.self, forKey: .creationDate) ?? Date()
+        lastModifiedDate = try c.decodeIfPresent(Date.self, forKey: .lastModifiedDate) ?? Date()
+        hasRewardPoints = try c.decodeIfPresent(Bool.self, forKey: .hasRewardPoints) ?? false
+        rewardPoints = try c.decodeIfPresent(Int.self, forKey: .rewardPoints) ?? 0
+        totalTrackedTime = try c.decodeIfPresent(TimeInterval.self, forKey: .totalTrackedTime) ?? 0
+        lastTrackedDate = try c.decodeIfPresent(Date.self, forKey: .lastTrackedDate)
+        hasNotification = try c.decodeIfPresent(Bool.self, forKey: .hasNotification) ?? false
+        notificationId = try c.decodeIfPresent(String.self, forKey: .notificationId)
+        timeScope = try c.decodeIfPresent(TaskTimeScope.self, forKey: .timeScope) ?? .today
+        scopeStartDate = try c.decodeIfPresent(Date.self, forKey: .scopeStartDate)
+        scopeEndDate = try c.decodeIfPresent(Date.self, forKey: .scopeEndDate)
+        photoPath = try c.decodeIfPresent(String.self, forKey: .photoPath)
+        photoThumbnailPath = try c.decodeIfPresent(String.self, forKey: .photoThumbnailPath)
+        photos = try c.decodeIfPresent([TaskPhoto].self, forKey: .photos) ?? []
+        voiceMemos = try c.decodeIfPresent([TaskVoiceMemo].self, forKey: .voiceMemos) ?? []
+        notificationLeadTimeMinutes = try c.decodeIfPresent(Int.self, forKey: .notificationLeadTimeMinutes) ?? 0
     }
 }

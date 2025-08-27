@@ -5,7 +5,7 @@ import Combine
 class TaskNotificationManager: NSObject, ObservableObject {
     static let shared = TaskNotificationManager()
     
-    @Published var areNotificationsEnabled = false
+    @Published var areTaskNotificationsEnabled = true
     @Published var authorizationStatus: UNAuthorizationStatus = .notDetermined
     
     private let center = UNUserNotificationCenter.current()
@@ -21,11 +21,9 @@ class TaskNotificationManager: NSObject, ObservableObject {
     
     func requestNotificationPermission() async -> Bool {
         do {
-            let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
+            let granted = try await center.requestAuthorization(options: [.alert, .sound])
             await MainActor.run {
                 self.authorizationStatus = granted ? .authorized : .denied
-                self.areNotificationsEnabled = granted
-                self.saveNotificationSettings()
             }
             return granted
         } catch {
@@ -38,7 +36,36 @@ class TaskNotificationManager: NSObject, ObservableObject {
         center.getNotificationSettings { settings in
             DispatchQueue.main.async {
                 self.authorizationStatus = settings.authorizationStatus
-                self.areNotificationsEnabled = settings.authorizationStatus == .authorized
+            }
+        }
+    }
+    
+    // MARK: - Master Mute Management
+    
+    func setTaskNotificationsEnabled(_ enabled: Bool) {
+        areTaskNotificationsEnabled = enabled
+        saveNotificationSettings()
+        
+        if !enabled {
+            // Quando disabilitato: cancella tutte le notifiche task pendenti
+            cancelAllTaskNotifications()
+            print("🔇 Master mute ON: cancelled all task notifications")
+        } else {
+            print("🔔 Master mute OFF: task notifications re-enabled")
+            // Nota: non ripianifichiamo automaticamente qui.
+            // Le notifiche verranno ripianificate quando le task vengono modificate/create
+        }
+    }
+    
+    private func cancelAllTaskNotifications() {
+        center.getPendingNotificationRequests { requests in
+            let taskNotificationIdentifiers = requests
+                .filter { $0.identifier.hasPrefix("task_") }
+                .map { $0.identifier }
+            
+            if !taskNotificationIdentifiers.isEmpty {
+                self.center.removePendingNotificationRequests(withIdentifiers: taskNotificationIdentifiers)
+                print("🗑️ Cancelled \(taskNotificationIdentifiers.count) task notifications")
             }
         }
     }
@@ -46,37 +73,33 @@ class TaskNotificationManager: NSObject, ObservableObject {
     // MARK: - Notification Management
     
     func scheduleNotification(for task: TodoTask) async -> String? {
-        guard areNotificationsEnabled,
+        guard areTaskNotificationsEnabled,
+              authorizationStatus == .authorized,
               task.hasSpecificTime,
               task.hasNotification else {
             return nil
         }
         
-        // Check if notification is in the future
-        guard task.startTime > Date() else {
+        let lead = TimeInterval(max(0, task.notificationLeadTimeMinutes) * 60)
+        let fireDate = task.startTime.addingTimeInterval(-lead)
+        
+        guard fireDate > Date() else {
             return nil
         }
         
         let identifier = "task_\(task.id.uuidString)"
         
-        // Create notification content
         let content = UNMutableNotificationContent()
         content.title = "task_notification_title".localized
         content.body = String(format: "task_notification_body".localized, task.name)
         content.sound = .default
-        content.badge = 1
-        
-        // Add category for context
         if let category = task.category {
             content.subtitle = category.name
         }
         
-        // Create trigger for specific time
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: task.startTime)
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         
-        // Create request
         let request = UNNotificationRequest(
             identifier: identifier,
             content: content,
@@ -85,7 +108,7 @@ class TaskNotificationManager: NSObject, ObservableObject {
         
         do {
             try await center.add(request)
-            print("✅ Scheduled notification for task: \(task.name) at \(task.startTime)")
+            print("✅ Scheduled notification for task: \(task.name) at \(fireDate) (lead \(task.notificationLeadTimeMinutes)m)")
             return identifier
         } catch {
             print("❌ Error scheduling notification: \(error)")
@@ -94,7 +117,8 @@ class TaskNotificationManager: NSObject, ObservableObject {
     }
     
     func scheduleRecurringNotifications(for task: TodoTask) async -> [String] {
-        guard areNotificationsEnabled,
+        guard areTaskNotificationsEnabled,
+              authorizationStatus == .authorized,
               task.hasSpecificTime,
               task.hasNotification,
               let recurrence = task.recurrence else {
@@ -105,61 +129,56 @@ class TaskNotificationManager: NSObject, ObservableObject {
         let calendar = Calendar.current
         let today = Date()
         
-        // Schedule notifications for the next 30 days (or until end date)
         let endDate = recurrence.endDate ?? calendar.date(byAdding: .day, value: 30, to: today) ?? today
         var currentDate = today
         
         while currentDate <= endDate {
             if recurrence.shouldOccurOn(date: currentDate) {
-                // Calculate notification time for this occurrence
                 let timeComponents = calendar.dateComponents([.hour, .minute], from: task.startTime)
                 let dateComponents = calendar.dateComponents([.year, .month, .day], from: currentDate)
                 
-                var notificationComponents = DateComponents()
-                notificationComponents.year = dateComponents.year
-                notificationComponents.month = dateComponents.month
-                notificationComponents.day = dateComponents.day
-                notificationComponents.hour = timeComponents.hour
-                notificationComponents.minute = timeComponents.minute
+                var candidateComponents = DateComponents()
+                candidateComponents.year = dateComponents.year
+                candidateComponents.month = dateComponents.month
+                candidateComponents.day = dateComponents.day
+                candidateComponents.hour = timeComponents.hour
+                candidateComponents.minute = timeComponents.minute
                 
-                if let notificationDate = calendar.date(from: notificationComponents),
-                   notificationDate > Date() {
+                if let occurrenceDate = calendar.date(from: candidateComponents) {
+                    let lead = TimeInterval(max(0, task.notificationLeadTimeMinutes) * 60)
+                    let notificationDate = occurrenceDate.addingTimeInterval(-lead)
                     
-                    let identifier = "task_\(task.id.uuidString)_\(currentDate.timeIntervalSince1970)"
-                    
-                    // Create notification content
-                    let content = UNMutableNotificationContent()
-                    content.title = "task_notification_title".localized
-                    content.body = String(format: "task_notification_body".localized, task.name)
-                    content.sound = .default
-                    content.badge = 1
-                    
-                    if let category = task.category {
-                        content.subtitle = category.name
-                    }
-                    
-                    // Create trigger
-                    let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: notificationDate)
-                    let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
-                    
-                    // Create request
-                    let request = UNNotificationRequest(
-                        identifier: identifier,
-                        content: content,
-                        trigger: trigger
-                    )
-                    
-                    do {
-                        try await center.add(request)
-                        identifiers.append(identifier)
-                        print("✅ Scheduled recurring notification for task: \(task.name) at \(notificationDate)")
-                    } catch {
-                        print("❌ Error scheduling recurring notification: \(error)")
+                    if notificationDate > Date() {
+                        let identifier = "task_\(task.id.uuidString)_\(notificationDate.timeIntervalSince1970)"
+                        
+                        let content = UNMutableNotificationContent()
+                        content.title = "task_notification_title".localized
+                        content.body = String(format: "task_notification_body".localized, task.name)
+                        content.sound = .default
+                        if let category = task.category {
+                            content.subtitle = category.name
+                        }
+                        
+                        let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: notificationDate)
+                        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
+                        
+                        let request = UNNotificationRequest(
+                            identifier: identifier,
+                            content: content,
+                            trigger: trigger
+                        )
+                        
+                        do {
+                            try await center.add(request)
+                            identifiers.append(identifier)
+                            print("✅ Scheduled recurring notification for task: \(task.name) at \(notificationDate) (lead \(task.notificationLeadTimeMinutes)m)")
+                        } catch {
+                            print("❌ Error scheduling recurring notification: \(error)")
+                        }
                     }
                 }
             }
             
-            // Move to next day
             guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
             currentDate = nextDate
         }
@@ -193,21 +212,11 @@ class TaskNotificationManager: NSObject, ObservableObject {
     // MARK: - Settings Management
     
     private func loadNotificationSettings() {
-        areNotificationsEnabled = UserDefaults.standard.bool(forKey: "taskNotificationsEnabled")
+        areTaskNotificationsEnabled = UserDefaults.standard.object(forKey: "masterTaskNotificationsEnabled") as? Bool ?? true
     }
     
     private func saveNotificationSettings() {
-        UserDefaults.standard.set(areNotificationsEnabled, forKey: "taskNotificationsEnabled")
-    }
-    
-    func toggleNotifications() {
-        areNotificationsEnabled.toggle()
-        saveNotificationSettings()
-        
-        if !areNotificationsEnabled {
-            // Cancel all pending notifications
-            center.removeAllPendingNotificationRequests()
-        }
+        UserDefaults.standard.set(areTaskNotificationsEnabled, forKey: "masterTaskNotificationsEnabled")
     }
     
     // MARK: - Utility Methods
@@ -236,7 +245,7 @@ extension TaskNotificationManager: UNUserNotificationCenterDelegate {
             return
         }
         // Show notification even when app is in foreground
-        completionHandler([.banner, .badge, .sound])
+        completionHandler([.banner, .sound])
     }
     
     func userNotificationCenter(

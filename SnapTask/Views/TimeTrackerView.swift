@@ -8,6 +8,7 @@ struct TimeTrackerView: View {
     let task: TodoTask?
     let mode: TrackingMode
     let presentationStyle: PresentationStyle
+    let allowExpand: Bool
     
     @State private var sessionId: UUID?
     
@@ -16,11 +17,32 @@ struct TimeTrackerView: View {
         case sheet
     }
     
-    init(task: TodoTask?, mode: TrackingMode, taskManager: TaskManager, presentationStyle: PresentationStyle = .sheet) {
+    init(task: TodoTask?, mode: TrackingMode, taskManager: TaskManager, presentationStyle: PresentationStyle = .sheet, allowExpand: Bool = true) {
         self.task = task
         self.mode = mode
         self.presentationStyle = presentationStyle
+        self.allowExpand = allowExpand
         self.viewModel = TimeTrackerViewModel.shared
+    }
+    
+    init(sessionId: UUID, presentationStyle: PresentationStyle = .sheet, allowExpand: Bool = true) {
+        self.viewModel = TimeTrackerViewModel.shared
+        self.presentationStyle = presentationStyle
+        self.allowExpand = allowExpand
+        self._sessionId = State(initialValue: sessionId)
+        
+        // Get task and mode from the existing session
+        if let session = TimeTrackerViewModel.shared.getSession(id: sessionId) {
+            if let taskId = session.taskId {
+                self.task = TaskManager.shared.tasks.first(where: { $0.id == taskId })
+            } else {
+                self.task = nil
+            }
+            self.mode = session.mode
+        } else {
+            self.task = nil
+            self.mode = .simple
+        }
     }
     
     private var session: TrackingSession? {
@@ -73,7 +95,7 @@ struct TimeTrackerView: View {
             
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 8) {
-                    if isCompactMode {
+                    if isCompactMode && allowExpand {
                         Button(action: {
                             expandToFullscreen()
                         }) {
@@ -465,6 +487,7 @@ extension Notification.Name {
         task: TodoTask(name: "Sample Task", startTime: Date()),
         mode: .simple,
         taskManager: TaskManager(),
-        presentationStyle: .sheet
+        presentationStyle: .sheet,
+        allowExpand: true
     )
 }

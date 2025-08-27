@@ -46,6 +46,8 @@
 // Task Notifications
 "task_notifications" = "タスク通知";
 "task_notifications_description" = "スケジュールされたタスクのリマインダーを受け取る";
+"task_notifications_master" = "タスク通知（マスター）";
+"task_notifications_master_description" = "すべてのタスクリマインダーのメインスイッチ";
 "enable_task_notifications" = "タスク通知を有効にする";
 "task_notification_title" = "タスクリマインダー";
 "task_notification_body" = "時間です: %@";
@@ -262,6 +264,9 @@
 "last_synced" = "最後の同期";
 "try_sign_out_in" = "iCloudからサインアウト/サインインを試してください";
 
+// Premium / オファーコード
+"redeem_offer_code" = "オファーコードを引き換える";
+
 // Behavior Settings
 "smart_notifications" = "スマート通知";
 "smart_notifications_description" = "タスクの優先度と締切に基づいてリマインダーを送信";
@@ -337,6 +342,12 @@
 "sessions_until_long_break" = "長い休憩までのセッション数";
 "focus_time" = "フォーカス時間";
 "colors" = "色";
+"about" = "情報";
+"min_unit" = "分";
+"general_pomodoro_settings" = "ポモドーロの一般設定";
+"task_pomodoro_settings" = "このタスクのポモドーロ設定";
+"general_focus_sessions_description" = "デフォルトのポモドーロフローを設定します。作業時間・休憩・合計時間を自分のスタイルに合わせて調整できます。";
+"task_pomodoro_sessions_description" = "このタスク専用にポモドーロ設定をカスタマイズします。これらの設定は一般のポモドーロ設定を上書きします。";
 
 // Timeline specific
 "list" = "リスト";
@@ -378,6 +389,32 @@
 "complex_tasks_2_4_hours" = "長時間タスク (2-4時間)";
 "save_task" = "タスクを保存";
 "choose_icon" = "アイコンを選択";
+
+// Notification Timing (通知タイミング)
+"when_to_notify" = "通知タイミング";
+"at_exact_time" = "設定時刻に";
+"notify_5_min_before" = "5分前";
+"notify_10_min_before" = "10分前";
+"notify_15_min_before" = "15分前";
+"notify_30_min_before" = "30分前";
+"notify_60_min_before" = "60分前";
+"notify_custom" = "カスタム…";
+
+// Custom Notification Sheet
+"custom_notification_title" = "カスタム通知";
+"custom_notify_before" = "前";
+"custom_notify_after" = "後";
+"custom_time_offset" = "時間オフセット";
+"hours" = "時間";
+"minutes" = "分";
+"custom_notification_preview" = "通知プレビュー";
+"set_custom_notification" = "設定";
+
+// Notification lead time formats
+"lead_time_hours_minutes_before_format" = "%dh %d分前";
+"lead_time_hours_before_format" = "%dh前";
+"lead_time_minutes_before_format" = "%d分前";
+"lead_time_short_exact" = "設定時刻";
 
 // Rewards View
 "available_points" = "利用可能なポイント";
@@ -1037,8 +1074,6 @@
 "how_long_did_it_take" = "どのくらい時間がかかりましたか？";
 "actual_duration" = "実際の時間";
 "hours" = "時間";
-"minutes" = "分";
-
 // Notes Section
 "notes" = "メモ";
 "add_your_thoughts_completion" = "この完了について思ったことを追加...";
@@ -1049,6 +1084,9 @@
 "choose_tracking_mode" = "追跡モードを選択";
 "select_mode" = "モードを選択";
 "simple_timer_session" = "シンプルタイマーセッション";
+"simple_timer_description" = "時間を継続的に記録";
+"pomodoro_mode_description" = "集中インターバルで作業";
+"track_task_format" = "追跡: %@";
 
 // Time Tracking Completion
 "focus_session_complete" = "フォーカスセッション完了！";

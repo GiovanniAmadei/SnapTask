@@ -121,6 +121,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var selectedPriority: Priority = .medium
     @Published var subtasks: [Subtask] = []
     @Published var hasNotification: Bool = false
+    @Published var notificationLeadTimeMinutes: Int = 0
     @Published var isRecurring: Bool = false
     @Published var recurrenceType: RecurrenceType = .daily
     @Published var contextualRecurrenceType: ContextualRecurrenceType = .everyDay
@@ -469,7 +470,8 @@ class TaskFormViewModel: ObservableObject {
             hasNotification: hasNotification,
             timeScope: selectedTimeScope,
             scopeStartDate: scopeStartDate,
-            scopeEndDate: scopeEndDate
+            scopeEndDate: scopeEndDate,
+            notificationLeadTimeMinutes: notificationLeadTimeMinutes
         )
     }
     
@@ -625,6 +627,7 @@ class TaskFormViewModel: ObservableObject {
         selectedPriority = .medium
         subtasks = []
         hasNotification = false
+        notificationLeadTimeMinutes = 0
         isRecurring = false
         recurrenceType = .daily
         contextualRecurrenceType = .everyDay

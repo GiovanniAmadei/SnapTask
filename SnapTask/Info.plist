@@ -10,5 +10,16 @@
 	<string>SnapTask needs notification access to send alerts when your focus sessions complete and provide live timer updates.</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>google_oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1058830795390-12jq92hniunnaq5qttsdt37fh1qsvgt5</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

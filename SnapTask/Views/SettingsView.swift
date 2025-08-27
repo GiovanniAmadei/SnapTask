@@ -88,6 +88,29 @@ struct SettingsView: View {
                         }
                     }
                     .listRowBackground(theme.surfaceColor)
+
+                    // Redeem Offer Code
+                    Button {
+                        presentOfferCodeRedemption()
+                    } label: {
+                        HStack {
+                            Image(systemName: "ticket")
+                                .foregroundColor(.purple)
+                                .frame(width: 24)
+
+                            Text("redeem_offer_code".localized)
+                                .themedPrimaryText()
+                                .font(.body)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .themedSecondaryText()
+                                .font(.caption)
+                                .frame(width: 12, height: 12)
+                        }
+                    }
+                    .listRowBackground(theme.surfaceColor)
                 } header: {
                     Text("premium_plan".localized)
                         .themedSecondaryText()
@@ -174,33 +197,33 @@ struct SettingsView: View {
                         }
                     }
 
-                    // Task Notifications
+                    // Task Notifications - Master Mute
                     HStack {
-                        Image(systemName: "alarm.fill")
-                            .foregroundColor(.blue)
+                        Image(systemName: "bell.slash.fill")
+                            .foregroundColor(.orange)
                             .frame(width: 24)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("task_notifications".localized)
+                            Text("task_notifications_master".localized)
                                 .themedPrimaryText()
                                 .font(.body)
-                            Text("task_notifications_description".localized)
+                            Text("task_notifications_master_description".localized)
                                 .font(.caption)
                                 .themedSecondaryText()
                         }
                         
                         Spacer()
                         
-                        Toggle("", isOn: $taskNotificationManager.areNotificationsEnabled)
+                        Toggle("", isOn: $taskNotificationManager.areTaskNotificationsEnabled)
                             .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
-                            .onChange(of: taskNotificationManager.areNotificationsEnabled) { _, newValue in
-                                handleTaskNotificationToggle(newValue)
+                            .onChange(of: taskNotificationManager.areTaskNotificationsEnabled) { _, newValue in
+                                handleMasterMuteToggle(newValue)
                             }
                     }
                     .listRowBackground(theme.surfaceColor)
 
-                    // Show task notification permission status
-                    if taskNotificationManager.authorizationStatus == .denied && taskNotificationManager.areNotificationsEnabled {
+                    // Show iOS permission status only if master mute is ON and permissions denied
+                    if taskNotificationManager.areTaskNotificationsEnabled && taskNotificationManager.authorizationStatus == .denied {
                         Button {
                             showingTaskNotificationPermissionAlert = true
                         } label: {
@@ -209,7 +232,7 @@ struct SettingsView: View {
                                     .foregroundColor(.red)
                                     .frame(width: 24)
                                 
-                                Text("notification_permission_denied_message".localized)
+                                Text("ios_permission_required".localized)
                                     .font(.caption)
                                     .foregroundColor(.red)
                                 
@@ -222,6 +245,7 @@ struct SettingsView: View {
                         }
                         .listRowBackground(theme.surfaceColor)
                     }
+
                 } header: {
                     Text("notifications".localized)
                         .themedSecondaryText()
@@ -627,16 +651,24 @@ struct SettingsView: View {
         }
     }
     
-    private func handleTaskNotificationToggle(_ newValue: Bool) {
-        if newValue && taskNotificationManager.authorizationStatus != .authorized {
+    private func handleMasterMuteToggle(_ newValue: Bool) {
+        if newValue && taskNotificationManager.authorizationStatus == .denied {
+            // Se l'utente abilita il master mute ma iOS nega i permessi, chiedi i permessi
             Task {
                 let granted = await taskNotificationManager.requestNotificationPermission()
-                if !granted {
-                    showingTaskNotificationPermissionAlert = true
+                await MainActor.run {
+                    if granted {
+                        taskNotificationManager.setTaskNotificationsEnabled(true)
+                    } else {
+                        // Se i permessi vengono negati, torna su OFF e mostra l'alert
+                        taskNotificationManager.setTaskNotificationsEnabled(false)
+                        showingTaskNotificationPermissionAlert = true
+                    }
                 }
             }
-        } else if !newValue {
-            taskNotificationManager.toggleNotifications()
+        } else {
+            // Caso normale: imposta semplicemente il master mute
+            taskNotificationManager.setTaskNotificationsEnabled(newValue)
         }
     }
     
@@ -679,6 +711,48 @@ struct SettingsView: View {
     private func openAppSettings() {
         if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(settingsUrl)
+        }
+    }
+
+    private func presentOfferCodeRedemption() {
+        // Simulator: presentCodeRedemptionSheet does nothing. Open App Store redeem webpage instead.
+        #if targetEnvironment(simulator)
+        let webFallbacksSim = [
+            "https://apps.apple.com/redeem?ctx=offercodes",
+            "https://apps.apple.com/redeem"
+        ]
+        openURLs(webFallbacksSim)
+        return
+        #else
+        // Prefer in-app redemption sheet when available (iOS 14+)
+        if #available(iOS 14.0, *) {
+            SKPaymentQueue.default().presentCodeRedemptionSheet()
+            return
+        }
+
+        // Device fallback: open App Store redeem page for offer codes for this app
+        let appId = "6746721766"
+        let urlStrings = [
+            "itms-apps://apps.apple.com/redeem?ctx=offercodes&id=\(appId)",
+            "itms-apps://apps.apple.com/redeem",
+            "https://apps.apple.com/redeem?ctx=offercodes&id=\(appId)",
+            "https://apps.apple.com/redeem"
+        ]
+        openURLs(urlStrings)
+        #endif
+    }
+
+    // Try opening a sequence of URLs; if one fails, attempt the next.
+    private func openURLs(_ urlStrings: [String], index: Int = 0) {
+        guard index < urlStrings.count else { return }
+        guard let url = URL(string: urlStrings[index]) else {
+            openURLs(urlStrings, index: index + 1)
+            return
+        }
+        UIApplication.shared.open(url, options: [:]) { success in
+            if !success {
+                openURLs(urlStrings, index: index + 1)
+            }
         }
     }
     

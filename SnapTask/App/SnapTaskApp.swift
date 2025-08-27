@@ -57,6 +57,7 @@ struct SnapTaskApp: App {
                         }
                         
                         requestBackgroundAppRefresh()
+                        UIApplication.shared.applicationIconBadgeNumber = 0
                     }
                     else if newPhase == .background {
                         scheduleBackgroundAppRefresh()
@@ -103,7 +104,7 @@ struct SnapTaskApp: App {
         UNUserNotificationCenter.current().delegate = appDelegate
         
         // Request notification permissions for timer notifications
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if granted {
                 print("✅ Notification permissions granted")
             } else {
@@ -128,7 +129,7 @@ struct SnapTaskApp: App {
     }
     
     func registerForRemoteNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if granted {
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
@@ -178,11 +179,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if notification.request.identifier.hasPrefix("pomodoro-") {
             completionHandler([.banner, .sound])
         } else if notification.request.identifier.hasPrefix("task_") {
-            completionHandler([.banner, .sound, .badge])
+            completionHandler([.banner, .sound])
         } else if notification.request.identifier == "dailyQuote" {
             completionHandler([.banner, .sound])
         } else {
-            completionHandler([.alert, .badge, .sound])
+            completionHandler([.alert, .sound])
         }
     }
     
@@ -216,7 +217,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 }
             }
         }
-        
+
+        DispatchQueue.main.async {
+            UIApplication.shared.applicationIconBadgeNumber = 0
+        }
+
         completionHandler()
     }
     
