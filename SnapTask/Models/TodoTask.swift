@@ -77,7 +77,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var scopeStartDate: Date? = nil
     var scopeEndDate: Date? = nil
     var notificationLeadTimeMinutes: Int = 0
-    
+    var autoCarryOver: Bool = false
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -104,7 +105,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         photoThumbnailPath: String? = nil,
         photos: [TaskPhoto] = [],
         voiceMemos: [TaskVoiceMemo] = [],
-        notificationLeadTimeMinutes: Int = 0
+        notificationLeadTimeMinutes: Int = 0,
+        autoCarryOver: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -134,6 +136,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.photos = photos
         self.voiceMemos = voiceMemos
         self.notificationLeadTimeMinutes = notificationLeadTimeMinutes
+        self.autoCarryOver = autoCarryOver
     }
     
     var displayPeriod: String {
@@ -366,7 +369,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.photoThumbnailPath == rhs.photoThumbnailPath &&
         lhs.photos == rhs.photos &&
         lhs.voiceMemos == rhs.voiceMemos &&
-        lhs.notificationLeadTimeMinutes == rhs.notificationLeadTimeMinutes
+        lhs.notificationLeadTimeMinutes == rhs.notificationLeadTimeMinutes &&
+        lhs.autoCarryOver == rhs.autoCarryOver
     }
     
     // MARK: - Completion Key Helper
@@ -566,6 +570,7 @@ extension TodoTask {
         case photos
         case voiceMemos
         case notificationLeadTimeMinutes
+        case autoCarryOver
     }
     
     init(from decoder: Decoder) throws {
@@ -602,5 +607,6 @@ extension TodoTask {
         photos = try c.decodeIfPresent([TaskPhoto].self, forKey: .photos) ?? []
         voiceMemos = try c.decodeIfPresent([TaskVoiceMemo].self, forKey: .voiceMemos) ?? []
         notificationLeadTimeMinutes = try c.decodeIfPresent(Int.self, forKey: .notificationLeadTimeMinutes) ?? 0
+        autoCarryOver = try c.decodeIfPresent(Bool.self, forKey: .autoCarryOver) ?? false
     }
 }

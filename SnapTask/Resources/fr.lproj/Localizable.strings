@@ -114,6 +114,7 @@
 "medium_priority" = "Moyenne";
 "low_priority" = "Basse";
 "no_tasks_today" = "Aucune tâche pour aujourd'hui";
+"no_tasks_this_day" = "Aucune tâche pour ce jour";
 "task_details" = "Détails de la tâche";
 "due_tasks" = "Tâches échues";
 "no_tasks_due" = "Aucune tâche échue";
@@ -135,6 +136,12 @@
 "recurrence_settings" = "Réglages de récurrence";
 "repeat_settings" = "Réglages de répétition";
 "select_days" = "Sélectionner les jours";
+"repeat_every" = "Répéter tous les";
+"day_unit" = "jour";
+"days_unit" = "jours";
+"anchored_to_task_start_date" = "Ancré à la date de début de la tâche.";
+"repeats_every_day" = "Se répète chaque jour";
+"repeats_every_n_days" = "Se répète tous les %d jours";
 "adapted_to_scope" = "Adapté à la portée sélectionnée";
 "no_recurrence_long_term" = "Pas de récurrence pour les objectifs à long terme";
 
@@ -652,6 +659,8 @@
 "feedback_suggestions" = "Feedback & suggestions";
 "whats_cooking" = "Ce qui se prépare";
 "support_snaptask" = "Soutenir SnapTask";
+"rate_app" = "Évaluer SnapTask";
+"rate_app_subtitle" = "Vous aimez SnapTask ? Laissez-nous un avis !";
 "loading_inspiration" = "Chargement de l'inspiration...";
 "choose_language" = "Choisir une langue";
 "enable_notifications" = "Activer les notifications";

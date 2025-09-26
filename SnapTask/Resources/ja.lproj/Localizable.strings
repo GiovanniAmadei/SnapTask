@@ -118,6 +118,7 @@
 "medium_priority" = "中";
 "low_priority" = "低";
 "no_tasks_today" = "今日のタスクはありません";
+"no_tasks_this_day" = "この日のタスクはありません";
 "task_details" = "タスクの詳細";
 "due_tasks" = "期限のタスク";
 "no_tasks_due" = "期限のタスクなし";
@@ -139,7 +140,12 @@
 "recurrence_settings" = "繰り返し設定";
 "repeat_settings" = "リピート設定";
 "select_days" = "日を選択";
-// Recurrence adaptation
+"repeat_every" = "繰り返し間隔";
+"day_unit" = "日";
+"days_unit" = "日";
+"anchored_to_task_start_date" = "タスクの開始日に基づいています。";
+"repeats_every_day" = "毎日繰り返します";
+"repeats_every_n_days" = "%d日ごとに繰り返します";
 "adapted_to_scope" = "選択した範囲に適応";
 "no_recurrence_long_term" = "長期目標には繰り返しなし";
 
@@ -663,6 +669,8 @@
 "feedback_suggestions" = "フィードバックと提案";
 "whats_cooking" = "開発中";
 "support_snaptask" = "SnapTaskをサポート";
+"rate_app" = "SnapTaskを評価";
+"rate_app_subtitle" = "SnapTaskは気に入りましたか？レビューをお願いします！";
 "loading_inspiration" = "インスピレーションを読み込み中...";
 "choose_language" = "言語を選択";
 "enable_notifications" = "通知を有効にする";

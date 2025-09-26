@@ -240,7 +240,7 @@ extension TaskNotificationManager: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        if notification.request.identifier == "dailyQuote" {
+        if notification.request.identifier == "dailyQuote" || notification.request.identifier.hasPrefix("dailyQuote_") {
             completionHandler([.banner, .sound])
             return
         }

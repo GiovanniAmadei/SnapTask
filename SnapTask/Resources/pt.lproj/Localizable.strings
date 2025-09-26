@@ -118,6 +118,7 @@
 "medium_priority" = "Média";
 "low_priority" = "Baixa";
 "no_tasks_today" = "Sem tarefas para hoje";
+"no_tasks_this_day" = "Sem tarefas para este dia";
 "task_details" = "Detalhes da tarefa";
 "due_tasks" = "Tarefas pendentes";
 "no_tasks_due" = "Sem tarefas pendentes";
@@ -139,7 +140,12 @@
 "recurrence_settings" = "Configurações de recorrência";
 "repeat_settings" = "Configurações de repetição";
 "select_days" = "Selecionar dias";
-// Recurrence adaptation
+"repeat_every" = "Repetir a cada";
+"day_unit" = "dia";
+"days_unit" = "dias";
+"anchored_to_task_start_date" = "Ancorado à data de início da tarefa.";
+"repeats_every_day" = "Repete todos os dias";
+"repeats_every_n_days" = "Repete a cada %d dias";
 "adapted_to_scope" = "Adaptado ao escopo selecionado";
 "no_recurrence_long_term" = "Sem recorrência para metas de longo prazo";
 
@@ -664,6 +670,8 @@
 "feedback_suggestions" = "Feedback e sugestões";
 "whats_cooking" = "O que vem por aí";
 "support_snaptask" = "Apoiar o SnapTask";
+"rate_app" = "Avaliar SnapTask";
+"rate_app_subtitle" = "Gosta do SnapTask? Deixe-nos uma avaliação!";
 "loading_inspiration" = "Carregando inspiração...";
 "choose_language" = "Escolha um idioma";
 "enable_notifications" = "Ativar notificações";

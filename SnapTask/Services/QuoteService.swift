@@ -9,6 +9,14 @@ class QuoteService {
     private init() {}
     
     func fetchDailyQuote() async throws -> Quote {
+        // For now, we'll use the built-in quotes and pick deterministically for today
+        return quoteFor(date: Date())
+    }
+
+    /// Returns the deterministic daily quote for a specific date.
+    /// This exposes the same logic used for today's quote, allowing callers
+    /// to schedule notifications with the correct quote for future dates.
+    func quoteFor(date: Date) -> Quote {
         // For now, we'll use the built-in quotes
         // In the future, this could be extended to fetch from an API
         let fallbackQuotes = [
@@ -33,18 +41,17 @@ class QuoteService {
             Quote(text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery"),
             Quote(text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "Anonymous")
         ]
-        
-        // Use a deterministic approach based on the current date
-        // This ensures the same quote is returned throughout the day
+
+        // Use a deterministic approach based on the provided date
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: Date())
+        let dateString = dateFormatter.string(from: date)
         let seed = dateString.hash
-        
+
         // Use the hash as seed for deterministic randomness
         var generator = LinearCongruentialGenerator(seed: UInt64(abs(seed)))
         let randomIndex = Int(generator.next() % UInt64(fallbackQuotes.count))
-        
+
         return fallbackQuotes[randomIndex]
     }
     

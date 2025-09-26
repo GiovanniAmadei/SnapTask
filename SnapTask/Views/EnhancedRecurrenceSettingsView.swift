@@ -48,7 +48,7 @@ struct EnhancedRecurrenceSettingsView: View {
                     VStack(spacing: 20) {
                         switch viewModel.recurrenceType {
                         case .daily:
-                            DailyRecurrenceView()
+                            DailyRecurrenceView(viewModel: viewModel)
                             
                         case .weekly:
                             WeeklyRecurrenceView(viewModel: viewModel)
@@ -116,6 +116,7 @@ struct RecurrenceTypeButton: View {
 }
 
 struct DailyRecurrenceView: View {
+    @ObservedObject var viewModel: TaskFormViewModel
     @Environment(\.theme) private var theme
     
     var body: some View {
@@ -125,10 +126,30 @@ struct DailyRecurrenceView: View {
                 .themedPrimaryText()
                 .padding(.horizontal)
             
-            Text("task_repeat_every_day".localized)
-                .themedSecondaryText()
-                .font(.subheadline)
+            VStack(spacing: 12) {
+                HStack {
+                    Text("repeat_every".localized)
+                        .themedPrimaryText()
+                    Spacer()
+                    Stepper(value: $viewModel.dayInterval, in: 1...60) {
+                        let unit = viewModel.dayInterval == 1 ? "day_unit".localized : "days_unit".localized
+                        Text("\(viewModel.dayInterval) \(unit)")
+                            .foregroundColor(theme.primaryColor)
+                    }
+                    .frame(width: 200)
+                }
                 .padding(.horizontal)
+                
+                Text("anchored_to_task_start_date".localized)
+                    .font(.caption)
+                    .themedSecondaryText()
+                    .padding(.horizontal)
+                
+                Text(viewModel.dayInterval == 1 ? "repeats_every_day".localized : String(format: "repeats_every_n_days".localized, viewModel.dayInterval))
+                    .font(.caption)
+                    .foregroundColor(theme.primaryColor)
+                    .padding(.horizontal)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 16)

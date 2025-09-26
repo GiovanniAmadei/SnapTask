@@ -417,7 +417,7 @@ struct SettingsView: View {
                         }
                     }
                     .listRowBackground(theme.surfaceColor)
-                    
+
                     Button {
                         showingWelcome = true
                     } label: {
@@ -431,6 +431,33 @@ struct SettingsView: View {
                             
                             Spacer()
                             
+                            Image(systemName: "chevron.right")
+                                .themedSecondaryText()
+                                .font(.caption)
+                                .frame(width: 12, height: 12)
+                        }
+                    }
+                    .listRowBackground(theme.surfaceColor)
+
+                    Button {
+                        openAppStoreReviewPage()
+                    } label: {
+                        HStack {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                                .frame(width: 24)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("rate_app".localized)
+                                    .themedPrimaryText()
+                                    .font(.body)
+                                Text("rate_app_subtitle".localized)
+                                    .font(.caption)
+                                    .themedSecondaryText()
+                            }
+
+                            Spacer()
+
                             Image(systemName: "chevron.right")
                                 .themedSecondaryText()
                                 .font(.caption)
@@ -757,42 +784,91 @@ struct SettingsView: View {
     }
     
     private func scheduleDailyQuoteNotification() {
-        // Cancel existing notifications
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyQuote"])
-        
-        guard dailyQuoteNotificationsEnabled else { return }
-        
-        let content = UNMutableNotificationContent()
-        content.title = "your_daily_motivation".localized
-        content.body = quoteManager.getCurrentQuoteText()
-        content.sound = .default
-        content.badge = nil
-        
-        // Parse the time from dailyQuoteNotificationTime
-        let timeComponents = dailyQuoteNotificationTime.split(separator: ":")
-        guard timeComponents.count == 2,
-              let hour = Int(timeComponents[0]),
-              let minute = Int(timeComponents[1]) else { return }
-        
-        var dateComponents = DateComponents()
-        dateComponents.hour = hour
-        dateComponents.minute = minute
-        
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(identifier: "dailyQuote", content: content, trigger: trigger)
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print(" Error scheduling notification: \(error)")
-            } else {
-                print(" Daily quote notification scheduled for \(self.dailyQuoteNotificationTime)")
+        // Remove existing daily quote notifications (legacy id and new prefix-based ids)
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["dailyQuote"]) // legacy
+
+        center.getPendingNotificationRequests { requests in
+            let idsToRemove = requests
+                .filter { $0.identifier.hasPrefix("dailyQuote_") }
+                .map { $0.identifier }
+
+            if !idsToRemove.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
+                print(" Removed \(idsToRemove.count) existing daily quote notifications")
             }
+
+            guard dailyQuoteNotificationsEnabled else { return }
+
+            // Parse the time from dailyQuoteNotificationTime
+            let timeComponents = self.dailyQuoteNotificationTime.split(separator: ":")
+            guard timeComponents.count == 2,
+                  let hour = Int(timeComponents[0]),
+                  let minute = Int(timeComponents[1]) else { return }
+
+            let calendar = Calendar.current
+            let quoteService = QuoteService.shared
+
+            // Start from today
+            let today = Date()
+            var scheduledCount = 0
+
+            for offset in 0..<30 {
+                guard let baseDate = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+
+                var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
+                components.hour = hour
+                components.minute = minute
+
+                guard let fireDate = calendar.date(from: components) else { continue }
+
+                // Only schedule future notifications
+                if fireDate <= Date() { continue }
+
+                // Build identifier and content for that day
+                let idDateFormatter = DateFormatter()
+                idDateFormatter.dateFormat = "yyyy-MM-dd"
+                let idDateString = idDateFormatter.string(from: baseDate)
+                let identifier = "dailyQuote_\(idDateString)"
+
+                let dailyQuote = quoteService.quoteFor(date: baseDate)
+
+                let content = UNMutableNotificationContent()
+                content.title = "your_daily_motivation".localized
+                content.body = "\"\(dailyQuote.text)\" - \(dailyQuote.author)"
+                content.sound = .default
+                content.badge = nil
+
+                let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+                let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
+
+                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+                center.add(request) { error in
+                    if let error = error {
+                        print(" Error scheduling daily quote (\(identifier)): \(error)")
+                    }
+                }
+                scheduledCount += 1
+            }
+
+            print(" Scheduled \(scheduledCount) daily quote notifications starting at \(self.dailyQuoteNotificationTime)")
         }
     }
     
     private func cancelDailyQuoteNotification() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["dailyQuote"])
-        print(" Daily quote notification cancelled")
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["dailyQuote"]) // legacy
+        center.getPendingNotificationRequests { requests in
+            let idsToRemove = requests
+                .filter { $0.identifier.hasPrefix("dailyQuote_") }
+                .map { $0.identifier }
+            if !idsToRemove.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
+                print(" Daily quote notifications cancelled: removed \(idsToRemove.count) items")
+            } else {
+                print(" Daily quote notification cancelled (legacy only)")
+            }
+        }
     }
     
     private func loadNotificationTime() {
@@ -902,6 +978,22 @@ struct SettingsView: View {
         } else {
             showingEmailNotAvailableAlert = true
         }
+    }
+
+    private func openAppStoreReviewPage() {
+        let appId = "6746721766"
+        #if targetEnvironment(simulator)
+        let urls = [
+            "https://apps.apple.com/app/id\(appId)?action=write-review"
+        ]
+        #else
+        let urls = [
+            "itms-apps://itunes.apple.com/app/id\(appId)?action=write-review",
+            "itms-apps://apps.apple.com/app/id\(appId)?action=write-review",
+            "https://apps.apple.com/app/id\(appId)?action=write-review"
+        ]
+        #endif
+        openURLs(urls)
     }
 }
 

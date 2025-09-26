@@ -1,5 +1,32 @@
 import SwiftUI
+import ASBUtils
+import ASBModels
 import Combine
+
+class RemoteConfigManager: ObservableObject {
+    @Published var config: RemoteConfig? = nil
+    
+    var chatModels: [Model] {
+        config?.chat_models ?? []
+    }
+    
+    init() {
+        self.fetch()
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            self.fetch()
+        }
+    }
+    
+    func fetch() {
+        Task {
+            let info = try await api.getSuggestionsInfo()
+
+            await MainActor.run {
+                self.config = info
+            }
+        }
+    }
+}
 
 struct TimelineView: View {
     @StateObject var viewModel: TimelineViewModel
@@ -13,7 +40,6 @@ struct TimelineView: View {
         NavigationStack {
             GeometryReader { geometry in
                 VStack(spacing: 0) {
-                    // Header con mese e selettore data
                     TimelineHeaderView(
                         viewModel: viewModel,
                         selectedDayOffset: $selectedDayOffset,
@@ -23,7 +49,6 @@ struct TimelineView: View {
                     .themedSurface()
                     .zIndex(1)
                     
-                    // Subtle divider between header and controls
                     Divider()
                         .padding(.horizontal)
                         .foregroundColor(theme.borderColor)
@@ -32,13 +57,18 @@ struct TimelineView: View {
                         .themedSurface()
                         .zIndex(1)
                     
-                    // Subtle divider between controls and content
                     Divider()
                         .padding(.horizontal)
                         .foregroundColor(theme.borderColor)
                     
                     if viewModel.viewMode == .timeline && viewModel.selectedTimeScope == .today {
                         TimelineContentView(
+                            viewModel: viewModel,
+                            showingNewTask: $showingNewTask
+                        )
+                        .frame(maxHeight: .infinity)
+                    } else if viewModel.viewMode == .monthCalendar && viewModel.selectedTimeScope == .today {
+                        MonthCalendarView(
                             viewModel: viewModel,
                             showingNewTask: $showingNewTask
                         )
@@ -57,19 +87,13 @@ struct TimelineView: View {
             .sheet(isPresented: $showingNewTask) {
                 TaskCreationOptionsView(viewModel: viewModel)
             }
-            .sheet(isPresented: $showingCalendarPicker) {
-                CalendarPickerView(
-                    selectedDate: $viewModel.selectedDate,
-                    selectedDayOffset: $selectedDayOffset,
-                    viewModel: viewModel,
-                    scrollProxy: scrollProxy
-                )
+            .fullScreenCover(isPresented: $showingCalendarPicker) {
+                MonthlyCalendarView(viewModel: viewModel)
             }
             .sheet(isPresented: $viewModel.showingFilterSheet) {
                 TimelineOrganizationView(viewModel: viewModel)
             }
             .onChange(of: viewModel.selectedTimeScope) { newScope in
-                // Ensure timeline (hourly) view is only used for Today scope
                 if newScope != .today {
                     if viewModel.viewMode == .timeline {
                         viewModel.viewMode = .list
@@ -116,7 +140,6 @@ struct ViewControlBarView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // View mode toggle - styled with theme colors
             HStack(spacing: 2) {
                 ForEach(availableViewModes, id: \.self) { mode in
                     Button(action: {
@@ -127,7 +150,13 @@ struct ViewControlBarView: View {
                         HStack(spacing: 3) {
                             Image(systemName: mode.icon)
                                 .font(.system(size: 11, weight: .medium))
-                            Text(mode == .list ? "list".localized : "time".localized)
+                            Text({
+                                switch mode {
+                                case .list: return "list".localized
+                                case .timeline: return "time".localized
+                                case .monthCalendar: return "month".localized
+                                }
+                            }())
                                 .font(.system(size: 11, weight: .semibold))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
@@ -154,7 +183,6 @@ struct ViewControlBarView: View {
             
             Spacer()
             
-            // Organization status - themed
             HStack(spacing: 4) {
                 Image(systemName: viewModel.organization.icon)
                     .font(.system(size: 11, weight: .medium))
@@ -173,7 +201,6 @@ struct ViewControlBarView: View {
                     .fill(theme.surfaceColor)
             )
             
-            // Filter button - themed
             Button(action: {
                 viewModel.showingFilterSheet = true
             }) {
@@ -187,7 +214,6 @@ struct ViewControlBarView: View {
                     )
             }
             
-            // Reset button - themed
             if viewModel.organization != .none {
                 Button(action: {
                     viewModel.resetView()
@@ -234,11 +260,10 @@ struct TimelineContentView: View {
         let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
         
         if tasks.isEmpty {
-            // If no tasks, show around current time or reasonable default
             if viewModel.isToday {
                 return max(0, currentHour - 2)...min(23, currentHour + 8)
             } else {
-                return 8...20 // Default business hours
+                return 8...20 
             }
         }
         
@@ -246,11 +271,9 @@ struct TimelineContentView: View {
         let minHour = taskHours.min() ?? 8
         let maxHour = taskHours.max() ?? 20
         
-        // Expand range slightly for context
         let startHour = max(0, minHour - 1)
         let endHour = min(23, maxHour + 2)
         
-        // If viewing today, include current hour in range
         if viewModel.isToday {
             let expandedStart = min(startHour, max(0, currentHour - 1))
             let expandedEnd = max(endHour, min(23, currentHour + 2))
@@ -315,7 +338,6 @@ struct TimelineContentView: View {
                 }
             }
             
-            // Add Task Button - positioned at bottom center
             VStack {
                 Spacer()
                 AddTaskButton(
@@ -340,7 +362,6 @@ struct TimelineContentView: View {
     private func tasksForHour(_ hour: Int) -> [TodoTask] {
         let calendar = Calendar.current
         return viewModel.tasksForSelectedDate().filter { task in
-            // Only include tasks with specific time for timeline view
             guard task.hasSpecificTime else { return false }
             let taskHour = calendar.component(.hour, from: task.startTime)
             return taskHour == hour
@@ -354,15 +375,13 @@ struct TimelineContentView: View {
             isRefreshing = true
         }
         
-        // Trigger CloudKit sync
         cloudKitService.syncNow()
         
-        // Wait for sync to complete
-        for _ in 0..<10 { // Max 5 seconds wait
+        for _ in 0..<10 { 
             if cloudKitService.syncStatus == .success || cloudKitService.syncStatus.description.contains("error") {
                 break
             }
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000) 
         }
         
         await MainActor.run {
@@ -402,7 +421,6 @@ struct EnhancedTimelineHourRow: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                // Time column with enhanced current time indicator
                 VStack(spacing: 4) {
                     Text(hourString)
                         .font(.system(.caption, design: .monospaced))
@@ -432,22 +450,18 @@ struct EnhancedTimelineHourRow: View {
                 }
                 .frame(width: 60)
                 
-                // Task content area with smart layout
                 VStack(alignment: .leading, spacing: 8) {
                     if hasCurrentTask {
-                        // Show tasks for this hour
                         ForEach(tasks, id: \.id) { task in
                             EnhancedTimelineTaskView(task: task, viewModel: viewModel)
                         }
                     } else {
-                        // Show empty state with next task info
                         RoundedRectangle(cornerRadius: 12)
                             .fill(isCurrentHour ? theme.primaryColor.opacity(0.08) : theme.surfaceColor)
                             .frame(height: 50)
                             .overlay(
                                 VStack(spacing: 4) {
                                     if isCurrentHour && currentMinute != nil {
-                                        // Current time indicator line
                                         HStack {
                                             Circle()
                                                 .fill(theme.primaryColor)
@@ -470,7 +484,6 @@ struct EnhancedTimelineHourRow: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    // Enhanced background for current hour
                     isCurrentHour ?
                     RoundedRectangle(cornerRadius: 16)
                         .fill(theme.primaryColor.opacity(0.05))
@@ -484,7 +497,6 @@ struct EnhancedTimelineHourRow: View {
             }
             .padding(.vertical, 6)
             
-            // Connection line to next hour
             if !isLastHour {
                 HStack {
                     Spacer()
@@ -492,7 +504,6 @@ struct EnhancedTimelineHourRow: View {
                     
                     VStack(spacing: 0) {
                         if hasCurrentTask || nextTaskHour != nil {
-                            // Animated connection line
                             Rectangle()
                                 .fill(
                                     LinearGradient(
@@ -506,7 +517,6 @@ struct EnhancedTimelineHourRow: View {
                                 )
                                 .frame(width: 2, height: 20)
                         } else {
-                            // Dotted line for empty periods
                             VStack(spacing: 2) {
                                 ForEach(0..<4, id: \.self) { _ in
                                     Circle()
@@ -553,7 +563,6 @@ struct EnhancedTimelineTaskView: View {
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
     private var isCompleted: Bool {
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         if let completion = task.completions[completionDate] {
             return completion.isCompleted
@@ -581,7 +590,7 @@ struct EnhancedTimelineTaskView: View {
                 let hours = minutes / 60
                 return "in \(hours)h"
             }
-        } else if timeInterval > -3600 { // Within last hour
+        } else if timeInterval > -3600 { 
             return "now"
         }
         
@@ -612,7 +621,6 @@ struct EnhancedTimelineTaskView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Completion button
             Button(action: {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     viewModel.toggleTaskCompletion(task.id)
@@ -630,9 +638,7 @@ struct EnhancedTimelineTaskView: View {
             }
             .buttonStyle(BorderlessButtonStyle())
 
-            // Task content with shared leading column for category dot
             HStack(alignment: .top, spacing: 8) {
-                // Leading dot column (fixed width)
                 Group {
                     if let category = task.category {
                         Circle()
@@ -656,7 +662,6 @@ struct EnhancedTimelineTaskView: View {
                             .lineLimit(2)
                     }
                     
-                    // Priority and Pomodoro indicators
                     HStack(spacing: 8) {
                         Image(systemName: task.priority.icon)
                             .foregroundColor(Color(hex: task.priority.color))
@@ -686,7 +691,6 @@ struct EnhancedTimelineTaskView: View {
                     }
                 }
             }
-            // Trailing time info overlay on the whole content row
             .overlay(
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(taskTime)
@@ -761,10 +765,8 @@ struct TimelineHeaderView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Fixed height header - sempre la stessa altezza
             VStack(spacing: 8) {
                 HStack(alignment: .center) {
-                    // Period text - flexible but not compressed
                     Text(viewModel.currentPeriodString)
                         .font(.title2.bold())
                         .themedPrimaryText()
@@ -774,9 +776,7 @@ struct TimelineHeaderView: View {
                     
                     Spacer(minLength: 8)
                     
-                    // Navigation controls and menu - flexible layout
                     HStack(spacing: 8) {
-                        // Navigation arrows (when needed)
                         if viewModel.selectedTimeScope != .today && viewModel.selectedTimeScope != .longTerm {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -828,7 +828,6 @@ struct TimelineHeaderView: View {
                                         
                                         Spacer()
                                         
-                                        // Checkmark per opzione selezionata
                                         if viewModel.selectedTimeScope == scope {
                                             Image(systemName: "checkmark")
                                                 .foregroundColor(.blue)
@@ -868,7 +867,6 @@ struct TimelineHeaderView: View {
                         .menuStyle(.borderlessButton)
                         .fixedSize(horizontal: true, vertical: false)
                         
-                        // Calendar button (only for today)
                         if viewModel.selectedTimeScope == .today {
                             Button(action: { showingCalendarPicker = true }) {
                                 Image(systemName: "calendar")
@@ -887,7 +885,6 @@ struct TimelineHeaderView: View {
             }
             .frame(height: 60)
             
-            // Date selector only for 'today' scope
             if viewModel.selectedTimeScope == .today {
                 DateSelectorView(
                     viewModel: viewModel,
@@ -1011,7 +1008,6 @@ struct TaskListView: View {
     var body: some View {
         ZStack {
             if viewModel.tasks.isEmpty {
-                // Empty state
                 VStack(spacing: 20) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 64))
@@ -1090,7 +1086,6 @@ struct TaskListView: View {
                             
                             if pomodoroViewModel.hasActiveTask {
                                 MiniPomodoroWidget(viewModel: pomodoroViewModel) {
-                                    // Present on next run loop to stabilize presentation
                                     DispatchQueue.main.async {
                                         if pomodoroViewModel.activeTask != nil {
                                             showingActivePomodoroSession = true
@@ -1152,15 +1147,13 @@ struct TaskListView: View {
             isRefreshing = true
         }
         
-        // Trigger CloudKit sync
         cloudKitService.syncNow()
         
-        // Wait for sync to complete
-        for _ in 0..<10 { // Max 5 seconds wait
+        for _ in 0..<10 { 
             if cloudKitService.syncStatus == .success || cloudKitService.syncStatus.description.contains("error") {
                 break
             }
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000) 
         }
         
         await MainActor.run {
@@ -1359,7 +1352,6 @@ private struct TimelineTaskCard: View {
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
     private var isCompleted: Bool {
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         if let completion = task.completions[completionDate] {
             return completion.isCompleted
@@ -1377,7 +1369,6 @@ private struct TimelineTaskCard: View {
     }
 
     private var completedSubtasks: Set<UUID> {
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         return task.completions[completionDate]?.completedSubtasks ?? []
     }
@@ -1397,7 +1388,6 @@ private struct TimelineTaskCard: View {
             currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
         }
         
-        // Limit iterations to prevent infinite loops (max 1000 days back)
         var iterationCount = 0
         let maxIterations = 1000
         
@@ -1446,7 +1436,6 @@ private struct TimelineTaskCard: View {
 
     var body: some View {
         ZStack {
-            // Background actions layer
             HStack(spacing: 0) {
                 Spacer()
                 
@@ -1516,7 +1505,6 @@ private struct TimelineTaskCard: View {
                 .opacity(dragOffset.magnitude > 40 ? min(1.0, (dragOffset.magnitude - 40.0) / 60.0) : 0.0)
             }
             
-            // Main task card content
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 8) {
                     Rectangle()
@@ -1937,7 +1925,6 @@ struct CompactTimelineTaskView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         if let completion = task.completions[completionDate] {
             return completion.isCompleted

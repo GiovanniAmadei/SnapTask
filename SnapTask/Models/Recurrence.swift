@@ -42,6 +42,7 @@ struct Recurrence: Codable, Equatable, Hashable {
     
     private enum CodingKeys: String, CodingKey {
         case type, endDate, trackInStatistics, startDate
+        case dayInterval
         case weekInterval, weekModuloK, weekModuloOffset, weekSelectedOrdinals
         case monthInterval, monthSelectedMonths
         case yearInterval, yearModuloK, yearModuloOffset
@@ -52,6 +53,7 @@ struct Recurrence: Codable, Equatable, Hashable {
     let endDate: Date?
     let trackInStatistics: Bool
     
+    var dayInterval: Int? = nil
     var weekInterval: Int? = nil
     var weekModuloK: Int? = nil
     var weekModuloOffset: Int? = nil
@@ -90,6 +92,7 @@ struct Recurrence: Codable, Equatable, Hashable {
         yearInterval = try container.decodeIfPresent(Int.self, forKey: .yearInterval)
         yearModuloK = try container.decodeIfPresent(Int.self, forKey: .yearModuloK)
         yearModuloOffset = try container.decodeIfPresent(Int.self, forKey: .yearModuloOffset)
+        dayInterval = try container.decodeIfPresent(Int.self, forKey: .dayInterval)
     }
 }
 
@@ -111,6 +114,14 @@ extension Recurrence {
         
         switch self.type {
         case .daily:
+            // Day-level gating (interval)
+            if let interval = dayInterval, interval > 1 {
+                if let days = calendar.dateComponents([.day], from: recurrenceStart, to: targetDay).day, days >= 0 {
+                    return days % interval == 0
+                } else {
+                    return false
+                }
+            }
             return true
             
         case .weekly(let days):

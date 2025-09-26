@@ -180,7 +180,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler([.banner, .sound])
         } else if notification.request.identifier.hasPrefix("task_") {
             completionHandler([.banner, .sound])
-        } else if notification.request.identifier == "dailyQuote" {
+        } else if notification.request.identifier == "dailyQuote" || notification.request.identifier.hasPrefix("dailyQuote_") {
             completionHandler([.banner, .sound])
         } else {
             completionHandler([.alert, .sound])
@@ -191,7 +191,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let identifier = response.notification.request.identifier
         
-        if identifier == "dailyQuote" {
+        if identifier == "dailyQuote" || identifier.hasPrefix("dailyQuote_") {
             // User tapped daily quote notification
             Task {
                 await QuoteManager.shared.forceUpdateQuote()

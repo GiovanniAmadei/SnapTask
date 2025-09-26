@@ -1,7 +1,6 @@
 import Foundation
 import Combine
 import EventKit
-import WidgetKit
 
 @MainActor
 class TaskManager: ObservableObject {
@@ -25,6 +24,7 @@ class TaskManager: ObservableObject {
         loadTasks()
         loadTrackingSessions()
         setupCloudKitObservers()
+        applyCarryOverIfNeeded()
     }
     
     private func setupCloudKitObservers() {
@@ -740,8 +740,6 @@ class TaskManager: ObservableObject {
             appGroupUserDefaults?.set(data, forKey: tasksKey)
             appGroupUserDefaults?.synchronize()
             
-            WidgetCenter.shared.reloadAllTimelines()
-            
             print(" App: Saved \(tasks.count) tasks to both UserDefaults")
             NSLog(" APP DEBUG: Saved \(tasks.count) tasks to shared UserDefaults")
             
@@ -982,6 +980,70 @@ class TaskManager: ObservableObject {
         if newTask.hasNotification && newTask.hasSpecificTime {
             await handleTaskNotification(newTask, isNew: false)
         }
+    }
+
+    private func applyCarryOverIfNeeded() {
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: Date())
+        let lastKey = "lastCarryOverCheckDate"
+        
+        if let lastDate = UserDefaults.standard.object(forKey: lastKey) as? Date {
+            if calendar.isDate(lastDate, inSameDayAs: todayStart) {
+                return
+            }
+        }
+        
+        var changedTasks: [TodoTask] = []
+        
+        for i in tasks.indices {
+            var task = tasks[i]
+            guard task.autoCarryOver,
+                  task.recurrence == nil,
+                  task.timeScope == .today else { continue }
+            
+            let taskDay = calendar.startOfDay(for: task.startTime)
+            if taskDay >= todayStart { continue }
+            
+            var newStart = task.startTime
+            var moved = false
+            
+            while calendar.startOfDay(for: newStart) < todayStart {
+                let dayKey = calendar.startOfDay(for: newStart)
+                let wasCompleted = task.completions[dayKey]?.isCompleted ?? false
+                if wasCompleted { break }
+                if let plusOne = calendar.date(byAdding: .day, value: 1, to: newStart) {
+                    newStart = plusOne
+                    moved = true
+                } else {
+                    break
+                }
+            }
+            
+            if moved {
+                task.startTime = newStart
+                task.lastModifiedDate = Date()
+                tasks[i] = task
+                changedTasks.append(task)
+                
+                if task.hasNotification && task.hasSpecificTime {
+                    Task { [oldTask = task] in
+                        self.notificationManager.cancelAllNotificationsForTask(oldTask.id)
+                        await self.handleTaskNotification(oldTask, isNew: false)
+                    }
+                }
+            }
+        }
+        
+        if !changedTasks.isEmpty {
+            saveTasks()
+            notifyTasksUpdated()
+            objectWillChange.send()
+            for t in changedTasks {
+                debouncedSaveTask(t)
+            }
+        }
+        
+        UserDefaults.standard.set(todayStart, forKey: lastKey)
     }
 
 }

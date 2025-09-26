@@ -118,6 +118,7 @@
 "medium_priority" = "Medium";
 "low_priority" = "Low";
 "no_tasks_today" = "No tasks for today";
+"no_tasks_this_day" = "No tasks for this day";
 "task_details" = "Task Details";
 "due_tasks" = "Due Tasks";
 "no_tasks_due" = "No Tasks Due";
@@ -139,6 +140,13 @@
 "recurrence_settings" = "Recurrence Settings";
 "repeat_settings" = "Repeat Settings";
 "select_days" = "Select Days";
+// Daily interval UI
+"repeat_every" = "Repeat every";
+"day_unit" = "day";
+"days_unit" = "days";
+"anchored_to_task_start_date" = "Anchored to the task start date.";
+"repeats_every_day" = "Repeats every day";
+"repeats_every_n_days" = "Repeats every %d days";
 // Recurrence adaptation
 "adapted_to_scope" = "Adapted to selected scope";
 "no_recurrence_long_term" = "No recurrence for long-term goals";
@@ -672,6 +680,8 @@
 "your_daily_motivation" = "Your Daily Motivation";
 "help_continue_improving" = "Help us continue improving SnapTask";
 "support_development" = "Support Development";
+"rate_app" = "Rate SnapTask";
+"rate_app_subtitle" = "Enjoying SnapTask? Leave us a review!";
 "data_management" = "Data Management";
 "delete_all_data" = "Delete All Data";
 "delete_all_data_description" = "Delete all tasks, categories, statistics, and rewards";

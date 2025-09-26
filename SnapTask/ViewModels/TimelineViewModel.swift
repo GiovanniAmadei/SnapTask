@@ -397,7 +397,11 @@ class TimelineViewModel: ObservableObject {
         if tasks.isEmpty {
             switch selectedTimeScope {
             case .today:
-                return "no_tasks_today".localized
+                if Calendar.current.isDateInToday(selectedDate) {
+                    return "no_tasks_today".localized
+                } else {
+                    return "no_tasks_this_day".localized
+                }
             case .week:
                 return "no_tasks_this_week".localized
             case .month:

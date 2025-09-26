@@ -61,6 +61,7 @@ extension String {
     static var mediumPriority: String { "medium_priority".localized }
     static var lowPriority: String { "low_priority".localized }
     static var noTasksToday: String { "no_tasks_today".localized }
+    static var noTasksThisDay: String { "no_tasks_this_day".localized }
     static var taskDetails: String { "task_details".localized }
     static var dueTasks: String { "due_tasks".localized }
     static var noTasksDue: String { "no_tasks_due".localized }

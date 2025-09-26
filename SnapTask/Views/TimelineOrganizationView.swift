@@ -4,6 +4,15 @@ struct TimelineOrganizationView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
+    
+    private var availableOrganizations: [TimelineOrganization] {
+        // Hide time-based organization for non-daily scopes
+        if viewModel.selectedTimeScope == .today {
+            return TimelineOrganization.allCases
+        } else {
+            return TimelineOrganization.allCases.filter { $0 != .time }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -19,7 +28,7 @@ struct TimelineOrganizationView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
                             VStack(spacing: 8) {
-                                ForEach(TimelineOrganization.allCases, id: \.self) { organization in
+                                ForEach(availableOrganizations, id: \.self) { organization in
                                     Button(action: {
                                         viewModel.organization = organization
                                     }) {
@@ -77,8 +86,8 @@ struct TimelineOrganizationView: View {
                         )
                         .padding(.horizontal, 16)
                         
-                        // Time Sort Order (only when organizing by time)
-                        if viewModel.organization == .time {
+                        // Time Sort Order (only when organizing by time and Today scope)
+                        if viewModel.selectedTimeScope == .today && viewModel.organization == .time {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text("time_sort_order_title".localized)
                                     .font(.system(size: 18, weight: .semibold))

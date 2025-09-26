@@ -131,6 +131,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var selectedOrdinalPatterns: Set<Recurrence.OrdinalPattern> = []
     @Published var yearlyDate: Date = Date()
     @Published var weeklyTimes: [Int: Date] = [:]
+    @Published var dayInterval: Int = 1
     @Published var hasRecurrenceEndDate: Bool = false
     @Published var recurrenceEndDate: Date = Date().addingTimeInterval(86400 * 30)
     @Published var trackInStatistics: Bool = true
@@ -146,7 +147,8 @@ class TaskFormViewModel: ObservableObject {
     }
     @Published var useCustomPoints = false
     @Published var customPointsText = "5"
-    
+    @Published var autoCarryOver: Bool = false
+
     // MARK: - TimeScope Properties
     @Published var selectedTimeScope: TaskTimeScope = .today
     @Published var selectedWeekDate: Date = Date()
@@ -290,6 +292,24 @@ class TaskFormViewModel: ObservableObject {
             return String(selectedYear)
         case .longTerm:
             return "long_term_goal".localized
+        }
+    }
+    
+    // Title for the Time Scope menu button
+    var timeScopeTitle: String {
+        switch selectedTimeScope {
+        case .today:
+            let cal = Calendar.current
+            if cal.isDateInToday(startDate) {
+                return TaskTimeScope.today.displayName
+            } else {
+                let f = DateFormatter()
+                // Localized format like "7 Sep 2025"
+                f.setLocalizedDateFormatFromTemplate("d MMM yyyy")
+                return f.string(from: startDate)
+            }
+        default:
+            return selectedTimeScope.displayName
         }
     }
     
@@ -471,7 +491,8 @@ class TaskFormViewModel: ObservableObject {
             timeScope: selectedTimeScope,
             scopeStartDate: scopeStartDate,
             scopeEndDate: scopeEndDate,
-            notificationLeadTimeMinutes: notificationLeadTimeMinutes
+            notificationLeadTimeMinutes: notificationLeadTimeMinutes,
+            autoCarryOver: autoCarryOver
         )
     }
     
@@ -482,7 +503,9 @@ class TaskFormViewModel: ObservableObject {
         
         switch recurrenceType {
         case .daily:
-            return Recurrence(type: .daily, startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+            var rec = Recurrence(type: .daily, startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+            if dayInterval > 1 { rec.dayInterval = dayInterval }
+            return rec
             
         case .weekly:
             var days = selectedDays
@@ -639,6 +662,7 @@ class TaskFormViewModel: ObservableObject {
         weeklyTimes = [:]
         hasRecurrenceEndDate = false
         recurrenceEndDate = Date().addingTimeInterval(86400 * 30)
+        dayInterval = 1
         trackInStatistics = true
         hasRewardPoints = false
         rewardPoints = 5
@@ -651,6 +675,7 @@ class TaskFormViewModel: ObservableObject {
         selectedMonth = Calendar.current.component(.month, from: Date())
         selectedYear = Calendar.current.component(.year, from: Date())
         taskId = nil
+        autoCarryOver = false
     }
     
     static var shared: TaskFormViewModel?

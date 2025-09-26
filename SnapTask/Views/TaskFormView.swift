@@ -58,7 +58,7 @@ struct TaskFormView: View {
             vm.selectedTimeScope = initialTask.timeScope
             vm.hasSpecificTime = initialTask.hasSpecificTime
             vm.notificationLeadTimeMinutes = initialTask.notificationLeadTimeMinutes
-            
+            vm.autoCarryOver = initialTask.autoCarryOver
             // Set specific period dates based on existing task
             if let scopeStart = initialTask.scopeStartDate {
                 let calendar = Calendar.current
@@ -235,7 +235,7 @@ struct TaskFormView: View {
                                         Image(systemName: viewModel.selectedTimeScope.icon)
                                             .font(.system(size: 12))
                                             .foregroundColor(Color(viewModel.selectedTimeScope.color))
-                                        Text(viewModel.selectedTimeScope.displayName)
+                                        Text(viewModel.timeScopeTitle)
                                             .font(.subheadline.weight(.semibold))
                                             .themedPrimaryText()
                                             .lineLimit(1)
@@ -326,6 +326,25 @@ struct TaskFormView: View {
                                             removal: .opacity.animation(.easeInOut(duration: 0.3))
                                         ))
                                     }
+                                }
+                                
+                                if !viewModel.isRecurring {
+                                    HStack(alignment: .center) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Rinvia a domani se non completata")
+                                                .font(.subheadline.weight(.medium))
+                                                .themedPrimaryText()
+                                            Text("Se non la completi entro la giornata, verrà spostata automaticamente a domani.")
+                                                .font(.caption)
+                                                .themedSecondaryText()
+                                        }
+                                        Spacer()
+                                        ModernToggle(isOn: $viewModel.autoCarryOver)
+                                    }
+                                    .transition(.asymmetric(
+                                        insertion: .opacity,
+                                        removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                    ))
                                 }
                             } else {
                                 // For other time scopes, show period selector
