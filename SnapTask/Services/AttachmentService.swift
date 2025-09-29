@@ -11,6 +11,13 @@ enum AttachmentService {
         attachmentsRoot.appendingPathComponent(taskId.uuidString, isDirectory: true)
     }
     
+    private static func journalFolder(for entryId: UUID) -> URL {
+        attachmentsRoot.appendingPathComponent("Journal", isDirectory: true)
+            .appendingPathComponent(entryId.uuidString, isDirectory: true)
+    }
+    
+    // MARK: - Task Photos
+    
     static func savePhoto(for taskId: UUID, imageData: Data) -> (photoPath: String, thumbnailPath: String)? {
         guard let original = UIImage(data: imageData) else { return nil }
         
@@ -90,6 +97,52 @@ enum AttachmentService {
         let folder = taskFolder(for: taskId)
         try? FileManager.default.removeItem(at: folder)
     }
+    
+    // MARK: - Journal Photos
+    
+    static func addJournalPhoto(for entryId: UUID, imageData: Data, id: UUID, createdAt: Date) -> JournalPhoto? {
+        guard let original = UIImage(data: imageData) else { return nil }
+        let scaled = downscale(image: original, maxDimension: 1600)
+        guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
+        
+        let thumb = downscale(image: scaled, maxDimension: 200)
+        guard let thumbJpeg = thumb.jpegData(compressionQuality: 0.8) else { return nil }
+        
+        let folder = journalFolder(for: entryId)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        } catch {
+            return nil
+        }
+        
+        let photoURL = folder.appendingPathComponent("photo_\(id.uuidString).jpg")
+        let thumbURL = folder.appendingPathComponent("thumb_\(id.uuidString).jpg")
+        
+        do {
+            try jpeg.write(to: photoURL, options: .atomic)
+            try thumbJpeg.write(to: thumbURL, options: .atomic)
+            return JournalPhoto(id: id, photoPath: photoURL.path, thumbnailPath: thumbURL.path, createdAt: createdAt)
+        } catch {
+            return nil
+        }
+    }
+    
+    static func deleteJournalPhoto(for entryId: UUID, photo: JournalPhoto) {
+        if FileManager.default.fileExists(atPath: photo.photoPath) {
+            try? FileManager.default.removeItem(atPath: photo.photoPath)
+        }
+        if FileManager.default.fileExists(atPath: photo.thumbnailPath) {
+            try? FileManager.default.removeItem(atPath: photo.thumbnailPath)
+        }
+        
+        // Optionally remove empty folder
+        let folder = journalFolder(for: entryId)
+        if let items = try? FileManager.default.contentsOfDirectory(atPath: folder.path), items.isEmpty {
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+    
+    // MARK: - Common
     
     static func loadImage(from path: String) -> UIImage? {
         return UIImage(contentsOfFile: path)

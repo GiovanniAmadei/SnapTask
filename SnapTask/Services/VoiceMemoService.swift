@@ -22,6 +22,11 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
     private func taskFolder(for taskId: UUID) -> URL {
         attachmentsRoot.appendingPathComponent(taskId.uuidString, isDirectory: true)
     }
+    
+    private func journalFolder(for entryId: UUID) -> URL {
+        attachmentsRoot.appendingPathComponent("Journal", isDirectory: true)
+            .appendingPathComponent(entryId.uuidString, isDirectory: true)
+    }
 
     func requestPermission() async -> Bool {
         await withCheckedContinuation { cont in
@@ -30,6 +35,8 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
             }
         }
     }
+
+    // MARK: - Task Voice Memos
 
     func startRecording(for taskId: UUID) throws {
         if isRecording {
@@ -90,6 +97,69 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
         return memo
     }
 
+    // MARK: - Journal Voice Memos
+
+    func startJournalRecording(for entryId: UUID) throws {
+        if isRecording {
+            stopJournalRecording()
+        }
+
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+        try session.setActive(true, options: .notifyOthersOnDeactivation)
+
+        let folder = journalFolder(for: entryId)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        let uid = UUID().uuidString
+        let fileURL = folder.appendingPathComponent("journal_memo_\(uid).m4a")
+
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: 44100,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
+            AVEncoderBitRateKey: 128_000
+        ]
+
+        let recorder = try AVAudioRecorder(url: fileURL, settings: settings)
+        recorder.delegate = self
+        recorder.isMeteringEnabled = true
+        recorder.prepareToRecord()
+        recorder.record()
+
+        self.recorder = recorder
+        self.currentFileURL = fileURL
+        self.recordingStartDate = Date()
+        self.isRecording = true
+        
+        try startRealTimeWaveform()
+    }
+
+    func stopJournalRecording() -> JournalVoiceMemo? {
+        guard isRecording, let url = currentFileURL else { return nil }
+        recorder?.stop()
+        recorder = nil
+        isRecording = false
+        stopRealTimeWaveform()
+
+        let asset = AVURLAsset(url: url)
+        let durationSeconds = CMTimeGetSeconds(asset.duration)
+
+        let memo = JournalVoiceMemo(audioPath: url.path, duration: durationSeconds, createdAt: recordingStartDate ?? Date())
+
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+        }
+
+        currentFileURL = nil
+        recordingStartDate = nil
+        return memo
+    }
+
+    // MARK: - Common Methods
+
     func cancelRecordingAndDeleteFile() {
         recorder?.stop()
         if let url = currentFileURL {
@@ -112,7 +182,19 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
         }
     }
 
+    func deleteJournalMemo(_ memo: JournalVoiceMemo) {
+        if FileManager.default.fileExists(atPath: memo.audioPath) {
+            try? FileManager.default.removeItem(atPath: memo.audioPath)
+        }
+    }
+
     func renameMemo(_ memo: TaskVoiceMemo, to newName: String) -> TaskVoiceMemo {
+        var updatedMemo = memo
+        updatedMemo.name = newName.isEmpty ? nil : newName
+        return updatedMemo
+    }
+
+    func renameJournalMemo(_ memo: JournalVoiceMemo, to newName: String) -> JournalVoiceMemo {
         var updatedMemo = memo
         updatedMemo.name = newName.isEmpty ? nil : newName
         return updatedMemo

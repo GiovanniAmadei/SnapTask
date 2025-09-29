@@ -12,6 +12,7 @@ struct SnapTaskApp: App {
     @StateObject private var cloudKitService = CloudKitService.shared
     @StateObject private var firebaseService = FirebaseService.shared
     @StateObject private var settingsManager = CloudKitSettingsManager.shared
+    @StateObject private var moodManager = MoodManager.shared // Add mood manager initialization
     @Environment(\.scenePhase) var scenePhase
     @AppStorage("isDarkMode") private var isDarkMode = false
     

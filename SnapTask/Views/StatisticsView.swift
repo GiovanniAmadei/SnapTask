@@ -169,6 +169,7 @@ private struct OverviewTab: View {
                 TimeDistributionCard(viewModel: viewModel)
                 TaskCompletionCard(viewModel: viewModel)
                 OverallStreakCard(viewModel: viewModel)
+                MoodTrendCard(timeRange: viewModel.selectedTimeRange)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)

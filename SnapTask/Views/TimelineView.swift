@@ -758,13 +758,13 @@ struct TimelineHeaderView: View {
     @Binding var showingCalendarPicker: Bool
     @Binding var scrollProxy: ScrollViewProxy?
     @Environment(\.theme) private var theme
-    
+    @State private var showingJournal = false
+    @ObservedObject private var journalManager = JournalManager.shared
+
     var body: some View {
         VStack(spacing: 0) {
-            // Fixed height header - sempre la stessa altezza
             VStack(spacing: 8) {
                 HStack(alignment: .center) {
-                    // Period text - flexible but not compressed
                     Text(viewModel.currentPeriodString)
                         .font(.title2.bold())
                         .themedPrimaryText()
@@ -772,11 +772,38 @@ struct TimelineHeaderView: View {
                         .minimumScaleFactor(0.7)
                         .layoutPriority(1)
                     
+                    Button(action: { showingJournal = true }) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(theme.primaryColor.opacity(0.12))
+                                .frame(width: 34, height: 34)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
+                                )
+                                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+
+                            Image(systemName: "book.closed.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(theme.primaryColor)
+
+                            if hasJournalContentForSelectedDate {
+                                Circle()
+                                    .fill(theme.accentColor)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 12, y: -12)
+                                    .shadow(color: theme.accentColor.opacity(0.5), radius: 2)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showingJournal) {
+                        JournalView(date: viewModel.selectedDate)
+                    }
+                    
                     Spacer(minLength: 8)
                     
-                    // Navigation controls and menu - flexible layout
                     HStack(spacing: 8) {
-                        // Navigation arrows (when needed)
                         if viewModel.selectedTimeScope != .today && viewModel.selectedTimeScope != .longTerm {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -828,7 +855,6 @@ struct TimelineHeaderView: View {
                                         
                                         Spacer()
                                         
-                                        // Checkmark per opzione selezionata
                                         if viewModel.selectedTimeScope == scope {
                                             Image(systemName: "checkmark")
                                                 .foregroundColor(.blue)
@@ -868,7 +894,10 @@ struct TimelineHeaderView: View {
                         .menuStyle(.borderlessButton)
                         .fixedSize(horizontal: true, vertical: false)
                         
-                        // Calendar button (only for today)
+                        Button(action: {
+                        }) {
+                        }
+                        
                         if viewModel.selectedTimeScope == .today {
                             Button(action: { showingCalendarPicker = true }) {
                                 Image(systemName: "calendar")
@@ -887,7 +916,6 @@ struct TimelineHeaderView: View {
             }
             .frame(height: 60)
             
-            // Date selector only for 'today' scope
             if viewModel.selectedTimeScope == .today {
                 DateSelectorView(
                     viewModel: viewModel,
@@ -897,6 +925,11 @@ struct TimelineHeaderView: View {
                 .padding(.top, 4)
             }
         }
+    }
+
+    private var hasJournalContentForSelectedDate: Bool {
+        let entry = journalManager.entry(for: viewModel.selectedDate)
+        return !entry.isEmpty
     }
 }
 
