@@ -211,6 +211,8 @@ struct TimelineOrganizationView: View {
             return "group_by_category_description".localized
         case .priority:
             return "group_by_priority_description".localized
+        case .eisenhower:
+            return "group_by_urgency_importance_description".localized
         case .none:
             return ""
         }

@@ -1065,40 +1065,48 @@ struct TaskListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        switch viewModel.organizedTasksForSelectedDate() {
-                        case .single(let tasks):
-                            ForEach(tasks, id: \.id) { task in
-                                TimelineTaskCard(
-                                    task: task,
-                                    onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
-                                    onToggleSubtask: { subtaskId in
-                                        viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
-                                    },
-                                    viewModel: viewModel
-                                )
-                            }
-                        
-                        case .sections(let sections):
-                            ForEach(sections) { section in
-                                OrganizedTaskSection(
-                                    section: section,
-                                    viewModel: viewModel
-                                )
+                if viewModel.organization == .eisenhower {
+                    EisenhowerMatrixView(viewModel: viewModel)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 8)
+                        .padding(.top, 8)
+                        .padding(.bottom, 100)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            switch viewModel.organizedTasksForSelectedDate() {
+                            case .single(let tasks):
+                                ForEach(tasks, id: \.id) { task in
+                                    TimelineTaskCard(
+                                        task: task,
+                                        onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
+                                        onToggleSubtask: { subtaskId in
+                                            viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
+                                        },
+                                        viewModel: viewModel
+                                    )
+                                }
+                            
+                            case .sections(let sections):
+                                ForEach(sections) { section in
+                                    OrganizedTaskSection(
+                                        section: section,
+                                        viewModel: viewModel
+                                    )
+                                }
                             }
                         }
+                        .padding(.horizontal, 4)
+                        .padding(.bottom, 100)
+                        .padding(.top, 8)
+                        .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
                     }
-                    .padding(.horizontal, 4)
-                    .padding(.bottom, 100)
-                    .padding(.top, 8)
-                    .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
-                }
-                .refreshable {
-                    await performCloudKitSync()
-                }
-                .onTapGesture {
-                    viewModel.closeAllSwipeMenus()
+                    .refreshable {
+                        await performCloudKitSync()
+                    }
+                    .onTapGesture {
+                        viewModel.closeAllSwipeMenus()
+                    }
                 }
             }
             

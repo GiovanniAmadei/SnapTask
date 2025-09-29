@@ -118,6 +118,8 @@ struct TimelineFilterView: View {
             return "Group tasks under their categories"
         case .priority:
             return "Group tasks by priority level"
+        case .eisenhower:
+            return "Group tasks by urgency and importance (Eisenhower matrix)"
         case .none:
             return ""
         }

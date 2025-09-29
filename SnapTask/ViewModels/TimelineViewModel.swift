@@ -26,6 +26,7 @@ enum TimelineOrganization: String, CaseIterable {
     case time = "time"
     case category = "category" 
     case priority = "priority"
+    case eisenhower = "eisenhower"
     case none = "none"
     
     var displayName: String {
@@ -33,6 +34,7 @@ enum TimelineOrganization: String, CaseIterable {
         case .time: return "by_time".localized
         case .category: return "by_category".localized
         case .priority: return "by_priority".localized
+        case .eisenhower: return "eisenhower_matrix".localized
         case .none: return "default".localized
         }
     }
@@ -42,6 +44,7 @@ enum TimelineOrganization: String, CaseIterable {
         case .time: return "clock"
         case .category: return "folder"
         case .priority: return "exclamationmark.triangle"
+        case .eisenhower: return "square.grid.2x2"
         case .none: return "list.bullet"
         }
     }
@@ -550,6 +553,16 @@ class TimelineViewModel: ObservableObject {
             
         case .priority:
             return organizeByPriority(scopedTasks)
+            
+        case .eisenhower:
+            let (q1, q2, q3, q4) = eisenhowerQuadrants(scopedTasks)
+            let sections: [TaskSection] = [
+                TaskSection(id: "q1", title: "urgent_important".localized, color: "#EF4444", icon: "flame.fill", tasks: q1),
+                TaskSection(id: "q2", title: "not_urgent_important".localized, color: "#3B82F6", icon: "calendar", tasks: q2),
+                TaskSection(id: "q3", title: "urgent_not_important".localized, color: "#F59E0B", icon: "bolt.fill", tasks: q3),
+                TaskSection(id: "q4", title: "not_urgent_not_important".localized, color: "#9CA3AF", icon: "square.dashed", tasks: q4),
+            ]
+            return OrganizedTasks.sections(sections)
         }
     }
     
@@ -616,6 +629,8 @@ class TimelineViewModel: ObservableObject {
             return "by_category".localized
         case .priority:
             return "by_priority".localized
+        case .eisenhower:
+            return "eisenhower_matrix".localized
         }
     }
     
@@ -793,6 +808,90 @@ class TimelineViewModel: ObservableObject {
         return openSwipeTaskId == taskId
     }
     
+    private func isImportant(_ task: TodoTask) -> Bool {
+        return task.priority == .high
+    }
+
+    private func dueDate(for task: TodoTask) -> Date? {
+        let cal = Calendar.current
+        switch task.timeScope {
+        case .today:
+            if task.hasSpecificTime {
+                return task.startTime
+            } else {
+                return cal.date(bySettingHour: 23, minute: 59, second: 59, of: cal.startOfDay(for: task.startTime))
+            }
+        case .week:
+            let start = currentWeek
+            let end = cal.date(byAdding: .day, value: 6, to: start) ?? start
+            return task.scopeEndDate ?? end
+        case .month:
+            let start = currentMonth
+            let end = (cal.date(byAdding: .month, value: 1, to: start) ?? start).addingTimeInterval(-1)
+            return task.scopeEndDate ?? end
+        case .year:
+            let start = currentYear
+            let end = (cal.date(byAdding: .year, value: 1, to: start) ?? start).addingTimeInterval(-1)
+            return task.scopeEndDate ?? end
+        case .longTerm:
+            return nil
+        }
+    }
+
+    private func isUrgent(_ task: TodoTask) -> Bool {
+        guard let due = dueDate(for: task) else { return false }
+        let now = Date()
+        if due <= now { return true }
+
+        // Thresholds by scope
+        let threshold: TimeInterval
+        switch selectedTimeScope {
+        case .today:
+            // Only consider urgent if has a specific time within 4 hours
+            if !task.hasSpecificTime { return false }
+            threshold = 4 * 3600
+        case .week:
+            threshold = 24 * 3600
+        case .month:
+            threshold = 3 * 24 * 3600
+        case .year:
+            threshold = 14 * 24 * 3600
+        case .longTerm:
+            return false
+        }
+        return due.timeIntervalSince(now) <= threshold
+    }
+
+    func eisenhowerQuadrants(_ source: [TodoTask]? = nil) -> ([TodoTask], [TodoTask], [TodoTask], [TodoTask]) {
+        let scoped = source ?? tasks
+        var q1: [TodoTask] = [] // Urgent + Important
+        var q2: [TodoTask] = [] // Not Urgent + Important
+        var q3: [TodoTask] = [] // Urgent + Not Important
+        var q4: [TodoTask] = [] // Not Urgent + Not Important
+
+        for task in scoped {
+            let important = isImportant(task)
+            let urgent = isUrgent(task)
+            switch (urgent, important) {
+            case (true, true): q1.append(task)
+            case (false, true): q2.append(task)
+            case (true, false): q3.append(task)
+            case (false, false): q4.append(task)
+            }
+        }
+
+        // Keep time order inside each quadrant
+        let sorted: ([TodoTask]) -> [TodoTask] = { arr in
+            arr.sorted { lhs, rhs in
+                if lhs.startTime != rhs.startTime {
+                    return lhs.startTime < rhs.startTime
+                }
+                return lhs.creationDate < rhs.creationDate
+            }
+        }
+
+        return (sorted(q1), sorted(q2), sorted(q3), sorted(q4))
+    }
 }
 
 enum OrganizedTasks {
