@@ -2242,15 +2242,8 @@ private struct TaskPerformanceChartView: View {
                         y: .value("Quality", point.1)
                     )
                     .foregroundStyle(Color(hex: analytics.categoryColor ?? "#6366F1"))
-                    .lineStyle(.init(lineWidth: 3.0, lineCap: .round))
-                    
-                    PointMark(
-                        x: .value("Date", point.0),
-                        y: .value("Difficulty", point.1)
-                    )
-                    .foregroundStyle(Color(hex: analytics.categoryColor ?? "#6366F1"))
-                    .symbolSize(60)
-                    .symbol(.circle)
+                    .lineStyle(.init(lineWidth: 2.5, lineCap: .round))
+                    .interpolationMethod(.catmullRom)
                 }
                 .frame(height: 200)
                 .chartYScale(domain: 0...10)
@@ -2327,15 +2320,8 @@ private struct TaskPerformanceChartView: View {
                         y: .value("Difficulty", point.1)
                     )
                     .foregroundStyle(Color(hex: analytics.categoryColor ?? "#6366F1"))
-                    .lineStyle(.init(lineWidth: 3.0, lineCap: .round))
-                    
-                    PointMark(
-                        x: .value("Date", point.0),
-                        y: .value("Difficulty", point.1)
-                    )
-                    .foregroundStyle(Color(hex: analytics.categoryColor ?? "#6366F1"))
-                    .symbolSize(60)
-                    .symbol(.circle)
+                    .lineStyle(.init(lineWidth: 2.5, lineCap: .round))
+                    .interpolationMethod(.catmullRom)
                 }
                 .frame(height: 200)
                 .chartYScale(domain: 0...10)
@@ -2498,32 +2484,33 @@ private struct TaskDetailMetricCard: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundColor(color)
-                Spacer()
-            }
+        VStack(alignment: .center, spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(color)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.title3.bold())
-                    .themedPrimaryText()
-                
-                Text(title)
-                    .font(.caption)
-                    .themedSecondaryText()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(value)
+                .font(.title3.bold())
+                .themedPrimaryText()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            
+            Text(title)
+                .font(.caption2)
+                .themedSecondaryText()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(12)
+        .frame(maxWidth: .infinity)
+        .frame(height: 70)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(theme.surfaceColor)
+            RoundedRectangle(cornerRadius: 10)
+                .fill(theme.backgroundColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(color.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
                 )
         )
     }
@@ -2534,9 +2521,15 @@ private struct CompletionDetailRow: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(completion.date.formatted(.dateTime.month().day().year()))
+        HStack(spacing: 12) {
+            // Icona completamento
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 18))
+                .foregroundColor(.green)
+            
+            // Data e ora
+            VStack(alignment: .leading, spacing: 2) {
+                Text(completion.date.formatted(.dateTime.day().month().year()))
                     .font(.subheadline.weight(.medium))
                     .themedPrimaryText()
                 
@@ -2547,37 +2540,40 @@ private struct CompletionDetailRow: View {
             
             Spacer()
             
-            HStack(spacing: 12) {
-                if let duration = completion.actualDuration {
-                    MetricBadge(
-                        icon: "clock.fill",
-                        value: formatted(duration: duration),
-                        color: .green
-                    )
-                }
-                
+            // Metriche
+            HStack(spacing: 6) {
                 if let quality = completion.qualityRating {
-                    MetricBadge(
-                        icon: "star.fill",
-                        value: "\(quality)",
-                        color: .yellow
-                    )
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.yellow)
+                        Text("\(quality)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.yellow)
+                    }
                 }
                 
                 if let difficulty = completion.difficultyRating {
-                    MetricBadge(
-                        icon: "bolt.fill",
-                        value: "\(difficulty)",
-                        color: .orange
-                    )
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                        Text("\(difficulty)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.orange)
+                    }
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(theme.surfaceColor.opacity(0.5))
+            RoundedRectangle(cornerRadius: 10)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(theme.borderColor.opacity(0.5), lineWidth: 1)
+                )
         )
     }
     

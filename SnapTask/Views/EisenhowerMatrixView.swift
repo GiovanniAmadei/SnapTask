@@ -9,46 +9,51 @@ struct EisenhowerMatrixView: View {
             // Riga superiore (Q1 | Q2)
             HStack(spacing: 8) {
                 MatrixQuadrant(
-                    title: "FARE SUBITO",
-                    subtitle: "Importante • Urgente",
+                    title: "eisenhower_do_now".localized,
+                    subtitle: "eisenhower_important_urgent".localized,
                     tasks: viewModel.eisenhowerQuadrants().0,
                     color: .red,
                     icon: "flame.fill",
                     viewModel: viewModel
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
                 MatrixQuadrant(
-                    title: "PIANIFICARE",
-                    subtitle: "Importante • Non urgente",
+                    title: "eisenhower_schedule".localized,
+                    subtitle: "eisenhower_important_not_urgent".localized,
                     tasks: viewModel.eisenhowerQuadrants().1,
                     color: .blue,
                     icon: "calendar",
                     viewModel: viewModel
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxHeight: .infinity)
 
             // Riga inferiore (Q3 | Q4)
             HStack(spacing: 8) {
                 MatrixQuadrant(
-                    title: "DELEGARE",
-                    subtitle: "Non importante • Urgente",
+                    title: "eisenhower_delegate".localized,
+                    subtitle: "eisenhower_not_important_urgent".localized,
                     tasks: viewModel.eisenhowerQuadrants().2,
                     color: .orange,
                     icon: "person.2",
                     viewModel: viewModel
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
                 MatrixQuadrant(
-                    title: "ELIMINARE",
-                    subtitle: "Non importante • Non urgente",
+                    title: "eisenhower_eliminate".localized,
+                    subtitle: "eisenhower_not_important_not_urgent".localized,
                     tasks: viewModel.eisenhowerQuadrants().3,
                     color: .gray,
                     icon: "trash",
                     viewModel: viewModel
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -120,7 +125,7 @@ private struct MatrixQuadrant: View {
                             Image(systemName: "checkmark.circle")
                                 .font(.system(size: 22))
                                 .foregroundColor(theme.secondaryTextColor.opacity(0.4))
-                            Text("Vuoto")
+                            Text("empty".localized)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(theme.secondaryTextColor)
                         }
@@ -131,9 +136,7 @@ private struct MatrixQuadrant: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 8)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(theme.surfaceColor)
@@ -184,7 +187,7 @@ private struct TaskRowCard: View {
                             Image(systemName: "exclamationmark.circle.fill")
                                 .font(.system(size: 9))
                                 .foregroundColor(.red)
-                            Text("Alta")
+                            Text("high".localized)
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundColor(.red)
                         }

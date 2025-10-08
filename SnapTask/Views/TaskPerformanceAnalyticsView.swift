@@ -430,6 +430,8 @@ struct TaskDetailAnalyticsView: View {
             return .stride(by: .day, count: 7)
         case .year, .today:
             return .stride(by: .month, count: 2)
+        case .allTime:
+            return .stride(by: .month, count: 3)
         }
     }
     
@@ -442,6 +444,8 @@ struct TaskDetailAnalyticsView: View {
             f.dateFormat = "d MMM"
         case .year, .today:
             f.dateFormat = "MMM"
+        case .allTime:
+            f.dateFormat = "MMM yy"
         }
         return f.string(from: date)
     }
@@ -507,7 +511,7 @@ struct TaskDetailAnalyticsView: View {
                 let avg = values.reduce(0, +) / Double(max(values.count, 1))
                 return ChartPoint(date: key, value: avg)
             }.sorted { $0.date < $1.date }
-        case .year:
+        case .year, .allTime:
             var buckets: [Date: [Double]] = [:]
             for p in points {
                 let comps = calendar.dateComponents([.year, .month], from: p.date)

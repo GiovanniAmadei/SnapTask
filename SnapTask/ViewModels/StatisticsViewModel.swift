@@ -70,6 +70,7 @@ class StatisticsViewModel: ObservableObject {
         case week = "Week"
         case month = "Month"
         case year = "Year"
+        case allTime = "AllTime"
         
         var localizedName: String {
             switch self {
@@ -77,6 +78,7 @@ class StatisticsViewModel: ObservableObject {
             case .week: return "week".localized
             case .month: return "month".localized
             case .year: return "year".localized
+            case .allTime: return "all_time".localized
             }
         }
         
@@ -95,6 +97,10 @@ class StatisticsViewModel: ObservableObject {
             case .year:
                 let yearStart = calendar.date(byAdding: .year, value: -1, to: now)!
                 return (yearStart, now)
+            case .allTime:
+                // Ritorna una data molto lontana nel passato
+                let distantPast = calendar.date(byAdding: .year, value: -10, to: now)!
+                return (distantPast, now)
             }
         }
     }

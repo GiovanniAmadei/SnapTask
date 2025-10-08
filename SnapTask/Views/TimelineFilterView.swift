@@ -21,11 +21,9 @@ struct TimelineFilterView: View {
                                     Text(organization.displayName)
                                         .font(.body)
                                     
-                                    if organization != .none {
-                                        Text(organizationDescription(for: organization))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
+                                    Text(organizationDescription(for: organization))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                                 
                                 Spacer()
@@ -113,15 +111,15 @@ struct TimelineFilterView: View {
     private func organizationDescription(for organization: TimelineOrganization) -> String {
         switch organization {
         case .time:
-            return "Sort tasks by their scheduled time"
+            return "filter_sort_by_time_description".localized
         case .category:
-            return "Group tasks under their categories"
+            return "filter_group_by_category_description".localized
         case .priority:
-            return "Group tasks by priority level"
+            return "filter_group_by_priority_description".localized
         case .eisenhower:
-            return "Group tasks by urgency and importance (Eisenhower matrix)"
+            return "filter_group_by_eisenhower_description".localized
         case .none:
-            return ""
+            return "filter_default_view_description".localized
         }
     }
 }

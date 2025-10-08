@@ -8,6 +8,7 @@ enum TaskTimeScope: String, CaseIterable, Codable {
     case month = "month"
     case year = "year"
     case longTerm = "longTerm"
+    case all = "all"
     
     var displayName: String {
         switch self {
@@ -16,6 +17,7 @@ enum TaskTimeScope: String, CaseIterable, Codable {
         case .month: return "scope_month".localized
         case .year: return "scope_year".localized
         case .longTerm: return "scope_long_term".localized
+        case .all: return "scope_all".localized
         }
     }
     
@@ -26,6 +28,7 @@ enum TaskTimeScope: String, CaseIterable, Codable {
         case .month: return "calendar"
         case .year: return "trophy.fill"
         case .longTerm: return "sparkles"
+        case .all: return "square.grid.2x2"
         }
     }
     
@@ -36,6 +39,7 @@ enum TaskTimeScope: String, CaseIterable, Codable {
         case .month: return "orange"
         case .year: return "purple"
         case .longTerm: return "pink"
+        case .all: return "teal"
         }
     }
 }
@@ -169,6 +173,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
             return "this_year".localized
         case .longTerm:
             return "long_term_objective".localized
+        case .all:
+            return "all_time".localized
         }
     }
     
@@ -203,6 +209,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
             return calendar.isDate(startTime, equalTo: date, toGranularity: .year)
         case .longTerm:
             return true // Always show long-term tasks
+        case .all:
+            return true // Always show all-time tasks
         }
     }
     
@@ -397,6 +405,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
             return calendar.dateInterval(of: .year, for: date)?.start ?? calendar.startOfDay(for: date)
         case .longTerm:
             // Per obiettivi a lungo termine, usiamo una data fissa per permettere un singolo completamento
+            return calendar.startOfDay(for: startTime)
+        case .all:
+            // Per tutti i tempi, usiamo una data fissa per permettere un singolo completamento
             return calendar.startOfDay(for: startTime)
         }
     }

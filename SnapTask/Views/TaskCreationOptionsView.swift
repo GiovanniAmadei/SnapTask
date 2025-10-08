@@ -6,9 +6,11 @@ struct TaskCreationOptionsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
     
-    @State private var searchText: String = ""
-    @State private var showingForm = false
+    @State private var taskName: String = ""
+    @State private var isExpanded: Bool = false
+    @State private var showingFullForm = false
     @State private var formSource: FormSource = .new
+    @FocusState private var isTextFieldFocused: Bool
     
     private enum FormSource {
         case new
@@ -28,6 +30,8 @@ struct TaskCreationOptionsView: View {
             return viewModel.currentYear
         case .longTerm:
             return Date()
+        case .all:
+            return Date()
         }
     }
     
@@ -44,8 +48,9 @@ struct TaskCreationOptionsView: View {
             }
         }
         var list = Array(byName.values)
-        if !searchText.isEmpty {
-            list = list.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        // Filtra automaticamente in base al nome della task che si sta scrivendo
+        if !taskName.isEmpty {
+            list = list.filter { $0.name.localizedCaseInsensitiveContains(taskName) }
         }
         return list.sorted { $0.lastModifiedDate > $1.lastModifiedDate }
     }
@@ -53,24 +58,134 @@ struct TaskCreationOptionsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Header fisso in alto
-                headerSection
+                // Campo di input principale - sempre visibile
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("how_create_task".localized)
+                            .font(.title3.bold())
+                            .themedPrimaryText()
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
                     .padding(.top, 8)
+                    
+                    // Campo di testo principale con toolbar
+                    VStack(spacing: 0) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(isExpanded ? theme.primaryColor : theme.secondaryTextColor)
+                            
+                            TextField("enter_task_name".localized, text: $taskName)
+                                .textFieldStyle(PlainTextFieldStyle())
+                                .themedPrimaryText()
+                                .focused($isTextFieldFocused)
+                                .submitLabel(.done)
+                                .onSubmit {
+                                    if !taskName.isEmpty {
+                                        createQuickTask()
+                                    }
+                                }
+                            
+                            if !taskName.isEmpty {
+                                Button {
+                                    taskName = ""
+                                    isExpanded = false
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(theme.secondaryTextColor)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(theme.surfaceColor)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(isTextFieldFocused ? theme.primaryColor : theme.borderColor, lineWidth: isTextFieldFocused ? 2 : 1)
+                                )
+                        )
+                        .padding(.horizontal, 16)
+                        
+                        // Toolbar sopra la tastiera (appare quando c'è testo)
+                        if !taskName.isEmpty && isTextFieldFocused {
+                            HStack(spacing: 12) {
+                                // Pulsante Crea
+                                Button {
+                                    createQuickTask()
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text("create".localized)
+                                            .font(.subheadline.weight(.semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(theme.primaryColor)
+                                    )
+                                }
+                                
+                                // Pulsante Personalizza
+                                Button {
+                                    openFullFormWithName()
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "slider.horizontal.3")
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text("customize".localized)
+                                            .font(.subheadline.weight(.semibold))
+                                    }
+                                    .foregroundColor(theme.primaryColor)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(theme.primaryColor.opacity(0.15))
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .top).combined(with: .opacity),
+                                removal: .move(edge: .top).combined(with: .opacity)
+                            ))
+                        }
+                    }
+                }
+                .padding(.bottom, 16)
                 
-                // Campo di ricerca fisso
-                searchField
-                    .padding(.vertical, 16)
+                // Divider
+                Divider()
+                    .padding(.horizontal)
                 
-                // Solo la lista delle task è scrollabile
+                // Lista template
                 if uniqueRecentTemplates.isEmpty {
                     emptyStateView
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity)
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("choose_from_previous_tasks".localized)
-                            .font(.headline)
-                            .themedPrimaryText()
-                            .padding(.horizontal, 16)
+                        HStack {
+                            if !taskName.isEmpty {
+                                Text("matching_templates".localized)
+                                    .font(.headline)
+                                    .themedPrimaryText()
+                            } else {
+                                Text("choose_from_previous_tasks".localized)
+                                    .font(.headline)
+                                    .themedPrimaryText()
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
                         
                         ScrollView {
                             LazyVStack(spacing: 10) {
@@ -78,7 +193,7 @@ struct TaskCreationOptionsView: View {
                                     TaskTemplateCard(task: task) {
                                         let anchored = anchoredTask(from: task, in: viewModel.selectedTimeScope, baseDate: baseDateForScope)
                                         formSource = .template(anchored)
-                                        showingForm = true
+                                        showingFullForm = true
                                     }
                                     .padding(.horizontal, 16)
                                 }
@@ -86,8 +201,14 @@ struct TaskCreationOptionsView: View {
                             .padding(.bottom, 20)
                         }
                     }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
                 }
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isExpanded)
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: taskName.isEmpty)
             .themedBackground()
             .navigationTitle("\(String.add) \(String.task)")
             .navigationBarTitleDisplayMode(.inline)
@@ -97,7 +218,18 @@ struct TaskCreationOptionsView: View {
                         .themedSecondaryText()
                 }
             }
-            .sheet(isPresented: $showingForm) {
+            .onChange(of: taskName) { _, newValue in
+                withAnimation {
+                    isExpanded = !newValue.isEmpty
+                }
+            }
+            .onAppear {
+                // Auto-focus sul campo di testo
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isTextFieldFocused = true
+                }
+            }
+            .sheet(isPresented: $showingFullForm) {
                 switch formSource {
                 case .new:
                     TaskFormView(
@@ -121,85 +253,55 @@ struct TaskCreationOptionsView: View {
         }
     }
     
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("how_create_task".localized)
-                    .font(.title3.bold())
-                    .themedPrimaryText()
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            
-            Button {
-                formSource = .new
-                showingForm = true
-            } label: {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(theme.primaryColor.opacity(0.12))
-                            .frame(width: 38, height: 38)
-                        Image(systemName: "plus")
-                            .foregroundColor(theme.primaryColor)
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(String.newTask)
-                            .font(.headline)
-                            .themedPrimaryText()
-                        Text(scopeSubtitleText())
-                            .font(.caption)
-                            .themedSecondaryText()
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .themedSecondaryText()
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(theme.surfaceColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(theme.borderColor, lineWidth: 1)
-                        )
-                )
-                .padding(.horizontal, 16)
-            }
-            .buttonStyle(.plain)
-        }
+    private func createQuickTask() {
+        guard !taskName.isEmpty else { return }
+        
+        let task = TodoTask(
+            name: taskName,
+            startTime: baseDateForScope,
+            timeScope: viewModel.selectedTimeScope
+        )
+        
+        viewModel.addTask(task)
+        dismiss()
     }
     
-    private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(theme.secondaryTextColor)
-            TextField("search_past_tasks".localized, text: $searchText)
-                .textFieldStyle(PlainTextFieldStyle())
-                .themedPrimaryText()
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(theme.secondaryTextColor)
-                }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(theme.surfaceColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(theme.borderColor, lineWidth: 1)
-                )
+    private func openFullFormWithName() {
+        var task = TodoTask(
+            name: taskName,
+            startTime: baseDateForScope,
+            timeScope: viewModel.selectedTimeScope
         )
-        .padding(.horizontal, 16)
+        
+        // Set scope dates based on time scope
+        let cal = Calendar.current
+        switch viewModel.selectedTimeScope {
+        case .week:
+            let weekStart = cal.startOfWeek(for: baseDateForScope)
+            task.scopeStartDate = weekStart
+            task.scopeEndDate = cal.date(byAdding: .day, value: 6, to: weekStart)
+        case .month:
+            let monthStart = cal.startOfMonth(for: baseDateForScope)
+            task.scopeStartDate = monthStart
+            if let next = cal.date(byAdding: .month, value: 1, to: monthStart) {
+                task.scopeEndDate = cal.date(byAdding: .day, value: -1, to: next)
+            }
+        case .year:
+            let yearStart = cal.startOfYear(for: baseDateForScope)
+            task.scopeStartDate = yearStart
+            var endComps = DateComponents()
+            endComps.year = cal.component(.year, from: yearStart)
+            endComps.month = 12
+            endComps.day = 31
+            task.scopeEndDate = cal.date(from: endComps)
+        default:
+            break
+        }
+        
+        formSource = .template(task)
+        showingFullForm = true
     }
+    
     
     private var emptyStateView: some View {
         VStack(spacing: 12) {
@@ -209,10 +311,6 @@ struct TaskCreationOptionsView: View {
             Text("no_past_tasks".localized)
                 .font(.subheadline)
                 .themedSecondaryText()
-            Text("create_first_then_see_templates".localized)
-                .font(.caption)
-                .themedSecondaryText()
-                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
@@ -225,6 +323,8 @@ struct TaskCreationOptionsView: View {
         case .month: return "this_month".localized
         case .year: return "this_year".localized
         case .longTerm: return "long_term_objective".localized
+        case .all:
+            return "all_tasks".localized
         }
     }
     
@@ -298,6 +398,16 @@ struct TaskCreationOptionsView: View {
             endComps.day = 31
             scopeEndDate = cal.date(from: endComps)
         case .longTerm:
+            if template.hasSpecificTime {
+                var comps = cal.dateComponents([.year, .month, .day], from: Date())
+                comps.hour = timeComponents.hour
+                comps.minute = timeComponents.minute
+                comps.second = 0
+                startTime = cal.date(from: comps) ?? Date()
+            } else {
+                startTime = cal.startOfDay(for: Date())
+            }
+        case .all:
             if template.hasSpecificTime {
                 var comps = cal.dateComponents([.year, .month, .day], from: Date())
                 comps.hour = timeComponents.hour

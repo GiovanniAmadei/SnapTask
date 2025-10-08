@@ -2,10 +2,10 @@ import SwiftUI
 import Charts
 
 struct MoodTrendCard: View {
-    let timeRange: StatisticsViewModel.TimeRange
     @ObservedObject private var moodManager = MoodManager.shared
     @Environment(\.theme) private var theme
     @State private var showingMoodSelector = false
+    @State private var selectedTimeRange: StatisticsViewModel.TimeRange = .week
 
     struct MoodPoint: Identifiable, Equatable {
         let id = UUID()
@@ -21,12 +21,12 @@ struct MoodTrendCard: View {
             // Header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Trend umore")
+                    Text("mood_trend".localized)
                         .font(.system(.headline, design: .rounded, weight: .semibold))
                         .themedPrimaryText()
                     
                     if let avg = averageScore {
-                        Text("Media: \(String(format: "%.1f", avg)) \(averageEmoji)")
+                        Text("average".localized + ": \(String(format: "%.1f", avg)) \(averageEmoji)")
                             .font(.system(.caption, design: .rounded, weight: .medium))
                             .themedSecondaryText()
                     }
@@ -38,7 +38,7 @@ struct MoodTrendCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
                             .font(.system(size: 12, weight: .semibold))
-                        Text("Aggiungi")
+                        Text("add".localized)
                             .font(.system(.caption, design: .rounded, weight: .semibold))
                     }
                     .foregroundStyle(.white)
@@ -53,14 +53,32 @@ struct MoodTrendCard: View {
                     MoodSelectionView(date: Date())
                 }
             }
+            
+            // Time Range Selector
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    TimeRangeButton(title: "week".localized, isSelected: selectedTimeRange == .week) {
+                        selectedTimeRange = .week
+                    }
+                    TimeRangeButton(title: "month".localized, isSelected: selectedTimeRange == .month) {
+                        selectedTimeRange = .month
+                    }
+                    TimeRangeButton(title: "year".localized, isSelected: selectedTimeRange == .year) {
+                        selectedTimeRange = .year
+                    }
+                    TimeRangeButton(title: "all_time".localized, isSelected: selectedTimeRange == .allTime) {
+                        selectedTimeRange = .allTime
+                    }
+                }
+            }
 
             // Chart or empty state
             if points.count >= 1 {
                 VStack(spacing: 12) {
-                    // Aumentiamo l'altezza del grafico per evitare il taglio
-                    MoodChart(points: points, changes: changes, timeRange: effectiveMoodRange)
-                        .frame(height: 220) // Aumentata da 180 a 220
-                        .clipped() // Assicuriamoci che non esca dai bordi
+                    // Aumentiamo l'altezza del grafico per evitare il taglio delle emoji
+                    MoodChart(points: points, changes: changes, timeRange: selectedTimeRange)
+                        .frame(height: 280)
+                        .padding(.top, 20)
                     
                     // Info bar compatta
                     HStack {
@@ -68,7 +86,7 @@ struct MoodTrendCard: View {
                             HStack(spacing: 4) {
                                 Text(last.emoji)
                                     .font(.system(size: 14))
-                                Text("Ultimo: \(last.italianName)")
+                                Text("last".localized + ": \(last.italianName)")
                                     .font(.system(.caption2, design: .rounded, weight: .medium))
                                     .themedSecondaryText()
                             }
@@ -80,7 +98,7 @@ struct MoodTrendCard: View {
                             Image(systemName: "calendar")
                                 .font(.system(size: 10))
                                 .themedSecondaryText()
-                            Text("\(recordedDaysCount) giorni")
+                            Text("\(recordedDaysCount) " + "days".localized)
                                 .font(.system(.caption2, design: .rounded, weight: .medium))
                                 .themedSecondaryText()
                         }
@@ -94,7 +112,7 @@ struct MoodTrendCard: View {
                         .themedSecondaryText()
                         .padding(.top, 20)
                     
-                    Text("Aggiungi il tuo umore per vedere il trend.")
+                    Text("add_mood_to_see_trend".localized)
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .themedSecondaryText()
                         .multilineTextAlignment(.center)
@@ -110,8 +128,7 @@ struct MoodTrendCard: View {
         .onAppear {
             // Debug info
             print("🔍 MoodTrendCard Debug:")
-            print("   Selected range: \(timeRange.rawValue)")
-            print("   Effective mood range: \(effectiveMoodRange.rawValue)")
+            print("   Selected range: \(selectedTimeRange.rawValue)")
             print("   Mood range dates: \(moodRange.start) to \(moodRange.end)")
             print("   Total entries in manager: \(moodManager.entries.count)")
             print("   Entries in range: \(recordedDaysCount)")
@@ -122,22 +139,12 @@ struct MoodTrendCard: View {
         }
     }
 
-    // Use a minimum of week range for mood trends, even if other stats use "today"
-    private var effectiveMoodRange: StatisticsViewModel.TimeRange {
-        switch timeRange {
-        case .today:
-            return .week // Always show at least a week for mood trends
-        default:
-            return timeRange
-        }
-    }
-
     private var range: (start: Date, end: Date) {
-        timeRange.dateRange
+        selectedTimeRange.dateRange
     }
 
     private var moodRange: (start: Date, end: Date) {
-        effectiveMoodRange.dateRange
+        selectedTimeRange.dateRange
     }
 
     // Use the mood range instead of the general range
@@ -271,24 +278,29 @@ private struct MoodChart: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
+        // Add a bit of headroom so annotations at the top aren't clipped
+        let maxY = (points.map { Double($0.score) }.max() ?? 7.0) + 0.6
+        let minY = 0.8
+
         Chart {
             // Neutral guideline
-            RuleMark(y: .value("Neutro", 4))
+            RuleMark(y: .value("neutral".localized, 4.0))
                 .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
                 .lineStyle(.init(lineWidth: 1, dash: [5, 3]))
 
-            // Area fill under the line
+            // Area fill under the line (same interpolation and aligned base)
             ForEach(points) { p in
                 AreaMark(
                     x: .value("Data", p.date),
-                    yStart: .value("Base", 1),
-                    yEnd: .value("Umore", p.score)
+                    yStart: .value("Base", minY),
+                    yEnd: .value("Umore", Double(p.score))
                 )
+                .interpolationMethod(.catmullRom)
                 .foregroundStyle(
                     LinearGradient(
                         gradient: Gradient(colors: [
-                            theme.accentColor.opacity(0.3),
-                            theme.accentColor.opacity(0.05)
+                            theme.accentColor.opacity(0.45),
+                            theme.accentColor.opacity(0.08)
                         ]),
                         startPoint: .top,
                         endPoint: .bottom
@@ -300,7 +312,7 @@ private struct MoodChart: View {
             ForEach(points) { p in
                 LineMark(
                     x: .value("Data", p.date),
-                    y: .value("Umore", p.score)
+                    y: .value("Umore", Double(p.score))
                 )
                 .lineStyle(.init(lineWidth: 3, lineCap: .round))
                 .interpolationMethod(.catmullRom)
@@ -311,10 +323,10 @@ private struct MoodChart: View {
             ForEach(changes.prefix(5)) { p in
                 PointMark(
                     x: .value("Data", p.date),
-                    y: .value("Umore", p.score)
+                    y: .value("Umore", Double(p.score))
                 )
                 .symbol(.circle)
-                .symbolSize(80)
+                .symbolSize(60)
                 .foregroundStyle(theme.accentColor)
                 .annotation(position: .top, spacing: 8) {
                     Text(emoji(for: p.score))
@@ -327,7 +339,7 @@ private struct MoodChart: View {
                 }
             }
         }
-        .chartYScale(domain: 1...7)
+        .chartYScale(domain: minY...maxY)
         .chartXAxis {
             AxisMarks(values: xAxisValues(for: timeRange)) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
@@ -345,7 +357,6 @@ private struct MoodChart: View {
         .chartPlotStyle { plotArea in
             plotArea
                 .background(theme.surfaceColor.opacity(0.3))
-                .cornerRadius(8)
         }
     }
 
@@ -367,6 +378,7 @@ private struct MoodChart: View {
         case .week: return .automatic(desiredCount: 4) // 4 date per la settimana
         case .month: return .stride(by: .day, count: 7)
         case .year: return .stride(by: .month, count: 2)
+        case .allTime: return .stride(by: .month, count: 3) // Mostra ogni 3 mesi
         }
     }
 
@@ -379,6 +391,8 @@ private struct MoodChart: View {
             formatter.dateFormat = "dd MMM"
         case .year: 
             formatter.dateFormat = "MMM"
+        case .allTime:
+            formatter.dateFormat = "MMM yy" // Mese e anno abbreviato
         }
         return formatter.string(from: date)
     }
@@ -407,5 +421,30 @@ private struct ChipView: View {
                         .stroke(theme.borderColor, lineWidth: 1)
                 )
         )
+    }
+}
+
+private struct TimeRangeButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundColor(isSelected ? .white : theme.primaryColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? theme.accentColor : theme.surfaceColor)
+                        .overlay(
+                            Capsule()
+                                .stroke(isSelected ? Color.clear : theme.borderColor, lineWidth: 1)
+                        )
+                )
+        }
     }
 }

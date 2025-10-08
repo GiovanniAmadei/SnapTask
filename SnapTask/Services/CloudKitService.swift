@@ -177,8 +177,13 @@ class CloudKitService: ObservableObject {
         zoneID = CKRecordZone.ID(zoneName: "SnapTaskZone", ownerName: CKCurrentUserDefaultName)
         recordZone = CKRecordZone(zoneID: zoneID)
         
-        // Load sync preference
-        isCloudKitEnabled = UserDefaults.standard.bool(forKey: "cloudkit_sync_enabled")
+        // Load sync preference (default to true if unset)
+        if let stored = UserDefaults.standard.object(forKey: "cloudkit_sync_enabled") as? Bool {
+            isCloudKitEnabled = stored
+        } else {
+            isCloudKitEnabled = true
+            UserDefaults.standard.set(true, forKey: "cloudkit_sync_enabled")
+        }
         
         Task {
             if isCloudKitEnabled {

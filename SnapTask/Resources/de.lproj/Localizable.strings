@@ -365,6 +365,7 @@
 "by_time" = "Nach Zeit";
 "by_category" = "Nach Kategorie";
 "by_priority" = "Nach Priorität";
+"all_goals" = "Alle";
 
 // Task Form specific
 "enter_task_name" = "Aufgabenname eingeben...";
@@ -390,6 +391,42 @@
 "complex_tasks_2_4_hours" = "Komplexe Aufgaben (2–4 Std.)";
 "save_task" = "Aufgabe speichern";
 "choose_icon" = "Symbol wählen";
+"customize_task" = "Aufgabe anpassen";
+"quick_task_hint" = "Geben Sie den Aufgabennamen ein und drücken Sie die Eingabetaste, um sie schnell zu erstellen, oder passen Sie sie mit Details an";
+"or_press_enter" = "oder drücken Sie die Eingabetaste, um schnell zu erstellen";
+"create" = "Erstellen";
+"customize" = "Anpassen";
+"matching_templates" = "Übereinstimmende Vorlagen";
+"auto_carry_over" = "Automatisch verschieben";
+"auto_carry_over_description" = "Wenn heute nicht abgeschlossen, wird sie auf morgen verschoben";
+
+// Journal
+"journal" = "Tagebuch";
+"journal_page_title" = "Seitentitel...";
+"journal_placeholder" = "Schreiben Sie hier Ihre Gedanken, Überlegungen, Dankbarkeit...";
+"remove_mood" = "Stimmung entfernen";
+"photos" = "Fotos";
+"voice_memos" = "Sprachmemos";
+"tags" = "Tags";
+"tags_description" = "Fügen Sie einige Tags hinzu, um Notizen in Zukunft leicht zu finden";
+"add_tag" = "Tag hinzufügen";
+
+// Eisenhower Matrix
+"eisenhower_matrix" = "Eisenhower-Matrix";
+"eisenhower_do_now" = "SOFORT TUN";
+"eisenhower_schedule" = "PLANEN";
+"eisenhower_delegate" = "DELEGIEREN";
+"eisenhower_eliminate" = "ELIMINIEREN";
+"eisenhower_important_urgent" = "Wichtig • Dringend";
+"eisenhower_important_not_urgent" = "Wichtig • Nicht dringend";
+"eisenhower_not_important_urgent" = "Nicht wichtig • Dringend";
+"eisenhower_not_important_not_urgent" = "Nicht wichtig • Nicht dringend";
+"urgent_important" = "Dringend und Wichtig";
+"not_urgent_important" = "Nicht Dringend und Wichtig";
+"urgent_not_important" = "Dringend und Nicht Wichtig";
+"not_urgent_not_important" = "Nicht Dringend und Nicht Wichtig";
+"empty" = "Leer";
+"high" = "Hoch";
 
 // Notification Timing (Wann benachrichtigen)
 "when_to_notify" = "Wann benachrichtigen";
@@ -509,6 +546,12 @@
 "sort_by_time_description" = "Aufgaben nach geplanter Zeit sortieren";
 "group_by_category_description" = "Aufgaben nach Kategorie gruppieren";
 "group_by_priority_description" = "Aufgaben nach Priorität gruppieren";
+"group_by_urgency_importance_description" = "Aufgaben nach Dringlichkeit und Wichtigkeit gruppieren (Eisenhower-Matrix)";
+"filter_sort_by_time_description" = "Aufgaben nach ihrer geplanten Zeit sortieren";
+"filter_group_by_category_description" = "Aufgaben unter ihren Kategorien gruppieren";
+"filter_group_by_priority_description" = "Aufgaben nach Prioritätsstufe gruppieren";
+"filter_group_by_eisenhower_description" = "Aufgaben nach Dringlichkeit und Wichtigkeit gruppieren (Eisenhower-Matrix)";
+"filter_default_view_description" = "Standardansicht ohne spezifische Organisation";
 "time_sort_order_title" = "Zeitsortierung";
 
 // What's New View
@@ -589,6 +632,8 @@
 "difficulty" = "Schwierigkeit";
 "quality_trend" = "Qualitätstrend";
 "difficulty_trend" = "Schwierigkeitstrend";
+"quality_over_time" = "Qualität im Zeitverlauf";
+"difficulty_over_time" = "Schwierigkeit im Zeitverlauf";
 "duration_trend" = "Dauertrend";
 "estimation_accuracy" = "Schätzgenauigkeit";
 "excellent_estimation_skills" = "Ausgezeichnete Schätzfähigkeiten! Ihre Zeitvorhersagen sind sehr genau.";
@@ -607,10 +652,10 @@
 "no_quality_data_available" = "Keine Qualitätsdaten verfügbar";
 "no_difficulty_data_available" = "Keine Schwierigkeitsdaten verfügbar";
 "incomplete" = "Unvollständig";
-"completions_period" = "Abschlüsse ({period})";
-"no_quality_ratings_in_period" = "Keine Qualitätsbewertungen in {period}";
-"no_difficulty_ratings_in_period" = "Keine Schwierigkeitsbewertungen in {period}";
-"no_completions_in_period" = "Keine Abschlüsse in {period}";
+"completions_period" = "Abschlüsse (%@)";
+"no_quality_ratings_in_period" = "Keine Qualitätsbewertungen in %@";
+"no_difficulty_ratings_in_period" = "Keine Schwierigkeitsbewertungen in %@";
+"no_completions_in_period" = "Keine Abschlüsse in %@";
 "complete_tasks_add_quality_ratings" = "Aufgaben abschließen und Qualitätsbewertungen hinzufügen, um Trends zu sehen";
 "complete_tasks_add_difficulty_ratings" = "Aufgaben abschließen und Schwierigkeitsbewertungen hinzufügen, um Trends zu sehen";
 "complete_this_task_start_tracking" = "Diese Aufgabe abschließen, um die Leistungsverfolgung zu starten";
@@ -1238,6 +1283,33 @@
 "location_based_tasks" = "Standortbasierte Aufgaben";
 "multi_language_support" = "Mehrsprachige Unterstützung";
 "major_improvements" = "Große Verbesserungen";
+
+// Time Sort Order
+"early_to_late" = "Von früh bis spät";
+"late_to_early" = "Von spät bis früh";
+
+// Mood Trend
+"mood_trend" = "Stimmungstrend";
+"average" = "Durchschnitt";
+"last" = "Letzter";
+"days" = "Tage";
+"add_mood_to_see_trend" = "Fügen Sie Ihre Stimmung hinzu, um den Trend zu sehen";
+"neutral" = "Neutral";
+"all_time" = "Immer";
+
+// Mood Selection
+"mood_awful" = "Schrecklich";
+"mood_bad" = "Schlecht";
+"mood_poor" = "Mäßig";
+"mood_neutral" = "Neutral";
+"mood_good" = "Gut";
+"mood_great" = "Sehr gut";
+"mood_excellent" = "Ausgezeichnet";
+"how_do_you_feel_today" = "Wie fühlst du dich heute?";
+"how_did_you_feel_that_day" = "Wie hast du dich an diesem Tag gefühlt?";
+"selected_mood_format" = "Ausgewählt: %@";
+"tap_icon_to_select" = "Tippe auf ein Symbol, um auszuwählen.";
+"remove" = "Entfernen";
 
 // Premium Paywall - Trial
 "free_trial" = "Kostenlose Testversion";

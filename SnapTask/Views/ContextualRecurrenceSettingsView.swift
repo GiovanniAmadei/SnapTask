@@ -50,6 +50,8 @@ struct ContextualRecurrenceSettingsView: View {
                             
                         case .longTerm:
                             LongTermInfoCard()
+                        case .all:
+                            RecurrenceOptionsCard(viewModel: viewModel)
                         }
                         
                         if viewModel.selectedTimeScope != .longTerm {
@@ -89,6 +91,8 @@ struct ContextualRecurrenceSettingsView: View {
             return "Configura una ricorrenza a livello di anno."
         case .longTerm:
             return "long_term_goals_no_recurrence".localized
+        case .all:
+            return "choose_how_often_daily_task".localized
         }
     }
 }

@@ -373,6 +373,7 @@
 "by_time" = "By Time";
 "by_category" = "By Category";
 "by_priority" = "By Priority";
+"all_goals" = "All";
 
 // Task Form specific
 "enter_task_name" = "Enter task name...";
@@ -398,6 +399,42 @@
 "complex_tasks_2_4_hours" = "Complex tasks (2-4 hours)";
 "save_task" = "Save Task";
 "choose_icon" = "Choose Icon";
+"customize_task" = "Customize Task";
+"quick_task_hint" = "Type the task name and press Enter to create it quickly, or customize it with details";
+"or_press_enter" = "or press Enter to create quickly";
+"create" = "Create";
+"customize" = "Customize";
+"matching_templates" = "Matching templates";
+"auto_carry_over" = "Auto-reschedule";
+"auto_carry_over_description" = "If not completed today, it will be moved to tomorrow";
+
+// Journal
+"journal" = "Journal";
+"journal_page_title" = "Page title...";
+"journal_placeholder" = "Write your thoughts, reflections, gratitude here...";
+"remove_mood" = "Remove mood";
+"photos" = "Photos";
+"voice_memos" = "Voice Memos";
+"tags" = "Tags";
+"tags_description" = "Add some tags to easily find notes in the future";
+"add_tag" = "Add tag";
+
+// Eisenhower Matrix
+"eisenhower_matrix" = "Eisenhower Matrix";
+"eisenhower_do_now" = "DO NOW";
+"eisenhower_schedule" = "SCHEDULE";
+"eisenhower_delegate" = "DELEGATE";
+"eisenhower_eliminate" = "ELIMINATE";
+"eisenhower_important_urgent" = "Important • Urgent";
+"eisenhower_important_not_urgent" = "Important • Not urgent";
+"eisenhower_not_important_urgent" = "Not important • Urgent";
+"eisenhower_not_important_not_urgent" = "Not important • Not urgent";
+"urgent_important" = "Urgent & Important";
+"not_urgent_important" = "Not Urgent & Important";
+"urgent_not_important" = "Urgent & Not Important";
+"not_urgent_not_important" = "Not Urgent & Not Important";
+"empty" = "Empty";
+"high" = "High";
 
 // Notification Timing (When to notify)
 "when_to_notify" = "When to notify";
@@ -518,6 +555,12 @@
 "sort_by_time_description" = "Sort tasks by scheduled time";
 "group_by_category_description" = "Group tasks by category";
 "group_by_priority_description" = "Group tasks by priority level";
+"group_by_urgency_importance_description" = "Group tasks by urgency and importance (Eisenhower matrix)";
+"filter_sort_by_time_description" = "Sort tasks by their scheduled time";
+"filter_group_by_category_description" = "Group tasks under their categories";
+"filter_group_by_priority_description" = "Group tasks by priority level";
+"filter_group_by_eisenhower_description" = "Group tasks by urgency and importance (Eisenhower matrix)";
+"filter_default_view_description" = "Default view without specific organization";
 "time_sort_order_title" = "Time Sort Order";
 
 // What's New View
@@ -603,6 +646,8 @@
 "difficulty" = "Difficulty";
 "quality_trend" = "Quality Trend";
 "difficulty_trend" = "Difficulty Trend";
+"quality_over_time" = "Quality Over Time";
+"difficulty_over_time" = "Difficulty Over Time";
 "duration_trend" = "Duration Trend";
 "estimation_accuracy" = "Estimation Accuracy";
 "excellent_estimation_skills" = "Excellent estimation skills! Your time predictions are very accurate.";
@@ -621,10 +666,10 @@
 "no_quality_data_available" = "No quality data available";
 "no_difficulty_data_available" = "No difficulty data available";
 "incomplete" = "Incomplete";
-"completions_period" = "Completions ({period})";
-"no_quality_ratings_in_period" = "No quality ratings in {period}";
-"no_difficulty_ratings_in_period" = "No difficulty ratings in {period}";
-"no_completions_in_period" = "No completions in {period}";
+"completions_period" = "Completions (%@)";
+"no_quality_ratings_in_period" = "No quality ratings in %@";
+"no_difficulty_ratings_in_period" = "No difficulty ratings in %@";
+"no_completions_in_period" = "No completions in %@";
 "complete_tasks_add_quality_ratings" = "Complete tasks and add quality ratings to see trends";
 "complete_tasks_add_difficulty_ratings" = "Complete tasks and add difficulty ratings to see trends";
 "complete_this_task_start_tracking" = "Complete this task to start tracking performance";
@@ -1058,6 +1103,7 @@
 "scope_month" = "Month";  
 "scope_year" = "Year";
 "scope_long_term" = "L. Term";
+"scope_all" = "All";
 "this_week" = "This Week";
 "this_month" = "This Month";
 "this_year" = "This Year";
@@ -1320,3 +1366,30 @@
 "location_based_tasks" = "Location-Based Tasks";
 "multi_language_support" = "Multi-Language Support";
 "major_improvements" = "Major Improvements";
+
+// Time Sort Order
+"early_to_late" = "Early to Late";
+"late_to_early" = "Late to Early";
+
+// Mood Trend
+"mood_trend" = "Mood Trend";
+"average" = "Average";
+"last" = "Last";
+"days" = "days";
+"add_mood_to_see_trend" = "Add your mood to see the trend";
+"neutral" = "Neutral";
+"all_time" = "All Time";
+
+// Mood Selection
+"mood_awful" = "Awful";
+"mood_bad" = "Bad";
+"mood_poor" = "Poor";
+"mood_neutral" = "Neutral";
+"mood_good" = "Good";
+"mood_great" = "Great";
+"mood_excellent" = "Excellent";
+"how_do_you_feel_today" = "How do you feel today?";
+"how_did_you_feel_that_day" = "How did you feel that day?";
+"selected_mood_format" = "Selected: %@";
+"tap_icon_to_select" = "Tap an icon to select.";
+"remove" = "Remove";

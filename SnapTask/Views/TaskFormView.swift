@@ -331,10 +331,10 @@ struct TaskFormView: View {
                                 if !viewModel.isRecurring {
                                     HStack(alignment: .center) {
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text("Rinvia a domani se non completata")
+                                            Text("auto_carry_over".localized)
                                                 .font(.subheadline.weight(.medium))
                                                 .themedPrimaryText()
-                                            Text("Se non la completi entro la giornata, verrà spostata automaticamente a domani.")
+                                            Text("auto_carry_over_description".localized)
                                                 .font(.caption)
                                                 .themedSecondaryText()
                                         }

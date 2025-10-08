@@ -551,6 +551,7 @@ struct SettingsView: View {
                         .font(.caption)
                         .themedSecondaryText()
                 }
+
             }
             .themedBackground()
             .scrollContentBackground(.hidden)

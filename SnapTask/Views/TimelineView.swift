@@ -87,6 +87,7 @@ struct ViewControlBarView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @StateObject private var cloudKitService = CloudKitService.shared
     @Environment(\.theme) private var theme
+    @AppStorage("allScopeShowHistory") private var allScopeShowHistory: Bool = false
     
     private var availableViewModes: [TimelineViewMode] {
         viewModel.selectedTimeScope == .today ? TimelineViewMode.allCases : [.list]
@@ -152,6 +153,27 @@ struct ViewControlBarView: View {
                     )
             )
             
+            if viewModel.selectedTimeScope == .all {
+                Button(action: {
+                    allScopeShowHistory.toggle()
+                    viewModel.showAllHistory = allScopeShowHistory
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11, weight: .medium))
+                        Text("Storico")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundColor(viewModel.showAllHistory ? theme.backgroundColor : theme.primaryColor)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(viewModel.showAllHistory ? theme.primaryColor : theme.primaryColor.opacity(0.08))
+                    )
+                }
+            }
+            
             Spacer()
             
             // Organization status - themed
@@ -205,6 +227,17 @@ struct ViewControlBarView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
+        .onAppear {
+            viewModel.showAllHistory = allScopeShowHistory
+        }
+        .onChange(of: allScopeShowHistory) { newValue in
+            viewModel.showAllHistory = newValue
+        }
+        .onChange(of: viewModel.selectedTimeScope) { newScope in
+            if newScope == .all {
+                viewModel.showAllHistory = allScopeShowHistory
+            }
+        }
     }
 }
 
@@ -804,7 +837,7 @@ struct TimelineHeaderView: View {
                     Spacer(minLength: 8)
                     
                     HStack(spacing: 8) {
-                        if viewModel.selectedTimeScope != .today && viewModel.selectedTimeScope != .longTerm {
+                        if viewModel.selectedTimeScope != .today && viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .all {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     viewModel.navigateToPrevious()
@@ -1218,11 +1251,6 @@ struct OrganizedTaskSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                if let color = section.color {
-                    Circle()
-                        .fill(Color(hex: color))
-                        .frame(width: 12, height: 12)
-                }
                 
                 if let icon = section.icon {
                     Image(systemName: icon)
@@ -1924,6 +1952,7 @@ private struct AddTaskButton: View {
                             .fill(theme.primaryColor.opacity(0.3))
                             .blur(radius: 8)
                             .scaleEffect(1.2)
+
                         
                         Circle()
                             .fill(theme.gradient)

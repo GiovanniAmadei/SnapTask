@@ -370,6 +370,7 @@
 "by_time" = "時間順";
 "by_category" = "カテゴリ順";
 "by_priority" = "優先度順";
+"all_goals" = "すべて";
 
 // Task Form specific
 "enter_task_name" = "タスク名を入力...";
@@ -395,6 +396,42 @@
 "complex_tasks_2_4_hours" = "長時間タスク (2-4時間)";
 "save_task" = "タスクを保存";
 "choose_icon" = "アイコンを選択";
+"customize_task" = "タスクをカスタマイズ";
+"quick_task_hint" = "タスク名を入力してEnterキーを押すと素早く作成できます。詳細設定でカスタマイズすることもできます";
+"or_press_enter" = "またはEnterキーを押して素早く作成";
+"create" = "作成";
+"customize" = "カスタマイズ";
+"matching_templates" = "一致するテンプレート";
+"auto_carry_over" = "自動繰り越し";
+"auto_carry_over_description" = "今日完了しない場合、明日に移動されます";
+
+// Journal
+"journal" = "日記";
+"journal_page_title" = "ページタイトル...";
+"journal_placeholder" = "ここにあなたの考え、省察、感謝を書いてください...";
+"remove_mood" = "気分を削除";
+"photos" = "写真";
+"voice_memos" = "音声メモ";
+"tags" = "タグ";
+"tags_description" = "将来ノートを簡単に見つけるためにいくつかのタグを追加";
+"add_tag" = "タグを追加";
+
+// Eisenhower Matrix
+"eisenhower_matrix" = "アイゼンハワーマトリックス";
+"eisenhower_do_now" = "今すぐやる";
+"eisenhower_schedule" = "スケジュール";
+"eisenhower_delegate" = "委任";
+"eisenhower_eliminate" = "削除";
+"eisenhower_important_urgent" = "重要 • 緊急";
+"eisenhower_important_not_urgent" = "重要 • 緊急ではない";
+"eisenhower_not_important_urgent" = "重要ではない • 緊急";
+"eisenhower_not_important_not_urgent" = "重要ではない • 緊急ではない";
+"urgent_important" = "緊急で重要";
+"not_urgent_important" = "緊急ではなく重要";
+"urgent_not_important" = "緊急で重要ではない";
+"not_urgent_not_important" = "緊急でも重要でもない";
+"empty" = "空";
+"high" = "高";
 
 // Notification Timing (通知タイミング)
 "when_to_notify" = "通知タイミング";
@@ -514,6 +551,12 @@
 "sort_by_time_description" = "スケジュールされた時間でタスクを並べ替え";
 "group_by_category_description" = "カテゴリでタスクをグループ化";
 "group_by_priority_description" = "優先度レベルでタスクをグループ化";
+"group_by_urgency_importance_description" = "緊急度と重要度でタスクをグループ化（アイゼンハワーマトリックス）";
+"filter_sort_by_time_description" = "スケジュールされた時間でタスクを並べ替える";
+"filter_group_by_category_description" = "カテゴリの下にタスクをグループ化";
+"filter_group_by_priority_description" = "優先度レベルでタスクをグループ化";
+"filter_group_by_eisenhower_description" = "緊急度と重要度でタスクをグループ化（アイゼンハワーマトリックス）";
+"filter_default_view_description" = "特定の整理なしのデフォルトビュー";
 "time_sort_order_title" = "時間並び順";
 
 // What's New View
@@ -599,6 +642,8 @@
 "difficulty" = "難易度";
 "quality_trend" = "品質トレンド";
 "difficulty_trend" = "難易度トレンド";
+"quality_over_time" = "品質の推移";
+"difficulty_over_time" = "難易度の推移";
 "duration_trend" = "期間トレンド";
 "estimation_accuracy" = "推定精度";
 "excellent_estimation_skills" = "優秀な推定スキル！時間の予測が非常に正確です。";
@@ -617,10 +662,10 @@
 "no_quality_data_available" = "品質データがありません";
 "no_difficulty_data_available" = "難易度データがありません";
 "incomplete" = "未完了";
-"completions_period" = "完了数 ({period})";
-"no_quality_ratings_in_period" = "{period}に品質評価なし";
-"no_difficulty_ratings_in_period" = "{period}に難易度評価なし";
-"no_completions_in_period" = "{period}に完了なし";
+"completions_period" = "完了数 (%@)";
+"no_quality_ratings_in_period" = "%@に品質評価なし";
+"no_difficulty_ratings_in_period" = "%@に難易度評価なし";
+"no_completions_in_period" = "%@に完了なし";
 "complete_tasks_add_quality_ratings" = "タスクを完了し品質評価を追加してトレンドを確認";
 "complete_tasks_add_difficulty_ratings" = "タスクを完了し難易度評価を追加してトレンドを確認";
 "complete_this_task_start_tracking" = "このタスクを完了してパフォーマンス追跡を開始";
@@ -1054,6 +1099,7 @@
 "scope_month" = "月";
 "scope_year" = "年";
 "scope_long_term" = "長期";
+"scope_all" = "すべて";
 "this_week" = "今週";
 "this_month" = "今月";
 "this_year" = "今年";
@@ -1310,6 +1356,33 @@
   "location_based_tasks" = "位置情報ベースのタスク";
   "multi_language_support" = "多言語対応";
   "major_improvements" = "大幅な改善";
+
+// Time Sort Order
+"early_to_late" = "早い順から遅い順";
+"late_to_early" = "遅い順から早い順";
+
+// Mood Trend
+"mood_trend" = "気分のトレンド";
+"average" = "平均";
+"last" = "最後";
+"days" = "日";
+"add_mood_to_see_trend" = "気分を追加してトレンドを表示";
+"neutral" = "中立";
+"all_time" = "すべて";
+
+// Mood Selection
+"mood_awful" = "最悪";
+"mood_bad" = "悪い";
+"mood_poor" = "良くない";
+"mood_neutral" = "普通";
+"mood_good" = "良い";
+"mood_great" = "とても良い";
+"mood_excellent" = "最高";
+"how_do_you_feel_today" = "今日の気分はどうですか？";
+"how_did_you_feel_that_day" = "その日の気分はどうでしたか？";
+"selected_mood_format" = "選択済み: %@";
+"tap_icon_to_select" = "アイコンをタップして選択してください。";
+"remove" = "削除";
 
 // Premium Paywall - Trial
 "free_trial" = "無料トライアル";

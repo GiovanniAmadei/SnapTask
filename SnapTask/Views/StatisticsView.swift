@@ -169,7 +169,7 @@ private struct OverviewTab: View {
                 TimeDistributionCard(viewModel: viewModel)
                 TaskCompletionCard(viewModel: viewModel)
                 OverallStreakCard(viewModel: viewModel)
-                MoodTrendCard(timeRange: viewModel.selectedTimeRange)
+                MoodTrendCard()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -425,6 +425,8 @@ private struct QualityChart: View {
             return .stride(by: .day, count: 7)
         case .year, .today:
             return .stride(by: .month, count: 2)
+        case .allTime:
+            return .stride(by: .month, count: 3)
         }
     }
     
@@ -443,6 +445,8 @@ private struct QualityChart: View {
             formatter.dateFormat = "d MMM"
         case .year, .today:
             formatter.dateFormat = "MMM"
+        case .allTime:
+            formatter.dateFormat = "MMM yy"
         }
         return formatter.string(from: date)
     }
@@ -537,6 +541,8 @@ private struct DifficultyChart: View {
             return .stride(by: .day, count: 7)
         case .year, .today:
             return .stride(by: .month, count: 2)
+        case .allTime:
+            return .stride(by: .month, count: 3)
         }
     }
     
@@ -555,6 +561,8 @@ private struct DifficultyChart: View {
             formatter.dateFormat = "d MMM"
         case .year, .today:
             formatter.dateFormat = "MMM"
+        case .allTime:
+            formatter.dateFormat = "MMM yy"
         }
         return formatter.string(from: date)
     }
@@ -786,7 +794,7 @@ private struct PerformanceTab: View {
                 return ChartPoint(value: avg, date: key)
             }
             return result.sorted { $0.date < $1.date }
-        case .year:
+        case .year, .allTime:
             // Monthly averages
             var buckets: [Date: [Double]] = [:]
             for p in points {

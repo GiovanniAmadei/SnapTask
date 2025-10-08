@@ -72,6 +72,8 @@ enum ContextualRecurrenceType {
             return [.everyYear, .everyTwoYears, .everyThreeYears]
         case .longTerm:
             return [] // Long term tasks don't have recurrence
+        case .all:
+            return [] // "All" è solo vista, nessuna ricorrenza contestuale
         }
     }
 }
@@ -270,6 +272,8 @@ class TaskFormViewModel: ObservableObject {
             return "task_happens_this_year".localized
         case .longTerm:
             return "long_term_goal".localized
+        case .all:
+            return "" // Non usato nel form
         }
     }
     
@@ -292,6 +296,8 @@ class TaskFormViewModel: ObservableObject {
             return String(selectedYear)
         case .longTerm:
             return "long_term_goal".localized
+        case .all:
+            return "" // Non usato nel form
         }
     }
     
@@ -382,6 +388,8 @@ class TaskFormViewModel: ObservableObject {
             }
         case .longTerm:
             return "Nessuna ricorrenza"
+        case .all:
+            return "" // Non applicabile nel form
         }
     }
     
@@ -457,6 +465,11 @@ class TaskFormViewModel: ObservableObject {
             taskStartTime = hasSpecificTime ? startDate : Calendar.current.startOfDay(for: startDate)
             scopeStartDate = nil
             scopeEndDate = nil
+        case .all:
+            // Tratta "All" come "Today" nel form per evitare task con scope non valido
+            taskStartTime = hasSpecificTime ? startDate : Calendar.current.startOfDay(for: startDate)
+            scopeStartDate = nil
+            scopeEndDate = nil
         }
         
         let recurrence: Recurrence?
@@ -488,7 +501,7 @@ class TaskFormViewModel: ObservableObject {
             hasRewardPoints: hasRewardPoints,
             rewardPoints: rewardPoints,
             hasNotification: hasNotification,
-            timeScope: selectedTimeScope,
+            timeScope: (selectedTimeScope == .all ? .today : selectedTimeScope),
             scopeStartDate: scopeStartDate,
             scopeEndDate: scopeEndDate,
             notificationLeadTimeMinutes: notificationLeadTimeMinutes,
@@ -612,6 +625,8 @@ class TaskFormViewModel: ObservableObject {
             
         case .longTerm:
             return nil
+        case .all:
+            return nil // Nessuna ricorrenza in modalità All nel form
         }
     }
     

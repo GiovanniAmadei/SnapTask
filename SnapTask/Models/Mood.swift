@@ -21,6 +21,18 @@ enum MoodType: String, CaseIterable, Codable {
         }
     }
 
+    var localizedName: String {
+        switch self {
+        case .awful: return "mood_awful".localized
+        case .bad: return "mood_bad".localized
+        case .poor: return "mood_poor".localized
+        case .neutral: return "mood_neutral".localized
+        case .good: return "mood_good".localized
+        case .great: return "mood_great".localized
+        case .excellent: return "mood_excellent".localized
+        }
+    }
+
     var emoji: String {
         switch self {
         case .awful: return "😫"

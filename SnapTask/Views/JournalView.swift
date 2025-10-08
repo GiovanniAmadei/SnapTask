@@ -45,17 +45,17 @@ struct JournalView: View {
                 .padding(.bottom, 24)
             }
             .themedBackground()
-            .navigationTitle("Diario")
+            .navigationTitle("journal".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Annulla") {
+                    Button("cancel".localized) {
                         manager.endEditing(for: currentDate, shouldSync: false)
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Fatto") {
+                    Button("done".localized) {
                         manager.endEditing(for: currentDate, shouldSync: true)
                         dismiss()
                     }
@@ -203,7 +203,7 @@ struct JournalView: View {
 
     private var titleAndMoodRow: some View {
         HStack(spacing: 10) {
-            TextField("Titolo della pagina...", text: $titleText)
+            TextField("journal_page_title".localized, text: $titleText)
                 .font(.headline)
                 .themedPrimaryText()
                 .padding(.horizontal, 16)
@@ -221,7 +221,7 @@ struct JournalView: View {
                 Button {
                     selectedMood = nil
                 } label: {
-                    Label("Rimuovi umore", systemImage: "slash.circle")
+                    Label("remove_mood".localized, systemImage: "slash.circle")
                 }
                 Divider()
                 ForEach(MoodType.allCases, id: \.self) { mood in
@@ -270,7 +270,7 @@ struct JournalView: View {
                 .themedPrimaryText()
 
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Scrivi qui i tuoi pensieri, riflessioni, gratitudine...")
+                Text("journal_placeholder".localized)
                     .foregroundColor(theme.secondaryTextColor)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 10)
@@ -295,7 +295,7 @@ struct JournalView: View {
                 Image(systemName: "photo")
                     .font(.system(size: 16))
                     .foregroundColor(.blue)
-                Text("Foto")
+                Text("photos".localized)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(theme.textColor)
                 Spacer()
@@ -412,7 +412,7 @@ struct JournalView: View {
                 Image(systemName: "waveform")
                     .font(.system(size: 16))
                     .foregroundColor(.pink)
-                Text("Memo Vocali")
+                Text("voice_memos".localized)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(theme.textColor)
                 Spacer()
@@ -513,12 +513,12 @@ struct JournalView: View {
 
     private var tagsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Tags")
+            Text("tags".localized)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(theme.textColor)
 
             if tags.isEmpty {
-                Text("Aggiungi alcuni tag per ritrovare facilmente le note in futuro")
+                Text("tags_description".localized)
                     .font(.caption)
                     .foregroundColor(theme.secondaryTextColor)
             }
@@ -553,7 +553,7 @@ struct JournalView: View {
             }
 
             HStack(spacing: 8) {
-                TextField("Aggiungi tag", text: $newTagText, onCommit: commitTag)
+                TextField("add_tag".localized, text: $newTagText, onCommit: commitTag)
                     .textFieldStyle(.roundedBorder)
                 Button {
                     commitTag()

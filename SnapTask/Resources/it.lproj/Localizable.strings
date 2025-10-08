@@ -370,6 +370,7 @@
 "by_time" = "Per orario";
 "by_category" = "Per categoria";
 "by_priority" = "Per priorità";
+"all_goals" = "Tutti";
 
 // Task Form specific
 "enter_task_name" = "Inserisci nome attività...";
@@ -395,6 +396,42 @@
 "complex_tasks_2_4_hours" = "Attività complesse (2‑4 ore)";
 "save_task" = "Salva attività";
 "choose_icon" = "Scegli icona";
+"customize_task" = "Personalizza attività";
+"quick_task_hint" = "Scrivi il nome dell'attività e premi Invio per crearla velocemente, oppure personalizzala con i dettagli";
+"or_press_enter" = "oppure premi Invio per creare velocemente";
+"create" = "Crea";
+"customize" = "Personalizza";
+"matching_templates" = "Template corrispondenti";
+"auto_carry_over" = "Rinvia automaticamente";
+"auto_carry_over_description" = "Se non completata entro oggi, verrà spostata a domani";
+
+// Journal
+"journal" = "Diario";
+"journal_page_title" = "Titolo della pagina...";
+"journal_placeholder" = "Scrivi qui i tuoi pensieri, riflessioni, gratitudine...";
+"remove_mood" = "Rimuovi umore";
+"photos" = "Foto";
+"voice_memos" = "Memo Vocali";
+"tags" = "Tag";
+"tags_description" = "Aggiungi alcuni tag per ritrovare facilmente le note in futuro";
+"add_tag" = "Aggiungi tag";
+
+// Eisenhower Matrix
+"eisenhower_matrix" = "Matrice di Eisenhower";
+"eisenhower_do_now" = "FARE SUBITO";
+"eisenhower_schedule" = "PIANIFICARE";
+"eisenhower_delegate" = "DELEGARE";
+"eisenhower_eliminate" = "ELIMINARE";
+"eisenhower_important_urgent" = "Importante • Urgente";
+"eisenhower_important_not_urgent" = "Importante • Non urgente";
+"eisenhower_not_important_urgent" = "Non importante • Urgente";
+"eisenhower_not_important_not_urgent" = "Non importante • Non urgente";
+"urgent_important" = "Urgente e Importante";
+"not_urgent_important" = "Non Urgente e Importante";
+"urgent_not_important" = "Urgente e Non Importante";
+"not_urgent_not_important" = "Non Urgente e Non Importante";
+"empty" = "Vuoto";
+"high" = "Alta";
 
 // Notification Timing (Quando notificare)
 "when_to_notify" = "Quando notificare";
@@ -514,6 +551,12 @@
 "sort_by_time_description" = "Ordina le attività per orario";
 "group_by_category_description" = "Raggruppa per categoria";
 "group_by_priority_description" = "Raggruppa per priorità";
+"group_by_urgency_importance_description" = "Raggruppa per urgenza e importanza (Matrice di Eisenhower)";
+"filter_sort_by_time_description" = "Ordina le attività per orario programmato";
+"filter_group_by_category_description" = "Raggruppa le attività nelle loro categorie";
+"filter_group_by_priority_description" = "Raggruppa le attività per livello di priorità";
+"filter_group_by_eisenhower_description" = "Raggruppa le attività per urgenza e importanza (Matrice di Eisenhower)";
+"filter_default_view_description" = "Vista predefinita senza organizzazione specifica";
 "time_sort_order_title" = "Ordine temporale";
 
 // What's New View
@@ -599,6 +642,8 @@
 "difficulty" = "Difficoltà";
 "quality_trend" = "Trend qualità";
 "difficulty_trend" = "Trend difficoltà";
+"quality_over_time" = "Qualità nel tempo";
+"difficulty_over_time" = "Difficoltà nel tempo";
 "duration_trend" = "Trend durata";
 "estimation_accuracy" = "Accuratezza di stima";
 "excellent_estimation_skills" = "Ottime capacità di stima! Le tue previsioni di tempo sono molto precise.";
@@ -617,10 +662,10 @@
 "no_quality_data_available" = "Nessun dato qualità disponibile";
 "no_difficulty_data_available" = "Nessun dato difficoltà disponibile";
 "incomplete" = "Incompleto";
-"completions_period" = "Completamenti ({period})";
-"no_quality_ratings_in_period" = "Nessuna valutazione qualità in {period}";
-"no_difficulty_ratings_in_period" = "Nessuna valutazione difficoltà in {period}";
-"no_completions_in_period" = "Nessun completamento in {period}";
+"completions_period" = "Completamenti (%@)";
+"no_quality_ratings_in_period" = "Nessuna valutazione qualità in %@";
+"no_difficulty_ratings_in_period" = "Nessuna valutazione difficoltà in %@";
+"no_completions_in_period" = "Nessun completamento in %@";
 "complete_tasks_add_quality_ratings" = "Completa attività e aggiungi valutazioni qualità per vedere i trend";
 "complete_tasks_add_difficulty_ratings" = "Completa attività e aggiungi valutazioni difficoltà per vedere i trend";
 "complete_this_task_start_tracking" = "Completa questa attività per iniziare il tracciamento prestazioni";
@@ -1267,8 +1312,34 @@
 "lets_get_started" = "Iniziamo! 🚀";
 
 // Update Banner v1.0 - Titoli delle funzioni
-"smart_goal_system" = "Sistema Obiettivi Intelligenti";
 "rich_task_media" = "Media Ricchi per le Attività";
 "location_based_tasks" = "Attività Basate sulla Posizione";
 "multi_language_support" = "Supporto Multilingua";
 "major_improvements" = "Grandi Miglioramenti";
+
+// Time Sort Order
+"early_to_late" = "Da presto a tardi";
+"late_to_early" = "Da tardi a presto";
+
+// Mood Trend
+"mood_trend" = "Trend umore";
+"average" = "Media";
+"last" = "Ultimo";
+"days" = "giorni";
+"add_mood_to_see_trend" = "Aggiungi il tuo umore per vedere il trend";
+"neutral" = "Neutro";
+"all_time" = "Sempre";
+
+// Mood Selection
+"mood_awful" = "Pessimo";
+"mood_bad" = "Brutto";
+"mood_poor" = "Scarso";
+"mood_neutral" = "Neutro";
+"mood_good" = "Buono";
+"mood_great" = "Ottimo";
+"mood_excellent" = "Eccellente";
+"how_do_you_feel_today" = "Come ti senti oggi?";
+"how_did_you_feel_that_day" = "Come ti sentivi in questa giornata?";
+"selected_mood_format" = "Selezionato: %@";
+"tap_icon_to_select" = "Tocca un’icona per selezionare.";
+"remove" = "Rimuovi";

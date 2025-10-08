@@ -27,7 +27,12 @@ final class DemoDataSeeder {
         refs.rewardsByName = await seedRewards(refs.categories)
         refs.tasks = await seedTasksAndSubtasks(refs.categories, &refs.taskSubtasks)
 
+        let scopedIds = await seedScopedObjectives(refs.categories)
+        for (k,v) in scopedIds { refs.tasks[k] = v }
+
         await seedOneYearOfCompletions(refs.tasks, taskSubtasks: refs.taskSubtasks)
+        await seedScopedCompletions(scopedIds)
+
         await seedTrackingSessionsForYear(refs.tasks, categories: refs.categories)
         await seedRewardRedemptions(refs.rewardsByName)
 
@@ -833,5 +838,308 @@ final class DemoDataSeeder {
         UserDefaults.standard.set(exp, forKey: "subscriptionExpirationDate")
         UserDefaults.standard.set("subscribed", forKey: "subscriptionStatusType")
         UserDefaults.standard.synchronize()
+    }
+
+    private func seedScopedObjectives(_ categories: [String: Category]) async -> [String: UUID] {
+        var ids: [String: UUID] = [:]
+        let cal = Calendar.current
+        let today = Date()
+        let weekAnchor = cal.startOfWeek(for: today)
+        let monthAnchor = cal.startOfMonth(for: today)
+        let yearAnchor = cal.startOfYear(for: today)
+
+        func cat(_ name: String) -> Category? {
+            categories[name] ?? CategoryManager.shared.categories.first(where: { $0.name == name })
+        }
+
+        // Weekly objectives (recurring weekly, no specific day-of-week, interval=1)
+        let weeklyRec: Recurrence = {
+            var r = Recurrence(type: .weekly(days: []), startDate: weekAnchor, endDate: nil, trackInStatistics: true)
+            r.weekInterval = 1
+            return r
+        }()
+        if let c = cat("Personal") {
+            ids["Weekly Planning"] = await makeScopedTask(
+                name: "Weekly Planning",
+                icon: "calendar.badge.clock",
+                category: c,
+                priority: .medium,
+                minutes: 30,
+                points: 20,
+                timeScope: .week,
+                scopeAnchor: weekAnchor,
+                recurrence: weeklyRec,
+                hour: 18,
+                minute: 0,
+                subtasks: ["Review last week", "Set top 3 goals", "Schedule key tasks"]
+            )
+        }
+        if let c = cat("Home & Family") {
+            ids["Grocery Planning"] = await makeScopedTask(
+                name: "Grocery Planning",
+                icon: "cart.fill",
+                category: c,
+                priority: .low,
+                minutes: 20,
+                points: 10,
+                timeScope: .week,
+                scopeAnchor: weekAnchor,
+                recurrence: weeklyRec,
+                hour: 17,
+                minute: 0,
+                subtasks: ["Check pantry", "Create grocery list", "Plan 5 meals"]
+            )
+        }
+
+        // Monthly objectives (recurring monthly on day 1)
+        let monthlyRec: Recurrence = {
+            var r = Recurrence(type: .monthly(days: [1]), startDate: monthAnchor, endDate: nil, trackInStatistics: true)
+            r.monthInterval = 1
+            return r
+        }()
+        if let c = cat("Finance") {
+            ids["Monthly Budget Review"] = await makeScopedTask(
+                name: "Monthly Budget Review",
+                icon: "chart.line.uptrend.xyaxis",
+                category: c,
+                priority: .high,
+                minutes: 60,
+                points: 40,
+                timeScope: .month,
+                scopeAnchor: monthAnchor,
+                recurrence: monthlyRec,
+                hour: 19,
+                minute: 0,
+                subtasks: ["Review expenses", "Update savings", "Adjust allocations"]
+            )
+        }
+        if let c = cat("Learning") {
+            ids["Monthly Skill Focus"] = await makeScopedTask(
+                name: "Monthly Skill Focus",
+                icon: "lightbulb.fill",
+                category: c,
+                priority: .medium,
+                minutes: 90,
+                points: 35,
+                timeScope: .month,
+                scopeAnchor: monthAnchor,
+                recurrence: monthlyRec,
+                hour: 20,
+                minute: 0,
+                subtasks: ["Choose topic", "Collect resources", "Plan practice sessions"]
+            )
+        }
+
+        // Yearly objectives (recurring yearly, anchored to start)
+        let yearlyRec = Recurrence(type: .yearly, startDate: yearAnchor, endDate: nil, trackInStatistics: true)
+        if let c = cat("Personal") {
+            ids["Yearly Vision Review"] = await makeScopedTask(
+                name: "Yearly Vision Review",
+                icon: "trophy.fill",
+                category: c,
+                priority: .high,
+                minutes: 120,
+                points: 80,
+                timeScope: .year,
+                scopeAnchor: yearAnchor,
+                recurrence: yearlyRec,
+                hour: 10,
+                minute: 0,
+                subtasks: ["Review goals", "Assess progress", "Set new yearly themes"]
+            )
+        }
+
+        // Long-term objectives (no recurrence)
+        if let c = cat("Work") {
+            ids["Long-term Career Project"] = await makeScopedTask(
+                name: "Long-term Career Project",
+                icon: "briefcase.fill",
+                category: c,
+                priority: .high,
+                minutes: 0,
+                points: 100,
+                timeScope: .longTerm,
+                scopeAnchor: today,
+                recurrence: nil,
+                hour: nil,
+                minute: nil,
+                subtasks: ["Define milestones", "Research opportunities", "Deliver first milestone"]
+            )
+        }
+
+        return ids
+    }
+
+    private func makeScopedTask(
+        name: String,
+        icon: String,
+        category: Category?,
+        priority: Priority,
+        minutes: Int,
+        points: Int,
+        timeScope: TaskTimeScope,
+        scopeAnchor: Date,
+        recurrence: Recurrence?,
+        hour: Int?,
+        minute: Int?,
+        subtasks: [String]
+    ) async -> UUID {
+        let cal = Calendar.current
+        let startTime: Date
+        var scopeStartDate: Date? = nil
+        var scopeEndDate: Date? = nil
+
+        switch timeScope {
+        case .week:
+            let weekStart = cal.startOfWeek(for: scopeAnchor)
+            scopeStartDate = weekStart
+            scopeEndDate = cal.date(byAdding: .day, value: 6, to: weekStart)
+            if let h = hour, let m = minute {
+                startTime = cal.date(bySettingHour: h, minute: m, second: 0, of: weekStart) ?? weekStart
+            } else {
+                startTime = weekStart
+            }
+        case .month:
+            let monthStart = cal.startOfMonth(for: scopeAnchor)
+            scopeStartDate = monthStart
+            if let next = cal.date(byAdding: .month, value: 1, to: monthStart) {
+                scopeEndDate = cal.date(byAdding: .day, value: -1, to: next)
+            }
+            if let h = hour, let m = minute {
+                startTime = cal.date(bySettingHour: h, minute: m, second: 0, of: monthStart) ?? monthStart
+            } else {
+                startTime = monthStart
+            }
+        case .year:
+            let yearStart = cal.startOfYear(for: scopeAnchor)
+            scopeStartDate = yearStart
+            var comps = DateComponents()
+            comps.year = cal.component(.year, from: yearStart)
+            comps.month = 12
+            comps.day = 31
+            scopeEndDate = cal.date(from: comps)
+            if let h = hour, let m = minute {
+                startTime = cal.date(bySettingHour: h, minute: m, second: 0, of: yearStart) ?? yearStart
+            } else {
+                startTime = yearStart
+            }
+        case .longTerm:
+            if let h = hour, let m = minute {
+                startTime = cal.date(bySettingHour: h, minute: m, second: 0, of: scopeAnchor) ?? scopeAnchor
+            } else {
+                startTime = scopeAnchor
+            }
+        case .today, .all:
+            if let h = hour, let m = minute {
+                startTime = cal.date(bySettingHour: h, minute: m, second: 0, of: scopeAnchor) ?? scopeAnchor
+            } else {
+                startTime = scopeAnchor
+            }
+        }
+
+        let task = TodoTask(
+            name: name,
+            description: nil,
+            location: nil,
+            startTime: startTime,
+            hasSpecificTime: hour != nil,
+            duration: TimeInterval(minutes * 60),
+            hasDuration: minutes > 0,
+            category: category,
+            priority: priority,
+            icon: icon,
+            recurrence: recurrence,
+            pomodoroSettings: nil,
+            subtasks: subtasks.map { Subtask(name: $0) },
+            hasRewardPoints: points > 0,
+            rewardPoints: points,
+            hasNotification: false,
+            notificationId: nil,
+            timeScope: timeScope,
+            scopeStartDate: scopeStartDate,
+            scopeEndDate: scopeEndDate
+        )
+        await TaskManager.shared.addTask(task)
+        return task.id
+    }
+
+    private func seedScopedCompletions(_ scoped: [String: UUID]) async {
+        let tm = TaskManager.shared
+        let cal = Calendar.current
+        let today = Date()
+
+        func weekStart(_ date: Date) -> Date { cal.startOfWeek(for: date) }
+        func monthStart(_ date: Date) -> Date { cal.startOfMonth(for: date) }
+        func yearStart(_ date: Date) -> Date { cal.startOfYear(for: date) }
+
+        // Weekly: last 26 weeks ~ 6 mesi
+        if let weeklyPlanning = scoped["Weekly Planning"] {
+            var w = weekStart(today)
+            for i in 0..<26 {
+                if let past = cal.date(byAdding: .weekOfYear, value: -i, to: w) {
+                    if Double.random(in: 0...1) < 0.8 {
+                        TaskManager.shared.toggleTaskCompletion(weeklyPlanning, on: past)
+                        tm.updateTaskRating(taskId: weeklyPlanning, actualDuration: 30*60, difficultyRating: 3, qualityRating: 8, notes: nil, for: past)
+                    }
+                }
+            }
+        }
+        if let grocery = scoped["Grocery Planning"] {
+            var w = weekStart(today)
+            for i in 0..<20 {
+                if let past = cal.date(byAdding: .weekOfYear, value: -i, to: w) {
+                    if Double.random(in: 0...1) < 0.7 {
+                        TaskManager.shared.toggleTaskCompletion(grocery, on: past)
+                        tm.updateTaskRating(taskId: grocery, actualDuration: 20*60, difficultyRating: 2, qualityRating: 7, notes: nil, for: past)
+                    }
+                }
+            }
+        }
+
+        // Monthly: last 12 months
+        if let budget = scoped["Monthly Budget Review"] {
+            var m = monthStart(today)
+            for i in 0..<12 {
+                if let past = cal.date(byAdding: .month, value: -i, to: m) {
+                    if Double.random(in: 0...1) < 0.9 {
+                        TaskManager.shared.toggleTaskCompletion(budget, on: past)
+                        tm.updateTaskRating(taskId: budget, actualDuration: 60*60, difficultyRating: 5, qualityRating: 8, notes: nil, for: past)
+                    }
+                }
+            }
+        }
+        if let skill = scoped["Monthly Skill Focus"] {
+            var m = monthStart(today)
+            for i in 0..<12 {
+                if let past = cal.date(byAdding: .month, value: -i, to: m) {
+                    if Double.random(in: 0...1) < 0.6 {
+                        TaskManager.shared.toggleTaskCompletion(skill, on: past)
+                        tm.updateTaskRating(taskId: skill, actualDuration: 90*60, difficultyRating: 6, qualityRating: 7, notes: nil, for: past)
+                    }
+                }
+            }
+        }
+
+        // Yearly: last 3 years
+        if let vision = scoped["Yearly Vision Review"] {
+            var y = yearStart(today)
+            for i in 0..<3 {
+                if let past = cal.date(byAdding: .year, value: -i, to: y) {
+                    if Double.random(in: 0...1) < 0.95 {
+                        TaskManager.shared.toggleTaskCompletion(vision, on: past)
+                        tm.updateTaskRating(taskId: vision, actualDuration: 120*60, difficultyRating: 6, qualityRating: 9, notes: nil, for: past)
+                    }
+                }
+            }
+        }
+
+        // Long term: mark a couple of milestones (subtasks help completion metrics)
+        if let career = scoped["Long-term Career Project"] {
+            let anchor = cal.startOfDay(for: today)
+            if Double.random(in: 0...1) < 0.7 {
+                TaskManager.shared.toggleTaskCompletion(career, on: anchor)
+                tm.updateTaskRating(taskId: career, actualDuration: 3*60*60, difficultyRating: 7, qualityRating: 8, notes: "Milestone achieved", for: anchor)
+            }
+        }
     }
 }

@@ -62,6 +62,7 @@ enum TimeSortOrder: String, CaseIterable {
     }
 }
 
+
 @MainActor
 class TimelineViewModel: ObservableObject {
     @Published private(set) var tasks: [TodoTask] = []
@@ -72,7 +73,7 @@ class TimelineViewModel: ObservableObject {
     
     // New view mode and organization properties
     @Published var viewMode: TimelineViewMode = .list
-    @Published var organization: TimelineOrganization = .none
+    @Published var organization: TimelineOrganization = .time
     @Published var timeSortOrder: TimeSortOrder = .ascending
     @Published var showingFilterSheet = false
     @Published var showingTimelineView = false
@@ -84,10 +85,12 @@ class TimelineViewModel: ObservableObject {
     @Published var currentYear: Date = Date()
     
     @Published var openSwipeTaskId: UUID? = nil
+
+    @Published var showAllHistory: Bool = false
     
     private let tasksKey = "saved_tasks"
     private var cancellables = Set<AnyCancellable>()
-    
+
     @Published private(set) var monthYearString: String = ""
     
     var currentPeriodString: String {
@@ -104,10 +107,10 @@ class TimelineViewModel: ObservableObject {
             }
         case .week:
             let weekEnd = calendar.date(byAdding: .day, value: 6, to: currentWeek)!
-            formatter.dateFormat = "dd/MM"
+            formatter.dateFormat = "dd MMM"
             let startString = formatter.string(from: currentWeek)
             let endString = formatter.string(from: weekEnd)
-            return "week_short_format".localized + " \(startString) - \(endString)"
+            return "\(startString) - \(endString)"
         case .month:
             formatter.dateFormat = "MMMM yyyy"
             return formatter.string(from: currentMonth)
@@ -115,12 +118,14 @@ class TimelineViewModel: ObservableObject {
             formatter.dateFormat = "yyyy"
             return formatter.string(from: currentYear)
         case .longTerm:
-            return "long_term_objectives".localized
+            return "scope_long_term".localized
+        case .all:
+            return "all_goals".localized
         }
     }
     
     var scopeSubtitle: String {
-        return "" // Nessun subtitle per mantenere tutto su una riga
+        return ""
     }
     
     init() {
@@ -147,7 +152,14 @@ class TimelineViewModel: ObservableObject {
                 self?.refreshTasks()
             }
             .store(in: &cancellables)
-            
+        
+        $showAllHistory
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshTasks()
+            }
+            .store(in: &cancellables)
+        
         // Initial load
         refreshTasks()
     }
@@ -166,8 +178,14 @@ class TimelineViewModel: ObservableObject {
                 if task1.startTime != task2.startTime {
                     return task1.startTime < task2.startTime
                 }
-                // Then by creation date - older tasks first (new tasks go to bottom)
-                return task1.creationDate < task2.creationDate
+                // Stable tie-breakers to avoid reordering on updates
+                if task1.creationDate != task2.creationDate {
+                    return task1.creationDate < task2.creationDate
+                }
+                let n1 = task1.name.lowercased()
+                let n2 = task2.name.lowercased()
+                if n1 != n2 { return n1 < n2 }
+                return task1.id.uuidString < task2.id.uuidString
             }
         
         objectWillChange.send()
@@ -194,6 +212,17 @@ class TimelineViewModel: ObservableObject {
             filtered = tasksForYear(currentYear, from: allTasks)
         case .longTerm:
             filtered = longTermTasks(from: allTasks)
+        case .all:
+            if showAllHistory {
+                filtered = allTasks
+            } else {
+                let day = tasksForDay(selectedDate, from: allTasks).filter { $0.timeScope == .today }
+                let week = tasksForWeek(currentWeek, from: allTasks).filter { $0.timeScope == .week }
+                let month = tasksForMonth(currentMonth, from: allTasks).filter { $0.timeScope == .month }
+                let year = tasksForYear(currentYear, from: allTasks).filter { $0.timeScope == .year }
+                let longTerm = longTermTasks(from: allTasks) // long term sempre visibili
+                filtered = day + week + month + year + longTerm
+            }
         }
         
         print("Final filtered tasks count: \(filtered.count)")
@@ -204,7 +233,7 @@ class TimelineViewModel: ObservableObject {
         
         return filtered
     }
-    
+
     private func tasksForDay(_ date: Date, from tasks: [TodoTask]) -> [TodoTask] {
         let calendar = Calendar.current
         return tasks.filter { task in
@@ -344,8 +373,8 @@ class TimelineViewModel: ObservableObject {
             currentMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
         case .year:
             currentYear = calendar.date(byAdding: .year, value: -1, to: currentYear) ?? currentYear
-        case .longTerm:
-            break // No navigation for long term
+        case .longTerm, .all:
+            break
         }
     }
     
@@ -361,8 +390,8 @@ class TimelineViewModel: ObservableObject {
             currentMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
         case .year:
             currentYear = calendar.date(byAdding: .year, value: 1, to: currentYear) ?? currentYear
-        case .longTerm:
-            break // No navigation for long term
+        case .longTerm, .all:
+            break
         }
     }
     
@@ -379,8 +408,8 @@ class TimelineViewModel: ObservableObject {
             currentMonth = calendar.startOfMonth(for: today)
         case .year:
             currentYear = calendar.startOfYear(for: today)
-        case .longTerm:
-            break // No navigation for long term
+        case .longTerm, .all:
+            break
         }
     }
     
@@ -411,6 +440,8 @@ class TimelineViewModel: ObservableObject {
                 return "no_tasks_this_month".localized
             case .year:
                 return "no_tasks_this_year".localized
+            case .all:
+                return "0 " + "tasks".localized
             case .longTerm:
                 return "no_tasks_long_term".localized
             }
@@ -423,12 +454,9 @@ class TimelineViewModel: ObservableObject {
                 let completion = getCompletion(for: task.id, on: selectedDate)
                 return completion?.isCompleted ?? false
             }
-            let total = tasks.count
-            let completed = completedTasks.count
-            return "\(completed)/\(total) " + "completed".localized
-            
-        case .week, .month, .year, .longTerm:
-            // For non-daily scopes, don't show completion count, just show task count
+            let totalTasks = tasks.count
+            return "\(completedTasks.count)/\(totalTasks) " + "completed".localized
+        default:
             let taskCount = tasks.count
             if taskCount == 1 {
                 return "1 " + "task".localized
@@ -464,7 +492,13 @@ class TimelineViewModel: ObservableObject {
         case .year:
             targetDate = currentYear
         case .longTerm:
-            targetDate = Date() // Use current date for long-term tasks
+            targetDate = Date()
+        case .all:
+            if let t = (tasks.first { $0.id == taskId }) ?? (taskManager.tasks.first { $0.id == taskId }) {
+                targetDate = completionTargetDate(for: t)
+            } else {
+                targetDate = calendar.startOfDay(for: Date())
+            }
         }
         
         TaskManager.shared.toggleTaskCompletion(taskId, on: targetDate)
@@ -484,7 +518,13 @@ class TimelineViewModel: ObservableObject {
         case .year:
             targetDate = currentYear
         case .longTerm:
-            targetDate = Date() // Use current date for long-term tasks
+            targetDate = Date()
+        case .all:
+            if let t = (tasks.first { $0.id == taskId }) ?? (taskManager.tasks.first { $0.id == taskId }) {
+                targetDate = completionTargetDate(for: t)
+            } else {
+                targetDate = calendar.startOfDay(for: Date())
+            }
         }
         
         TaskManager.shared.toggleSubtask(taskId: taskId, subtaskId: subtaskId, on: targetDate)
@@ -493,24 +533,62 @@ class TimelineViewModel: ObservableObject {
     func getCompletion(for taskId: UUID, on date: Date) -> TaskCompletion? {
         if let task = tasks.first(where: { $0.id == taskId }) {
             let calendar = Calendar.current
-            let targetDate: Date
+            let keyDate: Date
             
             switch selectedTimeScope {
             case .today:
-                targetDate = calendar.startOfDay(for: date)
+                keyDate = calendar.startOfDay(for: date)
             case .week:
-                targetDate = calendar.startOfDay(for: currentWeek)
+                keyDate = calendar.startOfDay(for: currentWeek)
             case .month:
-                targetDate = calendar.startOfDay(for: currentMonth)
+                keyDate = calendar.startOfDay(for: currentMonth)
             case .year:
-                targetDate = calendar.startOfDay(for: currentYear)
+                keyDate = calendar.startOfDay(for: currentYear)
             case .longTerm:
-                targetDate = calendar.startOfDay(for: task.startTime)
+                keyDate = calendar.startOfDay(for: task.startTime)
+            case .all:
+                keyDate = calendar.startOfDay(for: completionTargetDate(for: task))
             }
             
-            return task.completions[targetDate]
+            return task.completions[keyDate]
         }
         return nil
+    }
+
+    private func completionTargetDate(for task: TodoTask) -> Date {
+        let calendar = Calendar.current
+        switch task.timeScope {
+        case .today:
+            return selectedDate
+        case .week:
+            return currentWeek
+        case .month:
+            return currentMonth
+        case .year:
+            return currentYear
+        case .longTerm:
+            return calendar.startOfDay(for: task.startTime)
+        case .all:
+            return calendar.startOfDay(for: Date())
+        }
+    }
+
+    private func targetDate(for task: TodoTask) -> Date {
+        let calendar = Calendar.current
+        switch task.timeScope {
+        case .today:
+            return selectedDate
+        case .week:
+            return currentWeek
+        case .month:
+            return currentMonth
+        case .year:
+            return currentYear
+        case .longTerm:
+            return calendar.startOfDay(for: task.startTime)
+        case .all:
+            return calendar.startOfDay(for: Date())
+        }
     }
     
     var dateString: String {
@@ -535,25 +613,34 @@ class TimelineViewModel: ObservableObject {
         // Use already filtered tasks for the current scope
         let scopedTasks = tasks
         
+        // Special grouping when viewing "All" scope: split by each task's own time scope
+        if selectedTimeScope == .all {
+            return organizeByTimeScope(scopedTasks)
+        }
+
         switch organization {
-        case .none:
-            return OrganizedTasks.single(scopedTasks.sorted { $0.startTime < $1.startTime })
-            
         case .time:
             let sortedTasks = scopedTasks.sorted { task1, task2 in
                 let calendar = Calendar.current
                 let time1 = calendar.component(.hour, from: task1.startTime) * 60 + calendar.component(.minute, from: task1.startTime)
                 let time2 = calendar.component(.hour, from: task2.startTime) * 60 + calendar.component(.minute, from: task2.startTime)
-                return timeSortOrder == .ascending ? time1 < time2 : time1 > time2
+                if time1 != time2 {
+                    return timeSortOrder == .ascending ? time1 < time2 : time1 > time2
+                }
+                // Stable tie-breakers when minute-of-day is equal
+                if task1.creationDate != task2.creationDate {
+                    return timeSortOrder == .ascending ? (task1.creationDate < task2.creationDate) : (task1.creationDate > task2.creationDate)
+                }
+                let n1 = task1.name.lowercased()
+                let n2 = task2.name.lowercased()
+                if n1 != n2 { return timeSortOrder == .ascending ? (n1 < n2) : (n1 > n2) }
+                return timeSortOrder == .ascending ? (task1.id.uuidString < task2.id.uuidString) : (task1.id.uuidString > task2.id.uuidString)
             }
             return OrganizedTasks.single(sortedTasks)
-            
         case .category:
             return organizeByCategory(scopedTasks)
-            
         case .priority:
             return organizeByPriority(scopedTasks)
-            
         case .eisenhower:
             let (q1, q2, q3, q4) = eisenhowerQuadrants(scopedTasks)
             let sections: [TaskSection] = [
@@ -563,6 +650,8 @@ class TimelineViewModel: ObservableObject {
                 TaskSection(id: "q4", title: "not_urgent_not_important".localized, color: "#9CA3AF", icon: "square.dashed", tasks: q4),
             ]
             return OrganizedTasks.sections(sections)
+        case .none:
+            return OrganizedTasks.single(scopedTasks)
         }
     }
     
@@ -583,7 +672,13 @@ class TimelineViewModel: ObservableObject {
                 title: categoryName,
                 color: category?.color,
                 icon: "folder", 
-                tasks: tasks.sorted { $0.startTime < $1.startTime }
+                tasks: tasks.sorted { lhs, rhs in
+                    if lhs.startTime != rhs.startTime { return lhs.startTime < rhs.startTime }
+                    if lhs.creationDate != rhs.creationDate { return lhs.creationDate < rhs.creationDate }
+                    let n1 = lhs.name.lowercased(); let n2 = rhs.name.lowercased()
+                    if n1 != n2 { return n1 < n2 }
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
             )
         }.sorted { $0.title < $1.title }
         
@@ -601,10 +696,51 @@ class TimelineViewModel: ObservableObject {
                 title: priority.displayName + " " + "priority".localized,
                 color: priority.color,
                 icon: priority.icon,
-                tasks: tasks.sorted { $0.startTime < $1.startTime }
+                tasks: tasks.sorted { lhs, rhs in
+                    if lhs.startTime != rhs.startTime { return lhs.startTime < rhs.startTime }
+                    if lhs.creationDate != rhs.creationDate { return lhs.creationDate < rhs.creationDate }
+                    let n1 = lhs.name.lowercased(); let n2 = rhs.name.lowercased()
+                    if n1 != n2 { return n1 < n2 }
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
             )
         }
         
+        return OrganizedTasks.sections(sections)
+    }
+
+    // Group tasks by their time scope for the "All" view
+    private func organizeByTimeScope(_ tasks: [TodoTask]) -> OrganizedTasks {
+        // Desired order of sections
+        let order: [TaskTimeScope] = [.today, .week, .month, .year, .longTerm]
+        
+        func colorHex(for scope: TaskTimeScope) -> String {
+            switch scope {
+            case .today: return "#3B82F6"   // blue
+            case .week: return "#10B981"    // green
+            case .month: return "#F59E0B"   // orange
+            case .year: return "#8B5CF6"    // purple
+            case .longTerm: return "#EC4899"// pink
+            case .all: return "#14B8A6"     // teal (not used in sections)
+            }
+        }
+        
+        let grouped = Dictionary(grouping: tasks) { $0.timeScope }
+        let sections: [TaskSection] = order.compactMap { scope in
+            guard let list = grouped[scope], !list.isEmpty else { return nil }
+            return TaskSection(
+                id: scope.rawValue,
+                title: scope.displayName,
+                color: colorHex(for: scope),
+                icon: scope.icon,
+                tasks: list.sorted { lhs, rhs in
+                    if lhs.startTime != rhs.startTime { return lhs.startTime < rhs.startTime }
+                    return lhs.creationDate < rhs.creationDate
+                }
+            )
+        }
+        
+        // If for some reason only one section exists, still return as sections to show headers
         return OrganizedTasks.sections(sections)
     }
     
@@ -614,23 +750,23 @@ class TimelineViewModel: ObservableObject {
     }
     
     func resetView() {
-        organization = .none
+        organization = .time
         timeSortOrder = .ascending
         viewMode = .list
     }
     
     var organizationStatusText: String {
         switch organization {
-        case .none:
-            return "default_view".localized
         case .time:
-            return "by_time".localized + " (\(timeSortOrder.displayName))"
+            return "by_time".localized
         case .category:
             return "by_category".localized
         case .priority:
             return "by_priority".localized
         case .eisenhower:
             return "eisenhower_matrix".localized
+        case .none:
+            return "default".localized
         }
     }
     
@@ -704,7 +840,13 @@ class TimelineViewModel: ObservableObject {
                 return recurrence.shouldOccurOn(date: date)
             }
         }
-        .sorted { $0.startTime < $1.startTime }
+        .sorted { lhs, rhs in
+            if lhs.startTime != rhs.startTime { return lhs.startTime < rhs.startTime }
+            if lhs.creationDate != rhs.creationDate { return lhs.creationDate < rhs.creationDate }
+            let n1 = lhs.name.lowercased(); let n2 = rhs.name.lowercased()
+            if n1 != n2 { return n1 < n2 }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
     }
     
     var dueTasks: [TodoTask] {
@@ -750,7 +892,13 @@ class TimelineViewModel: ObservableObject {
             }
             
             return false
-        }.sorted { $0.startTime < $1.startTime }
+        }.sorted { lhs, rhs in
+            if lhs.startTime != rhs.startTime { return lhs.startTime < rhs.startTime }
+            if lhs.creationDate != rhs.creationDate { return lhs.creationDate < rhs.creationDate }
+            let n1 = lhs.name.lowercased(); let n2 = rhs.name.lowercased()
+            if n1 != n2 { return n1 < n2 }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
     }
     
     var effectiveStartHour: Int {
@@ -835,6 +983,8 @@ class TimelineViewModel: ObservableObject {
             return task.scopeEndDate ?? end
         case .longTerm:
             return nil
+        case .all:
+            return nil
         }
     }
 
@@ -847,7 +997,6 @@ class TimelineViewModel: ObservableObject {
         let threshold: TimeInterval
         switch selectedTimeScope {
         case .today:
-            // Only consider urgent if has a specific time within 4 hours
             if !task.hasSpecificTime { return false }
             threshold = 4 * 3600
         case .week:
@@ -858,6 +1007,20 @@ class TimelineViewModel: ObservableObject {
             threshold = 14 * 24 * 3600
         case .longTerm:
             return false
+        case .all:
+            switch task.timeScope {
+            case .today:
+                if !task.hasSpecificTime { return false }
+                threshold = 4 * 3600
+            case .week:
+                threshold = 24 * 3600
+            case .month:
+                threshold = 3 * 24 * 3600
+            case .year:
+                threshold = 14 * 24 * 3600
+            case .longTerm, .all:
+                return false
+            }
         }
         return due.timeIntervalSince(now) <= threshold
     }

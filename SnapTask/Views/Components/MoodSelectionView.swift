@@ -36,7 +36,7 @@ struct MoodSelectionView: View {
                                     Text(mood.emoji)
                                         .font(.system(size: 30))
                                 }
-                                Text(mood.italianName.capitalized)
+                                Text(mood.localizedName.capitalized)
                                     .font(.system(.caption, design: .rounded, weight: .semibold))
                                     .lineLimit(1)
                                     .foregroundColor(theme.textColor)
@@ -62,7 +62,7 @@ struct MoodSelectionView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Annulla") { dismiss() }
+                    Button("cancel".localized) { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 8) {
@@ -75,10 +75,10 @@ struct MoodSelectionView: View {
                                 }
                                 dismiss()
                             } label: {
-                                Text("Rimuovi")
+                                Text("remove".localized)
                             }
                         }
-                        Button("Fatto") { dismiss() }
+                        Button("done".localized) { dismiss() }
                     }
                 }
             }
@@ -106,14 +106,14 @@ struct MoodSelectionView: View {
 
     private var titleText: String {
         let isToday = Calendar.current.isDateInToday(date)
-        return isToday ? "Come ti senti oggi?" : "Come ti sentivi in questa giornata?"
+        return isToday ? "how_do_you_feel_today".localized : "how_did_you_feel_that_day".localized
     }
 
     private var subtitleText: String {
         if let mood = selected {
-            return "Selezionato: \(mood.italianName.capitalized)"
+            return String(format: "selected_mood_format".localized, mood.localizedName.capitalized)
         }
-        return "Tocca un’icona per selezionare."
+        return "tap_icon_to_select".localized
     }
 
     private func select(_ mood: MoodType) {
