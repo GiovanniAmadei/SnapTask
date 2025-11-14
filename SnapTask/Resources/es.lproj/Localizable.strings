@@ -1600,3 +1600,15 @@
 "selected_mood_format" = "Seleccionado: %@";
 "tap_icon_to_select" = "Toca un ícono para seleccionar.";
 "remove" = "Eliminar";
+
+// Configuración de Eisenhower (personalización de urgencia)
+"eisenhower_settings_title" = "Matriz de Eisenhower";
+"eisenhower_today_require_specific_time_title" = "Requerir hora específica (Hoy)";
+"eisenhower_today_require_specific_time_desc" = "Considerar urgentes solo las tareas de Hoy con hora definida.";
+"eisenhower_today_urgent_hours_title" = "Umbral de urgencia Hoy (horas)";
+"eisenhower_week_urgent_hours_title" = "Umbral de urgencia Semana (horas)";
+"eisenhower_month_urgent_days_title" = "Umbral de urgencia Mes (días)";
+"eisenhower_year_urgent_days_title" = "Umbral de urgencia Año (días)";
+"eisenhower_threshold_desc" = "Define cuándo una tarea se considera urgente para cada periodo.";
+"reset_to_defaults" = "Restablecer valores";
+"app_behavior" = "Comportamiento";

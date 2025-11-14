@@ -1343,3 +1343,14 @@
 "selected_mood_format" = "Selezionato: %@";
 "tap_icon_to_select" = "Tocca un’icona per selezionare.";
 "remove" = "Rimuovi";
+
+// Impostazioni Eisenhower (personalizzazione urgenza)
+"eisenhower_settings_title" = "Matrice di Eisenhower";
+"eisenhower_today_require_specific_time_title" = "Richiedi orario specifico (Oggi)";
+"eisenhower_today_require_specific_time_desc" = "Considera urgenti solo le attività di Oggi con orario definito.";
+"eisenhower_today_urgent_hours_title" = "Soglia urgenza Oggi (ore)";
+"eisenhower_week_urgent_hours_title" = "Soglia urgenza Settimana (ore)";
+"eisenhower_month_urgent_days_title" = "Soglia urgenza Mese (giorni)";
+"eisenhower_year_urgent_days_title" = "Soglia urgenza Anno (giorni)";
+"eisenhower_threshold_desc" = "Definisce quando un'attività è considerata urgente per ciascun periodo.";
+"reset_to_defaults" = "Ripristina predefiniti";

@@ -1393,3 +1393,14 @@
 "selected_mood_format" = "Selected: %@";
 "tap_icon_to_select" = "Tap an icon to select.";
 "remove" = "Remove";
+
+// Eisenhower Settings (Urgency customization)
+"eisenhower_settings_title" = "Eisenhower Matrix";
+"eisenhower_today_require_specific_time_title" = "Require specific time (Today)";
+"eisenhower_today_require_specific_time_desc" = "Consider urgent only Today tasks with a defined time.";
+"eisenhower_today_urgent_hours_title" = "Today urgency threshold (hours)";
+"eisenhower_week_urgent_hours_title" = "Week urgency threshold (hours)";
+"eisenhower_month_urgent_days_title" = "Month urgency threshold (days)";
+"eisenhower_year_urgent_days_title" = "Year urgency threshold (days)";
+"eisenhower_threshold_desc" = "Defines when a task is considered urgent for each period.";
+"reset_to_defaults" = "Reset to defaults";

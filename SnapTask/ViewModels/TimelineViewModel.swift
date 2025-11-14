@@ -993,31 +993,32 @@ class TimelineViewModel: ObservableObject {
         let now = Date()
         if due <= now { return true }
 
-        // Thresholds by scope
+        // Thresholds by scope (customizable via SettingsViewModel)
+        let settings = SettingsViewModel.shared
         let threshold: TimeInterval
         switch selectedTimeScope {
         case .today:
-            if !task.hasSpecificTime { return false }
-            threshold = 4 * 3600
+            if settings.eisenhowerTodayRequireSpecificTime && !task.hasSpecificTime { return false }
+            threshold = TimeInterval(settings.eisenhowerTodayUrgentHours) * 3600
         case .week:
-            threshold = 24 * 3600
+            threshold = TimeInterval(settings.eisenhowerWeekUrgentHours) * 3600
         case .month:
-            threshold = 3 * 24 * 3600
+            threshold = TimeInterval(settings.eisenhowerMonthUrgentDays) * 24 * 3600
         case .year:
-            threshold = 14 * 24 * 3600
+            threshold = TimeInterval(settings.eisenhowerYearUrgentDays) * 24 * 3600
         case .longTerm:
             return false
         case .all:
             switch task.timeScope {
             case .today:
-                if !task.hasSpecificTime { return false }
-                threshold = 4 * 3600
+                if settings.eisenhowerTodayRequireSpecificTime && !task.hasSpecificTime { return false }
+                threshold = TimeInterval(settings.eisenhowerTodayUrgentHours) * 3600
             case .week:
-                threshold = 24 * 3600
+                threshold = TimeInterval(settings.eisenhowerWeekUrgentHours) * 3600
             case .month:
-                threshold = 3 * 24 * 3600
+                threshold = TimeInterval(settings.eisenhowerMonthUrgentDays) * 24 * 3600
             case .year:
-                threshold = 14 * 24 * 3600
+                threshold = TimeInterval(settings.eisenhowerYearUrgentDays) * 24 * 3600
             case .longTerm, .all:
                 return false
             }

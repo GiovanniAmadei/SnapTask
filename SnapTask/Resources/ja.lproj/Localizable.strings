@@ -1390,3 +1390,15 @@
 "free_trial_activated" = "無料トライアルが有効になりました";
 "welcome_snaptask_pro" = "SnapTask Proへようこそ！";
 "welcome_snaptask_pro_lifetime" = "SnapTask Pro（生涯版）へようこそ！";
+
+// アイゼンハワー設定（緊急度のカスタマイズ）
+"eisenhower_settings_title" = "アイゼンハワー・マトリックス";
+"eisenhower_today_require_specific_time_title" = "特定の時刻が必要（今日）";
+"eisenhower_today_require_specific_time_desc" = "今日のタスクのうち、時刻が設定されているものだけを緊急として扱う。";
+"eisenhower_today_urgent_hours_title" = "今日の緊急しきい値（時間）";
+"eisenhower_week_urgent_hours_title" = "週の緊急しきい値（時間）";
+"eisenhower_month_urgent_days_title" = "月の緊急しきい値（日）";
+"eisenhower_year_urgent_days_title" = "年の緊急しきい値（日）";
+"eisenhower_threshold_desc" = "各期間でタスクを緊急とみなす条件を定義します。";
+"reset_to_defaults" = "デフォルトにリセット";
+"app_behavior" = "動作";

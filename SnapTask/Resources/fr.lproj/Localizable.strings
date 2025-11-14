@@ -1309,3 +1309,15 @@
 "yearly_savings" = "Économisez 27 %";
 "yearly_subscription" = "Abonnement annuel";
 "you_save" = "Vous économisez";
+
+// Réglages Eisenhower (personnalisation de l'urgence)
+"eisenhower_settings_title" = "Matrice d’Eisenhower";
+"eisenhower_today_require_specific_time_title" = "Exiger une heure précise (Aujourd’hui)";
+"eisenhower_today_require_specific_time_desc" = "Considérer urgentes uniquement les tâches d’aujourd’hui avec une heure définie.";
+"eisenhower_today_urgent_hours_title" = "Seuil d’urgence Aujourd’hui (heures)";
+"eisenhower_week_urgent_hours_title" = "Seuil d’urgence Semaine (heures)";
+"eisenhower_month_urgent_days_title" = "Seuil d’urgence Mois (jours)";
+"eisenhower_year_urgent_days_title" = "Seuil d’urgence Année (jours)";
+"eisenhower_threshold_desc" = "Définit quand une tâche est considérée urgente pour chaque période.";
+"reset_to_defaults" = "Réinitialiser par défaut";
+"app_behavior" = "Comportement";

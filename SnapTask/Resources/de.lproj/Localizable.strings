@@ -1317,3 +1317,15 @@
 "free_trial_activated" = "Kostenlose Testversion aktiviert";
 "welcome_snaptask_pro" = "Willkommen bei SnapTask Pro!";
 "welcome_snaptask_pro_lifetime" = "Willkommen bei SnapTask Pro (lebenslang)!";
+
+// Eisenhower-Einstellungen (Dringlichkeit anpassen)
+"eisenhower_settings_title" = "Eisenhower-Matrix";
+"eisenhower_today_require_specific_time_title" = "Spezifische Uhrzeit erforderlich (Heute)";
+"eisenhower_today_require_specific_time_desc" = "Nur heutige Aufgaben mit festgelegter Uhrzeit als dringend betrachten.";
+"eisenhower_today_urgent_hours_title" = "Dringlichkeitsschwelle Heute (Stunden)";
+"eisenhower_week_urgent_hours_title" = "Dringlichkeitsschwelle Woche (Stunden)";
+"eisenhower_month_urgent_days_title" = "Dringlichkeitsschwelle Monat (Tage)";
+"eisenhower_year_urgent_days_title" = "Dringlichkeitsschwelle Jahr (Tage)";
+"eisenhower_threshold_desc" = "Legt fest, wann eine Aufgabe je Zeitraum als dringend gilt.";
+"reset_to_defaults" = "Auf Standard zurücksetzen";
+"app_behavior" = "Verhalten";
