@@ -1093,6 +1093,7 @@
 "scope_month" = "Mese";
 "scope_year" = "Anno";
 "scope_long_term" = "L. termine";
+"scope_all" = "Tutto";
 "this_week" = "Questa settimana";
 "this_month" = "Questo mese";
 "this_year" = "Quest'anno";
