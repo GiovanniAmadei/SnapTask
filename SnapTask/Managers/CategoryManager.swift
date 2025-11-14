@@ -115,6 +115,22 @@ class CategoryManager: ObservableObject {
             // Sync with CloudKit
             CloudKitService.shared.saveCategory(category)
             print("CategoryManager: Updated category locally: \(category.name)")
+
+            // Propagate the updated category to all tasks that reference it
+            let tasksUsingCategory = TaskManager.shared.tasks.filter { $0.category?.id == category.id }
+            if !tasksUsingCategory.isEmpty {
+                print("CategoryManager: Updating \(tasksUsingCategory.count) task(s) with new category data")
+                for task in tasksUsingCategory {
+                    var updatedTask = task
+                    updatedTask.category = category
+                    Task {
+                        await TaskManager.shared.updateTask(updatedTask)
+                    }
+                }
+            }
+
+            // Notify listeners that categories changed (for forms, pickers, etc.)
+            NotificationCenter.default.post(name: .categoriesDidUpdate, object: nil)
         }
     }
     

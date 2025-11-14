@@ -50,7 +50,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var description: String?
     var location: TaskLocation?
     var startTime: Date
-    var hasSpecificTime: Bool = true
+    var hasSpecificTime: Bool = false
     var duration: TimeInterval
     var hasDuration: Bool
     var category: Category?
@@ -89,7 +89,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         description: String? = nil,
         location: TaskLocation? = nil,
         startTime: Date,
-        hasSpecificTime: Bool = true,
+        hasSpecificTime: Bool = false,
         duration: TimeInterval = 0,
         hasDuration: Bool = false,
         category: Category? = nil,

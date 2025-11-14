@@ -109,7 +109,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var description: String = ""
     @Published var location: TaskLocation?
     @Published var startDate: Date = Date()
-    @Published var hasSpecificTime: Bool = true
+    @Published var hasSpecificTime: Bool = false
     @Published var hasDuration: Bool = false
     @Published var duration: TimeInterval = 3600 {
         didSet {
@@ -203,6 +203,12 @@ class TaskFormViewModel: ObservableObject {
                 if self.categories != newCategories {
                     DispatchQueue.main.async {
                         self.categories = newCategories
+                        // Keep selectedCategory in sync if it exists and was updated
+                        if let current = self.selectedCategory,
+                           let updated = newCategories.first(where: { $0.id == current.id }),
+                           current != updated {
+                            self.selectedCategory = updated
+                        }
                     }
                 }
             }
@@ -214,6 +220,12 @@ class TaskFormViewModel: ObservableObject {
                 guard let self = self, self.isInitialized else { return }
                 if self.categories != newCategories {
                     self.categories = newCategories
+                    // Also sync selectedCategory here in case this publisher fires first
+                    if let current = self.selectedCategory,
+                       let updated = newCategories.first(where: { $0.id == current.id }),
+                       current != updated {
+                        self.selectedCategory = updated
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -246,12 +258,8 @@ class TaskFormViewModel: ObservableObject {
     }
     
     private func updateDefaultSpecificTime(for timeScope: TaskTimeScope) {
-        // Only set hasSpecificTime to true by default for today scope
-        if timeScope == .today {
-            hasSpecificTime = true
-        } else {
-            hasSpecificTime = false
-        }
+        // Default: do not set a specific time automatically for any scope
+        hasSpecificTime = false
     }
     
     var isValid: Bool {
@@ -657,7 +665,7 @@ class TaskFormViewModel: ObservableObject {
         description = ""
         location = nil
         startDate = Date()
-        hasSpecificTime = true
+        hasSpecificTime = false
         hasDuration = false
         duration = 3600
         icon = "circle.fill"
