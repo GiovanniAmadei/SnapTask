@@ -425,50 +425,80 @@ class TaskFormViewModel: ObservableObject {
             scopeStartDate = nil
             scopeEndDate = nil
         case .week:
-            let weekStart = Calendar.current.startOfWeek(for: selectedWeekDate)
-            // Use specific time if set, otherwise use week start
-            taskStartTime = hasSpecificTime ? 
-                Calendar.current.date(bySettingHour: Calendar.current.component(.hour, from: startDate), 
-                                    minute: Calendar.current.component(.minute, from: startDate), 
-                                    second: 0, 
-                                    of: weekStart) ?? weekStart : weekStart
+            let calendar = Calendar.current
+            let weekStart = calendar.startOfWeek(for: selectedWeekDate)
+            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
+            if hasSpecificTime {
+                // Clamp chosen date within the selected week and apply chosen time
+                let chosen = startDate
+                let clampedDate = max(weekStart, min(weekEnd, chosen))
+                var comps = calendar.dateComponents([.year, .month, .day], from: clampedDate)
+                comps.hour = calendar.component(.hour, from: startDate)
+                comps.minute = calendar.component(.minute, from: startDate)
+                comps.second = 0
+                taskStartTime = calendar.date(from: comps) ?? weekStart
+            } else {
+                taskStartTime = weekStart
+            }
             scopeStartDate = weekStart
-            scopeEndDate = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)
+            scopeEndDate = weekEnd
         case .month:
             let calendar = Calendar.current
-            var components = DateComponents()
-            components.year = selectedYear
-            components.month = selectedMonth
-            components.day = 1
-            let monthStart = calendar.date(from: components) ?? Date()
-            // Use specific time if set, otherwise use month start
-            taskStartTime = hasSpecificTime ? 
-                calendar.date(bySettingHour: calendar.component(.hour, from: startDate), 
-                            minute: calendar.component(.minute, from: startDate), 
-                            second: 0, 
-                            of: monthStart) ?? monthStart : monthStart
+            var startComps = DateComponents()
+            startComps.year = selectedYear
+            startComps.month = selectedMonth
+            startComps.day = 1
+            let monthStart = calendar.date(from: startComps) ?? Date()
+            let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart)!
+            let monthEnd = calendar.date(byAdding: .day, value: -1, to: nextMonth)!
+            if hasSpecificTime {
+                // Build date inside selected month/year with chosen day/time, clamped to month range
+                let day = calendar.component(.day, from: startDate)
+                let range = calendar.range(of: .day, in: .month, for: monthStart) ?? (1..<29)
+                let clampedDay = max(range.lowerBound, min(range.upperBound - 1, day))
+                var comps = DateComponents()
+                comps.year = selectedYear
+                comps.month = selectedMonth
+                comps.day = clampedDay
+                comps.hour = calendar.component(.hour, from: startDate)
+                comps.minute = calendar.component(.minute, from: startDate)
+                comps.second = 0
+                let candidate = calendar.date(from: comps) ?? monthStart
+                // Ensure inside month bounds
+                taskStartTime = max(monthStart, min(monthEnd, candidate))
+            } else {
+                taskStartTime = monthStart
+            }
             scopeStartDate = monthStart
-            let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart)
-            scopeEndDate = calendar.date(byAdding: .day, value: -1, to: monthEnd!)
+            scopeEndDate = monthEnd
         case .year:
             let calendar = Calendar.current
-            var components = DateComponents()
-            components.year = selectedYear
-            components.month = 1
-            components.day = 1
-            let yearStart = calendar.date(from: components) ?? Date()
-            // Use specific time if set, otherwise use year start
-            taskStartTime = hasSpecificTime ? 
-                calendar.date(bySettingHour: calendar.component(.hour, from: startDate), 
-                            minute: calendar.component(.minute, from: startDate), 
-                            second: 0, 
-                            of: yearStart) ?? yearStart : yearStart
+            var startComps = DateComponents()
+            startComps.year = selectedYear
+            startComps.month = 1
+            startComps.day = 1
+            let yearStart = calendar.date(from: startComps) ?? Date()
+            var endComps = DateComponents()
+            endComps.year = selectedYear
+            endComps.month = 12
+            endComps.day = 31
+            let yearEnd = calendar.date(from: endComps) ?? yearStart
+            if hasSpecificTime {
+                // Build date inside selected year with chosen month/day/time, clamped to year range
+                var comps = DateComponents()
+                comps.year = selectedYear
+                comps.month = calendar.component(.month, from: startDate)
+                comps.day = calendar.component(.day, from: startDate)
+                comps.hour = calendar.component(.hour, from: startDate)
+                comps.minute = calendar.component(.minute, from: startDate)
+                comps.second = 0
+                let candidate = calendar.date(from: comps) ?? yearStart
+                taskStartTime = max(yearStart, min(yearEnd, candidate))
+            } else {
+                taskStartTime = yearStart
+            }
             scopeStartDate = yearStart
-            var endComponents = DateComponents()
-            endComponents.year = selectedYear
-            endComponents.month = 12
-            endComponents.day = 31
-            scopeEndDate = calendar.date(from: endComponents)
+            scopeEndDate = yearEnd
         case .longTerm:
             taskStartTime = hasSpecificTime ? startDate : Calendar.current.startOfDay(for: startDate)
             scopeStartDate = nil

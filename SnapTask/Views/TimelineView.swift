@@ -1427,8 +1427,38 @@ private struct TimelineTaskCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
 
+    // Helpers for non-today scopes: date/time badges
+    private var dateBadgeText: String? {
+        switch viewModel.selectedTimeScope {
+        case .week:
+            let f = DateFormatter()
+            f.setLocalizedDateFormatFromTemplate("EEE d")
+            return f.string(from: task.startTime).capitalized
+        case .month:
+            let f = DateFormatter()
+            f.setLocalizedDateFormatFromTemplate("d MMM")
+            return f.string(from: task.startTime)
+        case .year:
+            let f = DateFormatter()
+            f.setLocalizedDateFormatFromTemplate("d MMM")
+            return f.string(from: task.startTime)
+        case .longTerm:
+            let f = DateFormatter()
+            f.setLocalizedDateFormatFromTemplate("d MMM yyyy")
+            return f.string(from: task.startTime)
+        default:
+            return nil
+        }
+    }
+
+    private var timeBadgeText: String? {
+        guard task.hasSpecificTime else { return nil }
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: task.startTime)
+    }
+
     private var isCompleted: Bool {
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         if let completion = task.completions[completionDate] {
             return completion.isCompleted
@@ -1438,7 +1468,6 @@ private struct TimelineTaskCard: View {
 
     private var completionProgress: Double {
         guard !task.subtasks.isEmpty else { return isCompleted ? 1.0 : 0.0 }
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         let completion = task.completions[completionDate]
         let completedCount = completion?.completedSubtasks.count ?? 0
@@ -1446,37 +1475,28 @@ private struct TimelineTaskCard: View {
     }
 
     private var completedSubtasks: Set<UUID> {
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         return task.completions[completionDate]?.completedSubtasks ?? []
     }
 
     private var currentStreak: Int {
         guard let recurrence = task.recurrence else { return 0 }
-        
         let selectedDate = viewModel.selectedDate.startOfDay
-        
         var streak = 0
         var currentDate = selectedDate
-        
         let isCompletedOnSelectedDate = task.completions[selectedDate]?.isCompleted == true
-        
         if isCompletedOnSelectedDate {
             streak = 1
             currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
         }
-        
-        // Limit iterations to prevent infinite loops (max 1000 days back)
         var iterationCount = 0
         let maxIterations = 1000
-        
         while iterationCount < maxIterations {
             guard recurrence.shouldOccurOn(date: currentDate) else {
                 currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
                 iterationCount += 1
                 continue
             }
-            
             if task.completions[currentDate]?.isCompleted == true {
                 streak += 1
                 currentDate = Calendar.current.date(byAdding: .day, value: -1, to: currentDate)!
@@ -1485,7 +1505,6 @@ private struct TimelineTaskCard: View {
                 break
             }
         }
-        
         return streak
     }
 
@@ -1517,6 +1536,7 @@ private struct TimelineTaskCard: View {
         ZStack {
             // Background actions layer
             HStack(spacing: 0) {
+                // ...
                 Spacer()
                 
                 HStack(spacing: 8) {
@@ -1666,7 +1686,7 @@ private struct TimelineTaskCard: View {
                     
                     Spacer()
                     
-                    if task.timeScope == .today {
+                    if viewModel.selectedTimeScope == .today {
                         if task.hasSpecificTime {
                             let calendar = Calendar.current
                             let hour = calendar.component(.hour, from: task.startTime)
@@ -1686,6 +1706,25 @@ private struct TimelineTaskCard: View {
                                 .padding(.vertical, 2)
                                 .background(Color.blue.opacity(0.1))
                                 .cornerRadius(4)
+                        }
+                    } else if task.hasSpecificTime, let dayText = dateBadgeText {
+                        HStack(spacing: 6) {
+                            Text(dayText)
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundColor(theme.secondaryTextColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(theme.surfaceColor)
+                                .cornerRadius(4)
+                            if let timeText = timeBadgeText {
+                                Text(timeText)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(theme.secondaryTextColor)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(theme.surfaceColor)
+                                    .cornerRadius(4)
+                            }
                         }
                     }
                     
