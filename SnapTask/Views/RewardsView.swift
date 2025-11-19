@@ -798,13 +798,13 @@ struct RewardCard: View {
                         if reward.isGeneralReward {
                             let actualPoints = RewardManager.shared.availablePoints(for: reward.frequency)
                             let safePoints = max(actualPoints, 0)
-                            Text("\(safePoints)/\(reward.pointsCost) points")
+                            Text("\(safePoints)/\(reward.pointsCost) " + "points".localized)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(canRedeem ? Color(hex: "00C853") : theme.primaryColor)
                         } else if let categoryId = reward.categoryId {
                             let categoryPoints = RewardManager.shared.availablePointsForCategory(categoryId, frequency: reward.frequency)
                             let safeCategoryPoints = max(categoryPoints, 0)
-                            Text("\(safeCategoryPoints)/\(reward.pointsCost) points")
+                            Text("\(safeCategoryPoints)/\(reward.pointsCost) " + "points".localized)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(canRedeem ? Color(hex: "00C853") : categoryColor)
                         }
@@ -814,7 +814,7 @@ struct RewardCard: View {
                                 RewardManager.shared.availablePoints(for: reward.frequency) :
                                 RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
                             let missingPoints = reward.pointsCost - max(actualAvailablePoints, 0)
-                            Text(String(format: "need_%d_more".localized, missingPoints))
+                            Text("need_more_points".localized.replacingOccurrences(of: "{points}", with: "\(missingPoints)"))
                                 .font(.system(size: 11))
                                 .themedSecondaryText()
                                 .lineLimit(1)
