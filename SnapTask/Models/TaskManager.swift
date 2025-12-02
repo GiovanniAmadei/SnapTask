@@ -780,17 +780,39 @@ class TaskManager: ObservableObject {
     }
     
     private func loadTasks() {
-        if let data = UserDefaults.standard.data(forKey: tasksKey) {
+        // Preferisci i dati dal container condiviso (usato dal Widget)
+        let sharedData = appGroupUserDefaults?.data(forKey: tasksKey)
+        let standardData = UserDefaults.standard.data(forKey: tasksKey)
+        if let data = sharedData ?? standardData {
             do {
                 tasks = try JSONDecoder().decode([TodoTask].self, from: data)
                 migrateTaskDataIfNeeded()
                 
-                // Assicuriamoci che i dati siano anche nel container condiviso per i Widget
+                // Mantieni i due store allineati
                 saveTasks()
             } catch {
                 print("Error loading tasks: \(error)")
                 tasks = []
             }
+        }
+    }
+
+    /// Ricarica le task dall'App Group se diverse da quelle in memoria (es. modificate dal Widget)
+    func reloadFromSharedIfAvailable() {
+        guard let data = appGroupUserDefaults?.data(forKey: tasksKey) else { return }
+        do {
+            // Confronta con lo stato corrente per evitare reload inutili
+            let current = try? JSONEncoder().encode(tasks)
+            if current == data { return }
+            let sharedTasks = try JSONDecoder().decode([TodoTask].self, from: data)
+            tasks = sharedTasks
+            // Allinea e notifica UI
+            saveTasks()
+            notifyTasksUpdated()
+            objectWillChange.send()
+            print("🔄 Reloaded tasks from shared App Group (widget changes applied)")
+        } catch {
+            print("Error reloading tasks from shared App Group: \(error)")
         }
     }
     

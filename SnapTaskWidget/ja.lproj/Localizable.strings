@@ -1,0 +1,16 @@
+/* Widget & AppIntents */
+"Configuration" = "設定";
+"This is an example widget." = "これはサンプルウィジェットです。";
+"Favorite Emoji" = "お気に入りの絵文字";
+
+"Scope" = "範囲";
+"Select which scope to show in the widget" = "ウィジェットに表示する範囲を選択";
+"Today" = "今日";
+"Week" = "週";
+"Month" = "月";
+"Year" = "年";
+"Long Term" = "長期";
+"Set Widget Scope" = "ウィジェット範囲を設定";
+
+"Toggle Task Completion" = "タスクの完了/取消";
+"Task ID" = "タスクID";

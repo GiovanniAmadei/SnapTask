@@ -1,0 +1,16 @@
+/* Widget & AppIntents */
+"Configuration" = "Konfiguration";
+"This is an example widget." = "Dies ist ein Beispiel-Widget.";
+"Favorite Emoji" = "Lieblings-Emoji";
+
+"Scope" = "Bereich";
+"Select which scope to show in the widget" = "Wählen Sie den Bereich für das Widget";
+"Today" = "Heute";
+"Week" = "Woche";
+"Month" = "Monat";
+"Year" = "Jahr";
+"Long Term" = "Langfristig";
+"Set Widget Scope" = "Widget-Bereich festlegen";
+
+"Toggle Task Completion" = "Aufgabe abschließen/aufheben";
+"Task ID" = "Aufgaben-ID";

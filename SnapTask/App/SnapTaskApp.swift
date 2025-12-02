@@ -56,6 +56,9 @@ struct SnapTaskApp: App {
                         if cloudKitService.isCloudKitEnabled {
                             settingsManager.syncSettings()
                         }
+
+                        // Reload tasks from App Group if modified by the widget
+                        TaskManager.shared.reloadFromSharedIfAvailable()
                         
                         requestBackgroundAppRefresh()
                         UIApplication.shared.applicationIconBadgeNumber = 0
