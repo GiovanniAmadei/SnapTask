@@ -254,7 +254,7 @@ struct SnapTaskWidgetEntryView : View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 28))
                         .foregroundStyle(accentGradient)
-                    Text("Tutto fatto!")
+                    Text(String(localized: "All done!"))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(textColor)
                 }
@@ -273,7 +273,7 @@ struct SnapTaskWidgetEntryView : View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 28))
                             .foregroundStyle(accentGradient)
-                        Text("Tutto fatto!")
+                        Text(String(localized: "All done!"))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(textColor)
                     }
@@ -342,7 +342,7 @@ struct SnapTaskWidgetEntryView : View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 24))
                         .foregroundStyle(accentGradient)
-                    Text("Nessuna task")
+                    Text(String(localized: "No tasks"))
                         .font(.system(size: 11))
                         .foregroundColor(secondaryTextColor)
                     Spacer()
@@ -366,7 +366,7 @@ struct SnapTaskWidgetEntryView : View {
                         }
                         
                         if entry.tasks.count > 6 {
-                            Text("+ \(entry.tasks.count - 6) altre")
+                            Text(String(localized: "+ \(entry.tasks.count - 6) more"))
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundColor(primaryColor)
                         }
@@ -407,7 +407,7 @@ struct SnapTaskWidgetEntryView : View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 32))
                         .foregroundStyle(accentGradient)
-                    Text("Nessuna task")
+                    Text(String(localized: "No tasks"))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(secondaryTextColor)
                     Spacer()
@@ -438,7 +438,7 @@ struct SnapTaskWidgetEntryView : View {
                     HStack {
                         Spacer()
                         Link(destination: URL(string: "snaptask://tasks")!) {
-                            Text("+ \(entry.tasks.count - 7) altre →")
+                            Text(String(localized: "+ \(entry.tasks.count - 7) more →"))
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(primaryColor)
                         }
@@ -544,11 +544,11 @@ struct SnapTaskWidgetEntryView : View {
                     .foregroundStyle(accentGradient)
             }
             
-            Text("Tutto fatto!")
+            Text(String(localized: "All done!"))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(textColor)
             
-            Text("Nessuna task per questo periodo")
+            Text(String(localized: "No tasks for this period"))
                 .font(.system(size: 11))
                 .foregroundColor(secondaryTextColor)
                 .multilineTextAlignment(.center)
@@ -593,7 +593,7 @@ struct SnapTaskWidgetEntryView : View {
                 Link(destination: URL(string: "snaptask://tasks")!) {
                     HStack {
                         Spacer()
-                        Text("+ \(entry.tasks.count - limit) altre →")
+                        Text(String(localized: "+ \(entry.tasks.count - limit) more →"))
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(primaryColor)
                             .padding(.horizontal, 8)
@@ -916,8 +916,8 @@ struct SnapTaskWidget: Widget {
         AppIntentConfiguration(kind: kind, intent: ScopeSelectionIntent.self, provider: Provider()) { entry in
             SnapTaskWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("SnapTask")
-        .description("Visualizza le task per lo scope selezionato.")
+        .configurationDisplayName(String(localized: "SnapTask"))
+        .description(String(localized: "View tasks for the selected scope."))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }

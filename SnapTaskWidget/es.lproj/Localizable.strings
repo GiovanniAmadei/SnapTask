@@ -14,3 +14,12 @@
 
 "Toggle Task Completion" = "Completar/Deshacer tarea";
 "Task ID" = "ID de tarea";
+
+/* Widget UI */
+"All done!" = "¡Todo hecho!";
+"No tasks" = "Sin tareas";
+"No tasks for this period" = "Sin tareas para este período";
+"+ %lld more" = "+ %lld más";
+"+ %lld more →" = "+ %lld más →";
+"SnapTask" = "SnapTask";
+"View tasks for the selected scope." = "Ver tareas del ámbito seleccionado.";

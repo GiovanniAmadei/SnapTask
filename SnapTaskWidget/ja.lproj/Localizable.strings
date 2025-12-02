@@ -14,3 +14,12 @@
 
 "Toggle Task Completion" = "タスクの完了/取消";
 "Task ID" = "タスクID";
+
+/* Widget UI */
+"All done!" = "全て完了！";
+"No tasks" = "タスクなし";
+"No tasks for this period" = "この期間のタスクはありません";
+"+ %lld more" = "+ %lld 件";
+"+ %lld more →" = "+ %lld 件 →";
+"SnapTask" = "SnapTask";
+"View tasks for the selected scope." = "選択した範囲のタスクを表示。";

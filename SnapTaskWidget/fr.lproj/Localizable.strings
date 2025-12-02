@@ -14,3 +14,12 @@
 
 "Toggle Task Completion" = "Valider/Annuler la tâche";
 "Task ID" = "ID de la tâche";
+
+/* Widget UI */
+"All done!" = "Tout est fait !";
+"No tasks" = "Aucune tâche";
+"No tasks for this period" = "Aucune tâche pour cette période";
+"+ %lld more" = "+ %lld autres";
+"+ %lld more →" = "+ %lld autres →";
+"SnapTask" = "SnapTask";
+"View tasks for the selected scope." = "Afficher les tâches pour la portée sélectionnée.";

@@ -14,3 +14,12 @@
 
 "Toggle Task Completion" = "Aufgabe abschließen/aufheben";
 "Task ID" = "Aufgaben-ID";
+
+/* Widget UI */
+"All done!" = "Alles erledigt!";
+"No tasks" = "Keine Aufgaben";
+"No tasks for this period" = "Keine Aufgaben für diesen Zeitraum";
+"+ %lld more" = "+ %lld weitere";
+"+ %lld more →" = "+ %lld weitere →";
+"SnapTask" = "SnapTask";
+"View tasks for the selected scope." = "Aufgaben für den ausgewählten Bereich anzeigen.";
