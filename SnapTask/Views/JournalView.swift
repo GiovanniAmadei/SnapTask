@@ -109,7 +109,8 @@ struct JournalView: View {
                 }
             }
             .sheet(isPresented: $showingPhotoLibraryPicker) {
-                PhotoLibraryPicker(selectionLimit: 10) { images in
+                let remaining = MediaLimits.remainingJournalPhotos(currentCount: currentPhotos.count)
+                PhotoLibraryPicker(selectionLimit: remaining) { images in
                     Task {
                         await handleCapturedImages(images)
                     }
@@ -289,6 +290,22 @@ struct JournalView: View {
         }
     }
 
+    private var currentPhotos: [JournalPhoto] {
+        manager.entry(for: currentDate).photos
+    }
+    
+    private var currentVoiceMemos: [JournalVoiceMemo] {
+        manager.entry(for: currentDate).voiceMemos
+    }
+    
+    private var canAddMorePhotos: Bool {
+        MediaLimits.canAddJournalPhoto(currentCount: currentPhotos.count)
+    }
+    
+    private var canAddMoreVoiceMemos: Bool {
+        MediaLimits.canAddJournalVoiceMemo(currentCount: currentVoiceMemos.count)
+    }
+    
     private var photosCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -299,6 +316,10 @@ struct JournalView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(theme.textColor)
                 Spacer()
+                // Photo count indicator
+                Text("\(currentPhotos.count)/\(MediaLimits.maxPhotosPerJournal)")
+                    .font(.caption)
+                    .foregroundColor(theme.secondaryTextColor)
             }
 
             let currentEntry = manager.entry(for: currentDate)
@@ -343,31 +364,33 @@ struct JournalView: View {
                     }
                 }
                 
-                Button {
-                    showPhotoSourceDialog = true
-                } label: {
-                    HStack {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 16))
-                            .foregroundColor(.blue)
-                        Text("add_photos".localized)
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
-                        Spacer()
+                if canAddMorePhotos {
+                    Button {
+                        showPhotoSourceDialog = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 16))
+                                .foregroundColor(.blue)
+                            Text("add_photos".localized)
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.blue.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.blue.opacity(0.05))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                            )
-                    )
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
                 }
-                .buttonStyle(.plain)
-                .padding(.top, 4)
             } else {
                 Button {
                     showPhotoSourceDialog = true
@@ -416,51 +439,57 @@ struct JournalView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(theme.textColor)
                 Spacer()
+                // Voice memo count indicator
+                Text("\(currentVoiceMemos.count)/\(MediaLimits.maxVoiceMemosPerJournal)")
+                    .font(.caption)
+                    .foregroundColor(theme.secondaryTextColor)
             }
 
-            HStack(spacing: 12) {
-                Button {
-                    if isRecordingVoice {
-                        if let memo = voiceMemoService.stopJournalRecording() {
-                            manager.addVoiceMemo(memo, for: currentDate)
-                        }
-                        isRecordingVoice = false
-                    } else {
-                        Task {
-                            let granted = await voiceMemoService.requestPermission()
-                            if !granted {
-                                showMicDeniedAlert = true
-                                return
+            if canAddMoreVoiceMemos || isRecordingVoice {
+                HStack(spacing: 12) {
+                    Button {
+                        if isRecordingVoice {
+                            if let memo = voiceMemoService.stopJournalRecording() {
+                                manager.addVoiceMemo(memo, for: currentDate)
                             }
-                            do {
-                                let entryId = manager.entry(for: currentDate).id
-                                try voiceMemoService.startJournalRecording(for: entryId)
-                                isRecordingVoice = true
-                            } catch {
-                                isRecordingVoice = false
+                            isRecordingVoice = false
+                        } else {
+                            Task {
+                                let granted = await voiceMemoService.requestPermission()
+                                if !granted {
+                                    showMicDeniedAlert = true
+                                    return
+                                }
+                                do {
+                                    let entryId = manager.entry(for: currentDate).id
+                                    try voiceMemoService.startJournalRecording(for: entryId)
+                                    isRecordingVoice = true
+                                } catch {
+                                    isRecordingVoice = false
+                                }
                             }
                         }
+                    } label: {
+                        HStack {
+                            Image(systemName: isRecordingVoice ? "stop.circle.fill" : "record.circle.fill")
+                                .font(.system(size: 16))
+                            Text(isRecordingVoice ? "stop".localized : "record".localized)
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.9)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(isRecordingVoice ? Color.orange : Color.red)
+                        )
                     }
-                } label: {
-                    HStack {
-                        Image(systemName: isRecordingVoice ? "stop.circle.fill" : "record.circle.fill")
-                            .font(.system(size: 16))
-                        Text(isRecordingVoice ? "stop".localized : "record".localized)
-                            .font(.subheadline.weight(.medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.9)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(isRecordingVoice ? Color.orange : Color.red)
-                    )
+                    .frame(minWidth: 110)
+                    
+                    Spacer()
                 }
-                .frame(minWidth: 110)
-                
-                Spacer()
             }
             
             if isRecordingVoice {

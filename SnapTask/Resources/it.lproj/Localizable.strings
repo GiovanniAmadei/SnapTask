@@ -1355,3 +1355,30 @@
 "eisenhower_year_urgent_days_title" = "Soglia urgenza Anno (giorni)";
 "eisenhower_threshold_desc" = "Definisce quando un'attività è considerata urgente per ciascun periodo.";
 "reset_to_defaults" = "Ripristina predefiniti";
+
+// Media Limits
+"photo_limit_reached_title" = "Limite Foto Raggiunto";
+"photo_limit_reached_message" = "Puoi aggiungere fino a %d foto per attività. Elimina alcune foto per aggiungerne altre.";
+"voice_memo_limit_reached_title" = "Limite Note Vocali Raggiunto";
+"voice_memo_limit_reached_message" = "Puoi aggiungere fino a %d note vocali per attività. Eliminane alcune per aggiungerne altre.";
+"max_duration_reached_title" = "Durata Massima Raggiunta";
+"max_duration_reached_message" = "Le note vocali sono limitate a %d minuti. La registrazione è stata salvata.";
+"add_photos_remaining" = "Aggiungi foto (%d rimanenti)";
+"max_duration_info" = "Max %d min";
+"voice_memo_limit_info" = "Limite note vocali raggiunto";
+"clear_duration" = "Cancella Durata";
+
+// Calendar View
+"calendar" = "Calendario";
+"today" = "Oggi";
+"tasks_count" = "%d attività";
+"no_tasks_for_day" = "Nessuna attività per questo giorno";
+"select_day_to_view_media" = "Seleziona un giorno per vedere i media";
+"no_media_for_task" = "Nessun media allegato";
+"notes" = "Note";
+"photo_not_found" = "Foto non trovata";
+
+// Task Performance
+"performance" = "Prestazione";
+"difficulty" = "Difficoltà";
+"quality" = "Qualità";

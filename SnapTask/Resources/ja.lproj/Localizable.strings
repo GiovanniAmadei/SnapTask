@@ -1402,3 +1402,30 @@
 "eisenhower_threshold_desc" = "各期間でタスクを緊急とみなす条件を定義します。";
 "reset_to_defaults" = "デフォルトにリセット";
 "app_behavior" = "動作";
+
+// Media Limits
+"photo_limit_reached_title" = "写真の上限に達しました";
+"photo_limit_reached_message" = "タスクごとに最大%d枚の写真を追加できます。追加するには写真を削除してください。";
+"voice_memo_limit_reached_title" = "ボイスメモの上限に達しました";
+"voice_memo_limit_reached_message" = "タスクごとに最大%d件のボイスメモを追加できます。追加するには削除してください。";
+"max_duration_reached_title" = "最大時間に達しました";
+"max_duration_reached_message" = "ボイスメモは%d分に制限されています。録音は保存されました。";
+"add_photos_remaining" = "写真を追加（残り%d枚）";
+"max_duration_info" = "最大%d分";
+"voice_memo_limit_info" = "ボイスメモの上限に達しました";
+"clear_duration" = "時間をクリア";
+
+// Calendar View
+"calendar" = "カレンダー";
+"today" = "今日";
+"tasks_count" = "%d件のタスク";
+"no_tasks_for_day" = "この日のタスクはありません";
+"select_day_to_view_media" = "日付を選択してメディアを表示";
+"no_media_for_task" = "添付メディアなし";
+"notes" = "メモ";
+"photo_not_found" = "写真が見つかりません";
+
+// Task Performance
+"performance" = "パフォーマンス";
+"difficulty" = "難易度";
+"quality" = "品質";

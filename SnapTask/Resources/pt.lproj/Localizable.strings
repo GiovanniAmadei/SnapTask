@@ -1404,3 +1404,30 @@
 "eisenhower_threshold_desc" = "Define quando uma tarefa é considerada urgente para cada período.";
 "reset_to_defaults" = "Restaurar padrões";
 "app_behavior" = "Comportamento";
+
+// Media Limits
+"photo_limit_reached_title" = "Limite de fotos atingido";
+"photo_limit_reached_message" = "Você pode adicionar até %d fotos por tarefa. Exclua algumas fotos para adicionar mais.";
+"voice_memo_limit_reached_title" = "Limite de gravações atingido";
+"voice_memo_limit_reached_message" = "Você pode adicionar até %d gravações por tarefa. Exclua algumas para adicionar mais.";
+"max_duration_reached_title" = "Duração máxima atingida";
+"max_duration_reached_message" = "As gravações são limitadas a %d minutos. Sua gravação foi salva.";
+"add_photos_remaining" = "Adicionar fotos (%d restantes)";
+"max_duration_info" = "Máx %d min";
+"voice_memo_limit_info" = "Limite de gravações atingido";
+"clear_duration" = "Limpar duração";
+
+// Calendar View
+"calendar" = "Calendário";
+"today" = "Hoje";
+"tasks_count" = "%d tarefas";
+"no_tasks_for_day" = "Sem tarefas para este dia";
+"select_day_to_view_media" = "Selecione um dia para ver as mídias";
+"no_media_for_task" = "Sem mídias anexadas";
+"notes" = "Notas";
+"photo_not_found" = "Foto não encontrada";
+
+// Task Performance
+"performance" = "Desempenho";
+"difficulty" = "Dificuldade";
+"quality" = "Qualidade";

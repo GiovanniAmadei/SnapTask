@@ -1404,3 +1404,30 @@
 "eisenhower_year_urgent_days_title" = "Year urgency threshold (days)";
 "eisenhower_threshold_desc" = "Defines when a task is considered urgent for each period.";
 "reset_to_defaults" = "Reset to defaults";
+
+// Media Limits
+"photo_limit_reached_title" = "Photo Limit Reached";
+"photo_limit_reached_message" = "You can add up to %d photos per task. Delete some photos to add more.";
+"voice_memo_limit_reached_title" = "Voice Memo Limit Reached";
+"voice_memo_limit_reached_message" = "You can add up to %d voice memos per task. Delete some to add more.";
+"max_duration_reached_title" = "Maximum Duration Reached";
+"max_duration_reached_message" = "Voice memos are limited to %d minutes. Your recording has been saved.";
+"add_photos_remaining" = "Add photos (%d remaining)";
+"max_duration_info" = "Max %d min";
+"voice_memo_limit_info" = "Voice memo limit reached";
+"clear_duration" = "Clear Duration";
+
+// Calendar View
+"calendar" = "Calendar";
+"today" = "Today";
+"tasks_count" = "%d tasks";
+"no_tasks_for_day" = "No tasks for this day";
+"select_day_to_view_media" = "Select a day to view media";
+"no_media_for_task" = "No media attached";
+"notes" = "Notes";
+"photo_not_found" = "Photo not found";
+
+// Task Performance
+"performance" = "Performance";
+"difficulty" = "Difficulty";
+"quality" = "Quality";

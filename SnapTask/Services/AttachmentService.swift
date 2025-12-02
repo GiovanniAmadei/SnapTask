@@ -145,7 +145,76 @@ enum AttachmentService {
     // MARK: - Common
     
     static func loadImage(from path: String) -> UIImage? {
-        return UIImage(contentsOfFile: path)
+        // First try the exact path
+        if let image = UIImage(contentsOfFile: path) {
+            return image
+        }
+        
+        // If path doesn't work, try to reconstruct it
+        // This handles cases where the app's sandbox path changed (reinstall, update, etc.)
+        let filename = (path as NSString).lastPathComponent
+        let parentFolder = ((path as NSString).deletingLastPathComponent as NSString).lastPathComponent
+        
+        // Try to find the file in the current Documents/Attachments directory
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let possiblePaths = [
+            // Try Attachments/parentFolder/filename
+            docs.appendingPathComponent("Attachments").appendingPathComponent(parentFolder).appendingPathComponent(filename).path,
+            // Try just Attachments/filename
+            docs.appendingPathComponent("Attachments").appendingPathComponent(filename).path,
+            // Try VoiceMemos/parentFolder/filename (for voice memos)
+            docs.appendingPathComponent("VoiceMemos").appendingPathComponent(parentFolder).appendingPathComponent(filename).path
+        ]
+        
+        for possiblePath in possiblePaths {
+            if let image = UIImage(contentsOfFile: possiblePath) {
+                return image
+            }
+        }
+        
+        return nil
+    }
+    
+    /// Resolves a potentially stale file path to a valid current path
+    static func resolveFilePath(_ path: String) -> String? {
+        // First check if the path exists as-is
+        if FileManager.default.fileExists(atPath: path) {
+            return path
+        }
+        
+        // Try to reconstruct the path
+        let filename = (path as NSString).lastPathComponent
+        let parentFolder = ((path as NSString).deletingLastPathComponent as NSString).lastPathComponent
+        
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        
+        // Build list of possible paths to check
+        var possiblePaths: [String] = []
+        
+        // Try Attachments folder (where voice memos are stored)
+        possiblePaths.append(docs.appendingPathComponent("Attachments").appendingPathComponent(parentFolder).appendingPathComponent(filename).path)
+        possiblePaths.append(docs.appendingPathComponent("Attachments").appendingPathComponent(filename).path)
+        
+        // Try VoiceMemos folder (legacy location)
+        possiblePaths.append(docs.appendingPathComponent("VoiceMemos").appendingPathComponent(parentFolder).appendingPathComponent(filename).path)
+        possiblePaths.append(docs.appendingPathComponent("VoiceMemos").appendingPathComponent(filename).path)
+        
+        // Try searching in all Attachments subfolders
+        let attachmentsFolder = docs.appendingPathComponent("Attachments")
+        if let subfolders = try? FileManager.default.contentsOfDirectory(atPath: attachmentsFolder.path) {
+            for subfolder in subfolders {
+                let potentialPath = attachmentsFolder.appendingPathComponent(subfolder).appendingPathComponent(filename).path
+                possiblePaths.append(potentialPath)
+            }
+        }
+        
+        for possiblePath in possiblePaths {
+            if FileManager.default.fileExists(atPath: possiblePath) {
+                return possiblePath
+            }
+        }
+        
+        return nil
     }
     
     private static func downscale(image: UIImage, maxDimension: CGFloat) -> UIImage {

@@ -1329,3 +1329,30 @@
 "eisenhower_threshold_desc" = "Legt fest, wann eine Aufgabe je Zeitraum als dringend gilt.";
 "reset_to_defaults" = "Auf Standard zurücksetzen";
 "app_behavior" = "Verhalten";
+
+// Media Limits
+"photo_limit_reached_title" = "Fotolimit erreicht";
+"photo_limit_reached_message" = "Du kannst bis zu %d Fotos pro Aufgabe hinzufügen. Lösche einige Fotos, um weitere hinzuzufügen.";
+"voice_memo_limit_reached_title" = "Sprachmemo-Limit erreicht";
+"voice_memo_limit_reached_message" = "Du kannst bis zu %d Sprachmemos pro Aufgabe hinzufügen. Lösche einige, um weitere hinzuzufügen.";
+"max_duration_reached_title" = "Maximale Dauer erreicht";
+"max_duration_reached_message" = "Sprachmemos sind auf %d Minuten begrenzt. Deine Aufnahme wurde gespeichert.";
+"add_photos_remaining" = "Fotos hinzufügen (%d übrig)";
+"max_duration_info" = "Max %d Min";
+"voice_memo_limit_info" = "Sprachmemo-Limit erreicht";
+"clear_duration" = "Dauer löschen";
+
+// Calendar View
+"calendar" = "Kalender";
+"today" = "Heute";
+"tasks_count" = "%d Aufgaben";
+"no_tasks_for_day" = "Keine Aufgaben für diesen Tag";
+"select_day_to_view_media" = "Wähle einen Tag, um Medien anzuzeigen";
+"no_media_for_task" = "Keine Medien angehängt";
+"notes" = "Notizen";
+"photo_not_found" = "Foto nicht gefunden";
+
+// Task Performance
+"performance" = "Leistung";
+"difficulty" = "Schwierigkeit";
+"quality" = "Qualität";

@@ -10,6 +10,9 @@
 		0134761044174BDDB535D8F4 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B7E085D2B50B4B569093A98C /* FirebaseAuth */; };
 		1D7A28826641479EBF3A11B5 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = C23D2A3E30904F0BBD78F8CE /* FirebaseCore */; };
 		4CBA99743298491BAC054E58 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = D87140FB2D2B446DA794B990 /* FirebaseFirestore */; };
+		AC8F53382ED859DE009561B2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 42E919B783BB4EB99F43A4C3 /* WidgetKit.framework */; };
+		AC8F53392ED859DE009561B2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A5D885DF271547BCAB71EBED /* SwiftUI.framework */; };
+		AC8F534A2ED859DE009561B2 /* SnapTaskWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC8F53372ED859DE009561B2 /* SnapTaskWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -19,6 +22,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 8558DB37607D472D9D5D9D67;
 			remoteInfo = "SnapTask Pro";
+		};
+		AC8F53482ED859DE009561B2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FD3DCF475E4A4C8CABD44701 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AC8F53362ED859DE009561B2;
+			remoteInfo = SnapTaskWidgetExtension;
 		};
 		CB092F97BB274760BEF0ADAC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -53,6 +63,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				AC8F534A2ED859DE009561B2 /* SnapTaskWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -75,6 +86,7 @@
 		42E919B783BB4EB99F43A4C3 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		5BE6903CC2BE45AF9E5B2602 /* SnapTask ProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SnapTask ProTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A5D885DF271547BCAB71EBED /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		AC8F53372ED859DE009561B2 /* SnapTaskWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SnapTaskWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D58B432B55A343BB8233FA51 /* SnapTask Pro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SnapTask Pro.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F410AB27FC1B43A7B59795D0 /* SnapTask ProUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SnapTask ProUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5F5DAAB9E22424CBC996659 /* SnapTask Pro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SnapTask Pro.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,6 +94,31 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AC8F534E2ED859DE009561B2 /* Exceptions for "SnapTaskWidget" folder in "SnapTaskWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AC8F53362ED859DE009561B2 /* SnapTaskWidgetExtension */;
+		};
+		AC8F53522ED85ACE009561B2 /* Exceptions for "SnapTask" folder in "SnapTaskWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Extensions/Color+Hex.swift",
+				"Extensions/String+Localization.swift",
+				Models/Category.swift,
+				Models/PomodoroSettings.swift,
+				Models/Priority.swift,
+				Models/Recurrence.swift,
+				Models/Subtask.swift,
+				Models/TaskCompletion.swift,
+				Models/TaskLocation.swift,
+				Models/TaskPhoto.swift,
+				Models/TaskVoiceMemo.swift,
+				Models/TodoTask.swift,
+			);
+			target = AC8F53362ED859DE009561B2 /* SnapTaskWidgetExtension */;
+		};
 		F06FD242C14E48EDB783BA46 /* Exceptions for "SnapTask" folder in "SnapTask" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -106,8 +143,17 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				F06FD242C14E48EDB783BA46 /* Exceptions for "SnapTask" folder in "SnapTask" target */,
+				AC8F53522ED85ACE009561B2 /* Exceptions for "SnapTask" folder in "SnapTaskWidgetExtension" target */,
 			);
 			path = SnapTask;
+			sourceTree = "<group>";
+		};
+		AC8F533A2ED859DE009561B2 /* SnapTaskWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AC8F534E2ED859DE009561B2 /* Exceptions for "SnapTaskWidget" folder in "SnapTaskWidgetExtension" target */,
+			);
+			path = SnapTaskWidget;
 			sourceTree = "<group>";
 		};
 		FC2AE95C2E605FAB0039612E /* SnapTaskWidgetExtension */ = {
@@ -147,6 +193,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AC8F53342ED859DE009561B2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC8F53392ED859DE009561B2 /* SwiftUI.framework in Frameworks */,
+				AC8F53382ED859DE009561B2 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BA572E9C4CFA4D018C1D3C20 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -173,6 +228,7 @@
 				81E1F18F4F5647BF997A6867 /* SnapTaskUITests */,
 				FC2AE95C2E605FAB0039612E /* SnapTaskWidgetExtension */,
 				FC2AEB452E6064FA0039612E /* SnapTaskWidgetExtension */,
+				AC8F533A2ED859DE009561B2 /* SnapTaskWidget */,
 				F90FF5C009E5401BB3E1882E /* Frameworks */,
 				91AAC91753284605B39E028F /* Products */,
 				4EA9C2CF45A241B4AF67EF2A /* Recovered References */,
@@ -195,6 +251,7 @@
 				F5F5DAAB9E22424CBC996659 /* SnapTask Pro.app */,
 				5BE6903CC2BE45AF9E5B2602 /* SnapTask ProTests.xctest */,
 				F410AB27FC1B43A7B59795D0 /* SnapTask ProUITests.xctest */,
+				AC8F53372ED859DE009561B2 /* SnapTaskWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -224,6 +281,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				AC8F53492ED859DE009561B2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				836D3975FC0642468BE2CA9B /* SnapTask */,
@@ -321,6 +379,28 @@
 			productReference = F5F5DAAB9E22424CBC996659 /* SnapTask Pro.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AC8F53362ED859DE009561B2 /* SnapTaskWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC8F534D2ED859DE009561B2 /* Build configuration list for PBXNativeTarget "SnapTaskWidgetExtension" */;
+			buildPhases = (
+				AC8F53332ED859DE009561B2 /* Sources */,
+				AC8F53342ED859DE009561B2 /* Frameworks */,
+				AC8F53352ED859DE009561B2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AC8F533A2ED859DE009561B2 /* SnapTaskWidget */,
+			);
+			name = SnapTaskWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = SnapTaskWidgetExtension;
+			productReference = AC8F53372ED859DE009561B2 /* SnapTaskWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -348,6 +428,9 @@
 					};
 					8558DB37607D472D9D5D9D67 = {
 						CreatedOnToolsVersion = 16.3;
+					};
+					AC8F53362ED859DE009561B2 = {
+						CreatedOnToolsVersion = 16.4;
 					};
 				};
 			};
@@ -379,6 +462,7 @@
 				8558DB37607D472D9D5D9D67 /* SnapTask Pro */,
 				5C2A3715D7644CC0B6CE6CE8 /* SnapTask ProTests */,
 				3ABC874A267E4114B068247B /* SnapTask ProUITests */,
+				AC8F53362ED859DE009561B2 /* SnapTaskWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -399,6 +483,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		57AC9BF7DEDF4B558CA7B241 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC8F53352ED859DE009561B2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -430,6 +521,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9436E61ED67B4F788E4C30BB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC8F53332ED859DE009561B2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -469,6 +567,11 @@
 			isa = PBXTargetDependency;
 			target = 8558DB37607D472D9D5D9D67 /* SnapTask Pro */;
 			targetProxy = 8DFBB9A27DB047A695FB5AD8 /* PBXContainerItemProxy */;
+		};
+		AC8F53492ED859DE009561B2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AC8F53362ED859DE009561B2 /* SnapTaskWidgetExtension */;
+			targetProxy = AC8F53482ED859DE009561B2 /* PBXContainerItemProxy */;
 		};
 		CDFA3A8FA4644AD0A5AE98B1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -763,6 +866,64 @@
 			};
 			name = Release;
 		};
+		AC8F534B2ED859DE009561B2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SnapTaskWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y997848SS8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapTaskWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapTaskWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AC8F534C2ED859DE009561B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SnapTaskWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y997848SS8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapTaskWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapTaskWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		AD726710A117450FAE4E3D29 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -896,6 +1057,15 @@
 			buildConfigurations = (
 				AD726710A117450FAE4E3D29 /* Debug */,
 				12659A8573424BC489D82D5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC8F534D2ED859DE009561B2 /* Build configuration list for PBXNativeTarget "SnapTaskWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC8F534B2ED859DE009561B2 /* Debug */,
+				AC8F534C2ED859DE009561B2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

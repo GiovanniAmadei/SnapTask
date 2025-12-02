@@ -16,7 +16,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FC9FE5652DECFE71002425C4"
+               BlueprintIdentifier = "AC8F53362ED859DE009561B2"
                BuildableName = "SnapTaskWidgetExtension.appex"
                BlueprintName = "SnapTaskWidgetExtension"
                ReferencedContainer = "container:SnapTask.xcodeproj">
@@ -62,7 +62,7 @@
          BundleIdentifier = "com.apple.springboard">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FC9FE5652DECFE71002425C4"
+            BlueprintIdentifier = "AC8F53362ED859DE009561B2"
             BuildableName = "SnapTaskWidgetExtension.appex"
             BlueprintName = "SnapTaskWidgetExtension"
             ReferencedContainer = "container:SnapTask.xcodeproj">

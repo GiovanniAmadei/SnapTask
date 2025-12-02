@@ -5,11 +5,14 @@ import QuartzCore
 final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegate {
     @Published private(set) var isRecording: Bool = false
     @Published var meterLevels: [Float] = []
+    @Published private(set) var currentRecordingDuration: TimeInterval = 0
+    @Published private(set) var didReachMaxDuration: Bool = false
 
     private var recorder: AVAudioRecorder?
     private var currentFileURL: URL?
     private var recordingStartDate: Date?
     private var displayLink: CADisplayLink?
+    private var durationTimer: Timer?
     private var lastMeterLevel: Float = 0
     private var audioEngine: AVAudioEngine?
     private var inputNode: AVAudioInputNode?
@@ -71,6 +74,11 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
         self.currentFileURL = fileURL
         self.recordingStartDate = Date()
         self.isRecording = true
+        self.currentRecordingDuration = 0
+        self.didReachMaxDuration = false
+        
+        // Start duration timer for max duration limit
+        startDurationTimer()
         
         try startRealTimeWaveform()
     }
@@ -94,7 +102,33 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
 
         currentFileURL = nil
         recordingStartDate = nil
+        stopDurationTimer()
         return memo
+    }
+    
+    // MARK: - Duration Timer
+    
+    private func startDurationTimer() {
+        durationTimer?.invalidate()
+        durationTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self, let startDate = self.recordingStartDate else { return }
+            let elapsed = Date().timeIntervalSince(startDate)
+            DispatchQueue.main.async {
+                self.currentRecordingDuration = elapsed
+                
+                // Auto-stop if max duration reached
+                if elapsed >= MediaLimits.maxVoiceMemoDuration {
+                    self.didReachMaxDuration = true
+                    _ = self.stopRecording()
+                }
+            }
+        }
+    }
+    
+    private func stopDurationTimer() {
+        durationTimer?.invalidate()
+        durationTimer = nil
+        currentRecordingDuration = 0
     }
 
     // MARK: - Journal Voice Memos
@@ -132,6 +166,11 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
         self.currentFileURL = fileURL
         self.recordingStartDate = Date()
         self.isRecording = true
+        self.currentRecordingDuration = 0
+        self.didReachMaxDuration = false
+        
+        // Start duration timer for max duration limit
+        startDurationTimer()
         
         try startRealTimeWaveform()
     }
@@ -155,6 +194,7 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
 
         currentFileURL = nil
         recordingStartDate = nil
+        stopDurationTimer()
         return memo
     }
 
@@ -170,6 +210,7 @@ final class VoiceMemoService: NSObject, ObservableObject, AVAudioRecorderDelegat
         recordingStartDate = nil
         isRecording = false
         stopRealTimeWaveform()
+        stopDurationTimer()
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         } catch {

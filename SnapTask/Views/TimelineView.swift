@@ -58,7 +58,7 @@ struct TimelineView: View {
                 TaskCreationOptionsView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingCalendarPicker) {
-                CalendarPickerView(
+                MediaHubCalendarView(
                     selectedDate: $viewModel.selectedDate,
                     selectedDayOffset: $selectedDayOffset,
                     viewModel: viewModel,

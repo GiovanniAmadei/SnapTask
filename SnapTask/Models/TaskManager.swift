@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import EventKit
+import WidgetKit
 
 @MainActor
 class TaskManager: ObservableObject {
@@ -743,6 +744,9 @@ class TaskManager: ObservableObject {
             print(" App: Saved \(tasks.count) tasks to both UserDefaults")
             NSLog(" APP DEBUG: Saved \(tasks.count) tasks to shared UserDefaults")
             
+            // Ricarica i widget
+            WidgetCenter.shared.reloadAllTimelines()
+            
         } catch {
             print("Error saving tasks: \(error)")
         }
@@ -780,6 +784,9 @@ class TaskManager: ObservableObject {
             do {
                 tasks = try JSONDecoder().decode([TodoTask].self, from: data)
                 migrateTaskDataIfNeeded()
+                
+                // Assicuriamoci che i dati siano anche nel container condiviso per i Widget
+                saveTasks()
             } catch {
                 print("Error loading tasks: \(error)")
                 tasks = []

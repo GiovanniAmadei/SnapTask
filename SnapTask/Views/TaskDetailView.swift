@@ -34,6 +34,9 @@ struct TaskDetailView: View {
     @State private var isEditingVoiceMemo = false
     @State private var showPhotoSourceDialog = false
     @State private var showingPhotoLibraryPicker = false
+    @State private var showPhotoLimitAlert = false
+    @State private var showVoiceMemoLimitAlert = false
+    @State private var showMaxDurationReachedAlert = false
     
     private var effectiveDate: Date {
         let calendar = Calendar.current
@@ -193,7 +196,8 @@ struct TaskDetailView: View {
         }
         .sheet(isPresented: $showingPhotoLibraryPicker) {
             if let task = localTask {
-                PhotoLibraryPicker(selectionLimit: 10) { images in
+                let remaining = MediaLimits.remainingPhotos(currentCount: task.photos.count)
+                PhotoLibraryPicker(selectionLimit: remaining) { images in
                     Task {
                         await handleCapturedImages(images, task: task)
                     }
@@ -217,6 +221,37 @@ struct TaskDetailView: View {
             Button("ok".localized, role: .cancel) {}
         } message: {
             Text("microphone_access_denied_message".localized)
+        }
+        .alert("photo_limit_reached_title".localized, isPresented: $showPhotoLimitAlert) {
+            Button("ok".localized, role: .cancel) {}
+        } message: {
+            Text(String(format: "photo_limit_reached_message".localized, MediaLimits.maxPhotosPerTask))
+        }
+        .alert("voice_memo_limit_reached_title".localized, isPresented: $showVoiceMemoLimitAlert) {
+            Button("ok".localized, role: .cancel) {}
+        } message: {
+            Text(String(format: "voice_memo_limit_reached_message".localized, MediaLimits.maxVoiceMemosPerTask))
+        }
+        .alert("max_duration_reached_title".localized, isPresented: $showMaxDurationReachedAlert) {
+            Button("ok".localized, role: .cancel) {}
+        } message: {
+            Text(String(format: "max_duration_reached_message".localized, Int(MediaLimits.maxVoiceMemoDuration / 60)))
+        }
+        .onChange(of: voiceMemoService.didReachMaxDuration) { _, reached in
+            if reached, let task = localTask {
+                // Auto-save the memo when max duration is reached
+                if let memo = voiceMemoService.stopRecording() {
+                    var updated = task
+                    updated.voiceMemos.insert(memo, at: 0)
+                    updated.lastModifiedDate = Date()
+                    localTask = updated
+                    Task {
+                        await TaskManager.shared.updateTask(updated)
+                    }
+                }
+                isRecordingVoice = false
+                showMaxDurationReachedAlert = true
+            }
         }
     }
     
@@ -1110,19 +1145,31 @@ struct TaskDetailView: View {
     }
     
     private func photoCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "photo", title: "photos".localized, color: .blue) {
+        let canAddMore = MediaLimits.canAddPhoto(currentCount: task.photos.count)
+        let remaining = MediaLimits.remainingPhotos(currentCount: task.photos.count)
+        
+        return DetailCard(icon: "photo", title: "photos".localized, color: .blue) {
             VStack(alignment: .leading, spacing: 12) {
+                // Photo count indicator
                 if !task.photos.isEmpty {
-                    let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-                    LazyVGrid(columns: columns, spacing: 10) {
+                    HStack {
+                        Text("\(task.photos.count)/\(MediaLimits.maxPhotosPerTask)")
+                            .font(.caption)
+                            .foregroundColor(canAddMore ? .secondary : .orange)
+                        Spacer()
+                    }
+                }
+                
+                if !task.photos.isEmpty {
+                    let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+                    LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(task.photos) { photo in
                             ZStack(alignment: .topTrailing) {
                                 if let image = AttachmentService.loadImage(from: photo.thumbnailPath) {
                                     Image(uiImage: image)
                                         .resizable()
                                         .scaledToFill()
-                                        .frame(height: 90)
-                                        .frame(maxWidth: .infinity)
+                                        .frame(width: (UIScreen.main.bounds.width - 80) / 3, height: 90)
                                         .clipped()
                                         .cornerRadius(10)
                                         .onTapGesture {
@@ -1131,7 +1178,7 @@ struct TaskDetailView: View {
                                 } else {
                                     RoundedRectangle(cornerRadius: 10)
                                         .fill(Color.gray.opacity(0.1))
-                                        .frame(height: 90)
+                                        .frame(width: (UIScreen.main.bounds.width - 80) / 3, height: 90)
                                 }
                                 
                                 Button {
@@ -1152,31 +1199,33 @@ struct TaskDetailView: View {
                         }
                     }
                     
-                    Button {
-                        showPhotoSourceDialog = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus.circle")
-                                .font(.system(size: 16))
-                                .foregroundColor(.blue)
-                            Text("add_photos".localized)
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                            Spacer()
+                    if canAddMore {
+                        Button {
+                            showPhotoSourceDialog = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.blue)
+                                Text(String(format: "add_photos_remaining".localized, remaining))
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.blue.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.blue.opacity(0.05))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                                )
-                        )
+                        .buttonStyle(.plain)
+                        .padding(.top, 4)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 4)
                 } else if let thumbPath = task.photoThumbnailPath, let image = AttachmentService.loadImage(from: thumbPath) {
                     HStack(spacing: 12) {
                         Image(uiImage: image)
@@ -1273,7 +1322,11 @@ struct TaskDetailView: View {
     
     private func handlePickedPhotos(_ items: [PhotosPickerItem], task: TodoTask) async {
         var updated = task
-        for item in items {
+        let remaining = MediaLimits.remainingPhotos(currentCount: updated.photos.count)
+        let itemsToProcess = Array(items.prefix(remaining))
+        
+        for item in itemsToProcess {
+            guard MediaLimits.canAddPhoto(currentCount: updated.photos.count) else { break }
             if let data = try? await item.loadTransferable(type: Data.self),
                let added = AttachmentService.addPhoto(for: task.id, imageData: data) {
                 updated.photos.append(added)
@@ -1288,9 +1341,22 @@ struct TaskDetailView: View {
         updated.lastModifiedDate = Date()
         localTask = updated
         await TaskManager.shared.updateTask(updated)
+        
+        // Show alert if some photos were skipped
+        if items.count > itemsToProcess.count {
+            await MainActor.run {
+                showPhotoLimitAlert = true
+            }
+        }
     }
     
     private func handleCapturedImage(_ image: UIImage, task: TodoTask) async {
+        guard MediaLimits.canAddPhoto(currentCount: task.photos.count) else {
+            await MainActor.run {
+                showPhotoLimitAlert = true
+            }
+            return
+        }
         guard let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() else { return }
         if let added = AttachmentService.addPhoto(for: task.id, imageData: data) {
             var updated = task
@@ -1309,7 +1375,13 @@ struct TaskDetailView: View {
     
     private func handleCapturedImages(_ images: [UIImage], task: TodoTask) async {
         var updated = task
+        var skippedCount = 0
+        
         for image in images {
+            guard MediaLimits.canAddPhoto(currentCount: updated.photos.count) else {
+                skippedCount += 1
+                continue
+            }
             guard let data = image.jpegData(compressionQuality: 0.9) ?? image.pngData() else { continue }
             if let added = AttachmentService.addPhoto(for: task.id, imageData: data) {
                 updated.photos.append(added)
@@ -1324,6 +1396,13 @@ struct TaskDetailView: View {
         updated.lastModifiedDate = Date()
         localTask = updated
         await TaskManager.shared.updateTask(updated)
+        
+        // Show alert if some photos were skipped
+        if skippedCount > 0 {
+            await MainActor.run {
+                showPhotoLimitAlert = true
+            }
+        }
     }
     
     private func removeLegacyPhoto(_ task: TodoTask) {
@@ -1350,54 +1429,76 @@ struct TaskDetailView: View {
     }
     
     private func voiceMemosCard(_ task: TodoTask) -> some View {
-        DetailCard(icon: "waveform", title: "voice_memos".localized, color: .pink) {
+        let canAddMore = MediaLimits.canAddVoiceMemo(currentCount: task.voiceMemos.count)
+        let remaining = MediaLimits.remainingVoiceMemos(currentCount: task.voiceMemos.count)
+        
+        return DetailCard(icon: "waveform", title: "voice_memos".localized, color: .pink) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    Button {
-                        if isRecordingVoice {
-                            if let memo = voiceMemoService.stopRecording() {
-                                var updated = task
-                                updated.voiceMemos.insert(memo, at: 0)
-                                updated.lastModifiedDate = Date()
-                                localTask = updated
-                                Task {
-                                    await TaskManager.shared.updateTask(updated)
-                                }
-                            }
-                            isRecordingVoice = false
-                        } else {
-                            Task {
-                                let granted = await voiceMemoService.requestPermission()
-                                if !granted {
-                                    showMicDeniedAlert = true
-                                    return
-                                }
-                                do {
-                                    try voiceMemoService.startRecording(for: task.id)
-                                    isRecordingVoice = true
-                                } catch {
-                                    isRecordingVoice = false
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: isRecordingVoice ? "stop.circle.fill" : "record.circle.fill")
-                                .font(.system(size: 16))
-                            Text(isRecordingVoice ? "stop".localized : "record".localized)
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.9)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(isRecordingVoice ? Color.orange : Color.red)
-                        )
+                // Voice memo count indicator
+                if !task.voiceMemos.isEmpty {
+                    HStack {
+                        Text("\(task.voiceMemos.count)/\(MediaLimits.maxVoiceMemosPerTask)")
+                            .font(.caption)
+                            .foregroundColor(canAddMore ? .secondary : .orange)
+                        Spacer()
+                        Text(String(format: "max_duration_info".localized, Int(MediaLimits.maxVoiceMemoDuration / 60)))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    .frame(minWidth: 110)
+                }
+                
+                HStack(spacing: 12) {
+                    if canAddMore || isRecordingVoice {
+                        Button {
+                            if isRecordingVoice {
+                                if let memo = voiceMemoService.stopRecording() {
+                                    var updated = task
+                                    updated.voiceMemos.insert(memo, at: 0)
+                                    updated.lastModifiedDate = Date()
+                                    localTask = updated
+                                    Task {
+                                        await TaskManager.shared.updateTask(updated)
+                                    }
+                                }
+                                isRecordingVoice = false
+                            } else {
+                                Task {
+                                    let granted = await voiceMemoService.requestPermission()
+                                    if !granted {
+                                        showMicDeniedAlert = true
+                                        return
+                                    }
+                                    do {
+                                        try voiceMemoService.startRecording(for: task.id)
+                                        isRecordingVoice = true
+                                    } catch {
+                                        isRecordingVoice = false
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: isRecordingVoice ? "stop.circle.fill" : "record.circle.fill")
+                                    .font(.system(size: 16))
+                                Text(isRecordingVoice ? "stop".localized : "record".localized)
+                                    .font(.subheadline.weight(.medium))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.9)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(isRecordingVoice ? Color.orange : Color.red)
+                            )
+                        }
+                        .frame(minWidth: 110)
+                    } else {
+                        Text("voice_memo_limit_info".localized)
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
                     
                     Spacer()
                 }
@@ -1406,18 +1507,30 @@ struct TaskDetailView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         WaveformView(levels: voiceMemoService.meterLevels, color: .pink)
                             .frame(height: 40)
-                        Text("recording".localized)
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                        HStack {
+                            Text("recording".localized)
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            Spacer()
+                            // Duration indicator
+                            Text(formatRecordingDuration(voiceMemoService.currentRecordingDuration))
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(voiceMemoService.currentRecordingDuration > MediaLimits.maxVoiceMemoDuration * 0.8 ? .red : .secondary)
+                            Text("/ \(formatRecordingDuration(MediaLimits.maxVoiceMemoDuration))")
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .transition(.opacity)
                 }
 
-                if task.voiceMemos.isEmpty {
-                    Text("no_voice_memos_yet".localized)
-                        .font(.subheadline)
-                        .themedSecondaryText()
-                } else {
+                if task.voiceMemos.isEmpty && !isRecordingVoice {
+                    if canAddMore {
+                        Text("no_voice_memos_yet".localized)
+                            .font(.subheadline)
+                            .themedSecondaryText()
+                    }
+                } else if !task.voiceMemos.isEmpty {
                     VStack(spacing: 8) {
                         ForEach(task.voiceMemos) { memo in
                             VoiceMemoRow(
@@ -1437,6 +1550,12 @@ struct TaskDetailView: View {
                 }
             }
         }
+    }
+    
+    private func formatRecordingDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
     
     private func removeVoiceMemo(_ memo: TaskVoiceMemo, from task: TodoTask) {
