@@ -23,3 +23,27 @@
 "+ %lld more →" = "+ %lld altre →";
 "SnapTask" = "SnapTask";
 "View tasks for the selected scope." = "Visualizza le task per l'ambito selezionato.";
+
+/* Performance Widget */
+"Performance" = "Performance";
+"View your productivity statistics." = "Visualizza le tue statistiche di produttività.";
+"View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate." = "Visualizza le tue statistiche. Tieni premuto il widget per scegliere tra Distribuzione Tempo o Tasso di Completamento.";
+"done" = "fatte";
+"Performance Type" = "Tipo di Performance";
+"Time Distribution" = "Distribuzione Tempo";
+"Time spent per category" = "Tempo speso per categoria";
+"Task Completion Rate" = "Tasso di Completamento";
+"Weekly completion statistics" = "Statistiche di completamento settimanali";
+"Time" = "Tempo";
+"Completion" = "Completamento";
+"No data" = "Nessun dato";
+"total" = "totale";
+"avg" = "media";
+"Done" = "Fatte";
+"Total" = "Totale";
+"Completed" = "Completate";
+"No time tracked" = "Nessun tempo tracciato";
+"No tasks this week" = "Nessuna task questa settimana";
+"7 Days" = "7 Giorni";
+"%lld completed" = "%lld completate";
+"%lld total" = "%lld totali";

@@ -2,6 +2,22 @@ import SwiftUI
 import Combine
 import os.log
 import Foundation
+import WidgetKit
+
+// MARK: - Widget Data Models (Codable for sharing with widget)
+
+struct WidgetCategoryStatData: Codable {
+    let name: String
+    let color: String
+    let hours: Double
+}
+
+struct WidgetWeeklyStatData: Codable {
+    let day: String
+    let completedTasks: Int
+    let totalTasks: Int
+    let completionRate: Double
+}
 
 @MainActor
 class StatisticsViewModel: ObservableObject {
@@ -152,6 +168,7 @@ class StatisticsViewModel: ObservableObject {
     private let taskManager: TaskManager
     private let categoryManager = CategoryManager.shared
     private let cloudKitService = CloudKitService.shared
+    private let appGroupUserDefaults = UserDefaults(suiteName: "group.com.snapTask.shared")
     
     init(taskManager: TaskManager = .shared) {
         self.taskManager = taskManager
@@ -216,9 +233,43 @@ class StatisticsViewModel: ObservableObject {
         if dataChanged {
             print("📊 Data changed, updating UI")
             objectWillChange.send()
+            saveStatsForWidget()
         } else {
             print("📊 No data changes detected, skipping UI update")
         }
+    }
+    
+    // MARK: - Widget Data Sharing
+    
+    private func saveStatsForWidget() {
+        // Save category stats for Time Distribution widget
+        let categoryData = categoryStats.map { stat in
+            WidgetCategoryStatData(name: stat.name, color: stat.color, hours: stat.hours)
+        }
+        
+        if let encoded = try? JSONEncoder().encode(categoryData) {
+            appGroupUserDefaults?.set(encoded, forKey: "widgetCategoryStats")
+        }
+        
+        // Save weekly stats for Completion Rate widget
+        let weeklyData = weeklyStats.map { stat in
+            WidgetWeeklyStatData(
+                day: stat.day,
+                completedTasks: stat.completedTasks,
+                totalTasks: stat.totalTasks,
+                completionRate: stat.completionRate
+            )
+        }
+        
+        if let encoded = try? JSONEncoder().encode(weeklyData) {
+            appGroupUserDefaults?.set(encoded, forKey: "widgetWeeklyStats")
+        }
+        
+        appGroupUserDefaults?.synchronize()
+        
+        // Reload widget timelines
+        WidgetCenter.shared.reloadTimelines(ofKind: "PerformanceWidget")
+        print("📊 Saved stats for widget and requested timeline reload")
     }
     
     private func setupObservers() {

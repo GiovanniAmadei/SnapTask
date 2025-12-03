@@ -12,6 +12,7 @@ import SwiftUI
 struct SnapTaskWidgetBundle: WidgetBundle {
     var body: some Widget {
         SnapTaskWidget()
+        PerformanceWidget()
         SnapTaskWidgetControl()
         SnapTaskWidgetLiveActivity()
     }

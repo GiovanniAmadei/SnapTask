@@ -23,3 +23,27 @@
 "+ %lld more →" = "+ %lld more →";
 "SnapTask" = "SnapTask";
 "View tasks for the selected scope." = "View tasks for the selected scope.";
+
+/* Performance Widget */
+"Performance" = "Performance";
+"View your productivity statistics." = "View your productivity statistics.";
+"View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate." = "View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate.";
+"done" = "done";
+"Performance Type" = "Performance Type";
+"Time Distribution" = "Time Distribution";
+"Time spent per category" = "Time spent per category";
+"Task Completion Rate" = "Task Completion Rate";
+"Weekly completion statistics" = "Weekly completion statistics";
+"Time" = "Time";
+"Completion" = "Completion";
+"No data" = "No data";
+"total" = "total";
+"avg" = "avg";
+"Done" = "Done";
+"Total" = "Total";
+"Completed" = "Completed";
+"No time tracked" = "No time tracked";
+"No tasks this week" = "No tasks this week";
+"7 Days" = "7 Days";
+"%lld completed" = "%lld completed";
+"%lld total" = "%lld total";
