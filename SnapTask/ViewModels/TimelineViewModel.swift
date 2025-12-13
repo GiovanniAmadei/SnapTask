@@ -35,7 +35,7 @@ enum TimelineOrganization: String, CaseIterable {
         case .category: return "by_category".localized
         case .priority: return "by_priority".localized
         case .eisenhower: return "eisenhower_matrix".localized
-        case .none: return "default".localized
+        case .none: return "default_view".localized
         }
     }
     
@@ -766,7 +766,7 @@ class TimelineViewModel: ObservableObject {
         case .eisenhower:
             return "eisenhower_matrix".localized
         case .none:
-            return "default".localized
+            return "default_view".localized
         }
     }
     

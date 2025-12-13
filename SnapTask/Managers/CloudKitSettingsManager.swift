@@ -7,7 +7,8 @@ class CloudKitSettingsManager: ObservableObject {
     static let shared = CloudKitSettingsManager()
     
     // MARK: - Published Settings
-    @Published var isDarkMode: Bool = false {
+    // Appearance mode: "system", "light", "dark"
+    @Published var appearanceMode: String = "system" {
         didSet { saveSettings() }
     }
     
@@ -59,7 +60,7 @@ class CloudKitSettingsManager: ObservableObject {
     
     // MARK: - Syncable Settings Keys
     private let syncableSettings: Set<String> = [
-        "isDarkMode",
+        "appearanceMode",
         "selectedLanguage",
         "notificationsEnabled",
         "pomodoroDefaultDuration",
@@ -129,8 +130,8 @@ class CloudKitSettingsManager: ObservableObject {
         
         for key in syncableSettings {
             switch key {
-            case "isDarkMode":
-                settings[key] = isDarkMode
+            case "appearanceMode":
+                settings[key] = appearanceMode
             case "selectedLanguage":
                 settings[key] = selectedLanguage
             case "notificationsEnabled":
@@ -169,10 +170,14 @@ class CloudKitSettingsManager: ObservableObject {
             guard syncableSettings.contains(key) else { continue }
             
             switch key {
-            case "isDarkMode":
-                if let boolValue = value as? Bool {
-                    isDarkMode = boolValue
-                    UserDefaults.standard.set(boolValue, forKey: "isDarkMode")
+            case "appearanceMode":
+                if let stringValue = value as? String {
+                    appearanceMode = stringValue
+                    UserDefaults.standard.set(stringValue, forKey: "appearanceMode")
+                } else if let boolValue = value as? Bool {
+                    // Migration from old isDarkMode boolean
+                    appearanceMode = boolValue ? "dark" : "light"
+                    UserDefaults.standard.set(appearanceMode, forKey: "appearanceMode")
                 }
             case "selectedLanguage":
                 if let stringValue = value as? String {
@@ -312,7 +317,16 @@ class CloudKitSettingsManager: ObservableObject {
     
     private func loadLegacySettings() {
         // Load individual settings from UserDefaults for backward compatibility
-        isDarkMode = UserDefaults.standard.bool(forKey: "isDarkMode")
+        // Migration: check for old isDarkMode and convert to appearanceMode
+        if let savedMode = UserDefaults.standard.string(forKey: "appearanceMode") {
+            appearanceMode = savedMode
+        } else if UserDefaults.standard.object(forKey: "isDarkMode") != nil {
+            // Migrate from old isDarkMode boolean
+            let wasDarkMode = UserDefaults.standard.bool(forKey: "isDarkMode")
+            appearanceMode = wasDarkMode ? "dark" : "light"
+        } else {
+            appearanceMode = "system"
+        }
         selectedLanguage = UserDefaults.standard.string(forKey: "selectedLanguage") ?? "en"
         notificationsEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true
         pomodoroDefaultDuration = UserDefaults.standard.object(forKey: "pomodoroDefaultDuration") as? Int ?? 25
@@ -335,8 +349,8 @@ class CloudKitSettingsManager: ObservableObject {
             guard syncableSettings.contains(key) else { continue }
             
             switch key {
-            case "isDarkMode":
-                isDarkMode = value.boolValue ?? false
+            case "appearanceMode":
+                appearanceMode = value.stringValue ?? "system"
             case "selectedLanguage":
                 selectedLanguage = value.stringValue ?? "en"
             case "notificationsEnabled":
@@ -369,7 +383,7 @@ class CloudKitSettingsManager: ObservableObject {
     func resetToDefaults() {
         isLoadingFromRemote = true
         
-        isDarkMode = false
+        appearanceMode = "system"
         selectedLanguage = "en"
         notificationsEnabled = true
         pomodoroDefaultDuration = 25

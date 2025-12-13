@@ -3,6 +3,7 @@ import CloudKit
 import UserNotifications
 import Firebase
 import BackgroundTasks
+import WatchConnectivity
 
 @main
 struct SnapTaskApp: App {
@@ -13,10 +14,20 @@ struct SnapTaskApp: App {
     @StateObject private var firebaseService = FirebaseService.shared
     @StateObject private var settingsManager = CloudKitSettingsManager.shared
     @StateObject private var moodManager = MoodManager.shared // Add mood manager initialization
+    @StateObject private var watchConnectivityHandler = WatchConnectivityHandler.shared
     @Environment(\.scenePhase) var scenePhase
-    @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("appearanceMode") private var appearanceMode = "system"
     
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    /// Computed color scheme based on appearanceMode setting
+    private var computedColorScheme: ColorScheme? {
+        switch appearanceMode {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil // "system" - follows device setting
+        }
+    }
     
     init() {
         // Initialize Firebase as early as possible
@@ -24,6 +35,10 @@ struct SnapTaskApp: App {
             FirebaseApp.configure()
             print("🔥 Firebase configured in app init")
         }
+        
+        // Initialize Watch Connectivity
+        _ = WatchConnectivityHandler.shared
+        print("⌚ Watch Connectivity initialized")
     }
     
     var body: some Scene {
@@ -33,7 +48,7 @@ struct SnapTaskApp: App {
                     // Solo i temi premium sovrascrivono la dark mode
                     ThemeManager.shared.currentTheme.overridesSystemColors ? 
                     (ThemeManager.shared.isDarkTheme ? .dark : .light) : 
-                    (isDarkMode ? .dark : .light)
+                    computedColorScheme
                 )
                 .onAppear {
                     setupNotifications()
@@ -59,6 +74,9 @@ struct SnapTaskApp: App {
 
                         // Reload tasks from App Group if modified by the widget
                         TaskManager.shared.reloadFromSharedIfAvailable()
+                        
+                        // Sync data to Watch
+                        watchConnectivityHandler.sendFullSyncToWatch()
                         
                         requestBackgroundAppRefresh()
                         UIApplication.shared.applicationIconBadgeNumber = 0

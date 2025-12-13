@@ -14,10 +14,9 @@ struct SettingsView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
-    @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("appearanceMode") private var appearanceMode = "system"
     @AppStorage("dailyQuoteNotificationsEnabled") private var dailyQuoteNotificationsEnabled = false
     @AppStorage("dailyQuoteNotificationTime") private var dailyQuoteNotificationTime = "09:00"
-    @State private var showingLanguagePicker = false
     @State private var showingDonationSheet = false
     @State private var showingTimePicker = false
     @State private var selectedNotificationTime = Date()
@@ -254,25 +253,30 @@ struct SettingsView: View {
                 // Appearance Section
                 Section {
                     HStack {
-                        Image(systemName: "moon.fill")
+                        Image(systemName: "circle.lefthalf.filled")
                             .foregroundColor(.indigo)
                             .frame(width: 24)
                         
-                        Text("dark_mode".localized)
+                        Text("appearance".localized)
                             .themedPrimaryText()
                         
                         Spacer()
                         
-                        Toggle("", isOn: $isDarkMode)
-                            .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
-                            .onChange(of: isDarkMode) { _, newValue in
-                                handleDarkModeToggle(newValue)
-                            }
+                        Picker("", selection: $appearanceMode) {
+                            Text("system".localized).tag("system")
+                            Text("light".localized).tag("light")
+                            Text("dark".localized).tag("dark")
+                        }
+                        .pickerStyle(.menu)
+                        .tint(theme.accentColor)
+                        .onChange(of: appearanceMode) { _, newValue in
+                            handleAppearanceModeChange(newValue)
+                        }
                     }
                     .listRowBackground(theme.surfaceColor)
                     
-                    Button {
-                        showingLanguagePicker = true
+                    NavigationLink {
+                        LanguageSelectionView()
                     } label: {
                         HStack {
                             Image(systemName: "globe")
@@ -286,11 +290,6 @@ struct SettingsView: View {
                             
                             Text(languageManager.currentLanguage.name)
                                 .themedSecondaryText()
-                            
-                            Image(systemName: "chevron.right")
-                                .themedSecondaryText()
-                                .font(.caption)
-                                .frame(width: 12, height: 12)
                         }
                     }
                     .listRowBackground(theme.surfaceColor)
@@ -564,17 +563,6 @@ struct SettingsView: View {
                 checkNotificationPermissionStatus()
                 taskNotificationManager.checkAuthorizationStatus()
             }
-            .actionSheet(isPresented: $showingLanguagePicker) {
-                ActionSheet(
-                    title: Text("language".localized),
-                    message: Text("choose_language".localized),
-                    buttons: languageManager.localizedLanguages.map { language in
-                        .default(Text(language.name)) {
-                            languageManager.setLanguage(language.code)
-                        }
-                    } + [.cancel(Text("cancel".localized))]
-                )
-            }
             .sheet(isPresented: $showingDonationSheet) {
                 DonationView()
             }
@@ -632,13 +620,12 @@ struct SettingsView: View {
             }
             .alert("dark_mode_theme_warning_title".localized, isPresented: $showingThemeWarning) {
                 Button("switch_to_simple_theme".localized) {
-                    // Switch to default theme and enable dark mode
+                    // Switch to default theme and keep selected appearance mode
                     themeManager.setTheme(ThemeManager.defaultTheme)
-                    isDarkMode = true
                 }
                 Button("keep_current_theme".localized, role: .cancel) {
-                    // Keep current theme and disable dark mode
-                    isDarkMode = false
+                    // Keep current theme and revert to system
+                    appearanceMode = "system"
                 }
             } message: {
                 Text("dark_mode_theme_warning_message".localized)
@@ -672,9 +659,9 @@ struct SettingsView: View {
         }
     }
     
-    private func handleDarkModeToggle(_ newValue: Bool) {
-        // Se l'utente sta provando ad attivare la modalità scura con un tema che sovrascrive i colori
-        if newValue && themeManager.currentTheme.overridesSystemColors {
+    private func handleAppearanceModeChange(_ newValue: String) {
+        // Se l'utente sta provando ad attivare light/dark mode con un tema che sovrascrive i colori
+        if newValue != "system" && themeManager.currentTheme.overridesSystemColors {
             showingThemeWarning = true
         }
     }

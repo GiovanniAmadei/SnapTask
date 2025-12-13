@@ -62,6 +62,7 @@
 "notifications_not_available" = "Benachrichtigungen nicht verfügbar";
 "notifications_denied" = "Benachrichtigungen verweigert";
 "notification_permission_denied_message" = "Benachrichtigungen wurden verweigert. Aktivieren Sie sie in iOS Einstellungen > Datenschutz & Sicherheit > Kalender > SnapTask.";
+"ios_permission_required" = "iOS-Berechtigung erforderlich";
 
 // Accessibility Support
 "completed" = "abgeschlossen";
@@ -251,6 +252,8 @@
 "customization" = "Anpassung";
 "appearance" = "Aussehen";
 "dark_mode" = "Dunkelmodus";
+"light" = "Hell";
+"dark" = "Dunkel";
 "priorities" = "Prioritäten";
 "add_priority" = "Priorität hinzufügen";
 "performance" = "Leistung";
@@ -690,6 +693,11 @@
 "quality_rating" = "Qualitätsbewertung";
 "difficulty_rating" = "Schwierigkeitsbewertung";
 "performance_charts" = "Leistungsdiagramme";
+"chart" = "Diagramm";
+"heat_map" = "Wärmekarte";
+"less" = "Weniger";
+"more" = "Mehr";
+"rate" = "Rate";
 
 // Settings View
 "daily_notifications" = "Tägliche Benachrichtigungen";
@@ -1317,6 +1325,9 @@
 "free_trial_activated" = "Kostenlose Testversion aktiviert";
 "welcome_snaptask_pro" = "Willkommen bei SnapTask Pro!";
 "welcome_snaptask_pro_lifetime" = "Willkommen bei SnapTask Pro (lebenslang)!";
+"purchase_not_completed" = "Kauf nicht abgeschlossen";
+"purchases_restored_successfully" = "Käufe erfolgreich wiederhergestellt";
+"no_purchases_to_restore" = "Keine Käufe zum Wiederherstellen";
 
 // Eisenhower-Einstellungen (Dringlichkeit anpassen)
 "eisenhower_settings_title" = "Eisenhower-Matrix";
@@ -1348,9 +1359,23 @@
 "tasks_count" = "%d Aufgaben";
 "no_tasks_for_day" = "Keine Aufgaben für diesen Tag";
 "select_day_to_view_media" = "Wähle einen Tag, um Medien anzuzeigen";
+"select_week_to_view" = "Wähle eine Woche, um Aufgaben anzuzeigen";
+"select_month_to_view" = "Wähle einen Monat, um Aufgaben anzuzeigen";
+"select_year_to_view" = "Wähle ein Jahr, um Aufgaben anzuzeigen";
 "no_media_for_task" = "Keine Medien angehängt";
 "notes" = "Notizen";
 "photo_not_found" = "Foto nicht gefunden";
+"no_weekly_tasks" = "Keine wöchentlichen Aufgaben";
+"no_monthly_tasks" = "Keine monatlichen Aufgaben";
+"no_yearly_tasks" = "Keine jährlichen Aufgaben";
+"no_long_term_tasks" = "Keine langfristigen Aufgaben";
+"day" = "Tag";
+"week" = "Woche";
+"month" = "Monat";
+"year" = "Jahr";
+"long_term" = "Langfristig";
+"all" = "Alle";
+"tasks" = "Aufgaben";
 
 // Task Performance
 "performance" = "Leistung";

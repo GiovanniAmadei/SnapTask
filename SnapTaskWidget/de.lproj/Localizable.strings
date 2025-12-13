@@ -23,3 +23,17 @@
 "+ %lld more →" = "+ %lld weitere →";
 "SnapTask" = "SnapTask";
 "View tasks for the selected scope." = "Aufgaben für den ausgewählten Bereich anzeigen.";
+
+/* Performance Widget */
+"Performance" = "Leistung";
+"Time Distribution" = "Zeitverteilung";
+"Task Completion Rate" = "Abschlussrate";
+"Mood Trend" = "Stimmungstrend";
+"No mood data" = "Keine Stimmungsdaten";
+"No time tracked" = "Keine Zeit erfasst";
+"No tasks this week" = "Keine Aufgaben diese Woche";
+"7 Days" = "7 Tage";
+"done" = "erledigt";
+"total" = "gesamt";
+"avg" = "Durchschn.";
+"No data" = "Keine Daten";

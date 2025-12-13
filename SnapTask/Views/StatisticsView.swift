@@ -179,20 +179,69 @@ private struct OverviewTab: View {
 
 private struct StreaksTab: View {
     @ObservedObject var viewModel: StatisticsViewModel
+    @State private var viewMode: StreakViewMode = .chart
+    @Environment(\.theme) private var theme
+    
+    enum StreakViewMode: String, CaseIterable {
+        case chart = "chart"
+        case heatmap = "heatmap"
+        
+        var icon: String {
+            switch self {
+            case .chart: return "chart.line.uptrend.xyaxis"
+            case .heatmap: return "square.grid.3x3.fill"
+            }
+        }
+        
+        var displayName: String {
+            switch self {
+            case .chart: return "chart".localized
+            case .heatmap: return "heat_map".localized
+            }
+        }
+    }
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
+                // View mode toggle
+                HStack(spacing: 8) {
+                    ForEach(StreakViewMode.allCases, id: \.self) { mode in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                viewMode = mode
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: mode.icon)
+                                    .font(.system(.caption, weight: .medium))
+                                Text(mode.displayName)
+                                    .font(.system(.caption, design: .rounded, weight: .medium))
+                            }
+                            .foregroundColor(viewMode == mode ? .white : theme.textColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(viewMode == mode ? theme.accentColor : theme.surfaceColor)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                
                 if viewModel.taskStreaks.isEmpty {
                     EmptyStreaksView()
                         .padding(.top, 60)
                 } else {
                     ForEach(viewModel.taskStreaks) { taskStreak in
-                        TaskStreakCard(taskStreak: taskStreak)
+                        TaskStreakCard(taskStreak: taskStreak, viewMode: viewMode, viewModel: viewModel)
+                            .padding(.horizontal, 16)
                     }
                 }
             }
-            .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
     }
@@ -1433,10 +1482,30 @@ private struct CategoryLegendItem: View {
 
 private struct TaskStreakCard: View { 
     let taskStreak: StatisticsViewModel.TaskStreak
+    let viewMode: StreaksTab.StreakViewMode
+    @ObservedObject var viewModel: StatisticsViewModel
     @Environment(\.theme) private var theme
+    @State private var selectedTimeRange: HeatMapTimeRange = .threeMonths
+    
+    private enum HeatMapTimeRange: String, CaseIterable {
+        case oneMonth = "1M"
+        case threeMonths = "3M"
+        case sixMonths = "6M"
+        case year = "1Y"
+        
+        var weeksCount: Int {
+            switch self {
+            case .oneMonth: return 5
+            case .threeMonths: return 13
+            case .sixMonths: return 26
+            case .year: return 52
+            }
+        }
+    }
     
     var body: some View { 
-        VStack(spacing: 16) { 
+        VStack(spacing: 12) { 
+            // Header - same for both modes
             HStack(spacing: 12) { 
                 if let categoryColor = taskStreak.categoryColor { 
                     Circle()
@@ -1470,58 +1539,114 @@ private struct TaskStreakCard: View {
                 } 
             }
             
-            HStack(spacing: 24) { 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("current".localized)
-                        .font(.caption)
-                        .themedSecondaryText()
+            // Stats row with time range selector
+            HStack(spacing: 0) { 
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("current".localized)
+                            .font(.caption2)
+                            .themedSecondaryText()
+                        
+                        Text("\(taskStreak.currentStreak)")
+                            .font(.title3.bold())
+                            .foregroundColor(Color.orange)
+                    }
                     
-                    Text("\(taskStreak.currentStreak)")
-                        .font(.title2.bold())
-                        .foregroundColor(Color.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("best".localized)
+                            .font(.caption2)
+                            .themedSecondaryText()
+                        
+                        Text("\(taskStreak.bestStreak)")
+                            .font(.title3.bold())
+                            .foregroundColor(Color.red)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("completed".localized)
+                            .font(.caption2)
+                            .themedSecondaryText()
+                        
+                        Text("\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)")
+                            .font(.title3.bold())
+                            .foregroundColor(Color.green)
+                    }
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("best".localized)
-                        .font(.caption)
-                        .themedSecondaryText()
-                    
-                    Text("\(taskStreak.bestStreak)")
-                        .font(.title2.bold())
-                        .foregroundColor(Color.red)
-                }
+                Spacer()
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("completed".localized)
-                        .font(.caption)
-                        .themedSecondaryText()
-                    
-                    Text("\(taskStreak.completedOccurrences)/\(taskStreak.totalOccurrences)")
-                        .font(.title2.bold())
-                        .foregroundColor(Color.green)
+                // Time range selector - visible in both modes
+                HStack(spacing: 4) {
+                    ForEach(HeatMapTimeRange.allCases, id: \.self) { range in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedTimeRange = range
+                            }
+                        } label: {
+                            Text(range.rawValue)
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
+                                .foregroundColor(selectedTimeRange == range ? .white : theme.textColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(selectedTimeRange == range ? 
+                                              Color(hex: taskStreak.categoryColor ?? "#6366F1") : 
+                                              theme.surfaceColor.opacity(0.5))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                
-                Spacer() 
             }
             
-            if !taskStreak.streakHistory.isEmpty { 
-                Chart(taskStreak.streakHistory) { point in 
-                    LineMark(
-                        x: .value("date".localized, point.date), 
-                        y: .value("streak".localized, point.streakValue)
+            // Content area with fixed height
+            Group {
+                if viewMode == .chart {
+                    // Line chart view - filtered by time range
+                    let filteredHistory = getFilteredHistory()
+                    if !filteredHistory.isEmpty { 
+                        Chart(filteredHistory) { point in 
+                            LineMark(
+                                x: .value("date".localized, point.date), 
+                                y: .value("streak".localized, point.streakValue)
+                            )
+                            .foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1"))
+                            .lineStyle(.init(lineWidth: 2, lineCap: .round))
+                            .symbol(.circle)
+                            .symbolSize(30) 
+                        }
+                        .chartXAxis(.hidden)
+                        .chartYAxis(.hidden)
+                        .padding(.vertical, 8)
+                    } else {
+                        Color.clear
+                    }
+                } else {
+                    // Heat map view
+                    StreakHeatMapGrid(
+                        taskStreak: taskStreak,
+                        weeksCount: selectedTimeRange.weeksCount,
+                        viewModel: viewModel
                     )
-                    .foregroundStyle(Color(hex: taskStreak.categoryColor ?? "#6366F1"))
-                    .lineStyle(.init(lineWidth: 2, lineCap: .round))
-                    .symbol(.circle)
-                    .symbolSize(40) 
                 }
-                .frame(height: 80)
-                .chartXAxis(.hidden)
-                .chartYAxis(.hidden) 
-            } 
+            }
+            .frame(height: 100)
+            .clipped()
         }
-        .padding(20)
+        .padding(16)
         .background(cardBackground)
+        .clipped()
+    }
+    
+    private func getFilteredHistory() -> [StatisticsViewModel.StreakPoint] {
+        let calendar = Calendar.current
+        let today = Date()
+        let daysBack = selectedTimeRange.weeksCount * 7
+        guard let startDate = calendar.date(byAdding: .day, value: -daysBack, to: today) else {
+            return taskStreak.streakHistory
+        }
+        return taskStreak.streakHistory.filter { $0.date >= startDate }
     }
 }
 

@@ -62,6 +62,7 @@
 "notifications_not_available" = "Notifications non disponibles";
 "notifications_denied" = "Notifications refusées";
 "notification_permission_denied_message" = "Les notifications ont été refusées. Activez-les dans Réglages iOS > Confidentialité et sécurité > Calendriers > SnapTask.";
+"ios_permission_required" = "Autorisation iOS requise";
 
 // Accessibility Support
 "completed" = "terminé";
@@ -251,6 +252,8 @@
 "customization" = "Personnalisation";
 "appearance" = "Apparence";
 "dark_mode" = "Mode sombre";
+"light" = "Clair";
+"dark" = "Sombre";
 "priorities" = "Priorités";
 "add_priority" = "Ajouter une priorité";
 "performance" = "Performance";
@@ -691,6 +694,11 @@
 "quality_rating" = "Évaluation de qualité";
 "difficulty_rating" = "Évaluation de difficulté";
 "performance_charts" = "Graphiques de performance";
+"chart" = "Graphique";
+"heat_map" = "Carte de chaleur";
+"less" = "Moins";
+"more" = "Plus";
+"rate" = "Taux";
 
 // Settings View
 "daily_notifications" = "Notifications quotidiennes";
@@ -1340,9 +1348,23 @@
 "tasks_count" = "%d tâches";
 "no_tasks_for_day" = "Aucune tâche pour ce jour";
 "select_day_to_view_media" = "Sélectionnez un jour pour voir les médias";
+"select_week_to_view" = "Sélectionnez une semaine pour voir les tâches";
+"select_month_to_view" = "Sélectionnez un mois pour voir les tâches";
+"select_year_to_view" = "Sélectionnez une année pour voir les tâches";
 "no_media_for_task" = "Aucun média joint";
 "notes" = "Notes";
 "photo_not_found" = "Photo introuvable";
+"no_weekly_tasks" = "Aucune tâche hebdomadaire";
+"no_monthly_tasks" = "Aucune tâche mensuelle";
+"no_yearly_tasks" = "Aucune tâche annuelle";
+"no_long_term_tasks" = "Aucune tâche à long terme";
+"day" = "Jour";
+"week" = "Semaine";
+"month" = "Mois";
+"year" = "Année";
+"long_term" = "Long Terme";
+"all" = "Tout";
+"tasks" = "Tâches";
 
 // Task Performance
 "performance" = "Performance";

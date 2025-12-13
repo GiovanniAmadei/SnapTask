@@ -62,6 +62,7 @@
 "notifications_not_available" = "Notificações indisponíveis";
 "notifications_denied" = "Notificações negadas";
 "notification_permission_denied_message" = "As notificações foram negadas. Ative-as em Ajustes do iOS > Privacidade e Segurança > Notificações > SnapTask.";
+"ios_permission_required" = "Permissão do iOS necessária";
 
 // Accessibility Support
 "completed" = "concluída";
@@ -257,6 +258,8 @@
 "customization" = "Personalização";
 "appearance" = "Aparência";
 "dark_mode" = "Modo escuro";
+"light" = "Claro";
+"dark" = "Escuro";
 "priorities" = "Prioridades";
 "add_priority" = "Adicionar prioridade";
 "performance" = "Desempenho";
@@ -702,6 +705,11 @@
 "quality_rating" = "Avaliação de qualidade";
 "difficulty_rating" = "Avaliação de dificuldade";
 "performance_charts" = "Gráficos de desempenho";
+"chart" = "Gráfico";
+"heat_map" = "Mapa de calor";
+"less" = "Menos";
+"more" = "Mais";
+"rate" = "Taxa";
 
 // Settings View
 "daily_notifications" = "Notificações diárias";
@@ -1392,6 +1400,9 @@
 "free_trial_activated" = "Teste gratuito ativado";
 "welcome_snaptask_pro" = "Bem-vindo ao SnapTask Pro!";
 "welcome_snaptask_pro_lifetime" = "Bem-vindo ao SnapTask Pro (vitalício)!";
+"purchase_not_completed" = "Compra não concluída";
+"purchases_restored_successfully" = "Compras restauradas com sucesso";
+"no_purchases_to_restore" = "Nenhuma compra para restaurar";
 
 // Configurações de Eisenhower (personalização de urgência)
 "eisenhower_settings_title" = "Matriz de Eisenhower";
@@ -1423,9 +1434,23 @@
 "tasks_count" = "%d tarefas";
 "no_tasks_for_day" = "Sem tarefas para este dia";
 "select_day_to_view_media" = "Selecione um dia para ver as mídias";
+"select_week_to_view" = "Selecione uma semana para ver as tarefas";
+"select_month_to_view" = "Selecione um mês para ver as tarefas";
+"select_year_to_view" = "Selecione um ano para ver as tarefas";
 "no_media_for_task" = "Sem mídias anexadas";
 "notes" = "Notas";
 "photo_not_found" = "Foto não encontrada";
+"no_weekly_tasks" = "Sem tarefas semanais";
+"no_monthly_tasks" = "Sem tarefas mensais";
+"no_yearly_tasks" = "Sem tarefas anuais";
+"no_long_term_tasks" = "Sem tarefas de longo prazo";
+"day" = "Dia";
+"week" = "Semana";
+"month" = "Mês";
+"year" = "Ano";
+"long_term" = "Longo Prazo";
+"all" = "Tudo";
+"tasks" = "Tarefas";
 
 // Task Performance
 "performance" = "Desempenho";

@@ -200,16 +200,20 @@ struct NewsItemCard: View {
                                     .fill(Color(hex: news.type.color).opacity(0.15))
                             )
                         
+                        // Show version chip only if version contains at least one digit (avoid lonely 'v')
                         if let version = news.version {
-                            Text("v\(version)")
-                                .font(.system(size: 12, weight: .medium))
-                                .themedSecondaryText()
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule()
-                                        .fill(theme.surfaceColor)
-                                )
+                            let trimmed = version.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmed.isEmpty, trimmed.range(of: "[0-9]", options: .regularExpression) != nil {
+                                Text("v\(trimmed)")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .themedSecondaryText()
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(theme.surfaceColor)
+                                    )
+                            }
                         }
                         
                         Spacer()

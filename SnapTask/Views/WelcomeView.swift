@@ -207,7 +207,7 @@ struct WelcomeView: View {
                                 HStack {
                                     Image(systemName: "chevron.left")
                                         .font(.subheadline.weight(.medium))
-                                    Text("Indietro")
+                                    Text(NSLocalizedString("back", comment: "Back button"))
                                         .font(.subheadline.weight(.medium))
                                 }
                                 .foregroundColor(theme.secondaryTextColor)

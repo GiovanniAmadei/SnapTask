@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @AppStorage("hasShownWelcome") private var hasShownWelcome = false
     @State private var showingWelcome = false
-    @State private var showingUpdateBanner = false
+    // Version 1.0 banner removed - no longer needed
     @State private var selectedTab = 0
     @State private var showingTaskDetail = false
     @State private var selectedTaskId: UUID?
@@ -49,16 +49,6 @@ struct ContentView: View {
             .environment(\.theme, themeManager.currentTheme)
             .themedBackground()
             
-            // Update Banner Overlay
-            if showingUpdateBanner {
-                UpdateBannerView(isPresented: $showingUpdateBanner)
-                    .onAppear {
-                        // Trigger the animation when the banner appears
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.rootViewController?.children.last?.view.subviews.last?.layer.removeAllAnimations()
-                        }
-                    }
-            }
         }
         .sheet(isPresented: $showingTaskDetail) {
             if let taskId = selectedTaskId {
@@ -71,9 +61,6 @@ struct ContentView: View {
             print("ContentView onAppear - hasShownWelcome: \(hasShownWelcome)")
             if !hasShownWelcome {
                 showingWelcome = true
-            } else {
-                // Check if we should show update banner
-                checkForUpdateBanner()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .expandActiveTimer)) { _ in
@@ -99,18 +86,8 @@ struct ContentView: View {
             print("ContentView received theme change notification - updating bars directly")
             forceUpdateExistingBars()
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ForceShowUpdateBanner"))) { _ in
-            print("Force showing update banner...")
-            showingUpdateBanner = true
-        }
         .fullScreenCover(isPresented: $showingWelcome) {
             WelcomeView()
-                .onDisappear {
-                    // Check for update banner after welcome is dismissed
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        checkForUpdateBanner()
-                    }
-                }
         }
     }
     
@@ -191,23 +168,4 @@ struct ContentView: View {
         print("Tab bar and navigation bar theme updated successfully")
     }
     
-    private func checkForUpdateBanner() {
-        print("Checking for update banner...")
-        let shouldShow = UpdateBannerManager.shouldShowUpdateBanner()
-        print("Should show banner: \(shouldShow)")
-        
-        if shouldShow {
-            print("Showing update banner...")
-            showingUpdateBanner = true
-        } else {
-            print("Update banner already shown for this version, skipping")
-        }
-    }
-}
-
-// MARK: - Debug Helper (for testing)
-extension ContentView {
-    func resetUpdateBannerForTesting() {
-        UpdateBannerManager.resetBannerForTesting()
-    }
 }

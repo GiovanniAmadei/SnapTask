@@ -116,6 +116,28 @@ class TaskManager: ObservableObject {
             print("✅ Task updated: \(task.name)")
         }
     }
+
+    /// Apply a task coming from a remote source (Watch/CloudKit) and trust its contents
+    /// - If the task exists, replace it entirely (including completions)
+    /// - If it does not exist, append it (create)
+    func upsertTaskFromRemote(_ incoming: TodoTask) {
+        isUpdatingFromSync = true
+        defer { isUpdatingFromSync = false }
+
+        print("📱 Upsert incoming task: \(incoming.name), category: \(incoming.category?.name ?? "none"), lastModified: \(incoming.lastModifiedDate ?? Date.distantPast)")
+
+        if let index = tasks.firstIndex(where: { $0.id == incoming.id }) {
+            tasks[index] = incoming
+            print("🔁 Upsert remote: replaced task \(incoming.name)")
+        } else {
+            tasks.append(incoming)
+            print("➕ Upsert remote: added new task \(incoming.name)")
+        }
+
+        saveTasks()
+        notifyTasksUpdated()
+        objectWillChange.send()
+    }
     
     func updateAllTasks(_ newTasks: [TodoTask]) {
         isUpdatingFromSync = true

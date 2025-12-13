@@ -26,6 +26,14 @@ struct WeeklyStatData: Codable, Identifiable {
     let completionRate: Double
 }
 
+struct MoodStatData: Codable, Identifiable {
+    var id: String { day }
+    let day: String
+    let date: Date
+    let score: Int
+    let emoji: String
+}
+
 // MARK: - Widget Configuration Intent
 
 enum PerformanceWidgetType: String, CaseIterable, AppEnum {
@@ -59,8 +67,10 @@ struct PerformanceEntry: TimelineEntry {
     let performanceType: PerformanceWidgetType
     let categoryStats: [CategoryStatData]
     let weeklyStats: [WeeklyStatData]
+    let moodStats: [MoodStatData]
     let totalHours: Double
     let overallCompletionRate: Double
+    let averageMood: Double?
 }
 
 // MARK: - Timeline Provider
@@ -79,8 +89,10 @@ struct PerformanceProvider: AppIntentTimelineProvider {
                 CategoryStatData(name: "Personal", color: "#EF4444", hours: 0.5)
             ],
             weeklyStats: [],
+            moodStats: [],
             totalHours: 3.08,
-            overallCompletionRate: 0.0
+            overallCompletionRate: 0.0,
+            averageMood: nil
         )
     }
     
@@ -119,19 +131,34 @@ struct PerformanceProvider: AppIntentTimelineProvider {
             }
         }
         
+        // Load mood stats for Mood Trend
+        var moodStats: [MoodStatData] = []
+        if let data = sharedDefaults?.data(forKey: "widgetMoodStats") {
+            do {
+                moodStats = try JSONDecoder().decode([MoodStatData].self, from: data)
+            } catch {
+                print("Error decoding mood stats: \(error)")
+            }
+        }
+        
         // Calculate totals
         let totalHours = categoryStats.reduce(0) { $0 + $1.hours }
         let totalCompleted = weeklyStats.reduce(0) { $0 + $1.completedTasks }
         let totalTasks = weeklyStats.reduce(0) { $0 + $1.totalTasks }
         let overallCompletionRate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
         
+        // Calculate average mood
+        let averageMood: Double? = moodStats.isEmpty ? nil : Double(moodStats.reduce(0) { $0 + $1.score }) / Double(moodStats.count)
+        
         return PerformanceEntry(
             date: Date(),
             performanceType: configuration.performanceType,
             categoryStats: categoryStats,
             weeklyStats: weeklyStats,
+            moodStats: moodStats,
             totalHours: totalHours,
-            overallCompletionRate: overallCompletionRate
+            overallCompletionRate: overallCompletionRate,
+            averageMood: averageMood
         )
     }
 }
@@ -425,8 +452,8 @@ struct PerformanceWidgetEntryView: View {
             Divider()
                 .background(secondaryTextColor.opacity(0.2))
             
-            // Bottom section: Completion Rate
-            VStack(spacing: 6) {
+            // Middle section: Completion Rate
+            VStack(spacing: 4) {
                 HStack {
                     Text(String(localized: "Task Completion Rate"))
                         .font(.system(size: 10, weight: .semibold))
@@ -447,7 +474,7 @@ struct PerformanceWidgetEntryView: View {
                             .foregroundColor(secondaryTextColor)
                         Spacer()
                     }
-                    .frame(height: 50)
+                    .frame(height: 40)
                 } else {
                     // Bar chart
                     HStack(alignment: .bottom, spacing: 8) {
@@ -481,7 +508,7 @@ struct PerformanceWidgetEntryView: View {
                             }
                         }
                     }
-                    .frame(height: 55)
+                    .frame(height: 45)
                     
                     // Legend
                     HStack(spacing: 12) {
@@ -511,9 +538,104 @@ struct PerformanceWidgetEntryView: View {
                 }
             }
             
+            Divider()
+                .background(secondaryTextColor.opacity(0.2))
+            
+            // Bottom section: Mood Trend
+            VStack(spacing: 4) {
+                HStack {
+                    Text(String(localized: "Mood Trend"))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(primaryColor)
+                    
+                    Spacer()
+                    
+                    if let avg = entry.averageMood {
+                        Text(moodEmoji(for: avg))
+                            .font(.system(size: 14))
+                    }
+                }
+                
+                if entry.moodStats.isEmpty {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 2) {
+                            Image(systemName: "face.smiling")
+                                .font(.system(size: 16))
+                                .foregroundColor(secondaryTextColor.opacity(0.5))
+                            Text(String(localized: "No mood data"))
+                                .font(.system(size: 10))
+                                .foregroundColor(secondaryTextColor)
+                        }
+                        Spacer()
+                    }
+                    .frame(height: 40)
+                } else {
+                    // Mood emoji chart
+                    HStack(alignment: .bottom, spacing: 6) {
+                        ForEach(entry.moodStats.suffix(7), id: \.day) { stat in
+                            VStack(spacing: 2) {
+                                // Mood bar with gradient
+                                GeometryReader { geo in
+                                    let maxHeight = geo.size.height
+                                    let height = maxHeight * CGFloat(stat.score) / 7.0
+                                    
+                                    VStack(spacing: 0) {
+                                        Spacer(minLength: 0)
+                                        
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .fill(moodColor(for: stat.score))
+                                            .frame(height: max(height, 4))
+                                    }
+                                }
+                                
+                                Text(stat.emoji)
+                                    .font(.system(size: 10))
+                            }
+                        }
+                    }
+                    .frame(height: 45)
+                    
+                    // Average info
+                    if let avg = entry.averageMood {
+                        HStack {
+                            Text(String(localized: "avg") + ": \(String(format: "%.1f", avg))")
+                                .font(.system(size: 9))
+                                .foregroundColor(secondaryTextColor)
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            
             Spacer(minLength: 0)
         }
         .padding(12)
+    }
+    
+    private func moodEmoji(for score: Double) -> String {
+        let rounded = Int(round(score))
+        switch rounded {
+        case 1: return "😫"
+        case 2: return "😕"
+        case 3: return "🙁"
+        case 4: return "😐"
+        case 5: return "🙂"
+        case 6: return "😄"
+        default: return "🤩"
+        }
+    }
+    
+    private func moodColor(for score: Int) -> Color {
+        switch score {
+        case 1: return Color(hex: "#991B1B")
+        case 2: return Color(hex: "#DC2626")
+        case 3: return Color(hex: "#F97316")
+        case 4: return Color(hex: "#9CA3AF")
+        case 5: return Color(hex: "#22C55E")
+        case 6: return Color(hex: "#16A34A")
+        default: return Color(hex: "#0EA5E9")
+        }
     }
     
     // MARK: - Completion Rate View
@@ -818,8 +940,10 @@ struct PerformanceWidget: Widget {
             CategoryStatData(name: "Personal", color: "#EF4444", hours: 0.5)
         ],
         weeklyStats: [],
+        moodStats: [],
         totalHours: 3.08,
-        overallCompletionRate: 0.0
+        overallCompletionRate: 0.0,
+        averageMood: nil
     )
 }
 
@@ -839,7 +963,44 @@ struct PerformanceWidget: Widget {
             WeeklyStatData(day: "Tue", completedTasks: 4, totalTasks: 8, completionRate: 0.5),
             WeeklyStatData(day: "Wed", completedTasks: 3, totalTasks: 7, completionRate: 0.43)
         ],
+        moodStats: [],
         totalHours: 0,
-        overallCompletionRate: 0.15
+        overallCompletionRate: 0.15,
+        averageMood: nil
+    )
+}
+
+#Preview(as: .systemLarge) {
+    PerformanceWidget()
+} timeline: {
+    PerformanceEntry(
+        date: Date(),
+        performanceType: .timeDistribution,
+        categoryStats: [
+            CategoryStatData(name: "Work", color: "#F59E0B", hours: 1.83),
+            CategoryStatData(name: "Health", color: "#10B981", hours: 0.75),
+            CategoryStatData(name: "Personal", color: "#EF4444", hours: 0.5)
+        ],
+        weeklyStats: [
+            WeeklyStatData(day: "Thu", completedTasks: 3, totalTasks: 8, completionRate: 0.375),
+            WeeklyStatData(day: "Fri", completedTasks: 2, totalTasks: 6, completionRate: 0.333),
+            WeeklyStatData(day: "Sat", completedTasks: 1, totalTasks: 4, completionRate: 0.25),
+            WeeklyStatData(day: "Sun", completedTasks: 0, totalTasks: 2, completionRate: 0.0),
+            WeeklyStatData(day: "Mon", completedTasks: 5, totalTasks: 10, completionRate: 0.5),
+            WeeklyStatData(day: "Tue", completedTasks: 4, totalTasks: 8, completionRate: 0.5),
+            WeeklyStatData(day: "Wed", completedTasks: 3, totalTasks: 7, completionRate: 0.43)
+        ],
+        moodStats: [
+            MoodStatData(day: "Thu", date: Date().addingTimeInterval(-6*86400), score: 5, emoji: "🙂"),
+            MoodStatData(day: "Fri", date: Date().addingTimeInterval(-5*86400), score: 6, emoji: "😄"),
+            MoodStatData(day: "Sat", date: Date().addingTimeInterval(-4*86400), score: 4, emoji: "😐"),
+            MoodStatData(day: "Sun", date: Date().addingTimeInterval(-3*86400), score: 5, emoji: "🙂"),
+            MoodStatData(day: "Mon", date: Date().addingTimeInterval(-2*86400), score: 6, emoji: "😄"),
+            MoodStatData(day: "Tue", date: Date().addingTimeInterval(-1*86400), score: 7, emoji: "🤩"),
+            MoodStatData(day: "Wed", date: Date(), score: 5, emoji: "🙂")
+        ],
+        totalHours: 3.08,
+        overallCompletionRate: 0.45,
+        averageMood: 5.4
     )
 }

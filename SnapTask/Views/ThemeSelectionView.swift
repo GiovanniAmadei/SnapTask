@@ -8,7 +8,7 @@ struct ThemeSelectionView: View {
     @State private var showingDarkModeWarning = false
     @State private var pendingTheme: Theme?
     @Environment(\.theme) private var theme
-    @AppStorage("isDarkMode") private var isDarkMode = false
+    @AppStorage("appearanceMode") private var appearanceMode = "system"
 
     var body: some View {
         ScrollView {
@@ -97,7 +97,7 @@ struct ThemeSelectionView: View {
         }
         .alert("dark_mode_theme_warning_title".localized, isPresented: $showingDarkModeWarning) {
             Button("keep_dark_mode".localized) {
-                isDarkMode = false
+                appearanceMode = "system"
                 if let theme = pendingTheme {
                     applyTheme(theme)
                 }
@@ -115,7 +115,7 @@ struct ThemeSelectionView: View {
         if themeManager.canUseTheme(selectedTheme) {
             guard themeManager.currentTheme.id != selectedTheme.id else { return }
             
-            if selectedTheme.overridesSystemColors && isDarkMode {
+            if selectedTheme.overridesSystemColors && appearanceMode != "system" {
                 pendingTheme = selectedTheme
                 showingDarkModeWarning = true
                 return

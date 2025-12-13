@@ -19,6 +19,13 @@ struct WidgetWeeklyStatData: Codable {
     let completionRate: Double
 }
 
+struct WidgetMoodStatData: Codable {
+    let day: String
+    let date: Date
+    let score: Int
+    let emoji: String
+}
+
 @MainActor
 class StatisticsViewModel: ObservableObject {
     struct CategoryStat: Identifiable, Equatable {
@@ -265,6 +272,33 @@ class StatisticsViewModel: ObservableObject {
             appGroupUserDefaults?.set(encoded, forKey: "widgetWeeklyStats")
         }
         
+        // Save mood stats for Mood Trend widget
+        let calendar = Calendar.current
+        let today = Date()
+        let weekStart = calendar.date(byAdding: .day, value: -6, to: today)!
+        
+        var moodData: [WidgetMoodStatData] = []
+        let moodManager = MoodManager.shared
+        
+        for dayOffset in 0...6 {
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStart)!
+            let startOfDay = calendar.startOfDay(for: date)
+            
+            if let moodType = moodManager.mood(on: startOfDay) {
+                let dayName = date.formatted(.dateTime.weekday(.abbreviated))
+                moodData.append(WidgetMoodStatData(
+                    day: dayName,
+                    date: startOfDay,
+                    score: moodType.score,
+                    emoji: moodType.emoji
+                ))
+            }
+        }
+        
+        if let encoded = try? JSONEncoder().encode(moodData) {
+            appGroupUserDefaults?.set(encoded, forKey: "widgetMoodStats")
+        }
+        
         appGroupUserDefaults?.synchronize()
         
         // Reload widget timelines
@@ -323,6 +357,15 @@ class StatisticsViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 print("📊 CloudKit data changed (debounced)")
+                self?.scheduleUpdate()
+            }
+            .store(in: &cancellables)
+        
+        NotificationCenter.default.publisher(for: .moodDidUpdate)
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("📊 Mood updated (debounced)")
                 self?.scheduleUpdate()
             }
             .store(in: &cancellables)

@@ -62,6 +62,7 @@
 "notifications_not_available" = "通知が利用できません";
 "notifications_denied" = "通知が拒否されました";
 "notification_permission_denied_message" = "通知が拒否されています。iOS設定 > プライバシーとセキュリティ > カレンダー > SnapTask で有効にしてください。";
+"ios_permission_required" = "iOSの許可が必要です";
 
 // Accessibility Support
 "completed" = "完了";
@@ -256,6 +257,8 @@
 "customization" = "カスタマイゼーション";
 "appearance" = "外観";
 "dark_mode" = "ダークモード";
+"light" = "ライト";
+"dark" = "ダーク";
 "priorities" = "優先度";
 "add_priority" = "優先度を追加";
 "performance" = "パフォーマンス";
@@ -701,6 +704,11 @@
 "quality_rating" = "品質評価";
 "difficulty_rating" = "難易度評価";
 "performance_charts" = "パフォーマンスチャート";
+"chart" = "チャート";
+"heat_map" = "ヒートマップ";
+"less" = "少ない";
+"more" = "多い";
+"rate" = "率";
 
 // Settings View
 "daily_notifications" = "日次通知";
@@ -1390,6 +1398,9 @@
 "free_trial_activated" = "無料トライアルが有効になりました";
 "welcome_snaptask_pro" = "SnapTask Proへようこそ！";
 "welcome_snaptask_pro_lifetime" = "SnapTask Pro（生涯版）へようこそ！";
+"purchase_not_completed" = "購入が完了しませんでした";
+"purchases_restored_successfully" = "購入が正常に復元されました";
+"no_purchases_to_restore" = "復元する購入がありません";
 
 // アイゼンハワー設定（緊急度のカスタマイズ）
 "eisenhower_settings_title" = "アイゼンハワー・マトリックス";
@@ -1421,9 +1432,23 @@
 "tasks_count" = "%d件のタスク";
 "no_tasks_for_day" = "この日のタスクはありません";
 "select_day_to_view_media" = "日付を選択してメディアを表示";
+"select_week_to_view" = "週を選択してタスクを表示";
+"select_month_to_view" = "月を選択してタスクを表示";
+"select_year_to_view" = "年を選択してタスクを表示";
 "no_media_for_task" = "添付メディアなし";
 "notes" = "メモ";
 "photo_not_found" = "写真が見つかりません";
+"no_weekly_tasks" = "週間タスクなし";
+"no_monthly_tasks" = "月間タスクなし";
+"no_yearly_tasks" = "年間タスクなし";
+"no_long_term_tasks" = "長期タスクなし";
+"day" = "日";
+"week" = "週";
+"month" = "月";
+"year" = "年";
+"long_term" = "長期";
+"all" = "すべて";
+"tasks" = "タスク";
 
 // Task Performance
 "performance" = "パフォーマンス";

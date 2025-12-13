@@ -62,6 +62,7 @@
 "notifications_not_available" = "Notifications Not Available";
 "notifications_denied" = "Notifications Denied";
 "notification_permission_denied_message" = "Notifications have been denied. Enable them in iOS Settings > Privacy & Security > Calendars > SnapTask.";
+"ios_permission_required" = "iOS permission required";
 
 // Accessibility Support
 "completed" = "completed";
@@ -259,6 +260,8 @@
 "customization" = "Customization";
 "appearance" = "Appearance";
 "dark_mode" = "Dark Mode";
+"light" = "Light";
+"dark" = "Dark";
 "priorities" = "Priorities";
 "add_priority" = "Add Priority";
 "performance" = "Performance";
@@ -705,6 +708,11 @@
 "quality_rating" = "Quality Rating";
 "difficulty_rating" = "Difficulty Rating";
 "performance_charts" = "Performance Charts";
+"chart" = "Chart";
+"heat_map" = "Heat Map";
+"less" = "Less";
+"more" = "More";
+"rate" = "Rate";
 
 // Settings View
 "daily_notifications" = "Daily Notifications";
@@ -1191,6 +1199,9 @@
 "welcome_snaptask_pro" = "Welcome to SnapTask Pro!";
 "welcome_snaptask_pro_lifetime" = "Welcome to SnapTask Pro (lifetime)!";
 "free_trial_activated" = "Free trial activated";
+"purchase_not_completed" = "Purchase not completed";
+"purchases_restored_successfully" = "Purchases restored successfully";
+"no_purchases_to_restore" = "No purchases to restore";
 
 // Subscription
 "snaptask_pro" = "SnapTask Pro";
@@ -1423,9 +1434,23 @@
 "tasks_count" = "%d tasks";
 "no_tasks_for_day" = "No tasks for this day";
 "select_day_to_view_media" = "Select a day to view media";
+"select_week_to_view" = "Select a week to view tasks";
+"select_month_to_view" = "Select a month to view tasks";
+"select_year_to_view" = "Select a year to view tasks";
 "no_media_for_task" = "No media attached";
 "notes" = "Notes";
 "photo_not_found" = "Photo not found";
+"no_weekly_tasks" = "No weekly tasks";
+"no_monthly_tasks" = "No monthly tasks";
+"no_yearly_tasks" = "No yearly tasks";
+"no_long_term_tasks" = "No long-term tasks";
+"day" = "Day";
+"week" = "Week";
+"month" = "Month";
+"year" = "Year";
+"long_term" = "Long Term";
+"all" = "All";
+"tasks" = "Tasks";
 
 // Task Performance
 "performance" = "Performance";

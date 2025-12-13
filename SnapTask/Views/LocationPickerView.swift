@@ -12,21 +12,7 @@ struct LocationPickerView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Selected Location Preview (always visible if a location is set)
-                if let selectedLoc = selectedLocation {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("selected_location".localized)
-                            .font(.headline)
-                            .themedPrimaryText()
-                            .padding(.horizontal)
-
-                        LocationMapView(location: selectedLoc, height: 150, allowsInteraction: false)
-                            .padding(.horizontal)
-                    }
-                    .padding(.top, 8)
-                }
-
-                // Search Section
+                // Search Section - always at top
                 VStack(alignment: .leading, spacing: 12) {
                     Text("search_location".localized)
                         .font(.headline)
@@ -64,38 +50,62 @@ struct LocationPickerView: View {
                             )
                     )
                     .padding(.horizontal)
-                    
-                    // Search Results
-                    if viewModel.isSearching {
-                        HStack {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .accentColor(theme.primaryColor)
-                            Text("searching".localized)
-                                .font(.subheadline)
-                                .themedSecondaryText()
-                        }
-                        .padding(.horizontal)
-                    } else if !viewModel.searchResults.isEmpty {
-                        ScrollView {
-                            LazyVStack(spacing: 8) {
-                                ForEach(viewModel.searchResults, id: \.id) { location in
-                                    LocationResultRow(location: location) {
-                                        selectedLocation = location
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                    } else if !searchText.isEmpty && !viewModel.isSearching {
-                        Text("no_results_found".localized)
+                }
+                .padding(.top, 8)
+                
+                // Search Results or Selected Location Preview
+                if viewModel.isSearching {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .accentColor(theme.primaryColor)
+                        Text("searching".localized)
                             .font(.subheadline)
                             .themedSecondaryText()
-                            .padding(.horizontal)
                     }
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                    Spacer()
+                } else if !viewModel.searchResults.isEmpty {
+                    // Show search results in a scrollable list
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(viewModel.searchResults, id: \.id) { location in
+                                LocationResultRow(location: location) {
+                                    selectedLocation = location
+                                    searchText = ""
+                                    viewModel.clearSearchResults()
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 12)
+                    }
+                } else if !searchText.isEmpty && !viewModel.isSearching {
+                    Text("no_results_found".localized)
+                        .font(.subheadline)
+                        .themedSecondaryText()
+                        .padding(.horizontal)
+                        .padding(.top, 12)
+                    Spacer()
+                } else if let selectedLoc = selectedLocation {
+                    // Show selected location preview when not searching
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("selected_location".localized)
+                                .font(.headline)
+                                .themedPrimaryText()
+                                .padding(.horizontal)
+
+                            LocationMapView(location: selectedLoc, height: 180, allowsInteraction: false)
+                                .padding(.horizontal)
+                        }
+                        .padding(.top, 16)
+                    }
+                } else {
+                    // Empty state
+                    Spacer()
                 }
-                
-                Spacer()
                 
                 // Clear Location Button
                 if selectedLocation != nil {

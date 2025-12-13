@@ -385,6 +385,13 @@ struct TodoTask: Identifiable, Codable, Equatable {
     func completionKey(for date: Date) -> Date {
         let calendar = Calendar.current
         
+        // Per task ricorrenti, ogni istanza deve avere il proprio stato di completamento
+        // quindi usiamo sempre startOfDay come chiave
+        if recurrence != nil {
+            return calendar.startOfDay(for: date)
+        }
+        
+        // Per task non ricorrenti, usiamo la logica basata su timeScope
         switch timeScope {
         case .today:
             return calendar.startOfDay(for: date)

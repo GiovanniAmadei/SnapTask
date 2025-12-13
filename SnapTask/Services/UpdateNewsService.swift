@@ -50,11 +50,14 @@ class UpdateNewsService: ObservableObject {
                     date = nil
                 }
                 
+                // Treat empty version strings as nil so we don't render a lonely "v"
+                let versionString = (data["version"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+
                 let news = UpdateNews(
                     id: document.documentID,
                     title: title,
                     description: description,
-                    version: data["version"] as? String,
+                    version: (versionString?.isEmpty == false) ? versionString : nil,
                     date: date,
                     type: type,
                     isHighlighted: data["isHighlighted"] as? Bool ?? false
@@ -81,7 +84,25 @@ class UpdateNewsService: ObservableObject {
             return
         }
         
-        newsItems = cachedNews
+        // Normalize cached items: treat empty version strings as nil to avoid showing a lone 'v'
+        newsItems = cachedNews.map { item in
+            let normalizedVersion: String? = {
+                if let v = item.version?.trimmingCharacters(in: .whitespacesAndNewlines), !v.isEmpty {
+                    return v
+                } else {
+                    return nil
+                }
+            }()
+            return UpdateNews(
+                id: item.id,
+                title: item.title,
+                description: item.description,
+                version: normalizedVersion,
+                date: item.date,
+                type: item.type,
+                isHighlighted: item.isHighlighted
+            )
+        }
         lastUpdated = UserDefaults.standard.object(forKey: lastUpdateKey) as? Date
     }
     

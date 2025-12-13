@@ -62,6 +62,7 @@
 "notifications_not_available" = "Notificaciones no disponibles";
 "notifications_denied" = "Notificaciones denegadas";
 "notification_permission_denied_message" = "Las notificaciones han sido denegadas. Habilítalas en Ajustes de iOS > Privacidad y seguridad > Calendarios > SnapTask.";
+"ios_permission_required" = "Permiso de iOS requerido";
 
 // Accessibility Support
 "completed" = "completado";
@@ -255,6 +256,8 @@
 "customization" = "Personalización";
 "appearance" = "Apariencia";
 "dark_mode" = "Modo oscuro";
+"light" = "Claro";
+"dark" = "Oscuro";
 "priorities" = "Prioridades";
 "add_priority" = "Añadir prioridad";
 "performance" = "Rendimiento";
@@ -694,6 +697,11 @@
 "quality_rating" = "Calificación de calidad";
 "difficulty_rating" = "Calificación de dificultad";
 "performance_charts" = "Gráficos de desempeño";
+"chart" = "Gráfico";
+"heat_map" = "Mapa de calor";
+"less" = "Menos";
+"more" = "Más";
+"rate" = "Tasa";
 
 // Settings View
 "daily_notifications" = "Notificaciones diarias";
@@ -1573,6 +1581,9 @@
 "free_trial_activated" = "Prueba gratuita activada";
 "welcome_snaptask_pro" = "¡Bienvenido a SnapTask Pro!";
 "welcome_snaptask_pro_lifetime" = "¡Bienvenido a SnapTask Pro (de por vida)!";
+"purchase_not_completed" = "Compra no completada";
+"purchases_restored_successfully" = "Compras restauradas correctamente";
+"no_purchases_to_restore" = "No hay compras para restaurar";
 
 // Time Sort Order
 "early_to_late" = "De temprano a tarde";
@@ -1631,9 +1642,23 @@
 "tasks_count" = "%d tareas";
 "no_tasks_for_day" = "Sin tareas para este día";
 "select_day_to_view_media" = "Selecciona un día para ver los medios";
+"select_week_to_view" = "Selecciona una semana para ver las tareas";
+"select_month_to_view" = "Selecciona un mes para ver las tareas";
+"select_year_to_view" = "Selecciona un año para ver las tareas";
 "no_media_for_task" = "Sin medios adjuntos";
 "notes" = "Notas";
 "photo_not_found" = "Foto no encontrada";
+"no_weekly_tasks" = "Sin tareas semanales";
+"no_monthly_tasks" = "Sin tareas mensuales";
+"no_yearly_tasks" = "Sin tareas anuales";
+"no_long_term_tasks" = "Sin tareas a largo plazo";
+"day" = "Día";
+"week" = "Semana";
+"month" = "Mes";
+"year" = "Año";
+"long_term" = "Largo Plazo";
+"all" = "Todo";
+"tasks" = "Tareas";
 
 // Task Performance
 "performance" = "Rendimiento";
