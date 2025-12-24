@@ -86,17 +86,64 @@ struct TaskFormView: View {
                 case .weekly(let days):
                     vm.recurrenceType = .weekly
                     vm.selectedDays = days
+
+                    if let overrides = recurrence.weekdayTimeOverrides {
+                        let calendar = Calendar.current
+                        for override in overrides {
+                            if let time = calendar.date(bySettingHour: override.hour, minute: override.minute, second: 0, of: initialTask.startTime) {
+                                vm.weeklyTimes[override.weekday] = time
+                            }
+                        }
+                    }
                 case .monthly(let days):
                     vm.recurrenceType = .monthly
                     vm.monthlySelectionType = .days
                     vm.selectedMonthlyDays = days
+
+                    if let overrides = recurrence.monthDayTimeOverrides {
+                        let calendar = Calendar.current
+                        for override in overrides {
+                            if let time = calendar.date(bySettingHour: override.hour, minute: override.minute, second: 0, of: initialTask.startTime) {
+                                vm.monthlyTimes[override.day] = time
+                            }
+                        }
+                    }
+                    for day in days {
+                        if vm.monthlyTimes[day] == nil {
+                            vm.monthlyTimes[day] = initialTask.startTime
+                        }
+                    }
                 case .monthlyOrdinal(let patterns):
                     vm.recurrenceType = .monthly
                     vm.monthlySelectionType = .ordinal
                     vm.selectedOrdinalPatterns = patterns
+
+                    if let overrides = recurrence.monthOrdinalTimeOverrides {
+                        let calendar = Calendar.current
+                        for override in overrides {
+                            let pattern = Recurrence.OrdinalPattern(ordinal: override.ordinal, weekday: override.weekday)
+                            if let time = calendar.date(bySettingHour: override.hour, minute: override.minute, second: 0, of: initialTask.startTime) {
+                                vm.monthlyOrdinalTimes[pattern] = time
+                            }
+                        }
+                    }
+                    for pattern in patterns {
+                        if vm.monthlyOrdinalTimes[pattern] == nil {
+                            vm.monthlyOrdinalTimes[pattern] = initialTask.startTime
+                        }
+                    }
                 case .yearly:
                     vm.recurrenceType = .yearly
                     vm.yearlyDate = recurrence.startDate
+
+                    if let override = recurrence.yearlyTimeOverride {
+                        let calendar = Calendar.current
+                        if let time = calendar.date(bySettingHour: override.hour, minute: override.minute, second: 0, of: initialTask.startTime) {
+                            vm.yearlyTime = time
+                        }
+                    } else {
+                        vm.yearlyTime = initialTask.startTime
+                    }
                 }
                 vm.recurrenceEndDate = recurrence.endDate ?? Date().addingTimeInterval(86400 * 30)
                 vm.trackInStatistics = recurrence.trackInStatistics
@@ -223,7 +270,7 @@ struct TaskFormView: View {
                                     .themedPrimaryText()
                                 Spacer()
                                 Menu {
-                                    ForEach(TaskTimeScope.allCases, id: \.self) { scope in
+                                    ForEach(TaskTimeScope.allCases.filter { $0 != .all }, id: \.self) { scope in
                                         Button(action: {
                                             viewModel.selectedTimeScope = scope
                                         }) {
@@ -249,6 +296,39 @@ struct TaskFormView: View {
                             
                             // Date/Time Selection (for all scopes, but with different defaults)
                             if viewModel.selectedTimeScope == .today {
+                                let dateOnlyBinding = Binding<Date>(
+                                    get: { viewModel.startDate },
+                                    set: { newDate in
+                                        let calendar = Calendar.current
+                                        var comps = calendar.dateComponents([.year, .month, .day], from: newDate)
+                                        comps.hour = calendar.component(.hour, from: viewModel.startDate)
+                                        comps.minute = calendar.component(.minute, from: viewModel.startDate)
+                                        comps.second = 0
+                                        viewModel.startDate = calendar.date(from: comps) ?? newDate
+                                    }
+                                )
+
+                                let timeOnlyBinding = Binding<Date>(
+                                    get: { viewModel.startDate },
+                                    set: { newTime in
+                                        let calendar = Calendar.current
+                                        var comps = calendar.dateComponents([.year, .month, .day], from: viewModel.startDate)
+                                        comps.hour = calendar.component(.hour, from: newTime)
+                                        comps.minute = calendar.component(.minute, from: newTime)
+                                        comps.second = 0
+                                        viewModel.startDate = calendar.date(from: comps) ?? newTime
+                                    }
+                                )
+
+                                HStack {
+                                    Text("date".localized)
+                                        .font(.subheadline.weight(.medium))
+                                        .themedPrimaryText()
+                                    Spacer()
+                                    DatePicker("", selection: dateOnlyBinding, displayedComponents: [.date])
+                                        .labelsHidden()
+                                }
+
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("specific_time".localized)
@@ -261,6 +341,11 @@ struct TaskFormView: View {
                                     Spacer()
                                     ModernToggle(isOn: $viewModel.hasSpecificTime)
                                 }
+                                .onChange(of: viewModel.hasSpecificTime) { _, newValue in
+                                    if !newValue {
+                                        viewModel.hasNotification = false
+                                    }
+                                }
                                 
                                 if viewModel.hasSpecificTime {
                                     HStack {
@@ -268,7 +353,7 @@ struct TaskFormView: View {
                                             .font(.subheadline.weight(.medium))
                                             .themedPrimaryText()
                                         Spacer()
-                                        DatePicker("", selection: $viewModel.startDate)
+                                        DatePicker("", selection: timeOnlyBinding, displayedComponents: [.hourAndMinute])
                                             .labelsHidden()
                                     }
                                     .transition(.asymmetric(
@@ -349,6 +434,69 @@ struct TaskFormView: View {
                             } else {
                                 // For other time scopes, show period selector
                                 VStack(spacing: 12) {
+                                    let calendar = Calendar.current
+                                    let allowedDateRange: ClosedRange<Date> = {
+                                        switch viewModel.selectedTimeScope {
+                                        case .week:
+                                            let weekStart = calendar.startOfWeek(for: viewModel.selectedWeekDate)
+                                            let weekEndDay = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+                                            let weekEnd = (calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: weekEndDay)) ?? weekEndDay).addingTimeInterval(-1)
+                                            return weekStart...weekEnd
+                                        case .month:
+                                            var startComps = DateComponents()
+                                            startComps.year = viewModel.selectedYear
+                                            startComps.month = viewModel.selectedMonth
+                                            startComps.day = 1
+                                            let monthStart = calendar.date(from: startComps) ?? Date()
+                                            let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart
+                                            let monthEndDay = calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? monthStart
+                                            let monthEnd = (calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: monthEndDay)) ?? monthEndDay).addingTimeInterval(-1)
+                                            return monthStart...monthEnd
+                                        case .year:
+                                            var startComps = DateComponents()
+                                            startComps.year = viewModel.selectedYear
+                                            startComps.month = 1
+                                            startComps.day = 1
+                                            let yearStart = calendar.date(from: startComps) ?? Date()
+                                            var endComps = DateComponents()
+                                            endComps.year = viewModel.selectedYear
+                                            endComps.month = 12
+                                            endComps.day = 31
+                                            let yearEndDay = calendar.date(from: endComps) ?? yearStart
+                                            let yearEnd = (calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: yearEndDay)) ?? yearEndDay).addingTimeInterval(-1)
+                                            return yearStart...yearEnd
+                                        case .longTerm:
+                                            return Date()...Date.distantFuture
+                                        default:
+                                            return Date.distantPast...Date.distantFuture
+                                        }
+                                    }()
+
+                                    let dateOnlyBinding = Binding<Date>(
+                                        get: { max(allowedDateRange.lowerBound, min(allowedDateRange.upperBound, viewModel.startDate)) },
+                                        set: { newDate in
+                                            let clampedDate = max(allowedDateRange.lowerBound, min(allowedDateRange.upperBound, newDate))
+                                            var comps = calendar.dateComponents([.year, .month, .day], from: clampedDate)
+                                            comps.hour = calendar.component(.hour, from: viewModel.startDate)
+                                            comps.minute = calendar.component(.minute, from: viewModel.startDate)
+                                            comps.second = 0
+                                            let candidate = calendar.date(from: comps) ?? clampedDate
+                                            viewModel.startDate = max(allowedDateRange.lowerBound, min(allowedDateRange.upperBound, candidate))
+                                        }
+                                    )
+
+                                    let timeOnlyBinding = Binding<Date>(
+                                        get: { viewModel.startDate },
+                                        set: { newTime in
+                                            var comps = calendar.dateComponents([.year, .month, .day], from: viewModel.startDate)
+                                            comps.hour = calendar.component(.hour, from: newTime)
+                                            comps.minute = calendar.component(.minute, from: newTime)
+                                            comps.second = 0
+                                            let candidate = calendar.date(from: comps) ?? newTime
+                                            viewModel.startDate = max(allowedDateRange.lowerBound, min(allowedDateRange.upperBound, candidate))
+                                        }
+                                    )
+
                                     HStack {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("selected_period".localized)
@@ -447,84 +595,119 @@ struct TaskFormView: View {
                                     default:
                                         EmptyView()
                                     }
-                                    
-                                    // Optional: Allow specific time for other scopes
+
                                     HStack {
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text("specific_time".localized)
+                                            Text("specific_day".localized)
                                                 .font(.subheadline.weight(.medium))
                                                 .themedPrimaryText()
-                                            Text("optional_specific_time".localized)
+                                            Text("optional_specific_day".localized)
                                                 .font(.caption)
                                                 .themedSecondaryText()
                                         }
                                         Spacer()
-                                        ModernToggle(isOn: $viewModel.hasSpecificTime)
+                                        ModernToggle(isOn: $viewModel.hasSpecificDay)
                                     }
-                                    
-                                    if viewModel.hasSpecificTime {
+                                    .onChange(of: viewModel.hasSpecificDay) { _, newValue in
+                                        if !newValue {
+                                            viewModel.hasSpecificTime = false
+                                            viewModel.hasNotification = false
+                                        }
+                                    }
+
+                                    if viewModel.hasSpecificDay {
                                         HStack {
-                                            Text("start_time".localized)
+                                            Text("date".localized)
                                                 .font(.subheadline.weight(.medium))
                                                 .themedPrimaryText()
                                             Spacer()
-                                            DatePicker("", selection: $viewModel.startDate)
+                                            DatePicker("", selection: dateOnlyBinding, in: allowedDateRange, displayedComponents: [.date])
                                                 .labelsHidden()
                                         }
-                                        .transition(.asymmetric(
-                                            insertion: .opacity,
-                                            removal: .opacity.animation(.easeInOut(duration: 0.3))
-                                        ))
                                         
-                                        // Notification toggle (available for all tasks with specific time)
-                                        if taskNotificationManager.areTaskNotificationsEnabled {
+                                        // Optional: Allow specific time for other scopes
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("specific_time".localized)
+                                                    .font(.subheadline.weight(.medium))
+                                                    .themedPrimaryText()
+                                                Text("optional_specific_time".localized)
+                                                    .font(.caption)
+                                                    .themedSecondaryText()
+                                            }
+                                            Spacer()
+                                            ModernToggle(isOn: $viewModel.hasSpecificTime)
+                                        }
+                                        .onChange(of: viewModel.hasSpecificTime) { _, newValue in
+                                            if !newValue {
+                                                viewModel.hasNotification = false
+                                            }
+                                        }
+                                        
+                                        if viewModel.hasSpecificTime {
                                             HStack {
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    Text("enable_notification".localized)
-                                                        .font(.subheadline.weight(.medium))
-                                                        .themedPrimaryText()
-                                                    Text("notification_scheduled".localized)
-                                                        .font(.caption)
-                                                        .themedSecondaryText()
-                                                }
+                                                Text("start_time".localized)
+                                                    .font(.subheadline.weight(.medium))
+                                                    .themedPrimaryText()
                                                 Spacer()
-                                                ModernToggle(isOn: $viewModel.hasNotification)
+                                                DatePicker("", selection: timeOnlyBinding, displayedComponents: [.hourAndMinute])
+                                                    .labelsHidden()
                                             }
                                             .transition(.asymmetric(
                                                 insertion: .opacity,
                                                 removal: .opacity.animation(.easeInOut(duration: 0.3))
                                             ))
                                             
-                                            if viewModel.hasNotification {
-                                                leadTimeSelector
-                                            }
-                                        } else if viewModel.hasNotification {
-                                            // Show notification disabled warning
-                                            HStack {
-                                                Image(systemName: "exclamationmark.triangle.fill")
-                                                    .foregroundColor(.orange)
-                                                    .font(.system(size: 14))
+                                            // Notification toggle (available for all tasks with specific time)
+                                            if taskNotificationManager.areTaskNotificationsEnabled {
+                                                HStack {
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        Text("enable_notification".localized)
+                                                            .font(.subheadline.weight(.medium))
+                                                            .themedPrimaryText()
+                                                        Text("notification_scheduled".localized)
+                                                            .font(.caption)
+                                                            .themedSecondaryText()
+                                                    }
+                                                    Spacer()
+                                                    ModernToggle(isOn: $viewModel.hasNotification)
+                                                }
+                                                .transition(.asymmetric(
+                                                    insertion: .opacity,
+                                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                                ))
                                                 
-                                                Text("notifications_not_available".localized)
-                                                    .font(.caption)
-                                                    .themedSecondaryText()
-                                                
-                                                Spacer()
+                                                if viewModel.hasNotification {
+                                                    leadTimeSelector
+                                                }
+                                            } else if viewModel.hasNotification {
+                                                // Show notification disabled warning
+                                                HStack {
+                                                    Image(systemName: "exclamationmark.triangle.fill")
+                                                        .foregroundColor(.orange)
+                                                        .font(.system(size: 14))
+                                                    
+                                                    Text("notifications_not_available".localized)
+                                                        .font(.caption)
+                                                        .themedSecondaryText()
+                                                    
+                                                    Spacer()
+                                                }
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 8)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(.orange.opacity(0.1))
+                                                )
+                                                .onAppear {
+                                                    // Auto-disable notification if not available
+                                                    viewModel.hasNotification = false
+                                                }
+                                                .transition(.asymmetric(
+                                                    insertion: .opacity,
+                                                    removal: .opacity.animation(.easeInOut(duration: 0.3))
+                                                ))
                                             }
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 8)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .fill(.orange.opacity(0.1))
-                                            )
-                                            .onAppear {
-                                                // Auto-disable notification if not available
-                                                viewModel.hasNotification = false
-                                            }
-                                            .transition(.asymmetric(
-                                                insertion: .opacity,
-                                                removal: .opacity.animation(.easeInOut(duration: 0.3))
-                                            ))
                                         }
                                     }
                                 }

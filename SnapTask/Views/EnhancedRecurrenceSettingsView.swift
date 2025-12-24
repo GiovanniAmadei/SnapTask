@@ -80,7 +80,7 @@ struct EnhancedRecurrenceSettingsView: View {
                 }
             }
             .sheet(isPresented: $showingOrdinalPicker) {
-                OrdinalPatternPickerView(selectedPatterns: $viewModel.selectedOrdinalPatterns)
+                OrdinalPatternPickerView(selectedPatterns: $viewModel.selectedOrdinalPatterns, monthlyOrdinalTimes: $viewModel.monthlyOrdinalTimes, defaultTime: $viewModel.startDate)
             }
         }
     }
@@ -337,8 +337,12 @@ struct MonthlyDaysView: View {
                     Button(action: {
                         if viewModel.selectedMonthlyDays.contains(day) {
                             viewModel.selectedMonthlyDays.remove(day)
+                            viewModel.monthlyTimes.removeValue(forKey: day)
                         } else {
                             viewModel.selectedMonthlyDays.insert(day)
+                            if viewModel.monthlyTimes[day] == nil {
+                                viewModel.monthlyTimes[day] = viewModel.startDate
+                            }
                         }
                     }) {
                         Text("\(day)")
@@ -358,6 +362,33 @@ struct MonthlyDaysView: View {
                 }
             }
             .padding(.horizontal)
+
+            if !viewModel.selectedMonthlyDays.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("task_time".localized)
+                        .font(.subheadline)
+                        .themedSecondaryText()
+                        .padding(.horizontal)
+
+                    ForEach(viewModel.selectedMonthlyDays.sorted(), id: \.self) { day in
+                        HStack {
+                            Text(String(format: "%@ %d", "day".localized, day))
+                                .font(.subheadline)
+                                .themedPrimaryText()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            DatePicker("", selection: Binding(
+                                get: { viewModel.monthlyTimes[day] ?? viewModel.startDate },
+                                set: { viewModel.monthlyTimes[day] = $0 }
+                            ), displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .accentColor(theme.primaryColor)
+                            .frame(width: 80)
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+            }
         }
     }
 }
@@ -413,6 +444,42 @@ struct MonthlyPatternsView: View {
             }
             .buttonStyle(BorderlessButtonStyle())
             .padding(.horizontal)
+
+            if !viewModel.selectedOrdinalPatterns.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("task_time".localized)
+                        .font(.subheadline)
+                        .themedSecondaryText()
+                        .padding(.horizontal)
+
+                    ForEach(viewModel.selectedOrdinalPatterns.sorted(by: { $0.displayText < $1.displayText }), id: \.self) { pattern in
+                        HStack {
+                            Text(pattern.displayText)
+                                .font(.subheadline)
+                                .themedPrimaryText()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            DatePicker("", selection: Binding(
+                                get: {
+                                    viewModel.monthlyOrdinalTimes[pattern] ?? viewModel.startDate
+                                },
+                                set: { newTime in
+                                    viewModel.monthlyOrdinalTimes[pattern] = newTime
+                                }
+                            ), displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .accentColor(theme.primaryColor)
+                            .frame(width: 80)
+                        }
+                        .padding(.horizontal)
+                        .onAppear {
+                            if viewModel.monthlyOrdinalTimes[pattern] == nil {
+                                viewModel.monthlyOrdinalTimes[pattern] = viewModel.startDate
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -439,6 +506,17 @@ struct YearlyRecurrenceView: View {
                     .themedPrimaryText()
                 Spacer()
                 DatePicker("", selection: $viewModel.yearlyDate, displayedComponents: [.date])
+                    .labelsHidden()
+                    .accentColor(theme.primaryColor)
+            }
+            .padding(.horizontal)
+
+            HStack {
+                Text("time".localized)
+                    .font(.subheadline)
+                    .themedPrimaryText()
+                Spacer()
+                DatePicker("", selection: $viewModel.yearlyTime, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                     .accentColor(theme.primaryColor)
             }

@@ -5,6 +5,8 @@ struct FeedbackView: View {
     @State private var showingNewFeedback = false
     @State private var selectedCategory: FeedbackCategory? = nil
     @State private var searchText = ""
+    @State private var isSearchExpanded = false
+    @State private var sortMode: SortMode = .mostVoted
     @State private var expandedItems: Set<UUID> = []
     @State private var showingDeleteAlert = false
     @State private var feedbackToDelete: FeedbackItem?
@@ -42,8 +44,8 @@ struct FeedbackView: View {
             } message: {
                 Text("delete_feedback_alert_message".localized)
             }
-            .alert("Error", isPresented: $showingErrorAlert) {
-                Button("OK") { }
+            .alert("error".localized, isPresented: $showingErrorAlert) {
+                Button("ok".localized) { }
             } message: {
                 Text(errorMessage)
             }
@@ -57,14 +59,19 @@ struct FeedbackView: View {
     }
     
     // MARK: - View Components
+
+    private enum SortMode: String {
+        case recent
+        case mostVoted
+    }
     
     @ViewBuilder
     private var headerSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Compact Welcome section
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 Image(systemName: "quote.bubble.fill")
-                    .font(.system(size: 24))
+                    .font(.system(size: 20))
                     .foregroundStyle(
                         LinearGradient(
                             colors: [theme.accentColor, theme.primaryColor],
@@ -74,28 +81,28 @@ struct FeedbackView: View {
                     )
                 
                 Text("community_feedback_title".localized)
-                    .font(.title3)
+                    .font(.headline)
                     .fontWeight(.bold)
                     .themedPrimaryText()
             }
-            .padding(.top, 12)
+            .padding(.top, 10)
             
             searchAndFilterSection
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 14)
                 .fill(theme.surfaceColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(theme.borderColor, lineWidth: 1)
                 )
                 .shadow(
                     color: theme.shadowColor,
-                    radius: 8,
+                    radius: 6,
                     x: 0,
-                    y: 4
+                    y: 3
                 )
         )
         .padding(.horizontal, 16)
@@ -104,47 +111,132 @@ struct FeedbackView: View {
     
     @ViewBuilder
     private var searchAndFilterSection: some View {
-        VStack(spacing: 12) {
-            // Search Bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .themedSecondaryText()
-                    .font(.title3)
-                
-                TextField("search_feedback_placeholder".localized, text: $searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .themedPrimaryText()
-                    .accentColor(theme.accentColor)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(theme.backgroundColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(theme.borderColor, lineWidth: 1)
-                    )
-            )
-            
-            // Category Filter
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    CategoryFilterChip(
-                        category: nil,
-                        isSelected: selectedCategory == nil,
-                        action: { selectedCategory = nil }
-                    )
-                    
-                    ForEach(FeedbackCategory.allCases, id: \.self) { category in
-                        CategoryFilterChip(
-                            category: category,
-                            isSelected: selectedCategory == category,
-                            action: { selectedCategory = category }
-                        )
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                // Filter Menu (replaces chips)
+                Menu {
+                    Button {
+                        selectedCategory = nil
+                        sortMode = .mostVoted
+                    } label: {
+                        Label("all_category_filter".localized, systemImage: "list.bullet")
                     }
+
+                    Button {
+                        selectedCategory = .bugReport
+                        sortMode = .recent
+                    } label: {
+                        Label(FeedbackCategory.bugReport.displayName, systemImage: FeedbackCategory.bugReport.icon)
+                    }
+
+                    Button {
+                        selectedCategory = .featureRequest
+                        sortMode = .recent
+                    } label: {
+                        Label(FeedbackCategory.featureRequest.displayName, systemImage: FeedbackCategory.featureRequest.icon)
+                    }
+
+                    Button {
+                        selectedCategory = .general
+                        sortMode = .recent
+                    } label: {
+                        Label(FeedbackCategory.general.displayName, systemImage: FeedbackCategory.general.icon)
+                    }
+
+                    Button {
+                        selectedCategory = nil
+                        sortMode = .recent
+                    } label: {
+                        Label("feedback_filter_recent".localized, systemImage: "clock")
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: sortMode == .mostVoted ? "heart.fill" : (selectedCategory?.icon ?? "clock"))
+                            .font(.caption)
+                            .foregroundColor(.white)
+
+                        Text(filterLabel)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        Image(systemName: "chevron.down")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(theme.accentColor)
+                    )
                 }
-                .padding(.horizontal, 20)
+                .buttonStyle(PlainButtonStyle())
+
+                Spacer(minLength: 0)
+
+                // Collapsible search
+                if isSearchExpanded {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .themedSecondaryText()
+                            .font(.body)
+
+                        TextField("search_feedback_placeholder".localized, text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .themedPrimaryText()
+                            .accentColor(theme.accentColor)
+
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                searchText = ""
+                                isSearchExpanded = false
+                            }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption)
+                                .themedSecondaryText()
+                                .padding(6)
+                                .background(
+                                    Circle()
+                                        .fill(theme.backgroundColor)
+                                )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(theme.backgroundColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(theme.borderColor, lineWidth: 1)
+                            )
+                    )
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isSearchExpanded = true
+                        }
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.body)
+                            .foregroundColor(theme.secondaryTextColor)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(theme.backgroundColor)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(theme.borderColor, lineWidth: 1)
+                                    )
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
             }
         }
     }
@@ -152,7 +244,7 @@ struct FeedbackView: View {
     @ViewBuilder
     private var feedbackListSection: some View {
         ScrollView {
-            LazyVStack(spacing: 20) {
+            LazyVStack(spacing: 16) {
                 ForEach(filteredFeedback) { item in
                     FeedbackCardView(
                         item: item,
@@ -181,7 +273,7 @@ struct FeedbackView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 20)
+            .padding(.top, 16)
             .padding(.bottom, 40)
         }
     }
@@ -238,27 +330,55 @@ struct FeedbackView: View {
     }
     
     // MARK: - Helper Functions
-    
+
     private var filteredFeedback: [FeedbackItem] {
-        let categoryFiltered = selectedCategory == nil ?
-            feedbackManager.feedbackItems :
-            feedbackManager.feedbackItems.filter { $0.category == selectedCategory }
-        
+        let categoryFiltered = selectedCategory == nil
+            ? feedbackManager.feedbackItems
+            : feedbackManager.feedbackItems.filter { $0.category == selectedCategory }
+
+        let searchFiltered: [FeedbackItem]
         if searchText.isEmpty {
-            return categoryFiltered.sorted { $0.votes > $1.votes }
+            searchFiltered = categoryFiltered
         } else {
-            return categoryFiltered.filter { item in
+            searchFiltered = categoryFiltered.filter { item in
                 item.title.localizedCaseInsensitiveContains(searchText) ||
                 item.description.localizedCaseInsensitiveContains(searchText)
-            }.sorted { $0.votes > $1.votes }
+            }
+        }
+
+        switch sortMode {
+        case .mostVoted:
+            return searchFiltered.sorted { $0.votes > $1.votes }
+        case .recent:
+            return searchFiltered.sorted { $0.creationDate > $1.creationDate }
         }
     }
-    
+
+    private var filterLabel: String {
+        if selectedCategory == nil {
+            return sortMode == .recent
+                ? "feedback_filter_recent".localized
+                : "all_category_filter".localized
+        }
+
+        if let selectedCategory {
+            return selectedCategory.displayName
+        }
+
+        return "all_category_filter".localized
+    }
+
     private func autoExpandDeveloperReplies(_ items: [FeedbackItem]) {
+        var idsToExpand: Set<UUID> = []
+
         for item in items {
             if item.replies.contains(where: { $0.isFromDeveloper }) {
-                expandedItems.insert(item.id)
+                idsToExpand.insert(item.id)
             }
+        }
+
+        if !idsToExpand.isEmpty {
+            expandedItems.formUnion(idsToExpand)
         }
     }
 }
@@ -286,8 +406,8 @@ struct CategoryFilterChip: View {
                     .font(.caption)
                     .fontWeight(.semibold)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
@@ -314,7 +434,7 @@ struct CategoryFilterChip: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .scaleEffect(isSelected ? 1.05 : 1.0)
+        .scaleEffect(isSelected ? 1.02 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
@@ -328,7 +448,7 @@ struct FeedbackCardView: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             // Enhanced Header
             HStack {
                 // Category Badge with icon
@@ -340,8 +460,8 @@ struct FeedbackCardView: View {
                         .font(.caption2)
                         .fontWeight(.semibold)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color(hex: item.category.color).opacity(0.15))
@@ -356,7 +476,7 @@ struct FeedbackCardView: View {
                         Image(systemName: "trash")
                             .font(.caption)
                             .foregroundColor(.red)
-                            .padding(8)
+                            .padding(7)
                             .background(
                                 Circle()
                                     .fill(Color.red.opacity(0.1))
@@ -376,8 +496,8 @@ struct FeedbackCardView: View {
                         .fontWeight(.semibold)
                         .foregroundColor(Color(hex: item.status.color))
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color(hex: item.status.color).opacity(0.1))
@@ -386,23 +506,23 @@ struct FeedbackCardView: View {
             
             // Content - Tappable to expand
             Button(action: onToggleExpansion) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(item.title)
-                        .font(.headline)
+                        .font(.subheadline)
                         .fontWeight(.bold)
                         .themedPrimaryText()
                         .multilineTextAlignment(.leading)
                     
                     Text(item.description)
-                        .font(.body)
+                        .font(.callout)
                         .themedSecondaryText()
-                        .lineLimit(isExpanded ? nil : 3)
+                        .lineLimit(isExpanded ? nil : 2)
                         .multilineTextAlignment(.leading)
                         .animation(.easeInOut(duration: 0.3), value: isExpanded)
                     
                     if !isExpanded && item.description.count > 150 {
                         HStack {
-                            Text("Tap to read more")
+                            Text("feedback_tap_to_read_more".localized)
                                 .font(.caption)
                                 .foregroundColor(theme.accentColor)
                             
@@ -417,7 +537,7 @@ struct FeedbackCardView: View {
             
             if isExpanded && !item.replies.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Replies")
+                    Text("feedback_replies_title".localized)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .themedPrimaryText()
@@ -432,42 +552,43 @@ struct FeedbackCardView: View {
             // Enhanced Footer
             HStack {
                 // Author and Date
-                VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
                     if let authorName = item.authorName {
-                        HStack(spacing: 6) {
-                            Image(systemName: "person.circle.fill")
-                                .font(.caption)
-                                .themedSecondaryText()
-                            
-                            Text("by \(authorName)")
-                                .font(.caption)
-                                .themedSecondaryText()
-                            
-                            // Add "You" indicator for user's own feedback
-                            if item.isAuthoredByCurrentUser {
-                                Text("(You)")
-                                    .font(.caption2)
-                                    .foregroundColor(theme.accentColor)
-                                    .fontWeight(.semibold)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(theme.accentColor.opacity(0.1))
-                                    )
-                            }
-                        }
-                    }
-                    
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                            .font(.caption2)
+                        Image(systemName: "person.circle.fill")
+                            .font(.caption)
                             .themedSecondaryText()
-                        
-                        Text(item.creationDate, style: .relative)
+
+                        Text(String(format: "feedback_by_author_format".localized, authorName))
+                            .font(.caption)
+                            .themedSecondaryText()
+
+                        if item.isAuthoredByCurrentUser {
+                            Text("feedback_you_indicator".localized)
+                                .font(.caption2)
+                                .foregroundColor(theme.accentColor)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(theme.accentColor.opacity(0.1))
+                                )
+                        }
+
+                        Text("•")
                             .font(.caption)
                             .themedSecondaryText()
                     }
+
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                        .themedSecondaryText()
+
+                    Text(item.creationDate, style: .relative)
+                        .font(.caption)
+                        .themedSecondaryText()
+
+                    Spacer(minLength: 0)
                 }
                 
                 Spacer()
@@ -483,8 +604,8 @@ struct FeedbackCardView: View {
                             .font(.caption)
                             .foregroundColor(theme.accentColor)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
                             .fill(theme.accentColor.opacity(0.1))
@@ -495,16 +616,16 @@ struct FeedbackCardView: View {
                 Button(action: onVote) {
                     HStack(spacing: 8) {
                         Image(systemName: item.hasVoted ? "heart.fill" : "heart")
-                            .font(.subheadline)
+                            .font(.callout)
                             .foregroundColor(item.hasVoted ? .red : theme.secondaryTextColor)
                         
                         Text("\(item.votes)")
-                            .font(.subheadline)
+                            .font(.callout)
                             .fontWeight(.semibold)
                             .themedSecondaryText()
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
                             .fill(item.hasVoted ? Color.red.opacity(0.1) : theme.backgroundColor)
@@ -522,7 +643,7 @@ struct FeedbackCardView: View {
                 .animation(.easeInOut(duration: 0.2), value: item.hasVoted)
             }
         }
-        .padding(20)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(theme.surfaceColor)
@@ -532,9 +653,9 @@ struct FeedbackCardView: View {
                 )
                 .shadow(
                     color: theme.shadowColor,
-                    radius: 12,
+                    radius: 10,
                     x: 0,
-                    y: 6
+                    y: 5
                 )
         )
     }
@@ -545,24 +666,24 @@ struct ReplyCardView: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
             // Developer indicator or user icon
             if reply.isFromDeveloper {
                 Image(systemName: "person.badge.shield.checkmark.fill")
                     .font(.caption)
                     .foregroundColor(theme.accentColor)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
             } else {
                 Image(systemName: "person.circle.fill")
                     .font(.caption)
                     .themedSecondaryText()
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
             }
             
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 // Author and date
                 HStack {
-                    Text(reply.authorName ?? "Anonymous")
+                    Text(reply.authorName ?? "feedback_anonymous".localized)
                         .font(.caption)
                         .fontWeight(reply.isFromDeveloper ? .bold : .semibold)
                         .foregroundColor(reply.isFromDeveloper ? theme.accentColor : theme.textColor)
@@ -588,12 +709,12 @@ struct ReplyCardView: View {
                 
                 // Reply content
                 Text(reply.content)
-                    .font(.body)
+                    .font(.callout)
                     .themedPrimaryText()
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(12)
+        .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(reply.isFromDeveloper ? theme.accentColor.opacity(0.05) : theme.backgroundColor)
@@ -613,22 +734,9 @@ struct ReplyCardView: View {
     }
     
     private func formatTimeAgo(_ date: Date) -> String {
-        let now = Date()
-        let timeInterval = now.timeIntervalSince(date)
-        
-        if timeInterval < 60 {
-            return "\(Int(timeInterval))s ago"
-        } else if timeInterval < 3600 {
-            return "\(Int(timeInterval / 60))m ago"
-        } else if timeInterval < 86400 {
-            return "\(Int(timeInterval / 3600))h ago"
-        } else if timeInterval < 604800 {
-            return "\(Int(timeInterval / 86400))d ago"
-        } else {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            return formatter.string(from: date)
-        }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 

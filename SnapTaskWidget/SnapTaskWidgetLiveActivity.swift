@@ -24,7 +24,7 @@ struct SnapTaskWidgetLiveActivity: Widget {
         ActivityConfiguration(for: SnapTaskWidgetAttributes.self) { context in
             // Lock screen/banner UI goes here
             VStack {
-                Text("Hello \(context.state.emoji)")
+                Text(String(localized: "Hello") + " \(context.state.emoji)")
             }
             .activityBackgroundTint(Color.cyan)
             .activitySystemActionForegroundColor(Color.black)
@@ -34,19 +34,19 @@ struct SnapTaskWidgetLiveActivity: Widget {
                 // Expanded UI goes here.  Compose the expanded UI through
                 // various regions, like leading/trailing/center/bottom
                 DynamicIslandExpandedRegion(.leading) {
-                    Text("Leading")
+                    Text(String(localized: "Leading"))
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("Trailing")
+                    Text(String(localized: "Trailing"))
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
+                    Text(String(localized: "Bottom") + " \(context.state.emoji)")
                     // more content
                 }
             } compactLeading: {
-                Text("L")
+                Text(String(localized: "L"))
             } compactTrailing: {
-                Text("T \(context.state.emoji)")
+                Text(String(localized: "T") + " \(context.state.emoji)")
             } minimal: {
                 Text(context.state.emoji)
             }

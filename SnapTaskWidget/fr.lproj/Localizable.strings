@@ -11,9 +11,24 @@
 "Year" = "Année";
 "Long Term" = "Long terme";
 "Set Widget Scope" = "Définir la portée du widget";
+"Time Range" = "Période";
+"All Time" = "Depuis toujours";
 
+"specific_day" = "Jour spécifique";
+"optional_specific_day" = "Définir un jour spécifique (optionnel)";
 "Toggle Task Completion" = "Valider/Annuler la tâche";
 "Task ID" = "ID de la tâche";
+"Complete or undo a task for today" = "Valider ou annuler une tâche pour aujourd'hui";
+
+"Start Timer" = "Démarrer le minuteur";
+"On" = "Activé";
+"Off" = "Désactivé";
+"Timer" = "Minuteur";
+"An example control that runs a timer." = "Un contrôle d'exemple qui démarre un minuteur.";
+"Timer Name" = "Nom du minuteur";
+"Timer Name Configuration" = "Configuration du nom du minuteur";
+"Start a timer" = "Démarrer un minuteur";
+"Timer is running" = "Le minuteur est en cours";
 
 /* Widget UI */
 "All done!" = "Tout est fait !";
@@ -37,3 +52,31 @@
 "total" = "total";
 "avg" = "moy.";
 "No data" = "Aucune donnée";
+
+"View your productivity statistics." = "Consultez vos statistiques de productivité.";
+"View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate." = "Consultez vos statistiques de productivité. Maintenez le widget pour choisir entre Répartition du Temps et Taux de Complétion.";
+"Performance Type" = "Type de performance";
+"Time spent per category" = "Temps passé par catégorie";
+"Weekly completion statistics" = "Statistiques hebdomadaires de complétion";
+"Time" = "Temps";
+"Completion" = "Complétion";
+"Done" = "Faites";
+"Total" = "Total";
+"Completed" = "Terminées";
+"%lld completed" = "%lld terminées";
+"%lld total" = "%lld au total";
+
+"Task completion statistics" = "Statistiques de complétion";
+"No tasks completed" = "Aucune tâche terminée";
+
+"Performance Widget" = "Widget Performance";
+"Choose which performance time range to display" = "Choisissez la période à afficher";
+"Choose which performance metric to display" = "Choisissez la métrique à afficher";
+"Content" = "Contenu";
+
+"Hello" = "Bonjour";
+"Leading" = "Gauche";
+"Trailing" = "Droite";
+"Bottom" = "Bas";
+"L" = "G";
+"T" = "D";

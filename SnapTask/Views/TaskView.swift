@@ -7,6 +7,19 @@ struct TaskView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingPomodoro = false
     @StateObject private var taskManager = TaskManager.shared
+
+    private var taskTimeText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: task.startTime)
+    }
+
+    private var taskDayText: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter.string(from: task.startTime)
+    }
     
     private var isCompleted: Bool {
         let completionDate = task.completionKey(for: Date())
@@ -35,6 +48,28 @@ struct TaskView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Spacer()
+
+                if task.hasSpecificTime {
+                    Text(taskTimeText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6))
+                        )
+                } else if task.hasSpecificDay {
+                    Text(taskDayText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6))
+                        )
+                }
                 
                 if task.hasDuration && task.duration > 0 {
                     Text(formatDuration(task.duration))

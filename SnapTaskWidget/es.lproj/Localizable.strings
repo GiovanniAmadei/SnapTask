@@ -11,9 +11,25 @@
 "Year" = "Año";
 "Long Term" = "Largo plazo";
 "Set Widget Scope" = "Establecer ámbito del widget";
+"Time Range" = "Período";
+"All Time" = "Todo el tiempo";
+"specific_day" = "Día específico";
+"optional_specific_day" = "Establecer día específico (opcional)";
+"optional_specific_time" = "Establecer hora específica (opcional)";
 
 "Toggle Task Completion" = "Completar/Deshacer tarea";
 "Task ID" = "ID de tarea";
+"Complete or undo a task for today" = "Completa o deshace una tarea para hoy";
+
+"Start Timer" = "Iniciar temporizador";
+"On" = "Activado";
+"Off" = "Desactivado";
+"Timer" = "Temporizador";
+"An example control that runs a timer." = "Un control de ejemplo que inicia un temporizador.";
+"Timer Name" = "Nombre del temporizador";
+"Timer Name Configuration" = "Configuración del nombre del temporizador";
+"Start a timer" = "Iniciar un temporizador";
+"Timer is running" = "El temporizador está en marcha";
 
 /* Widget UI */
 "All done!" = "¡Todo hecho!";
@@ -37,3 +53,30 @@
 "total" = "total";
 "avg" = "prom.";
 "No data" = "Sin datos";
+
+"View your productivity statistics." = "Consulta tus estadísticas de productividad.";
+"View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate." = "Consulta tus estadísticas de productividad. Mantén pulsado el widget para elegir entre Distribución de Tiempo o Tasa de Completado.";
+"Performance Type" = "Tipo de rendimiento";
+"Time spent per category" = "Tiempo por categoría";
+"Weekly completion statistics" = "Estadísticas semanales de completado";
+"Task completion statistics" = "Estadísticas de completado";
+"Time" = "Tiempo";
+"Completion" = "Completado";
+"Done" = "Hechas";
+"Total" = "Total";
+"Completed" = "Completadas";
+"No tasks completed" = "Sin tareas completadas";
+"%lld completed" = "%lld completadas";
+"%lld total" = "%lld total";
+
+"Performance Widget" = "Widget de rendimiento";
+"Choose which performance time range to display" = "Elige el período que quieres mostrar";
+"Choose which performance metric to display" = "Elige qué métrica mostrar";
+"Content" = "Contenido";
+
+"Hello" = "Hola";
+"Leading" = "Izquierda";
+"Trailing" = "Derecha";
+"Bottom" = "Abajo";
+"L" = "I";
+"T" = "D";

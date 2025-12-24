@@ -11,6 +11,7 @@ class RewardManager: ObservableObject {
     private let rewardsKey = "savedRewards"
     private let dailyPointsHistoryKey = "savedDailyPointsHistory"
     private let categoryPointsHistoryKey = "savedCategoryPointsHistory"
+    private let autoFixPointsHistoryKey = "auto_fix_points_history_v3"
     private var cancellables: Set<AnyCancellable> = []
     
     init() {
@@ -27,6 +28,11 @@ class RewardManager: ObservableObject {
             recalculateDailyPointsFromSources()
             UserDefaults.standard.set(true, forKey: "points_history_migration_v2")
         }
+
+        if !UserDefaults.standard.bool(forKey: autoFixPointsHistoryKey) {
+            autoFixPointsHistoryIfNeeded()
+            UserDefaults.standard.set(true, forKey: autoFixPointsHistoryKey)
+        }
         
         // Listen for CloudKit data changes
         NotificationCenter.default.publisher(for: .cloudKitDataChanged)
@@ -37,6 +43,49 @@ class RewardManager: ObservableObject {
                 print("📥 CloudKit rewards data changed")
             }
             .store(in: &cancellables)
+    }
+
+    private func autoFixPointsHistoryIfNeeded() {
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: Date())
+
+        let expectedYearly = expectedYearlyPointsFromSources(year: year)
+        let storedYearly = availablePoints(for: .yearly, on: Date())
+
+        let diff = abs(storedYearly - expectedYearly)
+        let shouldFix = diff > 500
+
+        if shouldFix {
+            print("🧯 Points history mismatch detected (year \(year)). Stored: \(storedYearly), Expected: \(expectedYearly). Recalculating...")
+            recalculateDailyPointsFromSources()
+        }
+    }
+
+    private func expectedYearlyPointsFromSources(year: Int) -> Int {
+        let calendar = Calendar.current
+
+        // Build per-day points from task completions for the given year
+        var perDay: [Date: Int] = [:]
+        for task in TaskManager.shared.tasks {
+            guard task.hasRewardPoints, task.rewardPoints > 0 else { continue }
+            for completionDate in task.completionDates {
+                guard calendar.component(.year, from: completionDate) == year else { continue }
+                let day = calendar.startOfDay(for: completionDate)
+                perDay[day, default: 0] += task.rewardPoints
+            }
+        }
+
+        // Subtract general reward redemptions in the same year, clamping per-day to >= 0
+        for reward in rewards where reward.isGeneralReward {
+            for redemptionDate in reward.redemptions {
+                guard calendar.component(.year, from: redemptionDate) == year else { continue }
+                let day = calendar.startOfDay(for: redemptionDate)
+                let current = perDay[day] ?? 0
+                perDay[day] = max(current - reward.pointsCost, 0)
+            }
+        }
+
+        return perDay.values.reduce(0) { $0 + max($1, 0) }
     }
     
     // MARK: - Rewards Management

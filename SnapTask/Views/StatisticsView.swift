@@ -137,7 +137,11 @@ struct StatisticsView: View {
             PremiumPaywallView()
         }
         .onAppear {
+            viewModel.startObserving()
             viewModel.refreshStats()
+        }
+        .onDisappear {
+            viewModel.stopObserving()
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .active {
@@ -1067,7 +1071,7 @@ private struct TimeDistributionCard: View {
                             .foregroundStyle(Color(hex: stat.color))
                     }
                     .frame(height: 180)
-                    .animation(hasAnimated ? nil : .smooth(duration: 0.8), value: viewModel.categoryStats)
+                    .animation(hasAnimated ? nil : .smooth(duration: 0.8), value: viewModel.selectedTimeRange)
                     .onAppear {
                         if !viewModel.categoryStats.isEmpty && !hasAnimated {
                             hasAnimated = true

@@ -1,5 +1,8 @@
 /* Widget & AppIntents */
 "Configuration" = "設定";
+"optional_specific_time" = "特定の時間を設定（任意）";
+"specific_day" = "特定の日";
+"optional_specific_day" = "特定の日を設定（任意）";
 "This is an example widget." = "これはサンプルウィジェットです。";
 "Favorite Emoji" = "お気に入りの絵文字";
 
@@ -11,9 +14,22 @@
 "Year" = "年";
 "Long Term" = "長期";
 "Set Widget Scope" = "ウィジェット範囲を設定";
+"Time Range" = "期間";
+"All Time" = "全期間";
 
 "Toggle Task Completion" = "タスクの完了/取消";
 "Task ID" = "タスクID";
+"Complete or undo a task for today" = "今日のタスクを完了または取り消します";
+
+"Start Timer" = "タイマー開始";
+"On" = "オン";
+"Off" = "オフ";
+"Timer" = "タイマー";
+"An example control that runs a timer." = "タイマーを開始するサンプルコントロールです。";
+"Timer Name" = "タイマー名";
+"Timer Name Configuration" = "タイマー名の設定";
+"Start a timer" = "タイマーを開始";
+"Timer is running" = "タイマー実行中";
 
 /* Widget UI */
 "All done!" = "全て完了！";
@@ -23,3 +39,44 @@
 "+ %lld more →" = "+ %lld 件 →";
 "SnapTask" = "SnapTask";
 "View tasks for the selected scope." = "選択した範囲のタスクを表示。";
+
+/* Performance Widget */
+"Performance" = "パフォーマンス";
+"View your productivity statistics." = "生産性の統計を表示します。";
+"View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate." = "生産性の統計を表示します。ウィジェットを長押しして「時間配分」または「完了率」を選択できます。";
+"done" = "完了";
+"Performance Type" = "パフォーマンスタイプ";
+"Time Distribution" = "時間配分";
+"Time spent per category" = "カテゴリ別の時間";
+"Task Completion Rate" = "タスク完了率";
+"Task completion statistics" = "タスク完了の統計";
+"Weekly completion statistics" = "週間完了統計";
+"Time" = "時間";
+"Completion" = "完了";
+"No data" = "データなし";
+"total" = "合計";
+"avg" = "平均";
+"Done" = "完了";
+"Total" = "合計";
+"Completed" = "完了";
+"No time tracked" = "時間の記録なし";
+"No tasks this week" = "今週のタスクはありません";
+"7 Days" = "7日";
+"No tasks completed" = "完了したタスクはありません";
+"%lld completed" = "%lld 件完了";
+"%lld total" = "%lld 件合計";
+
+"Performance Widget" = "パフォーマンスウィジェット";
+"Choose which performance time range to display" = "表示する期間を選択";
+"Choose which performance metric to display" = "表示する指標を選択";
+"Content" = "内容";
+"Mood Trend" = "気分の推移";
+"No mood data" = "気分データなし";
+
+/* Live Activity */
+"Hello" = "こんにちは";
+"Leading" = "左";
+"Trailing" = "右";
+"Bottom" = "下";
+"L" = "L";
+"T" = "R";

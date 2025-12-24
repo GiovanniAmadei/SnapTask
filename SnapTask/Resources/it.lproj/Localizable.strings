@@ -118,6 +118,20 @@
 "high_priority" = "Alta";
 "medium_priority" = "Media";
 "low_priority" = "Bassa";
+
+"icon_category_general" = "Generale";
+"icon_category_time_planning" = "Tempo e pianificazione";
+"icon_category_study_work" = "Studio e lavoro";
+"icon_category_energy_nature" = "Energia e natura";
+"icon_category_sport_wellbeing" = "Sport e benessere";
+"icon_category_food_drink" = "Cibo e drink";
+"icon_category_home_security" = "Casa e sicurezza";
+"icon_category_travel_places" = "Viaggi e luoghi";
+"icon_category_shopping_money" = "Shopping e soldi";
+"icon_category_creativity_media" = "Creatività e media";
+"icon_category_communication" = "Comunicazione";
+"icon_category_weather" = "Meteo";
+"icon_category_animals" = "Animali";
 "no_tasks_today" = "Nessuna attività per oggi";
 "no_tasks_this_day" = "Nessuna attività per questo giorno";
 "task_details" = "Dettagli attività";
@@ -177,6 +191,9 @@
 "long_term_goals_no_recurrence" = "Gli obiettivi a lungo termine non hanno ricorrenza";
 "recurrence_options" = "Opzioni ricorrenza";
 "optional_specific_time" = "Imposta orario specifico (opzionale)";
+
+"specific_day" = "Giorno specifico";
+"optional_specific_day" = "Imposta giorno specifico (opzionale)";
 
 // Statistics and Consistency
 "time_spent" = "Tempo trascorso";
@@ -412,6 +429,10 @@
 "journal" = "Diario";
 "journal_page_title" = "Titolo della pagina...";
 "journal_placeholder" = "Scrivi qui i tuoi pensieri, riflessioni, gratitudine...";
+"worth_it_title" = "Perché ne è valsa la pena";
+"worth_it_subtitle" = "Prova a vivere ogni giornata in modo che ti lasci qualcosa da ricordare. Scrivi per cosa ne è valsa la pena oggi.";
+"worth_it_placeholder" = "Scrivi qui...";
+"show_worth_it_section" = "Mostra sezione";
 "remove_mood" = "Rimuovi umore";
 "photos" = "Foto";
 "voice_memos" = "Memo Vocali";
@@ -616,6 +637,13 @@
 "be_the_first_to_share_ideas" = "Sii il primo a condividere idee!";
 "all_category_filter" = "Tutti";
 
+"feedback_filter_recent" = "Più recenti";
+"feedback_replies_title" = "Risposte";
+"feedback_tap_to_read_more" = "Tocca per leggere";
+"feedback_anonymous" = "Anonimo";
+"feedback_by_author_format" = "di %@";
+"feedback_you_indicator" = "(Tu)";
+
 // New Feedback View
 "share_your_feedback_title" = "Condividi il tuo feedback";
 "feedback_category_title" = "Categoria";
@@ -712,6 +740,7 @@
 // Settings View
 "daily_notifications" = "Notifiche giornaliere";
 "daily_quote_reminder" = "Promemoria citazione";
+"diary_reminder" = "Promemoria diario";
 "notification_time" = "Orario notifica";
 "enable_in_settings" = "Abilita in Impostazioni";
 "app_behavior" = "Comportamento app";
@@ -728,6 +757,9 @@
 "enable_notifications" = "Abilita notifiche";
 "notification_permission_message" = "Per ricevere promemoria giornalieri, abilita le notifiche in Impostazioni > SnapTask > Notifiche.";
 "your_daily_motivation" = "La tua motivazione quotidiana";
+"daily_quote_notification_body" = "\"%@\" - %@";
+"diary_reminder_title" = "Promemoria diario";
+"diary_reminder_body" = "Prenditi un momento per compilare il diario.";
 "help_continue_improving" = "Aiutaci a migliorare SnapTask";
 "support_development" = "Supporta lo sviluppo";
 "data_management" = "Gestione dati";
@@ -1216,6 +1248,8 @@
 "recurrence_type" = "Tipo di ricorrenza";
 "daily_enum" = "Giornaliera";
 "weekly_enum" = "Settimanale";
+
+"task_time" = "Orari";
 "monthly_enum" = "Mensile";
 "yearly_enum" = "Annuale";
 "days_enum" = "Giorni";

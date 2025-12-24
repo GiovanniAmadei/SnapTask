@@ -187,8 +187,6 @@ class TimelineViewModel: ObservableObject {
                 if n1 != n2 { return n1 < n2 }
                 return task1.id.uuidString < task2.id.uuidString
             }
-        
-        objectWillChange.send()
     }
     
     // MARK: - TimeScope Filtering

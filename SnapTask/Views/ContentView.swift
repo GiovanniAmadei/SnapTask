@@ -7,6 +7,8 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var showingTaskDetail = false
     @State private var selectedTaskId: UUID?
+    @State private var showingJournal = false
+    @State private var selectedJournalDate: Date?
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var themeManager = ThemeManager.shared
     @State private var refreshID = UUID()
@@ -57,10 +59,27 @@ struct ContentView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingJournal) {
+            if let date = selectedJournalDate {
+                NavigationStack {
+                    JournalView(date: date)
+                }
+            }
+        }
         .onAppear {
             print("ContentView onAppear - hasShownWelcome: \(hasShownWelcome)")
             if !hasShownWelcome {
                 showingWelcome = true
+            }
+
+            if let dateString = UserDefaults.standard.string(forKey: "pendingJournalDateFromNotification") {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                if let date = formatter.date(from: dateString) {
+                    selectedJournalDate = date
+                    showingJournal = true
+                }
+                UserDefaults.standard.removeObject(forKey: "pendingJournalDateFromNotification")
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .expandActiveTimer)) { _ in
@@ -74,6 +93,12 @@ struct ContentView: View {
                 selectedTaskId = taskId
                 selectedTab = 0 // Switch to timeline tab
                 showingTaskDetail = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openJournalFromNotification)) { notification in
+            if let date = notification.object as? Date {
+                selectedJournalDate = date
+                showingJournal = true
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LanguageChanged"))) { _ in

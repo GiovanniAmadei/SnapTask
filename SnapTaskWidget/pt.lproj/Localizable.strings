@@ -11,9 +11,26 @@
 "Year" = "Ano";
 "Long Term" = "Longo prazo";
 "Set Widget Scope" = "Definir escopo do widget";
+"Time Range" = "Período";
+"All Time" = "Todo o período";
 
 "Toggle Task Completion" = "Concluir/Desfazer tarefa";
 "Task ID" = "ID da tarefa";
+"Complete or undo a task for today" = "Conclua ou desfaça uma tarefa de hoje";
+
+"Start Timer" = "Iniciar temporizador";
+"On" = "Ligado";
+"Off" = "Desligado";
+"Timer" = "Temporizador";
+"An example control that runs a timer." = "Um controle de exemplo que inicia um temporizador.";
+"Timer Name" = "Nome do temporizador";
+"Timer Name Configuration" = "Configuração do nome do temporizador";
+"Start a timer" = "Iniciar um temporizador";
+"Timer is running" = "Temporizador em execução";
+
+"specific_day" = "Dia específico";
+"optional_specific_day" = "Definir dia específico (opcional)";
+"optional_specific_time" = "Definir horário específico (opcional)";
 
 /* Widget UI */
 "All done!" = "Tudo feito!";
@@ -23,3 +40,44 @@
 "+ %lld more →" = "+ %lld mais →";
 "SnapTask" = "SnapTask";
 "View tasks for the selected scope." = "Ver tarefas do escopo selecionado.";
+
+/* Performance Widget */
+"Performance" = "Desempenho";
+"View your productivity statistics." = "Veja suas estatísticas de produtividade.";
+"View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate." = "Veja suas estatísticas de produtividade. Pressione e segure o widget para escolher entre Distribuição de Tempo ou Taxa de Conclusão.";
+"done" = "feitas";
+"Performance Type" = "Tipo de desempenho";
+"Time Distribution" = "Distribuição de Tempo";
+"Time spent per category" = "Tempo por categoria";
+"Task Completion Rate" = "Taxa de Conclusão";
+"Task completion statistics" = "Estatísticas de conclusão";
+"Weekly completion statistics" = "Estatísticas semanais de conclusão";
+"Time" = "Tempo";
+"Completion" = "Conclusão";
+"No data" = "Sem dados";
+"total" = "total";
+"avg" = "média";
+"Done" = "Feitas";
+"Total" = "Total";
+"Completed" = "Concluídas";
+"No time tracked" = "Nenhum tempo registrado";
+"No tasks this week" = "Sem tarefas esta semana";
+"7 Days" = "7 Dias";
+"No tasks completed" = "Nenhuma tarefa concluída";
+"%lld completed" = "%lld concluídas";
+"%lld total" = "%lld no total";
+
+"Performance Widget" = "Widget de desempenho";
+"Choose which performance time range to display" = "Escolha o período para exibir";
+"Choose which performance metric to display" = "Escolha qual métrica exibir";
+"Content" = "Conteúdo";
+"Mood Trend" = "Tendência de Humor";
+"No mood data" = "Sem dados de humor";
+
+/* Live Activity */
+"Hello" = "Olá";
+"Leading" = "Esquerda";
+"Trailing" = "Direita";
+"Bottom" = "Abaixo";
+"L" = "E";
+"T" = "D";

@@ -17,12 +17,7 @@ struct Provider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: ScopeSelectionIntent, in context: Context) async -> SimpleEntry {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.snapTask.shared")
         var effectiveScope = configuration.scope ?? .today
-        if let raw = sharedDefaults?.string(forKey: "widgetScopeOverride"),
-           let override = WidgetScope(rawValue: raw) {
-            effectiveScope = override
-        }
         return SimpleEntry(date: Date(), tasks: [
             TodoTask(
                 name: "Design Mockup",
@@ -64,12 +59,8 @@ struct Provider: AppIntentTimelineProvider {
                 print("Error decoding tasks: \(error)")
             }
         }
-        // Usa scope override se presente (dai bottoni interattivi), altrimenti dalla configurazione
-        var effectiveScope = configuration.scope ?? .today
-        if let raw = sharedDefaults?.string(forKey: "widgetScopeOverride"),
-           let override = WidgetScope(rawValue: raw) {
-            effectiveScope = override
-        }
+        // Scope solo dalle impostazioni del widget
+        let effectiveScope = configuration.scope ?? .today
         
         // Filtra per scope selezionato
         let cal = Calendar.current
@@ -128,9 +119,9 @@ struct Provider: AppIntentTimelineProvider {
                     return false
                 }
             case .year:
-                // Solo task con timeScope year dell'anno corrente
+                // Task con timeScope year dell'anno corrente (+ longTerm)
                 return tasks.filter { task in
-                    guard task.timeScope == .year else { return false }
+                    guard task.timeScope == .year || task.timeScope == .longTerm else { return false }
                     
                     // Se ha ricorrenza, usa occurs(inYear:)
                     if task.recurrence != nil {
@@ -144,9 +135,6 @@ struct Provider: AppIntentTimelineProvider {
                     
                     return false
                 }
-            case .longTerm:
-                // Solo task con timeScope longTerm
-                return tasks.filter { $0.timeScope == .longTerm }
             }
         }()
         // Ordina SOLO per orario per non far saltare l'ordine con il check
@@ -250,35 +238,38 @@ struct SnapTaskWidgetEntryView : View {
             
             if entry.tasks.isEmpty {
                 Spacer()
-                VStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(accentGradient)
-                    Text(String(localized: "All done!"))
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(textColor)
-                }
-                .frame(maxWidth: .infinity)
+                Text("0")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(textColor)
+                    .frame(maxWidth: .infinity)
                 Spacer()
             } else {
                 let uncompletedTasks = entry.tasks.filter { task in
                     let key = task.completionKey(for: entry.date)
                     return task.completions[key]?.isCompleted != true
                 }
+
+                let completedTasks = entry.tasks.filter { task in
+                    let key = task.completionKey(for: entry.date)
+                    return task.completions[key]?.isCompleted == true
+                }
                 
                 if uncompletedTasks.isEmpty {
-                    // Tutte completate
-                    Spacer()
-                    VStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(accentGradient)
-                        Text(String(localized: "All done!"))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(textColor)
+                    // Mostra fino a 3 task completate
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(completedTasks.prefix(3).enumerated()), id: \.element.id) { _, task in
+                            SmallTaskRow(
+                                task: task,
+                                date: entry.date,
+                                primaryColor: primaryColor,
+                                secondaryColor: secondaryColor,
+                                textColor: textColor,
+                                secondaryTextColor: secondaryTextColor
+                            )
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    Spacer()
+
+                    Spacer(minLength: 0)
                 } else {
                     // Mostra fino a 3 task non completate - tutte uguali
                     VStack(alignment: .leading, spacing: 6) {
@@ -318,7 +309,7 @@ struct SnapTaskWidgetEntryView : View {
     // MARK: - Medium Widget (Lista compatta orizzontale)
     private var mediumWidgetView: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Header con scope selector - sempre in alto
+            // Header - sempre in alto
             HStack {
                 HStack(spacing: 4) {
                     Image(systemName: "calendar")
@@ -333,7 +324,10 @@ struct SnapTaskWidgetEntryView : View {
                 
                 Spacer()
                 
-                scopeSelectorView
+                // Scope label
+                Text(scopeLabel(effectiveScope))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(secondaryTextColor)
             }
             
             if entry.tasks.isEmpty {
@@ -398,7 +392,10 @@ struct SnapTaskWidgetEntryView : View {
                 
                 Spacer()
                 
-                scopeSelectorView
+                // Scope label
+                Text(scopeLabel(effectiveScope))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(secondaryTextColor)
             }
             
             if entry.tasks.isEmpty {
@@ -489,8 +486,9 @@ struct SnapTaskWidgetEntryView : View {
             
             Spacer(minLength: 4)
             
-            // Scope pills - molto più compatti
-            scopeSelectorView
+            Text(scopeLabel(effectiveScope))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(secondaryTextColor)
         }
     }
     
@@ -502,31 +500,7 @@ struct SnapTaskWidgetEntryView : View {
     }
     
     private var scopeSelectorView: some View {
-        let scopes: [WidgetScope] = [.today, .week, .month, .year, .longTerm]
-        
-        return HStack(spacing: 2) {
-            ForEach(scopes, id: \.self) { scope in
-                Button(intent: SetWidgetScopeIntent(scope: scope)) {
-                    Text(scopeShortLabel(scope))
-                        .font(.system(size: 9, weight: effectiveScope == scope ? .bold : .medium))
-                        .foregroundColor(effectiveScope == scope ? .white : secondaryTextColor)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 4)
-                        .background(
-                            Group {
-                                if effectiveScope == scope {
-                                    Capsule()
-                                        .fill(accentGradient)
-                                } else {
-                                    Capsule()
-                                        .fill(surfaceColor.opacity(0.5))
-                                }
-                            }
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
+        EmptyView()
     }
     
     // MARK: - Empty State
@@ -955,7 +929,15 @@ private func scopeShortLabel(_ scope: WidgetScope) -> String {
     case .week: return "S"
     case .month: return "M"
     case .year: return "A"
-    case .longTerm: return "∞"
+    }
+}
+
+private func scopeLabel(_ scope: WidgetScope) -> String {
+    switch scope {
+    case .today: return "Today"
+    case .week: return "Week"
+    case .month: return "Month"
+    case .year: return "Year"
     }
 }
 

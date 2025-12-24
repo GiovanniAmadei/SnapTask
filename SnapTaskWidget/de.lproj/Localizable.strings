@@ -11,9 +11,24 @@
 "Year" = "Jahr";
 "Long Term" = "Langfristig";
 "Set Widget Scope" = "Widget-Bereich festlegen";
+"Time Range" = "Zeitraum";
+"All Time" = "Gesamt";
+"specific_day" = "Bestimmter Tag";
+"optional_specific_day" = "Bestimmten Tag festlegen (optional)";
 
 "Toggle Task Completion" = "Aufgabe abschließen/aufheben";
 "Task ID" = "Aufgaben-ID";
+"Complete or undo a task for today" = "Aufgabe für heute erledigen oder rückgängig machen";
+
+"Start Timer" = "Timer starten";
+"On" = "An";
+"Off" = "Aus";
+"Timer" = "Timer";
+"An example control that runs a timer." = "Ein Beispiel-Steuerelement, das einen Timer startet.";
+"Timer Name" = "Timername";
+"Timer Name Configuration" = "Konfiguration des Timernamens";
+"Start a timer" = "Einen Timer starten";
+"Timer is running" = "Timer läuft";
 
 /* Widget UI */
 "All done!" = "Alles erledigt!";
@@ -37,3 +52,30 @@
 "total" = "gesamt";
 "avg" = "Durchschn.";
 "No data" = "Keine Daten";
+
+"View your productivity statistics." = "Sieh dir deine Produktivitätsstatistiken an.";
+"View your productivity statistics. Hold the widget to choose between Time Distribution or Completion Rate." = "Sieh dir deine Produktivitätsstatistiken an. Halte das Widget gedrückt, um zwischen Zeitverteilung und Abschlussrate zu wählen.";
+"Performance Type" = "Leistungstyp";
+"Time spent per category" = "Zeit pro Kategorie";
+"Weekly completion statistics" = "Wöchentliche Abschlussstatistiken";
+"Task completion statistics" = "Abschlussstatistiken";
+"Time" = "Zeit";
+"Completion" = "Abschluss";
+"Done" = "Erledigt";
+"Total" = "Gesamt";
+"Completed" = "Erledigt";
+"No tasks completed" = "Keine Aufgaben erledigt";
+"%lld completed" = "%lld erledigt";
+"%lld total" = "%lld gesamt";
+
+"Performance Widget" = "Leistungs-Widget";
+"Choose which performance time range to display" = "Wähle den Zeitraum, der angezeigt werden soll";
+"Choose which performance metric to display" = "Wähle die anzuzeigende Kennzahl";
+"Content" = "Inhalt";
+
+"Hello" = "Hallo";
+"Leading" = "Links";
+"Trailing" = "Rechts";
+"Bottom" = "Unten";
+"L" = "L";
+"T" = "R";

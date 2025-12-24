@@ -1304,6 +1304,7 @@ class CloudKitService: ObservableObject {
         record["taskDescription"] = task.description
         record["startTime"] = task.startTime
         record["hasSpecificTime"] = task.hasSpecificTime
+        record["notificationLeadTimeMinutes"] = task.notificationLeadTimeMinutes
         record["duration"] = max(0, task.duration) 
         record["hasDuration"] = task.hasDuration
         record["icon"] = task.icon.isEmpty ? "circle" : task.icon
@@ -1316,6 +1317,7 @@ class CloudKitService: ObservableObject {
         record["timeScope"] = task.timeScope.rawValue
         record["scopeStartDate"] = task.scopeStartDate
         record["scopeEndDate"] = task.scopeEndDate
+        record["autoCarryOver"] = task.autoCarryOver
         
         do {
             let encoder = JSONEncoder()
@@ -1369,6 +1371,7 @@ class CloudKitService: ObservableObject {
         let description = record["taskDescription"] as? String
         let startTime = record["startTime"] as? Date ?? Date()
         let hasSpecificTime = record["hasSpecificTime"] as? Bool ?? true
+        let notificationLeadTimeMinutes = record["notificationLeadTimeMinutes"] as? Int ?? 0
         let duration = record["duration"] as? TimeInterval ?? 0
         let hasDuration = record["hasDuration"] as? Bool ?? false
         let icon = record["icon"] as? String ?? "circle"
@@ -1390,6 +1393,7 @@ class CloudKitService: ObservableObject {
         let decodedTimeScope = TaskTimeScope(rawValue: timeScopeRaw ?? "") ?? .today
         let decodedScopeStart: Date? = record["scopeStartDate"] as? Date
         let decodedScopeEnd: Date? = record["scopeEndDate"] as? Date
+        let autoCarryOver = record["autoCarryOver"] as? Bool ?? false
         
         var task = TodoTask(
             id: uuid,
@@ -1412,7 +1416,9 @@ class CloudKitService: ObservableObject {
             notificationId: nil,
             timeScope: decodedTimeScope,
             scopeStartDate: decodedScopeStart,
-            scopeEndDate: decodedScopeEnd
+            scopeEndDate: decodedScopeEnd,
+            notificationLeadTimeMinutes: notificationLeadTimeMinutes,
+            autoCarryOver: autoCarryOver
         )
         
         task.completions = completions
@@ -1674,6 +1680,8 @@ class CloudKitService: ObservableObject {
         record["date"] = entry.date
         record["title"] = entry.title
         record["text"] = entry.text
+        record["worthItText"] = entry.worthItText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : entry.worthItText
+        record["isWorthItHidden"] = entry.isWorthItHidden ? entry.isWorthItHidden : nil
         record["entryCreatedAt"] = entry.createdAt
         record["entryUpdatedAt"] = entry.updatedAt
         
@@ -1713,6 +1721,8 @@ class CloudKitService: ObservableObject {
         
         let title = record["title"] as? String ?? ""
         let text = record["text"] as? String ?? ""
+        let worthItText = record["worthItText"] as? String ?? ""
+        let isWorthItHidden = (record["isWorthItHidden"] as? NSNumber)?.boolValue ?? (record["isWorthItHidden"] as? Bool) ?? false
         let createdAt = record["entryCreatedAt"] as? Date ?? record.creationDate ?? Date()
         let updatedAt = record["entryUpdatedAt"] as? Date ?? record.modificationDate ?? createdAt
         
@@ -1768,6 +1778,8 @@ class CloudKitService: ObservableObject {
             date: date,
             title: title,
             text: text,
+            worthItText: worthItText,
+            isWorthItHidden: isWorthItHidden,
             mood: mood,
             tags: tags,
             voiceMemos: voiceMemos,
@@ -2144,6 +2156,7 @@ class CloudKitService: ObservableObject {
         existingRecord["taskDescription"] = task.description
         existingRecord["startTime"] = task.startTime
         existingRecord["hasSpecificTime"] = task.hasSpecificTime
+        existingRecord["notificationLeadTimeMinutes"] = task.notificationLeadTimeMinutes
         existingRecord["duration"] = max(0, task.duration) 
         existingRecord["hasDuration"] = task.hasDuration
         existingRecord["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
@@ -2155,6 +2168,7 @@ class CloudKitService: ObservableObject {
         existingRecord["timeScope"] = task.timeScope.rawValue
         existingRecord["scopeStartDate"] = task.scopeStartDate
         existingRecord["scopeEndDate"] = task.scopeEndDate
+        existingRecord["autoCarryOver"] = task.autoCarryOver
         
         encodeToRecord(existingRecord, key: "category", value: task.category)
         encodeToRecord(existingRecord, key: "location", value: task.location)
@@ -2349,6 +2363,8 @@ class CloudKitService: ObservableObject {
         record["date"] = entry.date
         record["title"] = entry.title
         record["text"] = entry.text
+        record["worthItText"] = entry.worthItText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : entry.worthItText
+        record["isWorthItHidden"] = entry.isWorthItHidden ? entry.isWorthItHidden : nil
         record["entryCreatedAt"] = entry.createdAt
         record["entryUpdatedAt"] = entry.updatedAt
         
@@ -2391,8 +2407,10 @@ class CloudKitService: ObservableObject {
                     var merged = remote
                     if !entry.text.isEmpty && remote.text.isEmpty { merged.text = entry.text }
                     if !entry.title.isEmpty && remote.title.isEmpty { merged.title = entry.title }
+                    if !entry.worthItText.isEmpty && remote.worthItText.isEmpty { merged.worthItText = entry.worthItText }
                     if merged.mood == nil, let m = entry.mood { merged.mood = m }
                     merged.tags = Array(Set(merged.tags + entry.tags)).sorted()
+                    if entry.isWorthItHidden != remote.isWorthItHidden { merged.isWorthItHidden = entry.isWorthItHidden }
                     
                     let photoMap = Dictionary(uniqueKeysWithValues: (merged.photos + entry.photos).map { ($0.id, $0) })
                     var mergedPhotos = Array(photoMap.values).sorted { $0.createdAt > $1.createdAt }

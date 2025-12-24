@@ -64,6 +64,20 @@
 "notification_permission_denied_message" = "通知が拒否されています。iOS設定 > プライバシーとセキュリティ > カレンダー > SnapTask で有効にしてください。";
 "ios_permission_required" = "iOSの許可が必要です";
 
+"icon_category_general" = "一般";
+"icon_category_time_planning" = "時間と計画";
+"icon_category_study_work" = "学習と仕事";
+"icon_category_energy_nature" = "エネルギーと自然";
+"icon_category_sport_wellbeing" = "スポーツと健康";
+"icon_category_food_drink" = "食事と飲み物";
+"icon_category_home_security" = "家とセキュリティ";
+"icon_category_travel_places" = "旅行と場所";
+"icon_category_shopping_money" = "買い物とお金";
+"icon_category_creativity_media" = "創造性とメディア";
+"icon_category_communication" = "コミュニケーション";
+"icon_category_weather" = "天気";
+"icon_category_animals" = "動物";
+
 // Accessibility Support
 "completed" = "完了";
 "not_completed" = "未完了";
@@ -177,6 +191,9 @@
 "long_term_goals_no_recurrence" = "長期目標には繰り返しがありません";
 "recurrence_options" = "繰り返しオプション";
 "optional_specific_time" = "特定の時間を設定（任意）";
+
+"specific_day" = "特定の日";
+"optional_specific_day" = "特定の日を設定（任意）";
 
 // Statistics and Consistency
 "time_spent" = "費やした時間";
@@ -412,6 +429,10 @@
 "journal" = "日記";
 "journal_page_title" = "ページタイトル...";
 "journal_placeholder" = "ここにあなたの考え、省察、感謝を書いてください...";
+"worth_it_title" = "今日が報われた理由";
+"worth_it_subtitle" = "毎日を、あとで思い出せる何かが残るように過ごしてみましょう。今日「やってよかった」と思えたことを書いてください。";
+"worth_it_placeholder" = "ここに書く...";
+"show_worth_it_section" = "セクションを表示";
 "remove_mood" = "気分を削除";
 "photos" = "写真";
 "voice_memos" = "音声メモ";
@@ -616,6 +637,13 @@
 "be_the_first_to_share_ideas" = "アイデアを共有する最初の人になりましょう！";
 "all_category_filter" = "すべて";
 
+"feedback_filter_recent" = "最新";
+"feedback_replies_title" = "返信";
+"feedback_tap_to_read_more" = "タップして読む";
+"feedback_anonymous" = "匿名";
+"feedback_by_author_format" = "%@ さん";
+"feedback_you_indicator" = "(あなた)";
+
 // New Feedback View
 "share_your_feedback_title" = "フィードバックを共有";
 "feedback_category_title" = "カテゴリ";
@@ -713,6 +741,7 @@
 // Settings View
 "daily_notifications" = "日次通知";
 "daily_quote_reminder" = "毎日の名言リマインダー";
+"diary_reminder" = "日記リマインダー";
 "notification_time" = "通知時間";
 "enable_in_settings" = "設定で有効にする";
 "app_behavior" = "アプリの動作";
@@ -729,6 +758,9 @@
 "enable_notifications" = "通知を有効にする";
 "notification_permission_message" = "毎日の名言リマインダーを受け取るには、設定 > SnapTask > 通知 で通知を有効にしてください。";
 "your_daily_motivation" = "あなたの毎日のモチベーション";
+"daily_quote_notification_body" = "\"%@\" - %@";
+"diary_reminder_title" = "日記リマインダー";
+"diary_reminder_body" = "少し時間をとって日記を記入しましょう。";
 "help_continue_improving" = "SnapTaskの継続的な改善にご協力ください";
 "support_development" = "開発をサポート";
 "data_management" = "データ管理";
@@ -1240,6 +1272,8 @@
 "weekly_enum" = "毎週";
 "monthly_enum" = "毎月";
 "yearly_enum" = "毎年";
+
+"task_time" = "時間";
 "days_enum" = "日";
 "patterns_enum" = "パターン";
 "daily_recurrence" = "日次繰り返し";

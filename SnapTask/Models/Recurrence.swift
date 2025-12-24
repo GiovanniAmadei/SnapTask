@@ -1,6 +1,30 @@
 import Foundation
 
 struct Recurrence: Codable, Equatable, Hashable {
+    struct WeekdayTimeOverride: Codable, Equatable, Hashable {
+        let weekday: Int
+        let hour: Int
+        let minute: Int
+    }
+
+    struct MonthDayTimeOverride: Codable, Equatable, Hashable {
+        let day: Int
+        let hour: Int
+        let minute: Int
+    }
+
+    struct MonthOrdinalTimeOverride: Codable, Equatable, Hashable {
+        let ordinal: Int
+        let weekday: Int
+        let hour: Int
+        let minute: Int
+    }
+
+    struct YearlyTimeOverride: Codable, Equatable, Hashable {
+        let hour: Int
+        let minute: Int
+    }
+
     enum RecurrenceType: Codable, Equatable, Hashable {
         case daily
         case weekly(days: Set<Int>)
@@ -46,6 +70,10 @@ struct Recurrence: Codable, Equatable, Hashable {
         case weekInterval, weekModuloK, weekModuloOffset, weekSelectedOrdinals
         case monthInterval, monthSelectedMonths
         case yearInterval, yearModuloK, yearModuloOffset
+        case weekdayTimeOverrides
+        case monthDayTimeOverrides
+        case monthOrdinalTimeOverrides
+        case yearlyTimeOverride
     }
     
     let type: RecurrenceType
@@ -58,6 +86,12 @@ struct Recurrence: Codable, Equatable, Hashable {
     var weekModuloK: Int? = nil
     var weekModuloOffset: Int? = nil
     var weekSelectedOrdinals: Set<Int>? = nil // 1..5 and -1 for last
+
+    var weekdayTimeOverrides: [WeekdayTimeOverride]? = nil
+
+    var monthDayTimeOverrides: [MonthDayTimeOverride]? = nil
+    var monthOrdinalTimeOverrides: [MonthOrdinalTimeOverride]? = nil
+    var yearlyTimeOverride: YearlyTimeOverride? = nil
     
     var monthInterval: Int? = nil
     var monthSelectedMonths: Set<Int>? = nil // 1..12
@@ -93,6 +127,12 @@ struct Recurrence: Codable, Equatable, Hashable {
         yearModuloK = try container.decodeIfPresent(Int.self, forKey: .yearModuloK)
         yearModuloOffset = try container.decodeIfPresent(Int.self, forKey: .yearModuloOffset)
         dayInterval = try container.decodeIfPresent(Int.self, forKey: .dayInterval)
+
+        weekdayTimeOverrides = try container.decodeIfPresent([WeekdayTimeOverride].self, forKey: .weekdayTimeOverrides)
+
+        monthDayTimeOverrides = try container.decodeIfPresent([MonthDayTimeOverride].self, forKey: .monthDayTimeOverrides)
+        monthOrdinalTimeOverrides = try container.decodeIfPresent([MonthOrdinalTimeOverride].self, forKey: .monthOrdinalTimeOverrides)
+        yearlyTimeOverride = try container.decodeIfPresent(YearlyTimeOverride.self, forKey: .yearlyTimeOverride)
     }
 }
 

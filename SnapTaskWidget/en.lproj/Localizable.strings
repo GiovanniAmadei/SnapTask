@@ -11,9 +11,22 @@
 "Year" = "Year";
 "Long Term" = "Long Term";
 "Set Widget Scope" = "Set Widget Scope";
+"Time Range" = "Time Range";
+"All Time" = "All Time";
 
 "Toggle Task Completion" = "Toggle Task Completion";
 "Task ID" = "Task ID";
+"Complete or undo a task for today" = "Complete or undo a task for today";
+
+"Start Timer" = "Start Timer";
+"On" = "On";
+"Off" = "Off";
+"Timer" = "Timer";
+"An example control that runs a timer." = "An example control that runs a timer.";
+"Timer Name" = "Timer Name";
+"Timer Name Configuration" = "Timer Name Configuration";
+"Start a timer" = "Start a timer";
+"Timer is running" = "Timer is running";
 
 /* Widget UI */
 "All done!" = "All done!";
@@ -49,3 +62,18 @@
 "%lld total" = "%lld total";
 "Mood Trend" = "Mood Trend";
 "No mood data" = "No mood data";
+
+"Task completion statistics" = "Task completion statistics";
+"No tasks completed" = "No tasks completed";
+
+"Performance Widget" = "Performance Widget";
+"Choose which performance time range to display" = "Choose which performance time range to display";
+"Choose which performance metric to display" = "Choose which performance metric to display";
+"Content" = "Content";
+
+"Hello" = "Hello";
+"Leading" = "Leading";
+"Trailing" = "Trailing";
+"Bottom" = "Bottom";
+"L" = "L";
+"T" = "T";

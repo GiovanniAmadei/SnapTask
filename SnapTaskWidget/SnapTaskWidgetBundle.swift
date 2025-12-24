@@ -13,6 +13,7 @@ struct SnapTaskWidgetBundle: WidgetBundle {
     var body: some Widget {
         SnapTaskWidget()
         PerformanceWidget()
+        PerformanceWidgetLarge()
         SnapTaskWidgetControl()
         SnapTaskWidgetLiveActivity()
     }

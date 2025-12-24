@@ -64,6 +64,20 @@
 "notification_permission_denied_message" = "As notificações foram negadas. Ative-as em Ajustes do iOS > Privacidade e Segurança > Notificações > SnapTask.";
 "ios_permission_required" = "Permissão do iOS necessária";
 
+"icon_category_general" = "Geral";
+"icon_category_time_planning" = "Tempo e planejamento";
+"icon_category_study_work" = "Estudo e trabalho";
+"icon_category_energy_nature" = "Energia e natureza";
+"icon_category_sport_wellbeing" = "Esporte e bem-estar";
+"icon_category_food_drink" = "Comida e bebida";
+"icon_category_home_security" = "Casa e segurança";
+"icon_category_travel_places" = "Viagens e lugares";
+"icon_category_shopping_money" = "Compras e dinheiro";
+"icon_category_creativity_media" = "Criatividade e mídia";
+"icon_category_communication" = "Comunicação";
+"icon_category_weather" = "Clima";
+"icon_category_animals" = "Animais";
+
 // Accessibility Support
 "completed" = "concluída";
 "not_completed" = "não concluída";
@@ -177,7 +191,8 @@
 "long_term_goals_no_recurrence" = "Metas de longo prazo não têm recorrência";
 "recurrence_options" = "Opções de recorrência";
 "optional_specific_time" = "Definir horário específico (opcional)";
-"optional_specific_time" = "Definir horário específico (opcional)";
+"specific_day" = "Dia específico";
+"optional_specific_day" = "Definir dia específico (opcional)";
 
 // Statistics and Consistency
 "time_spent" = "Tempo gasto";
@@ -413,6 +428,10 @@
 "journal" = "Diário";
 "journal_page_title" = "Título da página...";
 "journal_placeholder" = "Escreva seus pensamentos, reflexões, gratidão aqui...";
+"worth_it_title" = "Por que valeu a pena";
+"worth_it_subtitle" = "Tente viver cada dia de um jeito que te dê algo para lembrar. Escreva por que valeu a pena hoje.";
+"worth_it_placeholder" = "Escreva aqui...";
+"show_worth_it_section" = "Mostrar seção";
 "remove_mood" = "Remover humor";
 "photos" = "Fotos";
 "voice_memos" = "Memorandos de voz";
@@ -617,6 +636,13 @@
 "be_the_first_to_share_ideas" = "Seja o primeiro a compartilhar suas ideias!";
 "all_category_filter" = "Todos";
 
+"feedback_filter_recent" = "Mais recentes";
+"feedback_replies_title" = "Respostas";
+"feedback_tap_to_read_more" = "Toque para ler";
+"feedback_anonymous" = "Anônimo";
+"feedback_by_author_format" = "por %@";
+"feedback_you_indicator" = "(Você)";
+
 // New Feedback View
 "share_your_feedback_title" = "Compartilhe seu feedback";
 "feedback_category_title" = "Categoria";
@@ -714,6 +740,7 @@
 // Settings View
 "daily_notifications" = "Notificações diárias";
 "daily_quote_reminder" = "Lembrete diário de frase";
+"diary_reminder" = "Lembrete do diário";
 "notification_time" = "Horário da notificação";
 "enable_in_settings" = "Ativar nos Ajustes";
 "app_behavior" = "Comportamento do app";
@@ -730,6 +757,9 @@
 "enable_notifications" = "Ativar notificações";
 "notification_permission_message" = "Para receber lembretes diários de frases, ative as notificações em Ajustes > SnapTask > Notificações.";
 "your_daily_motivation" = "Sua motivação diária";
+"daily_quote_notification_body" = "\"%@\" - %@";
+"diary_reminder_title" = "Lembrete do diário";
+"diary_reminder_body" = "Reserve um momento para preencher o seu diário.";
 "help_continue_improving" = "Ajude-nos a continuar melhorando o SnapTask";
 "support_development" = "Apoiar o desenvolvimento";
 "data_management" = "Gerenciamento de dados";
@@ -1241,6 +1271,7 @@
 "recurrence_type" = "Tipo de recorrência";
 "daily_enum" = "Diária";
 "weekly_enum" = "Semanal";
+"task_time" = "Horários";
 "monthly_enum" = "Mensal";
 "yearly_enum" = "Anual";
 "days_enum" = "Dias";

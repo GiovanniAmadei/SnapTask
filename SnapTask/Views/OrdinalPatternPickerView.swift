@@ -2,6 +2,8 @@ import SwiftUI
 
 struct OrdinalPatternPickerView: View {
     @Binding var selectedPatterns: Set<Recurrence.OrdinalPattern>
+    @Binding var monthlyOrdinalTimes: [Recurrence.OrdinalPattern: Date]
+    @Binding var defaultTime: Date
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
     
@@ -52,8 +54,12 @@ struct OrdinalPatternPickerView: View {
                                     Button(action: {
                                         if isSelected {
                                             selectedPatterns.remove(pattern)
+                                            monthlyOrdinalTimes.removeValue(forKey: pattern)
                                         } else {
                                             selectedPatterns.insert(pattern)
+                                            if monthlyOrdinalTimes[pattern] == nil {
+                                                monthlyOrdinalTimes[pattern] = defaultTime
+                                            }
                                         }
                                     }) {
                                         HStack {
@@ -107,6 +113,7 @@ struct OrdinalPatternPickerView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("clear_all".localized) {
                         selectedPatterns.removeAll()
+                        monthlyOrdinalTimes.removeAll()
                     }
                     .foregroundColor(.red)
                     .disabled(selectedPatterns.isEmpty)
@@ -128,5 +135,5 @@ struct OrdinalPatternPickerView: View {
     OrdinalPatternPickerView(selectedPatterns: .constant([
         Recurrence.OrdinalPattern(ordinal: 1, weekday: 1),
         Recurrence.OrdinalPattern(ordinal: -1, weekday: 6)
-    ]))
+    ]), monthlyOrdinalTimes: .constant([:]), defaultTime: .constant(Date()))
 }

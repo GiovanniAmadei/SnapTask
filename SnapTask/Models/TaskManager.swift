@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import EventKit
 import WidgetKit
+import UIKit
 
 @MainActor
 class TaskManager: ObservableObject {
@@ -18,6 +19,8 @@ class TaskManager: ObservableObject {
     private var cancellables: Set<AnyCancellable> = []
     private var saveTaskDebounceTimers: [UUID: Timer] = [:]
 
+    private static var lastWidgetReloadTime: Date = .distantPast
+
     private let appGroupUserDefaults = UserDefaults(suiteName: "group.com.snapTask.shared")
     private let notificationManager = TaskNotificationManager.shared
 
@@ -25,7 +28,28 @@ class TaskManager: ObservableObject {
         loadTasks()
         loadTrackingSessions()
         setupCloudKitObservers()
-        applyCarryOverIfNeeded()
+        applyCarryOverIfNeeded(force: false)
+        setupCarryOverObservers()
+    }
+
+    func refreshCarryOverIfNeeded() {
+        applyCarryOverIfNeeded(force: false)
+    }
+
+    private func setupCarryOverObservers() {
+        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.applyCarryOverIfNeeded(force: false)
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.applyCarryOverIfNeeded(force: false)
+            }
+            .store(in: &cancellables)
     }
     
     private func setupCloudKitObservers() {
@@ -84,6 +108,12 @@ class TaskManager: ObservableObject {
             
             // Handle notification changes
             await handleTaskNotificationUpdate(oldTask: oldTask, newTask: task)
+
+            let calendar = Calendar.current
+            let todayStart = calendar.startOfDay(for: Date())
+            let oldWasAutoCarryOver = oldTask.autoCarryOver
+            let newIsAutoCarryOver = task.autoCarryOver
+            let taskIsInPast = calendar.startOfDay(for: task.startTime) < todayStart
             
             if task.hasRewardPoints && oldTask.rewardPoints != task.rewardPoints {
                 // Per ogni data di completamento, aggiorna i punti
@@ -107,6 +137,10 @@ class TaskManager: ObservableObject {
             
             saveTasks()
             notifyTasksUpdated()
+
+            if !oldWasAutoCarryOver && newIsAutoCarryOver && taskIsInPast {
+                applyCarryOverIfNeeded(force: true)
+            }
             
             // Sync with CloudKit
             debouncedSaveTask(task)
@@ -137,6 +171,8 @@ class TaskManager: ObservableObject {
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
+
+        applyCarryOverIfNeeded(force: false)
     }
     
     func updateAllTasks(_ newTasks: [TodoTask]) {
@@ -147,6 +183,7 @@ class TaskManager: ObservableObject {
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
+        applyCarryOverIfNeeded(force: false)
         isUpdatingFromSync = false
         
         print(" Updated \(newTasks.count) tasks from sync")
@@ -767,7 +804,11 @@ class TaskManager: ObservableObject {
             NSLog(" APP DEBUG: Saved \(tasks.count) tasks to shared UserDefaults")
             
             // Ricarica i widget
-            WidgetCenter.shared.reloadAllTimelines()
+            let now = Date()
+            if now.timeIntervalSince(Self.lastWidgetReloadTime) >= 2.0 {
+                Self.lastWidgetReloadTime = now
+                WidgetCenter.shared.reloadAllTimelines()
+            }
             
         } catch {
             print("Error saving tasks: \(error)")
@@ -1033,12 +1074,12 @@ class TaskManager: ObservableObject {
         }
     }
 
-    private func applyCarryOverIfNeeded() {
+    private func applyCarryOverIfNeeded(force: Bool) {
         let calendar = Calendar.current
         let todayStart = calendar.startOfDay(for: Date())
         let lastKey = "lastCarryOverCheckDate"
         
-        if let lastDate = UserDefaults.standard.object(forKey: lastKey) as? Date {
+        if !force, let lastDate = UserDefaults.standard.object(forKey: lastKey) as? Date {
             if calendar.isDate(lastDate, inSameDayAs: todayStart) {
                 return
             }

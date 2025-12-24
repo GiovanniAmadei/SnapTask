@@ -18,15 +18,15 @@ struct SnapTaskWidgetControl: ControlWidget {
             provider: Provider()
         ) { value in
             ControlWidgetToggle(
-                "Start Timer",
+                String(localized: "Start Timer"),
                 isOn: value.isRunning,
                 action: StartTimerIntent(value.name)
             ) { isRunning in
-                Label(isRunning ? "On" : "Off", systemImage: "timer")
+                Label(isRunning ? String(localized: "On") : String(localized: "Off"), systemImage: "timer")
             }
         }
-        .displayName("Timer")
-        .description("A an example control that runs a timer.")
+        .displayName(LocalizedStringResource("Timer"))
+        .description(LocalizedStringResource("An example control that runs a timer."))
     }
 }
 
@@ -51,17 +51,17 @@ extension SnapTaskWidgetControl {
 struct TimerConfiguration: ControlConfigurationIntent {
     static let title: LocalizedStringResource = "Timer Name Configuration"
 
-    @Parameter(title: "Timer Name", default: "Timer")
+    @Parameter(title: LocalizedStringResource("Timer Name"), default: "Timer")
     var timerName: String
 }
 
 struct StartTimerIntent: SetValueIntent {
     static let title: LocalizedStringResource = "Start a timer"
 
-    @Parameter(title: "Timer Name")
+    @Parameter(title: LocalizedStringResource("Timer Name"))
     var name: String
 
-    @Parameter(title: "Timer is running")
+    @Parameter(title: LocalizedStringResource("Timer is running"))
     var value: Bool
 
     init() {}

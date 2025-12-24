@@ -19,13 +19,6 @@ struct WidgetWeeklyStatData: Codable {
     let completionRate: Double
 }
 
-struct WidgetMoodStatData: Codable {
-    let day: String
-    let date: Date
-    let score: Int
-    let emoji: String
-}
-
 @MainActor
 class StatisticsViewModel: ObservableObject {
     struct CategoryStat: Identifiable, Equatable {
@@ -39,6 +32,134 @@ class StatisticsViewModel: ObservableObject {
                    lhs.color == rhs.color &&
                    lhs.hours == rhs.hours
         }
+
+    }
+
+    private func calculateCategoryStats(for range: TimeRange) -> [CategoryStat] {
+        let categories = categoryManager.categories
+        let allTasks = taskManager.tasks
+        let (startDate, endDate) = range.dateRange
+
+        let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
+        let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
+
+        var categoryStatsList: [CategoryStat] = []
+
+        for category in categories {
+            let categoryTasks = allTasks.filter { task in
+                if task.category?.id == category.id {
+                    return true
+                }
+                if let taskCategoryName = task.category?.name,
+                   taskCategoryName.lowercased() == category.name.lowercased() {
+                    return true
+                }
+                return false
+            }
+
+            let taskHours = categoryTasks.reduce(0.0) { total, task in
+                let completionHours = task.completions
+                    .compactMap { (date, completion) -> Double? in
+                        let startOfStartDate = Calendar.current.startOfDay(for: startDate)
+                        let endOfEndDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: endDate))!
+
+                        guard date >= startOfStartDate &&
+                              date < endOfEndDate &&
+                              completion.isCompleted else {
+                            return nil
+                        }
+
+                        var taskDuration: TimeInterval = 0
+
+                        if let actualDuration = completion.actualDuration, actualDuration > 0 {
+                            taskDuration = actualDuration
+                        } else if task.totalTrackedTime > 0 {
+                            taskDuration = task.totalTrackedTime
+                        } else if task.hasDuration && task.duration > 0 {
+                            taskDuration = task.duration
+                        }
+
+                        guard taskDuration > 0 else { return nil }
+                        return taskDuration / 3600.0
+                    }
+                    .reduce(0.0, +)
+
+                return total + completionHours
+            }
+
+            let calendar = Calendar.current
+            var trackedHours = 0.0
+            let categoryKey = "category_\(category.id.uuidString)"
+
+            var currentDate = startDate
+            while currentDate <= endDate {
+                let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
+                if let dayData = timeTrackingData[dateKey],
+                   let categoryHours = dayData[categoryKey] {
+                    trackedHours += categoryHours
+                }
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+            }
+
+            let totalHours = taskHours + trackedHours
+            if totalHours > 0 {
+                categoryStatsList.append(CategoryStat(
+                    name: category.name,
+                    color: category.color,
+                    hours: totalHours
+                ))
+            }
+        }
+
+        let calendar = Calendar.current
+        var currentDate = startDate
+        var uncategorizedHours = 0.0
+
+        while currentDate <= endDate {
+            let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
+            if let dayData = timeTrackingData[dateKey],
+               let uncategorizedTime = dayData["uncategorized"] {
+                uncategorizedHours += uncategorizedTime
+            }
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
+        }
+
+        if uncategorizedHours > 0 {
+            categoryStatsList.append(CategoryStat(
+                name: "Uncategorized",
+                color: "#9CA3AF",
+                hours: uncategorizedHours
+            ))
+        }
+
+        let calendar2 = Calendar.current
+        var currentDate2 = startDate
+        var taskTracking: [String: Double] = [:]
+
+        while currentDate2 <= endDate {
+            let dateKey = ISO8601DateFormatter().string(from: calendar2.startOfDay(for: currentDate2))
+            if let dayData = timeTrackingData[dateKey] {
+                for (key, hours) in dayData {
+                    if key.hasPrefix("task_") {
+                        taskTracking[key, default: 0] += hours
+                    }
+                }
+            }
+            currentDate2 = calendar2.date(byAdding: .day, value: 1, to: currentDate2) ?? endDate.addingTimeInterval(86400)
+        }
+
+        for (taskKey, hours) in taskTracking {
+            if hours > 0, let metadata = taskMetadata[taskKey] {
+                categoryStatsList.append(CategoryStat(
+                    name: metadata["name"] ?? "Unknown Task",
+                    color: metadata["color"] ?? "#6366F1",
+                    hours: hours
+                ))
+            }
+        }
+
+        categoryStatsList.sort { $0.hours > $1.hours }
+        return categoryStatsList
     }
     
     struct WeeklyStat: Identifiable, Equatable {
@@ -157,6 +278,17 @@ class StatisticsViewModel: ObservableObject {
     private var lastUpdateTime: Date = Date()
     private let minUpdateInterval: TimeInterval = 2.0 
     private var pendingUpdate = false
+
+    private var isGeneratingWidgetStats = false
+
+    private var shouldSaveWidgetStatsOnNextUpdate = true
+
+    private var forceUIRefreshOnNextUpdate = false
+
+    private static let verboseStatsLogging = false
+
+    private var isUpdating = false
+    private var isObserving = false
     
     var trackedRecurringTasks: [TodoTask] {
         recurringTasks.filter { task in
@@ -179,7 +311,23 @@ class StatisticsViewModel: ObservableObject {
     
     init(taskManager: TaskManager = .shared) {
         self.taskManager = taskManager
+    }
+
+    func startObserving() {
+        guard !isObserving else { return }
+        isObserving = true
         setupObservers()
+    }
+
+    func stopObserving() {
+        guard isObserving else { return }
+        isObserving = false
+
+        pendingUpdate = false
+        updateTimer?.invalidate()
+        updateTimer = nil
+
+        cancellables.removeAll()
     }
     
     func refreshStats() {
@@ -190,6 +338,13 @@ class StatisticsViewModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.scheduleUpdate()
         }
+    }
+
+    private func performImmediateUpdate(skipWidgetSave: Bool) {
+        if skipWidgetSave {
+            shouldSaveWidgetStatsOnNextUpdate = false
+        }
+        performUpdate()
     }
     
     private func scheduleUpdate() {
@@ -212,6 +367,14 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func performUpdate() {
+        guard !isUpdating else { return }
+        isUpdating = true
+        defer {
+            isUpdating = false
+            shouldSaveWidgetStatsOnNextUpdate = true
+            forceUIRefreshOnNextUpdate = false
+        }
+
         lastUpdateTime = Date()
         pendingUpdate = false
         updateTimer?.invalidate()
@@ -236,11 +399,13 @@ class StatisticsViewModel: ObservableObject {
                          bestStreak != oldBestStreak ||
                          taskStreaks != oldTaskStreaks ||
                          taskPerformanceAnalytics != oldTaskPerformanceAnalytics
-        
-        if dataChanged {
+
+        if dataChanged || forceUIRefreshOnNextUpdate {
             print("📊 Data changed, updating UI")
             objectWillChange.send()
-            saveStatsForWidget()
+            if shouldSaveWidgetStatsOnNextUpdate {
+                saveStatsForWidget()
+            }
         } else {
             print("📊 No data changes detected, skipping UI update")
         }
@@ -249,61 +414,55 @@ class StatisticsViewModel: ObservableObject {
     // MARK: - Widget Data Sharing
     
     private func saveStatsForWidget() {
-        // Save category stats for Time Distribution widget
-        let categoryData = categoryStats.map { stat in
-            WidgetCategoryStatData(name: stat.name, color: stat.color, hours: stat.hours)
-        }
-        
-        if let encoded = try? JSONEncoder().encode(categoryData) {
-            appGroupUserDefaults?.set(encoded, forKey: "widgetCategoryStats")
-        }
-        
-        // Save weekly stats for Completion Rate widget
-        let weeklyData = weeklyStats.map { stat in
-            WidgetWeeklyStatData(
-                day: stat.day,
-                completedTasks: stat.completedTasks,
-                totalTasks: stat.totalTasks,
-                completionRate: stat.completionRate
-            )
-        }
-        
-        if let encoded = try? JSONEncoder().encode(weeklyData) {
-            appGroupUserDefaults?.set(encoded, forKey: "widgetWeeklyStats")
-        }
-        
-        // Save mood stats for Mood Trend widget
-        let calendar = Calendar.current
-        let today = Date()
-        let weekStart = calendar.date(byAdding: .day, value: -6, to: today)!
-        
-        var moodData: [WidgetMoodStatData] = []
-        let moodManager = MoodManager.shared
-        
-        for dayOffset in 0...6 {
-            let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStart)!
-            let startOfDay = calendar.startOfDay(for: date)
-            
-            if let moodType = moodManager.mood(on: startOfDay) {
-                let dayName = date.formatted(.dateTime.weekday(.abbreviated))
-                moodData.append(WidgetMoodStatData(
-                    day: dayName,
-                    date: startOfDay,
-                    score: moodType.score,
-                    emoji: moodType.emoji
-                ))
+        isGeneratingWidgetStats = true
+
+        let widgetTimeRanges: [TimeRange] = [.today, .week, .month, .year, .allTime]
+        let encoder = JSONEncoder()
+
+        for widgetRange in widgetTimeRanges {
+            let categoryStatsForWidget = calculateCategoryStats(for: widgetRange)
+            let weeklyStatsForWidget = calculateWeeklyStats(for: widgetRange)
+
+            let widgetKeySuffix: String = {
+                switch widgetRange {
+                case .allTime:
+                    return "allTime"
+                default:
+                    return widgetRange.rawValue.lowercased()
+                }
+            }()
+
+            let categoryData = categoryStatsForWidget.map { stat in
+                WidgetCategoryStatData(name: stat.name, color: stat.color, hours: stat.hours)
+            }
+
+            if let encoded = try? encoder.encode(categoryData) {
+                appGroupUserDefaults?.set(encoded, forKey: "widgetCategoryStats_\(widgetKeySuffix)")
+            }
+
+            let weeklyData = weeklyStatsForWidget.map { stat in
+                WidgetWeeklyStatData(
+                    day: stat.day,
+                    completedTasks: stat.completedTasks,
+                    totalTasks: stat.totalTasks,
+                    completionRate: stat.completionRate
+                )
+            }
+
+            if let encoded = try? encoder.encode(weeklyData) {
+                appGroupUserDefaults?.set(encoded, forKey: "widgetWeeklyStats_\(widgetKeySuffix)")
             }
         }
-        
-        if let encoded = try? JSONEncoder().encode(moodData) {
-            appGroupUserDefaults?.set(encoded, forKey: "widgetMoodStats")
-        }
-        
+
         appGroupUserDefaults?.synchronize()
-        
-        // Reload widget timelines
+
         WidgetCenter.shared.reloadTimelines(ofKind: "PerformanceWidget")
-        print("📊 Saved stats for widget and requested timeline reload")
+        WidgetCenter.shared.reloadTimelines(ofKind: "PerformanceWidgetLarge")
+        print("📊 Saved stats for widget time ranges and requested timeline reload")
+
+        DispatchQueue.main.async { [weak self] in
+            self?.isGeneratingWidgetStats = false
+        }
     }
     
     private func setupObservers() {
@@ -330,24 +489,6 @@ class StatisticsViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 print("📊 Time tracking updated (debounced)")
-                self?.scheduleUpdate()
-            }
-            .store(in: &cancellables)
-        
-        categoryManager.$categories
-            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                print("📊 Category manager updated (debounced)")
-                self?.scheduleUpdate()
-            }
-            .store(in: &cancellables)
-        
-        taskManager.$tasks
-            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                print("📊 Task manager updated (debounced)")
                 self?.scheduleUpdate()
             }
             .store(in: &cancellables)
@@ -396,8 +537,10 @@ class StatisticsViewModel: ObservableObject {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                guard self?.isGeneratingWidgetStats != true else { return }
+                self?.forceUIRefreshOnNextUpdate = true
                 print("📊 Time range changed - immediate update")
-                self?.performUpdate() 
+                self?.performImmediateUpdate(skipWidgetSave: true)
             }
             .store(in: &cancellables)
     }
@@ -406,9 +549,11 @@ class StatisticsViewModel: ObservableObject {
         let categories = categoryManager.categories
         let allTasks = taskManager.tasks
         let (startDate, endDate) = selectedTimeRange.dateRange
-        
-        print("📊 Date range: \(startDate) to \(endDate)")
-        print("📊 Available categories: \(categories.map { "\($0.name) (ID: \($0.id.uuidString.prefix(8)))" })")
+
+        if Self.verboseStatsLogging {
+            print("📊 Date range: \(startDate) to \(endDate)")
+            print("📊 Available categories: \(categories.map { "\($0.name) (ID: \($0.id.uuidString.prefix(8)))" })")
+        }
         
         let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
         let categoryMetadata = UserDefaults.standard.dictionary(forKey: "categoryMetadata") as? [String: [String: String]] ?? [:]
@@ -428,8 +573,10 @@ class StatisticsViewModel: ObservableObject {
                 }
                 return false
             }
-            
-            print("📊 Category '\(category.name)': found \(categoryTasks.count) tasks")
+
+            if Self.verboseStatsLogging {
+                print("📊 Category '\(category.name)': found \(categoryTasks.count) tasks")
+            }
             
             // Calcola ore dalle durate dei task completati
             let taskHours = categoryTasks.reduce(0.0) { total, task in
@@ -437,13 +584,17 @@ class StatisticsViewModel: ObservableObject {
                     .compactMap { (date, completion) -> Double? in
                         let startOfStartDate = Calendar.current.startOfDay(for: startDate)
                         let endOfEndDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: endDate))!
-                        
-                        print("📊 Checking task '\(task.name)': date=\(date), startRange=\(startOfStartDate), endRange=\(endOfEndDate), isCompleted=\(completion.isCompleted)")
+
+                        if Self.verboseStatsLogging {
+                            print("📊 Checking task '\(task.name)': date=\(date), startRange=\(startOfStartDate), endRange=\(endOfEndDate), isCompleted=\(completion.isCompleted)")
+                        }
                         
                         guard date >= startOfStartDate &&
                               date < endOfEndDate &&
                               completion.isCompleted else {
-                            print("📊   -> Excluded: outside date range or not completed")
+                            if Self.verboseStatsLogging {
+                                print("📊   -> Excluded: outside date range or not completed")
+                            }
                             return nil
                         }
                         
@@ -462,10 +613,14 @@ class StatisticsViewModel: ObservableObject {
                         }
                         
                         if taskDuration > 0 {
-                            print("📊   -> Included: Task '\(task.name)' completed on \(date) with \(String(format: "%.2f", taskDuration/3600.0))h (\(durationSource))")
+                            if Self.verboseStatsLogging {
+                                print("📊   -> Included: Task '\(task.name)' completed on \(date) with \(String(format: "%.2f", taskDuration/3600.0))h (\(durationSource))")
+                            }
                             return taskDuration / 3600.0
                         } else {
-                            print("📊   -> Excluded: Task '\(task.name)' completed on \(date) but has NO duration data")
+                            if Self.verboseStatsLogging {
+                                print("📊   -> Excluded: Task '\(task.name)' completed on \(date) but has NO duration data")
+                            }
                             return nil
                         }
                     }
@@ -485,7 +640,9 @@ class StatisticsViewModel: ObservableObject {
                 if let dayData = timeTrackingData[dateKey],
                    let categoryHours = dayData[categoryKey] {
                     trackedHours += categoryHours
-                    print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from time tracking")
+                    if Self.verboseStatsLogging {
+                        print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from time tracking")
+                    }
                 }
                 currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
             }
@@ -498,9 +655,13 @@ class StatisticsViewModel: ObservableObject {
                     color: category.color,
                     hours: totalHours
                 ))
-                print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from time tracking = \(String(format: "%.2f", totalHours))h total")
+                if Self.verboseStatsLogging {
+                    print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from time tracking = \(String(format: "%.2f", totalHours))h total")
+                }
             } else {
-                print("📊 Category \(category.name): 0 hours (no tasks with duration or time tracking sessions)")
+                if Self.verboseStatsLogging {
+                    print("📊 Category \(category.name): 0 hours (no tasks with duration or time tracking sessions)")
+                }
             }
         }
         
@@ -524,7 +685,9 @@ class StatisticsViewModel: ObservableObject {
                 color: "#9CA3AF",
                 hours: uncategorizedHours
             ))
-            print("📊 Uncategorized: \(String(format: "%.2f", uncategorizedHours))h from time tracking")
+            if Self.verboseStatsLogging {
+                print("📊 Uncategorized: \(String(format: "%.2f", uncategorizedHours))h from time tracking")
+            }
         }
         
         // Per retrocompatibilità: gestisci i vecchi task metadata (che verranno progressivamente rimossi)
@@ -552,71 +715,78 @@ class StatisticsViewModel: ObservableObject {
                     color: metadata["color"] ?? "#6366F1",
                     hours: hours
                 ))
-                print("📊 Legacy task \(metadata["name"] ?? "Unknown"): \(String(format: "%.2f", hours))h from old time tracking format")
+                if Self.verboseStatsLogging {
+                    print("📊 Legacy task \(metadata["name"] ?? "Unknown"): \(String(format: "%.2f", hours))h from old time tracking format")
+                }
             }
         }
-        
-        categoryStats = categoryStatsList
-        print("📊 FINAL STATISTICS: \(categoryStatsList.count) categories with total hours: \(String(format: "%.2f", categoryStatsList.reduce(0) { $0 + $1.hours }))")
-        print("📊 All tasks in system: \(allTasks.count)")
-        print("📊 Tasks with duration set: \(allTasks.filter { $0.hasDuration && $0.duration > 0 }.count)")
+
+        categoryStatsList.sort { $0.hours > $1.hours }
+        withAnimation(.smooth(duration: 0.35)) {
+            categoryStats = categoryStatsList
+        }
+
+        if Self.verboseStatsLogging {
+            print("📊 FINAL STATISTICS: \(categoryStatsList.count) categories with total hours: \(String(format: "%.2f", categoryStatsList.reduce(0) { $0 + $1.hours }))")
+            print("📊 All tasks in system: \(allTasks.count)")
+            print("📊 Tasks with duration set: \(allTasks.filter { $0.hasDuration && $0.duration > 0 }.count)")
+        }
     }
-    
+
     private func updateWeeklyStats() {
+        let next = calculateWeeklyStats(for: selectedTimeRange)
+        withAnimation(.smooth(duration: 0.35)) {
+            weeklyStats = next
+        }
+    }
+
+    private func calculateWeeklyStats(for range: TimeRange) -> [WeeklyStat] {
         let calendar = Calendar.current
-        let today = Date()
-        let weekStart = calendar.date(byAdding: .day, value: -6, to: today)!
-        
-        weeklyStats = (0...6).map { dayOffset in
-            let date = calendar.date(byAdding: .day, value: dayOffset, to: weekStart)!
-            let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
-            
-            let singleDayTasks = taskManager.tasks.filter { task in
-                task.recurrence == nil && calendar.isDate(task.startTime, inSameDayAs: date)
+        let today = calendar.startOfDay(for: Date())
+
+        switch range {
+        case .today:
+            let stats = getWeeklyStatsForDay(date: today)
+            return [WeeklyStat(
+                day: today.formatted(.dateTime.weekday(.abbreviated)),
+                completedTasks: stats.completed,
+                totalTasks: stats.total,
+                completionRate: stats.rate
+            )]
+        case .week:
+            let start = calendar.date(byAdding: .day, value: -6, to: today)!
+            return (0...6).map { dayOffset in
+                let date = calendar.date(byAdding: .day, value: dayOffset, to: start)!
+                let stats = getWeeklyStatsForDay(date: date)
+                return WeeklyStat(
+                    day: date.formatted(.dateTime.weekday(.abbreviated)),
+                    completedTasks: stats.completed,
+                    totalTasks: stats.total,
+                    completionRate: stats.rate
+                )
             }
-            
-            let recurringDayTasks = taskManager.tasks.filter { task in
-                guard let recurrence = task.recurrence else { return false }
-                
-                if task.startTime > endOfDay { return false }
-                
-                if let endDate = recurrence.endDate, endDate < startOfDay { return false }
-                
-                switch recurrence.type {
-                case .daily:
-                    return true
-                case .weekly(let days):
-                    let weekday = calendar.component(.weekday, from: date)
-                    return days.contains(weekday)
-                case .monthly(let days):
-                    let day = calendar.component(.day, from: date)
-                    return days.contains(day)
-                case .monthlyOrdinal(let patterns):
-                    return recurrence.shouldOccurOn(date: date)
-                case .yearly:
-                    return recurrence.shouldOccurOn(date: date)
-                }
+        case .month:
+            return (0..<5).map { weekOffset in
+                let stats = getWeeklyStatsForWeekOffset(weekOffset)
+                return WeeklyStat(
+                    day: "W\(weekOffset + 1)",
+                    completedTasks: stats.completed,
+                    totalTasks: stats.total,
+                    completionRate: stats.rate
+                )
             }
-            
-            let allDayTasks = singleDayTasks + recurringDayTasks
-            
-            let completedCount = allDayTasks.filter { task in
-                if let completion = task.completions[startOfDay], completion.isCompleted {
-                    return true
-                }
-                return false
-            }.count
-            
-            let totalCount = allDayTasks.count
-            let completionRate = totalCount > 0 ? Double(completedCount) / Double(totalCount) : 0.0
-            
-            return WeeklyStat(
-                day: date.formatted(.dateTime.weekday(.abbreviated)),
-                completedTasks: completedCount,
-                totalTasks: totalCount,
-                completionRate: completionRate
-            )
+        case .year, .allTime:
+            let startDate = calendar.date(byAdding: .day, value: -364, to: today)!
+            return (0..<12).map { monthOffset in
+                let monthStart = calendar.date(byAdding: .month, value: monthOffset, to: startDate)!
+                let stats = getMonthlyStatsForMonth(monthStart)
+                return WeeklyStat(
+                    day: monthStart.formatted(.dateTime.month(.abbreviated)),
+                    completedTasks: stats.completed,
+                    totalTasks: stats.total,
+                    completionRate: stats.rate
+                )
+            }
         }
     }
     

@@ -109,6 +109,7 @@ class TaskFormViewModel: ObservableObject {
     @Published var description: String = ""
     @Published var location: TaskLocation?
     @Published var startDate: Date = Date()
+    @Published var hasSpecificDay: Bool = true
     @Published var hasSpecificTime: Bool = false
     @Published var hasDuration: Bool = false
     @Published var duration: TimeInterval = 3600 {
@@ -133,6 +134,10 @@ class TaskFormViewModel: ObservableObject {
     @Published var selectedOrdinalPatterns: Set<Recurrence.OrdinalPattern> = []
     @Published var yearlyDate: Date = Date()
     @Published var weeklyTimes: [Int: Date] = [:]
+
+    @Published var monthlyTimes: [Int: Date] = [:]
+    @Published var monthlyOrdinalTimes: [Recurrence.OrdinalPattern: Date] = [:]
+    @Published var yearlyTime: Date = Date()
     @Published var dayInterval: Int = 1
     @Published var hasRecurrenceEndDate: Bool = false
     @Published var recurrenceEndDate: Date = Date().addingTimeInterval(86400 * 30)
@@ -188,11 +193,19 @@ class TaskFormViewModel: ObservableObject {
         let startDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: initialDate) ?? initialDate
         self.startDate = startDate
         self.yearlyDate = startDate
+        self.yearlyTime = startDate
         categories = settingsViewModel.categories
         
         setupObservers()
         setupContextualRecurrenceObserver()
         isInitialized = true
+    }
+
+    private func baseTimeAdjusted(_ date: Date) -> Date {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: startDate)
+        let minute = calendar.component(.minute, from: startDate)
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
     }
     
     private func setupObservers() {
@@ -248,6 +261,31 @@ class TaskFormViewModel: ObservableObject {
                 self.updateContextualRecurrenceType(for: self.selectedTimeScope)
             }
             .store(in: &cancellables)
+
+        // Se l'utente seleziona uno specific time fuori dal periodo corrente, adatta automaticamente il periodo
+        $startDate
+            .combineLatest($hasSpecificTime, $selectedTimeScope)
+            .sink { [weak self] newStartDate, hasSpecificTime, scope in
+                guard let self = self else { return }
+                guard hasSpecificTime else { return }
+
+                let calendar = Calendar.current
+                switch scope {
+                case .week:
+                    // Porta il selettore settimana alla settimana che contiene newStartDate
+                    self.selectedWeekDate = calendar.startOfWeek(for: newStartDate)
+                case .month:
+                    // Porta mese/anno a quelli che contengono newStartDate
+                    self.selectedMonth = calendar.component(.month, from: newStartDate)
+                    self.selectedYear = calendar.component(.year, from: newStartDate)
+                case .year:
+                    // Porta anno a quello che contiene newStartDate
+                    self.selectedYear = calendar.component(.year, from: newStartDate)
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
     }
     
     private func updateContextualRecurrenceType(for timeScope: TaskTimeScope) {
@@ -260,6 +298,8 @@ class TaskFormViewModel: ObservableObject {
     private func updateDefaultSpecificTime(for timeScope: TaskTimeScope) {
         // Default: do not set a specific time automatically for any scope
         hasSpecificTime = false
+        // Day selection is always applicable for "today"; optional for other scopes
+        hasSpecificDay = (timeScope == .today)
     }
     
     var isValid: Bool {
@@ -428,7 +468,8 @@ class TaskFormViewModel: ObservableObject {
             let calendar = Calendar.current
             let weekStart = calendar.startOfWeek(for: selectedWeekDate)
             let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart)!
-            if hasSpecificTime {
+            if hasSpecificDay {
+                if hasSpecificTime {
                 // Clamp chosen date within the selected week and apply chosen time
                 let chosen = startDate
                 let clampedDate = max(weekStart, min(weekEnd, chosen))
@@ -437,6 +478,11 @@ class TaskFormViewModel: ObservableObject {
                 comps.minute = calendar.component(.minute, from: startDate)
                 comps.second = 0
                 taskStartTime = calendar.date(from: comps) ?? weekStart
+                } else {
+                    let chosenDay = calendar.startOfDay(for: startDate)
+                    let clampedDay = max(weekStart, min(weekEnd, chosenDay))
+                    taskStartTime = calendar.startOfDay(for: clampedDay)
+                }
             } else {
                 taskStartTime = weekStart
             }
@@ -451,7 +497,8 @@ class TaskFormViewModel: ObservableObject {
             let monthStart = calendar.date(from: startComps) ?? Date()
             let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart)!
             let monthEnd = calendar.date(byAdding: .day, value: -1, to: nextMonth)!
-            if hasSpecificTime {
+            if hasSpecificDay {
+                if hasSpecificTime {
                 // Build date inside selected month/year with chosen day/time, clamped to month range
                 let day = calendar.component(.day, from: startDate)
                 let range = calendar.range(of: .day, in: .month, for: monthStart) ?? (1..<29)
@@ -466,6 +513,11 @@ class TaskFormViewModel: ObservableObject {
                 let candidate = calendar.date(from: comps) ?? monthStart
                 // Ensure inside month bounds
                 taskStartTime = max(monthStart, min(monthEnd, candidate))
+                } else {
+                    let chosenDay = calendar.startOfDay(for: startDate)
+                    let clampedDay = max(monthStart, min(monthEnd, chosenDay))
+                    taskStartTime = calendar.startOfDay(for: clampedDay)
+                }
             } else {
                 taskStartTime = monthStart
             }
@@ -483,7 +535,8 @@ class TaskFormViewModel: ObservableObject {
             endComps.month = 12
             endComps.day = 31
             let yearEnd = calendar.date(from: endComps) ?? yearStart
-            if hasSpecificTime {
+            if hasSpecificDay {
+                if hasSpecificTime {
                 // Build date inside selected year with chosen month/day/time, clamped to year range
                 var comps = DateComponents()
                 comps.year = selectedYear
@@ -494,13 +547,22 @@ class TaskFormViewModel: ObservableObject {
                 comps.second = 0
                 let candidate = calendar.date(from: comps) ?? yearStart
                 taskStartTime = max(yearStart, min(yearEnd, candidate))
+                } else {
+                    let chosenDay = calendar.startOfDay(for: startDate)
+                    let clampedDay = max(yearStart, min(yearEnd, chosenDay))
+                    taskStartTime = calendar.startOfDay(for: clampedDay)
+                }
             } else {
                 taskStartTime = yearStart
             }
             scopeStartDate = yearStart
             scopeEndDate = yearEnd
         case .longTerm:
-            taskStartTime = hasSpecificTime ? startDate : Calendar.current.startOfDay(for: startDate)
+            if hasSpecificDay {
+                taskStartTime = hasSpecificTime ? startDate : Calendar.current.startOfDay(for: startDate)
+            } else {
+                taskStartTime = Calendar.current.startOfDay(for: Date())
+            }
             scopeStartDate = nil
             scopeEndDate = nil
         case .all:
@@ -527,6 +589,7 @@ class TaskFormViewModel: ObservableObject {
             description: description.isEmpty ? nil : description,
             location: location,
             startTime: taskStartTime,
+            hasSpecificDay: (selectedTimeScope == .today) ? true : hasSpecificDay,
             hasSpecificTime: hasSpecificTime,
             duration: duration,
             hasDuration: hasDuration,
@@ -565,7 +628,17 @@ class TaskFormViewModel: ObservableObject {
                 let wd = calendar.component(.weekday, from: startDay)
                 days.insert(wd)
             }
-            return Recurrence(type: .weekly(days: days), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+            var rec = Recurrence(type: .weekly(days: days), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+            let overrides: [Recurrence.WeekdayTimeOverride] = days.compactMap { weekday in
+                guard let time = weeklyTimes[weekday] else { return nil }
+                return Recurrence.WeekdayTimeOverride(
+                    weekday: weekday,
+                    hour: calendar.component(.hour, from: time),
+                    minute: calendar.component(.minute, from: time)
+                )
+            }
+            rec.weekdayTimeOverrides = overrides.isEmpty ? nil : overrides
+            return rec
             
         case .monthly:
             if monthlySelectionType == .days {
@@ -574,23 +647,74 @@ class TaskFormViewModel: ObservableObject {
                     let d = calendar.component(.day, from: startDay)
                     days.insert(d)
                 }
-                return Recurrence(type: .monthly(days: days), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+
+                for day in days {
+                    if monthlyTimes[day] == nil {
+                        monthlyTimes[day] = startDate
+                    }
+                }
+
+                var rec = Recurrence(type: .monthly(days: days), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+                let overrides: [Recurrence.MonthDayTimeOverride] = days.compactMap { day in
+                    guard let time = monthlyTimes[day] else { return nil }
+                    return Recurrence.MonthDayTimeOverride(
+                        day: day,
+                        hour: calendar.component(.hour, from: time),
+                        minute: calendar.component(.minute, from: time)
+                    )
+                }
+                rec.monthDayTimeOverrides = overrides.isEmpty ? nil : overrides
+                return rec
             } else {
                 let patterns = selectedOrdinalPatterns
                 if patterns.isEmpty {
                     // Fallback: first occurrence of the weekday of startDay
                     let wd = calendar.component(.weekday, from: startDay)
                     let pattern = Recurrence.OrdinalPattern(ordinal: 1, weekday: wd)
-                    return Recurrence(type: .monthlyOrdinal(patterns: [pattern]), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+                    var rec = Recurrence(type: .monthlyOrdinal(patterns: [pattern]), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+                    let time = monthlyOrdinalTimes[pattern] ?? baseTimeAdjusted(Date())
+                    rec.monthOrdinalTimeOverrides = [
+                        Recurrence.MonthOrdinalTimeOverride(
+                            ordinal: pattern.ordinal,
+                            weekday: pattern.weekday,
+                            hour: calendar.component(.hour, from: time),
+                            minute: calendar.component(.minute, from: time)
+                        )
+                    ]
+                    return rec
                 } else {
-                    return Recurrence(type: .monthlyOrdinal(patterns: patterns), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+
+                    for pattern in patterns {
+                        if monthlyOrdinalTimes[pattern] == nil {
+                            monthlyOrdinalTimes[pattern] = startDate
+                        }
+                    }
+
+                    var rec = Recurrence(type: .monthlyOrdinal(patterns: patterns), startDate: startDay, endDate: endDate, trackInStatistics: trackInStatistics)
+                    let overrides: [Recurrence.MonthOrdinalTimeOverride] = patterns.compactMap { pattern in
+                        guard let time = monthlyOrdinalTimes[pattern] else { return nil }
+                        return Recurrence.MonthOrdinalTimeOverride(
+                            ordinal: pattern.ordinal,
+                            weekday: pattern.weekday,
+                            hour: calendar.component(.hour, from: time),
+                            minute: calendar.component(.minute, from: time)
+                        )
+                    }
+                    rec.monthOrdinalTimeOverrides = overrides.isEmpty ? nil : overrides
+                    return rec
                 }
             }
             
         case .yearly:
             // Anchor yearly recurrence to the chosen yearlyDate’s month/day
             let yearlyStart = calendar.startOfDay(for: yearlyDate)
-            return Recurrence(type: .yearly, startDate: yearlyStart, endDate: endDate, trackInStatistics: trackInStatistics)
+            var rec = Recurrence(type: .yearly, startDate: yearlyStart, endDate: endDate, trackInStatistics: trackInStatistics)
+            let time = yearlyTime
+            rec.yearlyTimeOverride = Recurrence.YearlyTimeOverride(
+                hour: calendar.component(.hour, from: time),
+                minute: calendar.component(.minute, from: time)
+            )
+            return rec
         }
     }
     
@@ -609,6 +733,20 @@ class TaskFormViewModel: ObservableObject {
                 endDate: endDate,
                 trackInStatistics: trackInStatistics
             )
+
+            let overrides: [Recurrence.WeekdayTimeOverride] = rec.weekdayTimeOverrides ?? []
+            if let time = weeklyTimes[weekday] {
+                rec.weekdayTimeOverrides = [
+                    Recurrence.WeekdayTimeOverride(
+                        weekday: weekday,
+                        hour: calendar.component(.hour, from: time),
+                        minute: calendar.component(.minute, from: time)
+                    )
+                ]
+            } else if !overrides.isEmpty {
+                rec.weekdayTimeOverrides = overrides
+            }
+
             switch weekRecurrenceMode {
             case .everyNWeeks:
                 rec.weekInterval = max(1, weekInterval)
@@ -713,6 +851,9 @@ class TaskFormViewModel: ObservableObject {
         selectedOrdinalPatterns = []
         yearlyDate = Date()
         weeklyTimes = [:]
+        monthlyTimes = [:]
+        monthlyOrdinalTimes = [:]
+        yearlyTime = Date()
         hasRecurrenceEndDate = false
         recurrenceEndDate = Date().addingTimeInterval(86400 * 30)
         dayInterval = 1

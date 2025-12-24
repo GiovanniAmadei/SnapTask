@@ -50,6 +50,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var description: String?
     var location: TaskLocation?
     var startTime: Date
+    var hasSpecificDay: Bool = false
     var hasSpecificTime: Bool = false
     var duration: TimeInterval
     var hasDuration: Bool
@@ -89,6 +90,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         description: String? = nil,
         location: TaskLocation? = nil,
         startTime: Date,
+        hasSpecificDay: Bool = false,
         hasSpecificTime: Bool = false,
         duration: TimeInterval = 0,
         hasDuration: Bool = false,
@@ -117,6 +119,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.description = description
         self.location = location
         self.startTime = startTime
+        self.hasSpecificDay = hasSpecificDay
         self.hasSpecificTime = hasSpecificTime
         self.duration = duration
         self.hasDuration = hasDuration
@@ -353,6 +356,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.description == rhs.description &&
         lhs.location == rhs.location &&
         lhs.startTime == rhs.startTime &&
+        lhs.hasSpecificDay == rhs.hasSpecificDay &&
         lhs.hasSpecificTime == rhs.hasSpecificTime &&
         lhs.duration == rhs.duration &&
         lhs.hasDuration == rhs.hasDuration &&
@@ -435,6 +439,79 @@ extension TodoTask {
         } else {
             return Calendar.current.isDate(startTime, inSameDayAs: date)
         }
+    }
+
+    func occurrenceDate(on day: Date) -> Date {
+        let calendar = Calendar.current
+        let base = calendar.dateComponents([.hour, .minute], from: startTime)
+        var comps = calendar.dateComponents([.year, .month, .day], from: day)
+
+        guard hasSpecificTime else {
+            comps.hour = 0
+            comps.minute = 0
+            comps.second = 0
+            return calendar.date(from: comps) ?? calendar.startOfDay(for: day)
+        }
+
+        var hour = base.hour
+        var minute = base.minute
+
+        if let recurrence {
+            switch recurrence.type {
+            case .weekly:
+                if let overrides = recurrence.weekdayTimeOverrides {
+                    let weekday = calendar.component(.weekday, from: day)
+                    if let ov = overrides.first(where: { $0.weekday == weekday }) {
+                        hour = ov.hour
+                        minute = ov.minute
+                    }
+                }
+            case .monthly:
+                if let overrides = recurrence.monthDayTimeOverrides {
+                    let d = calendar.component(.day, from: day)
+                    if let ov = overrides.first(where: { $0.day == d }) {
+                        hour = ov.hour
+                        minute = ov.minute
+                    }
+                }
+            case .monthlyOrdinal(let patterns):
+                if let overrides = recurrence.monthOrdinalTimeOverrides {
+                    let weekday = calendar.component(.weekday, from: day)
+                    let dayNum = calendar.component(.day, from: day)
+                    let ordinal: Int = {
+                        let range = calendar.range(of: .day, in: .month, for: day)!
+                        let lastDayOfMonth = range.upperBound - 1
+                        if patterns.contains(where: { $0.ordinal == -1 && $0.weekday == weekday }) {
+                            for dayOffset in 0..<7 {
+                                let checkDay = lastDayOfMonth - dayOffset
+                                if checkDay < 1 { break }
+                                if let checkDate = calendar.date(bySetting: .day, value: checkDay, of: day),
+                                   calendar.component(.weekday, from: checkDate) == weekday {
+                                    return dayNum == checkDay ? -1 : ((dayNum - 1) / 7 + 1)
+                                }
+                            }
+                        }
+                        return (dayNum - 1) / 7 + 1
+                    }()
+                    if let ov = overrides.first(where: { $0.weekday == weekday && $0.ordinal == ordinal }) {
+                        hour = ov.hour
+                        minute = ov.minute
+                    }
+                }
+            case .yearly:
+                if let ov = recurrence.yearlyTimeOverride {
+                    hour = ov.hour
+                    minute = ov.minute
+                }
+            case .daily:
+                break
+            }
+        }
+
+        comps.hour = hour
+        comps.minute = minute
+        comps.second = 0
+        return calendar.date(from: comps) ?? day
     }
     
     func occurs(inWeekStarting weekStart: Date) -> Bool {
@@ -579,7 +656,7 @@ extension TodoTask {
 // MARK: - Codable Support for TodoTask
 extension TodoTask {
     private enum CodingKeys: String, CodingKey {
-        case id, name, description, location, startTime, hasSpecificTime, duration, hasDuration
+        case id, name, description, location, startTime, hasSpecificDay, hasSpecificTime, duration, hasDuration
         case category, priority, icon, recurrence, pomodoroSettings, completions, subtasks
         case completionDates, creationDate, lastModifiedDate, hasRewardPoints, rewardPoints
         case totalTrackedTime, lastTrackedDate, hasNotification, notificationId
@@ -598,6 +675,7 @@ extension TodoTask {
         description = try c.decodeIfPresent(String.self, forKey: .description)
         location = try c.decodeIfPresent(TaskLocation.self, forKey: .location)
         startTime = try c.decodeIfPresent(Date.self, forKey: .startTime) ?? Date()
+        hasSpecificDay = try c.decodeIfPresent(Bool.self, forKey: .hasSpecificDay) ?? false
         hasSpecificTime = try c.decodeIfPresent(Bool.self, forKey: .hasSpecificTime) ?? true
         duration = try c.decodeIfPresent(TimeInterval.self, forKey: .duration) ?? 0
         hasDuration = try c.decodeIfPresent(Bool.self, forKey: .hasDuration) ?? false

@@ -64,6 +64,26 @@ final class JournalManager: ObservableObject {
         if !isEditing(day) { syncToCloudKit(entry) }
     }
 
+    func updateWorthItText(for date: Date, worthItText: String) {
+        let day = Calendar.current.startOfDay(for: date)
+        var entry = entry(for: day)
+        entry.worthItText = worthItText
+        entry.updatedAt = Date()
+        entriesByDay[day] = entry
+        save()
+        if !isEditing(day) { syncToCloudKit(entry) }
+    }
+
+    func setWorthItHidden(for date: Date, isHidden: Bool) {
+        let day = Calendar.current.startOfDay(for: date)
+        var entry = entry(for: day)
+        entry.isWorthItHidden = isHidden
+        entry.updatedAt = Date()
+        entriesByDay[day] = entry
+        save()
+        if !isEditing(day) { syncToCloudKit(entry) }
+    }
+
     func setMood(for date: Date, mood: MoodType?) {
         let day = Calendar.current.startOfDay(for: date)
         var entry = entry(for: day)
@@ -244,11 +264,21 @@ final class JournalManager: ObservableObject {
                 } else if !entry.text.isEmpty && !existingEntry.text.isEmpty && entry.text != existingEntry.text {
                     mergedEntry.text = entry.text
                 }
+
+                if !entry.worthItText.isEmpty && existingEntry.worthItText.isEmpty {
+                    mergedEntry.worthItText = entry.worthItText
+                } else if !entry.worthItText.isEmpty && !existingEntry.worthItText.isEmpty && entry.worthItText != existingEntry.worthItText {
+                    mergedEntry.worthItText = entry.worthItText
+                }
                 
                 if !entry.title.isEmpty && existingEntry.title.isEmpty {
                     mergedEntry.title = entry.title
                 } else if !entry.title.isEmpty && !existingEntry.title.isEmpty && entry.title != existingEntry.title {
                     mergedEntry.title = entry.title
+                }
+
+                if entry.isWorthItHidden != existingEntry.isWorthItHidden {
+                    mergedEntry.isWorthItHidden = entry.isWorthItHidden
                 }
                 
                 if entry.mood != nil && existingEntry.mood == nil {

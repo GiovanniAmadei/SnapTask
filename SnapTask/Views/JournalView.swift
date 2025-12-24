@@ -14,6 +14,8 @@ struct JournalView: View {
     @State private var currentDate: Date = Date()
     @State private var titleText: String = ""
     @State private var text: String = ""
+    @State private var worthItText: String = ""
+    @State private var isWorthItHidden: Bool = false
     @State private var selectedMood: MoodType?
     @State private var newTagText: String = ""
     @State private var tags: [String] = []
@@ -37,6 +39,7 @@ struct JournalView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     mainEditorCard
+                    worthItCard
                     attachmentsSection
                     tagsSection
                 }
@@ -78,6 +81,12 @@ struct JournalView: View {
             }
             .onChange(of: text) { _, newValue in
                 manager.updateText(for: currentDate, text: newValue)
+            }
+            .onChange(of: worthItText) { _, newValue in
+                manager.updateWorthItText(for: currentDate, worthItText: newValue)
+            }
+            .onChange(of: isWorthItHidden) { _, newValue in
+                manager.setWorthItHidden(for: currentDate, isHidden: newValue)
             }
             .onChange(of: selectedMood) { _, newValue in
                 manager.setMood(for: currentDate, mood: newValue)
@@ -279,6 +288,63 @@ struct JournalView: View {
             }
         }
         .background(Color.clear)
+    }
+
+    private var worthItCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Text("worth_it_title".localized)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(theme.textColor)
+                Spacer()
+                Toggle(
+                    "show_worth_it_section".localized,
+                    isOn: Binding(
+                        get: { !isWorthItHidden },
+                        set: { newValue in
+                            withAnimation(.easeInOut(duration: 0.22)) {
+                                isWorthItHidden = !newValue
+                            }
+                        }
+                    )
+                )
+                .labelsHidden()
+            }
+
+            if !isWorthItHidden {
+                Divider()
+                    .background(theme.borderColor)
+
+                ZStack(alignment: .topLeading) {
+                    textEditorClearBackground(text: $worthItText)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 6)
+                        .frame(minHeight: 120)
+                        .background(Color.clear)
+                        .themedPrimaryText()
+
+                    if worthItText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("worth_it_subtitle".localized)
+                            .foregroundColor(theme.secondaryTextColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .background(Color.clear)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(theme.borderColor, lineWidth: 1)
+                )
+        )
+        .animation(.easeInOut(duration: 0.22), value: isWorthItHidden)
     }
 
     // MARK: - Attachments Section
@@ -681,6 +747,8 @@ struct JournalView: View {
         let entry = manager.entry(for: currentDate)
         titleText = entry.title
         text = entry.text
+        worthItText = entry.worthItText
+        isWorthItHidden = entry.isWorthItHidden
         selectedMood = entry.mood
         tags = entry.tags
     }

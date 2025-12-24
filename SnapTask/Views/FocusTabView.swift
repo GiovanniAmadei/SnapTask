@@ -609,15 +609,22 @@ struct StatItem: View {
 struct SessionRow: View {
     let session: TrackingSession
     @Environment(\.theme) private var theme
+    @ObservedObject private var categoryManager = CategoryManager.shared
 
     var body: some View {
         HStack {
+            if let categoryColor {
+                Circle()
+                    .fill(categoryColor)
+                    .frame(width: 10, height: 10)
+            }
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.taskName ?? "general_focus".localized)
                     .font(.subheadline.weight(.medium))
                     .foregroundColor(theme.textColor)
 
-                Text(session.startTime.formatted(date: .omitted, time: .shortened))
+                Text(session.startTime.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption)
                     .foregroundColor(theme.secondaryTextColor)
             }
@@ -646,6 +653,22 @@ struct SessionRow: View {
         } else {
             return "\(minutes)m"
         }
+    }
+
+    private var categoryColor: Color? {
+        guard let categoryId = session.categoryId else { return nil }
+
+        if let category = categoryManager.categories.first(where: { $0.id == categoryId }) {
+            return Color(hex: category.color)
+        }
+
+        if let taskId = session.taskId,
+           let task = TaskManager.shared.tasks.first(where: { $0.id == taskId }),
+           let hex = task.category?.color {
+            return Color(hex: hex)
+        }
+
+        return nil
     }
 }
 

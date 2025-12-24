@@ -36,15 +36,23 @@ struct MediaHubCalendarView: View {
                 // Adaptive header based on scope
                 adaptiveHeader
                 
-                // Adaptive calendar/list view based on scope
-                adaptiveCalendarView
-                
-                Divider()
-                    .padding(.vertical, 8)
-                
-                // Adaptive detail view based on scope
-                adaptiveDetailView
+                GeometryReader { geometry in
+                    let calendarHeight = min(geometry.size.height * 0.46, 380)
+                    VStack(spacing: 0) {
+                        adaptiveCalendarView
+                            .frame(height: calendarHeight)
+                            .clipped()
+                        
+                        Divider()
+                            .padding(.vertical, 4)
+                        
+                        adaptiveDetailView
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    }
+                }
             }
+            .clipped()
+            
             .themedBackground()
             .navigationTitle("calendar".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -129,14 +137,12 @@ struct MediaHubCalendarView: View {
     }
     
     // MARK: - Adaptive Views
-    
+
     @ViewBuilder
     private var adaptiveHeader: some View {
         switch calendarViewScope {
-        case .today:
+        case .today, .week:
             monthHeader
-        case .week:
-            monthHeader // Same month navigation for week view
         case .month:
             yearHeader
         case .year:
@@ -167,7 +173,7 @@ struct MediaHubCalendarView: View {
             EmptyView()
         }
     }
-    
+
     @ViewBuilder
     private var adaptiveDetailView: some View {
         switch calendarViewScope {
@@ -195,8 +201,10 @@ struct MediaHubCalendarView: View {
             } else {
                 selectYearPrompt
             }
-        case .longTerm, .all:
+        case .longTerm:
             longTermDetailView
+        case .all:
+            EmptyView()
         }
     }
     
@@ -770,8 +778,6 @@ struct MediaHubCalendarView: View {
     
     @ViewBuilder
     private func quickInfoSection(task: TodoTask, completion: TaskCompletion?, date: Date) -> some View {
-        let isCompleted = completion?.isCompleted ?? false
-        
         // Compact grid layout
         let columns = [
             GridItem(.flexible(), spacing: 8),
@@ -881,9 +887,11 @@ struct MediaHubCalendarView: View {
             Text("select_day_to_view_media".localized)
                 .font(.subheadline)
                 .themedSecondaryText()
+            
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.top, 40)
     }
     
     private var selectWeekPrompt: some View {
@@ -895,9 +903,11 @@ struct MediaHubCalendarView: View {
             Text("select_week_to_view".localized)
                 .font(.subheadline)
                 .themedSecondaryText()
+            
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.top, 40)
     }
     
     private var selectMonthPrompt: some View {
@@ -927,72 +937,132 @@ struct MediaHubCalendarView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
     }
-    
+
     // MARK: - Week Calendar Grid
-    
+
     private var weekCalendarGrid: some View {
         let days = daysInMonth()
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
-        
-        return LazyVGrid(columns: columns, spacing: 4) {
-            ForEach(Array(days.enumerated()), id: \.offset) { index, day in
-                if let day = day {
-                    weekDayCell(for: day, index: index)
-                } else {
-                    Color.clear
-                        .frame(height: 50)
+        let weeks = stride(from: 0, to: days.count, by: 7).map { startIndex in
+            Array(days[startIndex..<min(startIndex + 7, days.count)])
+        }
+
+        return GeometryReader { geo in
+            let rowCount = max(1, weeks.count)
+            let rowSpacing: CGFloat = 4
+            let indicatorHeight: CGFloat = 10
+            let totalSpacing = CGFloat(max(0, rowCount - 1)) * rowSpacing
+            let totalIndicators = CGFloat(rowCount) * indicatorHeight
+            let available = max(0, geo.size.height - totalSpacing - totalIndicators)
+            let dayHeight = max(28, available / CGFloat(rowCount))
+
+            VStack(spacing: rowSpacing) {
+                ForEach(Array(weeks.enumerated()), id: \.offset) { weekIndex, weekDays in
+                    weekRow(weekDays: weekDays, weekIndex: weekIndex, dayHeight: dayHeight, indicatorHeight: indicatorHeight)
                 }
             }
+            .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 12)
     }
-    
-    private func weekDayCell(for date: Date, index: Int) -> some View {
+
+    private func weekRow(weekDays: [Date?], weekIndex: Int, dayHeight: CGFloat, indicatorHeight: CGFloat) -> some View {
+        let weekStart = weekDays.compactMap { $0 }.first.map { startOfWeek(for: $0) }
+        let stats = weekStart.map { weekStats(for: $0) }
+
+        return VStack(spacing: 2) {
+            HStack(spacing: 4) {
+                ForEach(Array(weekDays.enumerated()), id: \.offset) { dayIndex, day in
+                    if let date = day {
+                        weekDayCell(for: date, dayIndex: dayIndex, height: dayHeight)
+                    } else {
+                        Color.clear
+                            .frame(height: dayHeight)
+                    }
+                }
+            }
+
+            if let stats, stats.taskCount > 0 {
+                HStack(spacing: 6) {
+                    if stats.photoCount > 0 {
+                        Circle()
+                            .fill(Color.blue)
+                            .frame(width: 4, height: 4)
+                    }
+                    if stats.voiceMemoCount > 0 {
+                        Circle()
+                            .fill(Color.pink)
+                            .frame(width: 4, height: 4)
+                    }
+                    if stats.hasNotes {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 4, height: 4)
+                    }
+                    if stats.hasJournal {
+                        Circle()
+                            .fill(Color.purple)
+                            .frame(width: 4, height: 4)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: indicatorHeight)
+            } else {
+                Spacer().frame(height: indicatorHeight)
+            }
+        }
+    }
+
+    private func weekDayCell(for date: Date, dayIndex: Int, height: CGFloat) -> some View {
         let weekStart = startOfWeek(for: date)
         let isSelectedWeek = selectedWeekStart.map { calendar.isDate($0, inSameDayAs: weekStart) } ?? false
         let isToday = calendar.isDateInToday(date)
-        let isFirstDayOfWeek = index % 7 == 0
-        let stats = weekStats(for: weekStart)
-        
+
+        let currentWeekStart = startOfWeek(for: Date())
+        let isGhostWeek = selectedWeekStart == nil && calendar.isDate(weekStart, inSameDayAs: currentWeekStart)
+
+        let isFirstDay = dayIndex == 0
+        let isLastDay = dayIndex == 6
+
+        let fillColor: Color = {
+            if isSelectedWeek {
+                return theme.primaryColor
+            }
+            if isGhostWeek {
+                return theme.primaryColor.opacity(0.18)
+            }
+            if isToday {
+                return theme.primaryColor.opacity(0.1)
+            }
+            return Color.clear
+        }()
+
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedWeekStart = weekStart
             }
         } label: {
-            VStack(spacing: 2) {
+            VStack(spacing: max(1, height * 0.04)) {
                 Text("\(calendar.component(.day, from: date))")
-                    .font(.system(size: 14, weight: isSelectedWeek ? .bold : .medium))
+                    .font(.system(size: max(11, min(14, height * 0.28)), weight: isSelectedWeek ? .bold : .medium))
                     .foregroundColor(isSelectedWeek ? theme.backgroundColor : (isToday ? theme.primaryColor : theme.textColor))
-                
-                // Show week indicators only on first day of week
-                if isFirstDayOfWeek && stats.taskCount > 0 {
-                    HStack(spacing: 2) {
-                        if stats.photoCount > 0 {
-                            Circle()
-                                .fill(Color.blue)
-                                .frame(width: 4, height: 4)
-                        }
-                        if stats.voiceMemoCount > 0 {
-                            Circle()
-                                .fill(Color.pink)
-                                .frame(width: 4, height: 4)
-                        }
-                    }
-                    .frame(height: 6)
-                }
+
+                Spacer().frame(height: max(2, min(6, height * 0.16)))
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: height)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelectedWeek ? theme.primaryColor : (isToday ? theme.primaryColor.opacity(0.1) : Color.clear))
+                WeekSelectionShape(isFirstDay: isFirstDay, isLastDay: isLastDay)
+                    .fill(fillColor)
+            )
+            .overlay(
+                WeekSelectionShape(isFirstDay: isFirstDay, isLastDay: isLastDay)
+                    .strokeBorder(isToday && !isSelectedWeek ? theme.primaryColor.opacity(0.3) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
     }
-    
+
     // MARK: - Month List View
-    
+
     private var monthListView: some View {
         let months = (1...12).compactMap { month -> Date? in
             var components = DateComponents()
@@ -1001,49 +1071,60 @@ struct MediaHubCalendarView: View {
             components.day = 1
             return calendar.date(from: components)
         }
-        
+
         let columns = [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
+            GridItem(.flexible(), spacing: 10),
+            GridItem(.flexible(), spacing: 10),
+            GridItem(.flexible(), spacing: 10)
         ]
-        
-        return ScrollView {
-            LazyVGrid(columns: columns, spacing: 12) {
+        let rows = 4
+        let spacing: CGFloat = 10
+        let verticalPadding: CGFloat = 8
+
+        return GeometryReader { geo in
+            let available = max(0, geo.size.height - verticalPadding)
+            let cellHeight = max(44, (available - CGFloat(rows - 1) * spacing) / CGFloat(rows))
+
+            LazyVGrid(columns: columns, spacing: spacing) {
                 ForEach(months, id: \.self) { monthDate in
-                    monthCell(for: monthDate)
+                    monthCell(for: monthDate, height: cellHeight)
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, verticalPadding / 2)
         }
     }
-    
-    private func monthCell(for date: Date) -> some View {
+
+    private func monthCell(for date: Date, height: CGFloat) -> some View {
         let isSelected = selectedMonthStart.map { calendar.isDate($0, equalTo: date, toGranularity: .month) } ?? false
         let isCurrentMonth = calendar.isDate(date, equalTo: Date(), toGranularity: .month)
         let stats = monthStats(for: date)
-        
+
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: Bundle.main.preferredLocalizations.first ?? "en")
         formatter.dateFormat = "MMM"
         let monthName = formatter.string(from: date)
-        
+
+        let titleFontSize = max(12, min(16, height * 0.28))
+        let metaFontSize = max(9, min(11, height * 0.18))
+
+        let vSpacing = max(3, min(6, height * 0.10))
+
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedMonthStart = date
             }
         } label: {
-            VStack(spacing: 6) {
+            VStack(spacing: vSpacing) {
                 Text(monthName)
-                    .font(.system(size: 16, weight: isSelected ? .bold : .medium))
+                    .font(.system(size: titleFontSize, weight: isSelected ? .bold : .medium))
                     .foregroundColor(isSelected ? theme.backgroundColor : (isCurrentMonth ? theme.primaryColor : theme.textColor))
-                
+
                 if stats.taskCount > 0 {
                     Text("\(stats.taskCount)")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: metaFontSize, weight: .semibold))
                         .foregroundColor(isSelected ? theme.backgroundColor.opacity(0.8) : theme.secondaryTextColor)
-                    
+
                     HStack(spacing: 3) {
                         if stats.photoCount > 0 {
                             Circle()
@@ -1055,7 +1136,7 @@ struct MediaHubCalendarView: View {
                                 .fill(Color.pink)
                                 .frame(width: 5, height: 5)
                         }
-                        if stats.hasNotes {
+                        if stats.notesCount > 0 {
                             Circle()
                                 .fill(Color.orange)
                                 .frame(width: 5, height: 5)
@@ -1064,7 +1145,7 @@ struct MediaHubCalendarView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 70)
+            .frame(height: height)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(isSelected ? theme.primaryColor : (isCurrentMonth ? theme.primaryColor.opacity(0.1) : theme.surfaceColor))
@@ -1076,55 +1157,66 @@ struct MediaHubCalendarView: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     // MARK: - Year List View
-    
+
     private var yearListView: some View {
         let decadeStart = (displayedYear / 10) * 10
         let years = (decadeStart...(decadeStart + 9)).map { $0 }
-        
+
         let columns = [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
+            GridItem(.flexible(), spacing: 10),
+            GridItem(.flexible(), spacing: 10)
         ]
-        
-        return ScrollView {
-            LazyVGrid(columns: columns, spacing: 12) {
+        let rows = 5
+        let spacing: CGFloat = 10
+        let verticalPadding: CGFloat = 8
+
+        return GeometryReader { geo in
+            let available = max(0, geo.size.height - verticalPadding)
+            let cellHeight = max(44, (available - CGFloat(rows - 1) * spacing) / CGFloat(rows))
+
+            LazyVGrid(columns: columns, spacing: spacing) {
                 ForEach(years, id: \.self) { year in
-                    yearCell(for: year)
+                    yearCell(for: year, height: cellHeight)
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, verticalPadding / 2)
         }
     }
-    
-    private func yearCell(for year: Int) -> some View {
+
+    private func yearCell(for year: Int, height: CGFloat) -> some View {
         var components = DateComponents()
         components.year = year
         components.month = 1
         components.day = 1
         let yearDate = calendar.date(from: components) ?? Date()
-        
+
         let isSelected = selectedYearStart.map { calendar.component(.year, from: $0) == year } ?? false
         let isCurrentYear = calendar.component(.year, from: Date()) == year
         let stats = yearStats(for: yearDate)
-        
+
+        let titleFontSize = max(13, min(18, height * 0.30))
+        let metaFontSize = max(9, min(11, height * 0.18))
+
+        let vSpacing = max(3, min(6, height * 0.10))
+
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 selectedYearStart = yearDate
             }
         } label: {
-            VStack(spacing: 6) {
+            VStack(spacing: vSpacing) {
                 Text(String(year))
-                    .font(.system(size: 18, weight: isSelected ? .bold : .medium))
+                    .font(.system(size: titleFontSize, weight: isSelected ? .bold : .medium))
                     .foregroundColor(isSelected ? theme.backgroundColor : (isCurrentYear ? theme.primaryColor : theme.textColor))
-                
+
                 if stats.taskCount > 0 {
                     Text("\(stats.taskCount) " + "tasks".localized.lowercased())
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: metaFontSize, weight: .medium))
                         .foregroundColor(isSelected ? theme.backgroundColor.opacity(0.8) : theme.secondaryTextColor)
-                    
+
                     HStack(spacing: 3) {
                         if stats.photoCount > 0 {
                             HStack(spacing: 2) {
@@ -1148,7 +1240,7 @@ struct MediaHubCalendarView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 80)
+            .frame(height: height)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(isSelected ? theme.primaryColor : (isCurrentYear ? theme.primaryColor.opacity(0.1) : theme.surfaceColor))
@@ -1434,13 +1526,34 @@ struct MediaHubCalendarView: View {
     // MARK: - Scope Task Media Card
     
     private func scopeTaskMediaCard(task: TodoTask, scope: TaskTimeScope, rangeStart: Date?, rangeEnd: Date?) -> some View {
-        // Get all photos and memos for this task (for non-daily scopes, show all media)
-        let photos = task.photos
-        let memos = task.voiceMemos
+        let photos: [TaskPhoto]
+        let memos: [TaskVoiceMemo]
         
-        // Get completion info - for multi-day scopes, check if any completion exists
-        let isCompleted = !task.completions.isEmpty && task.completions.values.contains { $0.isCompleted }
-        let latestCompletion = task.completions.values.sorted(by: { ($0.completionDate ?? Date.distantPast) > ($1.completionDate ?? Date.distantPast) }).first
+        if let rangeStart, let rangeEnd {
+            let start = calendar.startOfDay(for: rangeStart)
+            let endExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: rangeEnd)) ?? rangeEnd
+            photos = task.photos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }
+            memos = task.voiceMemos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }
+        } else {
+            photos = task.photos
+            memos = task.voiceMemos
+        }
+        
+        // Completion info should respect the selected range when available
+        let isCompleted: Bool
+        let latestCompletion: TaskCompletion?
+        if let rangeStart, let rangeEnd {
+            let start = calendar.startOfDay(for: rangeStart)
+            let endExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: rangeEnd)) ?? rangeEnd
+            let completionsInRange = task.completions
+                .filter { $0.key >= start && $0.key < endExclusive }
+                .map { $0.value }
+            isCompleted = completionsInRange.contains { $0.isCompleted }
+            latestCompletion = completionsInRange.sorted(by: { ($0.completionDate ?? Date.distantPast) > ($1.completionDate ?? Date.distantPast) }).first
+        } else {
+            isCompleted = !task.completions.isEmpty && task.completions.values.contains { $0.isCompleted }
+            latestCompletion = task.completions.values.sorted(by: { ($0.completionDate ?? Date.distantPast) > ($1.completionDate ?? Date.distantPast) }).first
+        }
         
         return VStack(alignment: .leading, spacing: 12) {
             // Task header with category
@@ -1757,19 +1870,21 @@ struct MediaHubCalendarView: View {
     
     private func weekStats(for weekStart: Date) -> DayStats {
         let tasks = tasksForWeek(weekStart)
+        let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+        let start = calendar.startOfDay(for: weekStart)
+        let endExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: weekEnd)) ?? weekEnd
         var stats = DayStats()
         stats.taskCount = tasks.count
         
         for task in tasks {
-            stats.photoCount += task.photos.count
-            stats.voiceMemoCount += task.voiceMemos.count
+            stats.photoCount += task.photos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }.count
+            stats.voiceMemoCount += task.voiceMemos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }.count
             
-            // Count notes from any completion
-            for completion in task.completions.values {
-                if let notes = completion.notes, !notes.isEmpty {
-                    stats.notesCount += 1
-                    break
-                }
+            let completionsInRange = task.completions
+                .filter { $0.key >= start && $0.key < endExclusive }
+                .map { $0.value }
+            if completionsInRange.contains(where: { ($0.notes?.isEmpty == false) }) {
+                stats.notesCount += 1
             }
         }
         
@@ -1778,18 +1893,21 @@ struct MediaHubCalendarView: View {
     
     private func monthStats(for monthStart: Date) -> DayStats {
         let tasks = tasksForMonth(monthStart)
+        let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) ?? monthStart
+        let start = calendar.startOfDay(for: monthStart)
+        let endExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: monthEnd)) ?? monthEnd
         var stats = DayStats()
         stats.taskCount = tasks.count
         
         for task in tasks {
-            stats.photoCount += task.photos.count
-            stats.voiceMemoCount += task.voiceMemos.count
+            stats.photoCount += task.photos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }.count
+            stats.voiceMemoCount += task.voiceMemos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }.count
             
-            for completion in task.completions.values {
-                if let notes = completion.notes, !notes.isEmpty {
-                    stats.notesCount += 1
-                    break
-                }
+            let completionsInRange = task.completions
+                .filter { $0.key >= start && $0.key < endExclusive }
+                .map { $0.value }
+            if completionsInRange.contains(where: { ($0.notes?.isEmpty == false) }) {
+                stats.notesCount += 1
             }
         }
         
@@ -1798,18 +1916,22 @@ struct MediaHubCalendarView: View {
     
     private func yearStats(for yearStart: Date) -> DayStats {
         let tasks = tasksForYear(yearStart)
+        let year = calendar.component(.year, from: yearStart)
+        let yearEnd = yearEndDate(for: year)
+        let start = calendar.startOfDay(for: yearStart)
+        let endExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: yearEnd)) ?? yearEnd
         var stats = DayStats()
         stats.taskCount = tasks.count
         
         for task in tasks {
-            stats.photoCount += task.photos.count
-            stats.voiceMemoCount += task.voiceMemos.count
+            stats.photoCount += task.photos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }.count
+            stats.voiceMemoCount += task.voiceMemos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }.count
             
-            for completion in task.completions.values {
-                if let notes = completion.notes, !notes.isEmpty {
-                    stats.notesCount += 1
-                    break
-                }
+            let completionsInRange = task.completions
+                .filter { $0.key >= start && $0.key < endExclusive }
+                .map { $0.value }
+            if completionsInRange.contains(where: { ($0.notes?.isEmpty == false) }) {
+                stats.notesCount += 1
             }
         }
         
@@ -2070,6 +2192,41 @@ private struct VoiceMemoPlayerRow: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+}
+
+// MARK: - Week Selection Shape
+
+private struct WeekSelectionShape: InsettableShape {
+    let isFirstDay: Bool
+    let isLastDay: Bool
+    var insetAmount: CGFloat = 0
+    
+    func path(in rect: CGRect) -> Path {
+        let insetRect = rect.insetBy(dx: insetAmount, dy: insetAmount)
+        let cornerRadius: CGFloat = 8
+        
+        // Only round corners on first and last day of week
+        let topLeading: CGFloat = isFirstDay ? cornerRadius : 0
+        let bottomLeading: CGFloat = isFirstDay ? cornerRadius : 0
+        let topTrailing: CGFloat = isLastDay ? cornerRadius : 0
+        let bottomTrailing: CGFloat = isLastDay ? cornerRadius : 0
+        
+        return Path(
+            roundedRect: insetRect,
+            cornerRadii: RectangleCornerRadii(
+                topLeading: topLeading,
+                bottomLeading: bottomLeading,
+                bottomTrailing: bottomTrailing,
+                topTrailing: topTrailing
+            )
+        )
+    }
+    
+    func inset(by amount: CGFloat) -> some InsettableShape {
+        var shape = self
+        shape.insetAmount += amount
+        return shape
     }
 }
 

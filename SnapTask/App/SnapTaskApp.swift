@@ -77,6 +77,11 @@ struct SnapTaskApp: App {
                         
                         // Sync data to Watch
                         watchConnectivityHandler.sendFullSyncToWatch()
+
+                        Task {
+                            taskNotificationManager.checkAuthorizationStatus()
+                            await taskNotificationManager.rescheduleRecurringNotificationsRollingWindow(tasks: taskManager.tasks)
+                        }
                         
                         requestBackgroundAppRefresh()
                         UIApplication.shared.applicationIconBadgeNumber = 0
@@ -167,9 +172,13 @@ struct SnapTaskApp: App {
 
 // MARK: - UIApplicationDelegate
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    private static let pendingJournalDateKey = "pendingJournalDateFromNotification"
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Set up notification center delegate
         UNUserNotificationCenter.current().delegate = self
+
+        UserDefaults.standard.removeObject(forKey: Self.pendingJournalDateKey)
         
         BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.snaptask.timer-update", using: nil) { task in
             self.handleBackgroundTimerUpdate(task: task as! BGAppRefreshTask)
@@ -204,6 +213,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler([.banner, .sound])
         } else if notification.request.identifier == "dailyQuote" || notification.request.identifier.hasPrefix("dailyQuote_") {
             completionHandler([.banner, .sound])
+        } else if notification.request.identifier.hasPrefix("diary_") {
+            completionHandler([.banner, .sound])
         } else {
             completionHandler([.alert, .sound])
         }
@@ -236,6 +247,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                         name: .openTaskFromNotification,
                         object: taskId
                     )
+                }
+            }
+        } else if identifier.hasPrefix("diary_") {
+            // User tapped diary notification - open journal for that day
+            let components = identifier.components(separatedBy: "_")
+            if components.count >= 2 {
+                let dateString = components[1]
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                if let date = formatter.date(from: dateString) {
+                    if UIApplication.shared.applicationState != .active {
+                        UserDefaults.standard.set(dateString, forKey: Self.pendingJournalDateKey)
+                    }
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(
+                            name: .openJournalFromNotification,
+                            object: date
+                        )
+                    }
                 }
             }
         }

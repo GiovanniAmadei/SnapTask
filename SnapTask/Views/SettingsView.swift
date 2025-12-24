@@ -17,6 +17,8 @@ struct SettingsView: View {
     @AppStorage("appearanceMode") private var appearanceMode = "system"
     @AppStorage("dailyQuoteNotificationsEnabled") private var dailyQuoteNotificationsEnabled = false
     @AppStorage("dailyQuoteNotificationTime") private var dailyQuoteNotificationTime = "09:00"
+    @AppStorage("diaryNotificationsEnabled") private var diaryNotificationsEnabled = false
+    @AppStorage("diaryNotificationTime") private var diaryNotificationTime = "20:00"
     @State private var showingDonationSheet = false
     @State private var showingTimePicker = false
     @State private var selectedNotificationTime = Date()
@@ -30,6 +32,15 @@ struct SettingsView: View {
     @State private var showingThemeWarning = false
     @State private var showingTaskNotificationPermissionAlert = false
     @State private var showingEmailNotAvailableAlert = false
+
+    @State private var didInitialLoad = false
+
+    private enum NotificationTimeTarget {
+        case dailyQuote
+        case diary
+    }
+
+    @State private var timePickerTarget: NotificationTimeTarget = .dailyQuote
 
 
     var body: some View {
@@ -148,6 +159,8 @@ struct SettingsView: View {
                     
                     if dailyQuoteNotificationsEnabled {
                         Button {
+                            timePickerTarget = .dailyQuote
+                            selectedNotificationTime = dateFromTimeString(dailyQuoteNotificationTime)
                             showingTimePicker = true
                         } label: {
                             HStack {
@@ -187,6 +200,76 @@ struct SettingsView: View {
                                     
                                     Spacer()
                                     
+                                    Image(systemName: "arrow.up.right")
+                                        .font(.caption2)
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                            .listRowBackground(theme.surfaceColor)
+                        }
+                    }
+
+                    // Diary Notifications
+                    HStack {
+                        Image(systemName: "book.closed.fill")
+                            .foregroundColor(.orange)
+                            .frame(width: 24)
+
+                        Text("diary_reminder".localized)
+                            .themedPrimaryText()
+
+                        Spacer()
+
+                        Toggle("", isOn: $diaryNotificationsEnabled)
+                            .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                            .onChange(of: diaryNotificationsEnabled) { _, newValue in
+                                handleDiaryNotificationToggle(newValue)
+                            }
+                    }
+                    .listRowBackground(theme.surfaceColor)
+
+                    if diaryNotificationsEnabled {
+                        Button {
+                            timePickerTarget = .diary
+                            selectedNotificationTime = dateFromTimeString(diaryNotificationTime)
+                            showingTimePicker = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "clock")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 24)
+
+                                Text("notification_time".localized)
+                                    .themedPrimaryText()
+
+                                Spacer()
+
+                                Text(diaryNotificationTime)
+                                    .themedSecondaryText()
+
+                                Image(systemName: "chevron.right")
+                                    .themedSecondaryText()
+                                    .font(.caption)
+                                    .frame(width: 12, height: 12)
+                            }
+                        }
+                        .listRowBackground(theme.surfaceColor)
+
+                        if notificationPermissionStatus == .denied {
+                            Button {
+                                showingPermissionAlert = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                        .frame(width: 24)
+
+                                    Text("enable_in_settings".localized)
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+
+                                    Spacer()
+
                                     Image(systemName: "arrow.up.right")
                                         .font(.caption2)
                                         .foregroundColor(.orange)
@@ -555,9 +638,12 @@ struct SettingsView: View {
             .themedBackground()
             .scrollContentBackground(.hidden)
             .onAppear {
-                Task {
-                    await quoteManager.checkAndUpdateQuote()
-                    await subscriptionManager.loadProducts()
+                if !didInitialLoad {
+                    didInitialLoad = true
+                    Task {
+                        await quoteManager.checkAndUpdateQuote()
+                        await subscriptionManager.loadProducts()
+                    }
                 }
                 loadNotificationTime()
                 checkNotificationPermissionStatus()
@@ -572,7 +658,12 @@ struct SettingsView: View {
                     isPresented: $showingTimePicker
                 ) {
                     saveNotificationTime()
-                    scheduleDailyQuoteNotification()
+                    switch timePickerTarget {
+                    case .dailyQuote:
+                        scheduleDailyQuoteNotification()
+                    case .diary:
+                        scheduleDiaryNotification()
+                    }
                 }
             }
 
@@ -658,6 +749,17 @@ struct SettingsView: View {
             cancelDailyQuoteNotification()
         }
     }
+
+    private func handleDiaryNotificationToggle(_ newValue: Bool) {
+        print(" Toggle diary notification: \(newValue)")
+        if newValue {
+            Task {
+                await requestDiaryNotificationPermission()
+            }
+        } else {
+            cancelDiaryNotification()
+        }
+    }
     
     private func handleAppearanceModeChange(_ newValue: String) {
         // Se l'utente sta provando ad attivare light/dark mode con un tema che sovrascrive i colori
@@ -708,6 +810,28 @@ struct SettingsView: View {
             dailyQuoteNotificationsEnabled = false
         }
     }
+
+    @MainActor
+    private func requestDiaryNotificationPermission() async {
+        print(" Requesting diary notification permission...")
+
+        do {
+            let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+            print(" Diary notification permission result: \(granted)")
+
+            if granted {
+                scheduleDiaryNotification()
+            } else {
+                diaryNotificationsEnabled = false
+                showingPermissionAlert = true
+            }
+
+            checkNotificationPermissionStatus()
+        } catch {
+            print(" Diary notification permission error: \(error)")
+            diaryNotificationsEnabled = false
+        }
+    }
     
     private func checkNotificationPermissionStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -718,6 +842,10 @@ struct SettingsView: View {
                 // If permissions were denied, disable the toggle
                 if settings.authorizationStatus == .denied && self.dailyQuoteNotificationsEnabled {
                     self.dailyQuoteNotificationsEnabled = false
+                }
+
+                if settings.authorizationStatus == .denied && self.diaryNotificationsEnabled {
+                    self.diaryNotificationsEnabled = false
                 }
             }
         }
@@ -823,7 +951,7 @@ struct SettingsView: View {
 
                 let content = UNMutableNotificationContent()
                 content.title = "your_daily_motivation".localized
-                content.body = "\"\(dailyQuote.text)\" - \(dailyQuote.author)"
+                content.body = String(format: "daily_quote_notification_body".localized, dailyQuote.text, dailyQuote.author)
                 content.sound = .default
                 content.badge = nil
 
@@ -842,6 +970,68 @@ struct SettingsView: View {
             print(" Scheduled \(scheduledCount) daily quote notifications starting at \(self.dailyQuoteNotificationTime)")
         }
     }
+
+    private func scheduleDiaryNotification() {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let idsToRemove = requests
+                .filter { $0.identifier.hasPrefix("diary_") }
+                .map { $0.identifier }
+
+            if !idsToRemove.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
+                print(" Removed \(idsToRemove.count) existing diary notifications")
+            }
+
+            guard diaryNotificationsEnabled else { return }
+
+            let timeComponents = self.diaryNotificationTime.split(separator: ":")
+            guard timeComponents.count == 2,
+                  let hour = Int(timeComponents[0]),
+                  let minute = Int(timeComponents[1]) else { return }
+
+            let calendar = Calendar.current
+            let today = Date()
+            var scheduledCount = 0
+
+            for offset in 0..<30 {
+                guard let baseDate = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+
+                var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
+                components.hour = hour
+                components.minute = minute
+
+                guard let fireDate = calendar.date(from: components) else { continue }
+
+                if fireDate <= Date() { continue }
+
+                let idDateFormatter = DateFormatter()
+                idDateFormatter.dateFormat = "yyyy-MM-dd"
+                let idDateString = idDateFormatter.string(from: baseDate)
+                let identifier = "diary_\(idDateString)"
+
+                let content = UNMutableNotificationContent()
+                content.title = "diary_reminder_title".localized
+                content.body = "diary_reminder_body".localized
+                content.sound = .default
+                content.badge = nil
+
+                let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+                let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
+
+                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+                center.add(request) { error in
+                    if let error = error {
+                        print(" Error scheduling diary reminder (\(identifier)): \(error)")
+                    }
+                }
+
+                scheduledCount += 1
+            }
+
+            print(" Scheduled \(scheduledCount) diary reminders starting at \(self.diaryNotificationTime)")
+        }
+    }
     
     private func cancelDailyQuoteNotification() {
         let center = UNUserNotificationCenter.current()
@@ -858,17 +1048,45 @@ struct SettingsView: View {
             }
         }
     }
+
+    private func cancelDiaryNotification() {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let idsToRemove = requests
+                .filter { $0.identifier.hasPrefix("diary_") }
+                .map { $0.identifier }
+
+            if !idsToRemove.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
+                print(" Diary reminders cancelled: removed \(idsToRemove.count) items")
+            } else {
+                print(" Diary reminder cancelled")
+            }
+        }
+    }
     
     private func loadNotificationTime() {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         selectedNotificationTime = formatter.date(from: dailyQuoteNotificationTime) ?? Date()
     }
+
+    private func dateFromTimeString(_ time: String) -> Date {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.date(from: time) ?? Date()
+    }
     
     private func saveNotificationTime() {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        dailyQuoteNotificationTime = formatter.string(from: selectedNotificationTime)
+        let formatted = formatter.string(from: selectedNotificationTime)
+        switch timePickerTarget {
+        case .dailyQuote:
+            dailyQuoteNotificationTime = formatted
+        case .diary:
+            diaryNotificationTime = formatted
+        }
     }
     
     private func deleteAllData() async {

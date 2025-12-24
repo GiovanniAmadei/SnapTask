@@ -118,6 +118,20 @@
 "high_priority" = "High";
 "medium_priority" = "Medium";
 "low_priority" = "Low";
+
+"icon_category_general" = "General";
+"icon_category_time_planning" = "Time & Planning";
+"icon_category_study_work" = "Study & Work";
+"icon_category_energy_nature" = "Energy & Nature";
+"icon_category_sport_wellbeing" = "Sport & Wellbeing";
+"icon_category_food_drink" = "Food & Drink";
+"icon_category_home_security" = "Home & Security";
+"icon_category_travel_places" = "Travel & Places";
+"icon_category_shopping_money" = "Shopping & Money";
+"icon_category_creativity_media" = "Creativity & Media";
+"icon_category_communication" = "Communication";
+"icon_category_weather" = "Weather";
+"icon_category_animals" = "Animals";
 "no_tasks_today" = "No tasks for today";
 "no_tasks_this_day" = "No tasks for this day";
 "task_details" = "Task Details";
@@ -179,7 +193,8 @@
 "long_term_goals_no_recurrence" = "Long-term goals don't have recurrence";
 "recurrence_options" = "Recurrence Options";
 "optional_specific_time" = "Set specific time (optional)";
-"optional_specific_time" = "Set specific time (optional)";
+"specific_day" = "Specific day";
+"optional_specific_day" = "Set specific day (optional)";
 
 // Statistics and Consistency
 "time_spent" = "Time Spent";
@@ -415,6 +430,10 @@
 "journal" = "Journal";
 "journal_page_title" = "Page title...";
 "journal_placeholder" = "Write your thoughts, reflections, gratitude here...";
+"worth_it_title" = "Why it was worth it";
+"worth_it_subtitle" = "Try to live each day so it gives you something you can remember. Write what made today worth it.";
+"worth_it_placeholder" = "Write here...";
+"show_worth_it_section" = "Show section";
 "remove_mood" = "Remove mood";
 "photos" = "Photos";
 "voice_memos" = "Voice Memos";
@@ -620,6 +639,13 @@
 "be_the_first_to_share_ideas" = "Be the first to share your ideas!";
 "all_category_filter" = "All";
 
+"feedback_filter_recent" = "Most recent";
+"feedback_replies_title" = "Replies";
+"feedback_tap_to_read_more" = "Tap to read";
+"feedback_anonymous" = "Anonymous";
+"feedback_by_author_format" = "by %@";
+"feedback_you_indicator" = "(You)";
+
 // New Feedback View
 "share_your_feedback_title" = "Share Your Feedback";
 "feedback_category_title" = "Category";
@@ -717,6 +743,7 @@
 // Settings View
 "daily_notifications" = "Daily Notifications";
 "daily_quote_reminder" = "Daily Quote Reminder";
+"diary_reminder" = "Diary Reminder";
 "notification_time" = "Notification Time";
 "enable_in_settings" = "Enable in Settings";
 "app_behavior" = "App Behavior";
@@ -731,10 +758,11 @@
 "enable_notifications" = "Enable Notifications";
 "notification_permission_message" = "To receive daily quote reminders, enable notifications in Settings > SnapTask > Notifications.";
 "your_daily_motivation" = "Your Daily Motivation";
+"daily_quote_notification_body" = "\"%@\" - %@";
+"diary_reminder_title" = "Diary Reminder";
+"diary_reminder_body" = "Take a moment to fill in your diary.";
 "help_continue_improving" = "Help us continue improving SnapTask";
 "support_development" = "Support Development";
-"rate_app" = "Rate SnapTask";
-"rate_app_subtitle" = "Enjoying SnapTask? Leave us a review!";
 "data_management" = "Data Management";
 "delete_all_data" = "Delete All Data";
 "delete_all_data_description" = "Delete all tasks, categories, statistics, and rewards";
@@ -1251,6 +1279,8 @@
 "recurrence_type" = "Recurrence Type";
 "daily_enum" = "Daily";
 "weekly_enum" = "Weekly";
+
+"task_time" = "Times";
 "monthly_enum" = "Monthly";
 "yearly_enum" = "Yearly";
 "days_enum" = "Days";

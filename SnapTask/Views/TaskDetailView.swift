@@ -488,6 +488,18 @@ struct TaskDetailView: View {
                         .font(.subheadline)
                         .themedPrimaryText()
                 }
+
+                if task.hasSpecificDay {
+                    HStack {
+                        Text("date".localized)
+                            .font(.subheadline.weight(.medium))
+                            .themedSecondaryText()
+                        Spacer()
+                        Text(task.startTime.formatted(date: .abbreviated, time: .omitted))
+                            .font(.subheadline)
+                            .themedPrimaryText()
+                    }
+                }
                 
                 if task.hasSpecificTime {
                     HStack {

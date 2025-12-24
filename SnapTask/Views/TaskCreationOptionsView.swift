@@ -256,11 +256,36 @@ struct TaskCreationOptionsView: View {
     private func createQuickTask() {
         guard !taskName.isEmpty else { return }
         
-        let task = TodoTask(
+        var task = TodoTask(
             name: taskName,
             startTime: baseDateForScope,
             timeScope: viewModel.selectedTimeScope
         )
+        
+        // Set scope dates based on time scope (same logic as openFullFormWithName)
+        let cal = Calendar.current
+        switch viewModel.selectedTimeScope {
+        case .week:
+            let weekStart = cal.startOfWeek(for: baseDateForScope)
+            task.scopeStartDate = weekStart
+            task.scopeEndDate = cal.date(byAdding: .day, value: 6, to: weekStart)
+        case .month:
+            let monthStart = cal.startOfMonth(for: baseDateForScope)
+            task.scopeStartDate = monthStart
+            if let next = cal.date(byAdding: .month, value: 1, to: monthStart) {
+                task.scopeEndDate = cal.date(byAdding: .day, value: -1, to: next)
+            }
+        case .year:
+            let yearStart = cal.startOfYear(for: baseDateForScope)
+            task.scopeStartDate = yearStart
+            var endComps = DateComponents()
+            endComps.year = cal.component(.year, from: yearStart)
+            endComps.month = 12
+            endComps.day = 31
+            task.scopeEndDate = cal.date(from: endComps)
+        default:
+            break
+        }
         
         viewModel.addTask(task)
         dismiss()

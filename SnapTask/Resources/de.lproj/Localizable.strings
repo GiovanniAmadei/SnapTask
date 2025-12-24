@@ -58,6 +58,20 @@
 "enable_notification" = "Benachrichtigung aktivieren";
 "disable_notification" = "Benachrichtigung deaktivieren";
 "notification_scheduled" = "Benachrichtigung geplant";
+
+"icon_category_general" = "Allgemein";
+"icon_category_time_planning" = "Zeit und Planung";
+"icon_category_study_work" = "Studium und Arbeit";
+"icon_category_energy_nature" = "Energie und Natur";
+"icon_category_sport_wellbeing" = "Sport und Wohlbefinden";
+"icon_category_food_drink" = "Essen und Trinken";
+"icon_category_home_security" = "Zuhause und Sicherheit";
+"icon_category_travel_places" = "Reisen und Orte";
+"icon_category_shopping_money" = "Einkaufen und Geld";
+"icon_category_creativity_media" = "Kreativität und Medien";
+"icon_category_communication" = "Kommunikation";
+"icon_category_weather" = "Wetter";
+"icon_category_animals" = "Tiere";
 "notification_cancelled" = "Benachrichtigung abgebrochen";
 "notifications_not_available" = "Benachrichtigungen nicht verfügbar";
 "notifications_denied" = "Benachrichtigungen verweigert";
@@ -173,6 +187,9 @@
 "long_term_goals_no_recurrence" = "Langfristige Ziele haben keine Wiederholung";
 "recurrence_options" = "Wiederholungsoptionen";
 "optional_specific_time" = "Spezifische Zeit festlegen (optional)";
+
+"specific_day" = "Bestimmter Tag";
+"optional_specific_day" = "Bestimmten Tag festlegen (optional)";
 
 // Statistics and Consistency
 "time_spent" = "Aufgewendete Zeit";
@@ -407,6 +424,10 @@
 "journal" = "Tagebuch";
 "journal_page_title" = "Seitentitel...";
 "journal_placeholder" = "Schreiben Sie hier Ihre Gedanken, Überlegungen, Dankbarkeit...";
+"worth_it_title" = "Warum es sich gelohnt hat";
+"worth_it_subtitle" = "Versuche, jeden Tag so zu leben, dass er dir etwas gibt, woran du dich erinnern kannst. Schreibe auf, warum sich der heutige Tag gelohnt hat.";
+"worth_it_placeholder" = "Schreibe hier...";
+"show_worth_it_section" = "Abschnitt anzeigen";
 "remove_mood" = "Stimmung entfernen";
 "photos" = "Fotos";
 "voice_memos" = "Sprachmemos";
@@ -606,6 +627,13 @@
 "be_the_first_to_share_ideas" = "Seien Sie der Erste, der Ideen teilt!";
 "all_category_filter" = "Alle";
 
+"feedback_filter_recent" = "Neueste";
+"feedback_replies_title" = "Antworten";
+"feedback_tap_to_read_more" = "Tippen zum Lesen";
+"feedback_anonymous" = "Anonym";
+"feedback_by_author_format" = "von %@";
+"feedback_you_indicator" = "(Du)";
+
 // New Feedback View
 "share_your_feedback_title" = "Feedback teilen";
 "feedback_category_title" = "Kategorie";
@@ -702,6 +730,7 @@
 // Settings View
 "daily_notifications" = "Tägliche Benachrichtigungen";
 "daily_quote_reminder" = "Tägliche Zitat‑Erinnerung";
+"diary_reminder" = "Tagebuch‑Erinnerung";
 "notification_time" = "Benachrichtigungszeit";
 "enable_in_settings" = "In Einstellungen aktivieren";
 "app_behavior" = "App‑Verhalten";
@@ -718,6 +747,9 @@
 "enable_notifications" = "Benachrichtigungen aktivieren";
 "notification_permission_message" = "Um tägliche Zitat‑Erinnerungen zu erhalten, aktivieren Sie Benachrichtigungen in Einstellungen > SnapTask > Benachrichtigungen.";
 "your_daily_motivation" = "Ihre tägliche Motivation";
+"daily_quote_notification_body" = "\"%@\" - %@";
+"diary_reminder_title" = "Tagebuch‑Erinnerung";
+"diary_reminder_body" = "Nehmen Sie sich einen Moment Zeit, um Ihr Tagebuch auszufüllen.";
 "help_continue_improving" = "Helfen Sie uns, SnapTask weiter zu verbessern";
 "support_development" = "Entwicklung unterstützen";
 "data_management" = "Datenverwaltung";
@@ -1284,6 +1316,8 @@
 "multi_language_desc" = "Vollständige Unterstützung für Italienisch, Englisch, Spanisch, Französisch, Deutsch, Portugiesisch und Japanisch";
 "major_bug_fixes_desc" = "Hunderte Verbesserungen, Optimierungen und Fehlerbehebungen für ein reibungsloses Erlebnis";
 "lets_get_started" = "Los geht's! 🚀";
+
+"task_time" = "Uhrzeiten";
 
 // Update Banner v1.0 - Funktions-Titel
 "smart_goal_system" = "Smartes Zielsystem";

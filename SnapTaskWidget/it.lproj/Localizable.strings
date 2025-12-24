@@ -11,9 +11,22 @@
 "Year" = "Anno";
 "Long Term" = "Lungo termine";
 "Set Widget Scope" = "Imposta ambito widget";
+"Time Range" = "Intervallo";
+"All Time" = "Sempre";
 
 "Toggle Task Completion" = "Completa/Annulla task";
 "Task ID" = "ID Task";
+"Complete or undo a task for today" = "Completa o annulla una task per oggi";
+
+"Start Timer" = "Avvia timer";
+"On" = "On";
+"Off" = "Off";
+"Timer" = "Timer";
+"An example control that runs a timer." = "Un controllo di esempio che avvia un timer.";
+"Timer Name" = "Nome timer";
+"Timer Name Configuration" = "Configurazione nome timer";
+"Start a timer" = "Avvia un timer";
+"Timer is running" = "Timer in esecuzione";
 
 /* Widget UI */
 "All done!" = "Tutto fatto!";
@@ -49,3 +62,18 @@
 "%lld total" = "%lld totali";
 "Mood Trend" = "Andamento Umore";
 "No mood data" = "Nessun dato umore";
+
+"Task completion statistics" = "Statistiche di completamento";
+"No tasks completed" = "Nessuna task completata";
+
+"Performance Widget" = "Widget Performance";
+"Choose which performance time range to display" = "Scegli l'intervallo temporale da mostrare";
+"Choose which performance metric to display" = "Scegli quale metrica mostrare";
+"Content" = "Contenuto";
+
+"Hello" = "Ciao";
+"Leading" = "Sinistra";
+"Trailing" = "Destra";
+"Bottom" = "Sotto";
+"L" = "S";
+"T" = "D";
