@@ -403,14 +403,12 @@
 				6798D18CA3BD4052B2F8CD90 /* Sources */,
 				20933D2559A0439FAC4E551F /* Frameworks */,
 				02B5105D61A843DC8E5D1709 /* Resources */,
-				081CB257FAB74E359B38083E /* Embed Watch Content */,
 				153710D2849F4F38ADE66640 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				AC8F53492ED859DE009561B2 /* PBXTargetDependency */,
-				WATCHDEP123456789ABCDEF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				836D3975FC0642468BE2CA9B /* SnapTask */,

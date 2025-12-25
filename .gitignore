@@ -72,3 +72,5 @@ Carthage/Build/
 # Accidental temp files
 *.swp
 *~ 
+
+tmp/firebase/

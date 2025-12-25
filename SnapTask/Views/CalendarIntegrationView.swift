@@ -240,11 +240,12 @@ struct CalendarIntegrationView: View {
         Group {
             switch integrationManager.settings.provider {
             case .apple:
+                let isConnected = appleService.authorizationStatus == .authorized || appleService.authorizationStatus == .fullAccess || appleService.authorizationStatus == .writeOnly
                 HStack {
                     Circle()
-                        .fill(appleService.authorizationStatus == .authorized ? themeManager.currentTheme.accentColor : .red)
+                        .fill(isConnected ? themeManager.currentTheme.accentColor : .red)
                         .frame(width: 8, height: 8)
-                    Text(appleService.authorizationStatus == .authorized ? "connected".localized : "not_connected".localized)
+                    Text(isConnected ? "connected".localized : "not_connected".localized)
                         .themedSecondaryText()
                 }
             case .google:

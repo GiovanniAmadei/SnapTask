@@ -38,7 +38,7 @@ class AppleCalendarService: ObservableObject {
     
     func requestAccess() async -> Bool {
         let currentStatus = EKEventStore.authorizationStatus(for: .event)
-        print("📅 Current status before request: \(currentStatus.rawValue) (\(authorizationStatusString))")
+        print("📅 Current status before request: \(currentStatus.rawValue)")
         
         // If already authorized, just return true
         if currentStatus == .authorized || currentStatus == .fullAccess || currentStatus == .writeOnly {
@@ -49,20 +49,39 @@ class AppleCalendarService: ObservableObject {
             return true
         }
         
-        return await withCheckedContinuation { continuation in
-            eventStore.requestAccess(to: .event) { granted, error in
-                Task { @MainActor in
-                    let newStatus = EKEventStore.authorizationStatus(for: .event)
-                    print("📅 New status after request: \(newStatus.rawValue), granted: \(granted)")
-                    
-                    self.authorizationStatus = newStatus
-                    if granted && error == nil {
-                        print("✅ Calendar FULL access granted - can create, read, and DELETE events")
-                        self.loadCalendars()
-                        continuation.resume(returning: true)
-                    } else {
-                        print("❌ Calendar access denied: \(error?.localizedDescription ?? "Unknown error")")
-                        continuation.resume(returning: false)
+        if #available(iOS 17.0, *) {
+            return await withCheckedContinuation { continuation in
+                eventStore.requestFullAccessToEvents { granted, error in
+                    Task { @MainActor in
+                        let newStatus = EKEventStore.authorizationStatus(for: .event)
+                        print("📅 New status after request: \(newStatus.rawValue), granted: \(granted)")
+                        
+                        self.authorizationStatus = newStatus
+                        if (granted && error == nil) || newStatus == .writeOnly {
+                            self.loadCalendars()
+                            continuation.resume(returning: true)
+                        } else {
+                            print("❌ Calendar access denied: \(error?.localizedDescription ?? "Unknown error")")
+                            continuation.resume(returning: false)
+                        }
+                    }
+                }
+            }
+        } else {
+            return await withCheckedContinuation { continuation in
+                eventStore.requestAccess(to: .event) { granted, error in
+                    Task { @MainActor in
+                        let newStatus = EKEventStore.authorizationStatus(for: .event)
+                        print("📅 New status after request: \(newStatus.rawValue), granted: \(granted)")
+                        
+                        self.authorizationStatus = newStatus
+                        if granted && error == nil {
+                            self.loadCalendars()
+                            continuation.resume(returning: true)
+                        } else {
+                            print("❌ Calendar access denied: \(error?.localizedDescription ?? "Unknown error")")
+                            continuation.resume(returning: false)
+                        }
                     }
                 }
             }
@@ -124,7 +143,7 @@ class AppleCalendarService: ObservableObject {
     }
     
     func updateEvent(eventId: String, with task: TodoTask) async throws {
-        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess || authorizationStatus == .writeOnly else {
+        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess else {
             throw CalendarError.notAuthorized
         }
         
@@ -157,7 +176,7 @@ class AppleCalendarService: ObservableObject {
     }
     
     func deleteEvent(eventId: String) async throws {
-        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess || authorizationStatus == .writeOnly else {
+        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess else {
             throw CalendarError.notAuthorized
         }
         

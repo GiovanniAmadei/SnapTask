@@ -614,9 +614,14 @@ struct SessionRow: View {
     var body: some View {
         HStack {
             if let categoryColor {
-                Circle()
+                RoundedRectangle(cornerRadius: 2)
                     .fill(categoryColor)
-                    .frame(width: 10, height: 10)
+                    .frame(width: 3, height: 24)
+                    .padding(.trailing, 8)
+            } else {
+                Color.clear
+                    .frame(width: 3, height: 24)
+                    .padding(.trailing, 8)
             }
 
             VStack(alignment: .leading, spacing: 2) {
