@@ -64,6 +64,11 @@
 "notification_permission_denied_message" = "As notificações foram negadas. Ative-as em Ajustes do iOS > Privacidade e Segurança > Notificações > SnapTask.";
 "ios_permission_required" = "Permissão do iOS necessária";
 
+"notification_lead_exact" = "Na hora exata";
+"notification_lead_h_m_before" = "%dh %dm antes";
+"notification_lead_h_before" = "%dh antes";
+"notification_lead_m_before" = "%d min antes";
+
 "icon_category_general" = "Geral";
 "icon_category_time_planning" = "Tempo e planejamento";
 "icon_category_study_work" = "Estudo e trabalho";

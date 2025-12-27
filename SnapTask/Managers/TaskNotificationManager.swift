@@ -10,6 +10,10 @@ class TaskNotificationManager: NSObject, ObservableObject {
     
     private let center = UNUserNotificationCenter.current()
 
+    private let maxPendingNotificationsBudget: Int = 60
+    private let recurringWindowDays: Int = 30
+    private let maxRecurringNotificationsPerTask: Int = 30
+
     private static var lastRollingRescheduleTime: Date = .distantPast
     
     override init() {
@@ -131,6 +135,13 @@ class TaskNotificationManager: NSObject, ObservableObject {
         let calendar = Calendar.current
         let today = Date()
 
+        let pendingNow = await center.pendingNotificationRequests()
+        let remainingBudget = max(0, maxPendingNotificationsBudget - pendingNow.count)
+        let perTaskBudget = min(maxRecurringNotificationsPerTask, remainingBudget)
+        if perTaskBudget <= 0 {
+            return []
+        }
+
         let overridesByWeekday: [Int: Recurrence.WeekdayTimeOverride] = {
             guard let overrides = recurrence.weekdayTimeOverrides else { return [:] }
             return Dictionary(uniqueKeysWithValues: overrides.map { ($0.weekday, $0) })
@@ -146,10 +157,14 @@ class TaskNotificationManager: NSObject, ObservableObject {
             return Dictionary(uniqueKeysWithValues: overrides.map { ("\($0.ordinal)_\($0.weekday)", $0) })
         }()
         
-        let endDate = recurrence.endDate ?? calendar.date(byAdding: .day, value: 90, to: today) ?? today
+        let defaultEnd = calendar.date(byAdding: .day, value: recurringWindowDays, to: today) ?? today
+        let endDate = recurrence.endDate.map { min($0, defaultEnd) } ?? defaultEnd
         var currentDate = today
         
         while currentDate <= endDate {
+            if identifiers.count >= perTaskBudget {
+                break
+            }
             if recurrence.shouldOccurOn(date: currentDate) {
                 let timeComponents: DateComponents = {
                     switch recurrence.type {
@@ -219,6 +234,9 @@ class TaskNotificationManager: NSObject, ObservableObject {
                     let notificationDate = occurrenceDate.addingTimeInterval(-lead)
                     
                     if notificationDate > Date() {
+                        if identifiers.count >= perTaskBudget {
+                            break
+                        }
                         let identifier = "task_\(task.id.uuidString)_\(notificationDate.timeIntervalSince1970)"
                         
                         let content = UNMutableNotificationContent()

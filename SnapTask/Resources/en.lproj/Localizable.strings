@@ -64,6 +64,11 @@
 "notification_permission_denied_message" = "Notifications have been denied. Enable them in iOS Settings > Privacy & Security > Calendars > SnapTask.";
 "ios_permission_required" = "iOS permission required";
 
+"notification_lead_exact" = "At exact time";
+"notification_lead_h_m_before" = "%dh %dm before";
+"notification_lead_h_before" = "%dh before";
+"notification_lead_m_before" = "%d min before";
+
 // Accessibility Support
 "completed" = "completed";
 "not_completed" = "not completed";

@@ -552,12 +552,12 @@ struct TaskDetailView: View {
     }
     
     private func leadTimeLabel(_ minutes: Int) -> String {
-        if minutes <= 0 { return "All'ora esatta" }
+        if minutes <= 0 { return "notification_lead_exact".localized }
         let h = minutes / 60
         let m = minutes % 60
-        if h > 0 && m > 0 { return "\(h)h \(m)m prima" }
-        if h > 0 { return "\(h)h prima" }
-        return "\(m) min prima"
+        if h > 0 && m > 0 { return String(format: "notification_lead_h_m_before".localized, h, m) }
+        if h > 0 { return String(format: "notification_lead_h_before".localized, h) }
+        return String(format: "notification_lead_m_before".localized, m)
     }
     
     private func durationSectionTask(_ task: TodoTask) -> some View {

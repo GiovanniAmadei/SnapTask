@@ -59,6 +59,11 @@
 "disable_notification" = "Benachrichtigung deaktivieren";
 "notification_scheduled" = "Benachrichtigung geplant";
 
+"notification_lead_exact" = "Zur genauen Uhrzeit";
+"notification_lead_h_m_before" = "%dh %dm vorher";
+"notification_lead_h_before" = "%dh vorher";
+"notification_lead_m_before" = "%d Min vorher";
+
 "icon_category_general" = "Allgemein";
 "icon_category_time_planning" = "Zeit und Planung";
 "icon_category_study_work" = "Studium und Arbeit";

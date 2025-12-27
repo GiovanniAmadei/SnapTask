@@ -37,7 +37,6 @@
 		FABA10E5BBDAA44A54071E3E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5182B0FD251DC3FA3D34E8D /* ContentView.swift */; };
 		FC72B493C5286B3D9EEF947E /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E71CF387CCA9E67533C88AAA /* WatchConnectivityManager.swift */; };
 		STRLOCWATCHBUILD12345AB /* String+Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = STRLOCWATCH123456789ABC /* String+Localization.swift */; };
-		WATCHEMBED123456789ABCD /* SnapTaskWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DF3E8C8915BC225849BFE4B9 /* SnapTaskWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,27 +68,9 @@
 			remoteGlobalIDString = 077E0902895D492899F3A510;
 			remoteInfo = SnapTask;
 		};
-		WATCHPROXY123456789ABCD /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = FD3DCF475E4A4C8CABD44701 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = EAC44CD682917A8C442E5B7A;
-			remoteInfo = SnapTaskWatch;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		081CB257FAB74E359B38083E /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				WATCHEMBED123456789ABCD /* SnapTaskWatch.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		153710D2849F4F38ADE66640 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -750,11 +731,6 @@
 			target = 077E0902895D492899F3A510 /* SnapTask */;
 			targetProxy = CF3FBA583CBA4F8FB83F26AC /* PBXContainerItemProxy */;
 		};
-		WATCHDEP123456789ABCDEF /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = EAC44CD682917A8C442E5B7A /* SnapTaskWatch */;
-			targetProxy = WATCHPROXY123456789ABCD /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1111,7 +1087,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1140,7 +1116,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

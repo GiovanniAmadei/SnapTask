@@ -64,6 +64,11 @@
 "notification_permission_denied_message" = "Le notifiche sono state negate. Abilita in Impostazioni iOS > Privacy e Sicurezza > Calendari > SnapTask.";
 "ios_permission_required" = "Autorizzazione iOS richiesta";
 
+"notification_lead_exact" = "All'ora esatta";
+"notification_lead_h_m_before" = "%dh %dm prima";
+"notification_lead_h_before" = "%dh prima";
+"notification_lead_m_before" = "%d min prima";
+
 // Accessibility Support
 "completed" = "completata";
 "not_completed" = "non completata";
