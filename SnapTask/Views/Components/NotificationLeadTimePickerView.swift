@@ -6,6 +6,7 @@ struct NotificationLeadTimePickerView: View {
     
     @State private var hours: Int = 0
     @State private var minutes: Int = 0
+    @State private var isAfter: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -13,6 +14,13 @@ struct NotificationLeadTimePickerView: View {
                 Text("custom_notification_title".localized)
                     .font(.title2.bold())
                     .padding(.top)
+
+                Picker("custom_time_offset".localized, selection: $isAfter) {
+                    Text("custom_notify_before".localized).tag(false)
+                    Text("custom_notify_after".localized).tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
                 
                 HStack(spacing: 20) {
                     VStack {
@@ -77,7 +85,12 @@ struct NotificationLeadTimePickerView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(String.save) {
-                        leadMinutes = hours * 60 + minutes
+                        let total = hours * 60 + minutes
+                        if total == 0 {
+                            leadMinutes = 0
+                        } else {
+                            leadMinutes = isAfter ? -total : total
+                        }
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -85,8 +98,10 @@ struct NotificationLeadTimePickerView: View {
             }
         }
         .onAppear {
-            hours = max(0, leadMinutes) / 60
-            minutes = max(0, leadMinutes) % 60
+            isAfter = leadMinutes < 0
+            let absMinutes = abs(leadMinutes)
+            hours = absMinutes / 60
+            minutes = absMinutes % 60
         }
     }
 }

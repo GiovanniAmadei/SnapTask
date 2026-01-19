@@ -1233,23 +1233,35 @@ struct TaskFormView: View {
     }
     
     private func leadTimeDescription(_ minutes: Int) -> String {
-        if minutes <= 0 { return "at_exact_time".localized }
-        let h = minutes / 60
-        let m = minutes % 60
-        if h > 0 && m > 0 { return "lead_time_hours_minutes_before_format".localized(h, m) }
-        if h > 0 { return "lead_time_hours_before_format".localized(h) }
-        return "lead_time_minutes_before_format".localized(m)
+        if minutes == 0 { return "at_exact_time".localized }
+        let isAfter = minutes < 0
+        let absMinutes = abs(minutes)
+        let h = absMinutes / 60
+        let m = absMinutes % 60
+        if isAfter {
+            if h > 0 && m > 0 { return "lead_time_hours_minutes_after_format".localized(h, m) }
+            if h > 0 { return "lead_time_hours_after_format".localized(h) }
+            return "lead_time_minutes_after_format".localized(m)
+        } else {
+            if h > 0 && m > 0 { return "lead_time_hours_minutes_before_format".localized(h, m) }
+            if h > 0 { return "lead_time_hours_before_format".localized(h) }
+            return "lead_time_minutes_before_format".localized(m)
+        }
     }
     
     private func leadTimeShort(_ minutes: Int) -> String {
-        if minutes <= 0 { return "lead_time_short_exact".localized }
-        if minutes % 60 == 0 { return "lead_time_hours_before_format".localized(minutes/60) }
-        if minutes >= 60 {
-            let h = minutes / 60
-            let m = minutes % 60
-            return "lead_time_hours_minutes_before_format".localized(h, m)
+        if minutes == 0 { return "lead_time_short_exact".localized }
+        let isAfter = minutes < 0
+        let absMinutes = abs(minutes)
+        if absMinutes % 60 == 0 {
+            return isAfter ? "lead_time_hours_after_format".localized(absMinutes/60) : "lead_time_hours_before_format".localized(absMinutes/60)
         }
-        return "lead_time_minutes_before_format".localized(minutes)
+        if absMinutes >= 60 {
+            let h = absMinutes / 60
+            let m = absMinutes % 60
+            return isAfter ? "lead_time_hours_minutes_after_format".localized(h, m) : "lead_time_hours_minutes_before_format".localized(h, m)
+        }
+        return isAfter ? "lead_time_minutes_after_format".localized(absMinutes) : "lead_time_minutes_before_format".localized(absMinutes)
     }
 }
 

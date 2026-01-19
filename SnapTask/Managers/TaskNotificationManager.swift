@@ -45,6 +45,14 @@ class TaskNotificationManager: NSObject, ObservableObject {
             }
         }
     }
+
+    func refreshAuthorizationStatus() async -> UNAuthorizationStatus {
+        let settings = await center.notificationSettings()
+        await MainActor.run {
+            self.authorizationStatus = settings.authorizationStatus
+        }
+        return settings.authorizationStatus
+    }
     
     // MARK: - Master Mute Management
     
@@ -77,17 +85,137 @@ class TaskNotificationManager: NSObject, ObservableObject {
     }
     
     // MARK: - Notification Management
+
+    static func computeRecurringNotificationDates(
+        for task: TodoTask,
+        now: Date,
+        windowDays: Int = 30,
+        maxCount: Int = 30,
+        calendar: Calendar = .current
+    ) -> [Date] {
+        guard task.hasSpecificTime,
+              task.hasNotification,
+              let recurrence = task.recurrence else {
+            return []
+        }
+
+        var dates: [Date] = []
+        let defaultEnd = calendar.date(byAdding: .day, value: windowDays, to: now) ?? now
+        let endDate = recurrence.endDate.map { min($0, defaultEnd) } ?? defaultEnd
+        var currentDate = now
+
+        let overridesByWeekday: [Int: Recurrence.WeekdayTimeOverride] = {
+            guard let overrides = recurrence.weekdayTimeOverrides else { return [:] }
+            return Dictionary(uniqueKeysWithValues: overrides.map { ($0.weekday, $0) })
+        }()
+
+        let overridesByMonthDay: [Int: Recurrence.MonthDayTimeOverride] = {
+            guard let overrides = recurrence.monthDayTimeOverrides else { return [:] }
+            return Dictionary(uniqueKeysWithValues: overrides.map { ($0.day, $0) })
+        }()
+
+        let overridesByMonthOrdinalKey: [String: Recurrence.MonthOrdinalTimeOverride] = {
+            guard let overrides = recurrence.monthOrdinalTimeOverrides else { return [:] }
+            return Dictionary(uniqueKeysWithValues: overrides.map { ("\($0.ordinal)_\($0.weekday)", $0) })
+        }()
+
+        while currentDate <= endDate {
+            if dates.count >= maxCount { break }
+
+            if recurrence.shouldOccurOn(date: currentDate) {
+                let timeComponents: DateComponents = {
+                    switch recurrence.type {
+                    case .weekly:
+                        let weekday = calendar.component(.weekday, from: currentDate)
+                        if let override = overridesByWeekday[weekday] {
+                            var comps = DateComponents()
+                            comps.hour = override.hour
+                            comps.minute = override.minute
+                            return comps
+                        }
+                    case .monthly:
+                        let day = calendar.component(.day, from: currentDate)
+                        if let override = overridesByMonthDay[day] {
+                            var comps = DateComponents()
+                            comps.hour = override.hour
+                            comps.minute = override.minute
+                            return comps
+                        }
+                    case .monthlyOrdinal(let patterns):
+                        let weekday = calendar.component(.weekday, from: currentDate)
+                        let day = calendar.component(.day, from: currentDate)
+                        let ordinal: Int = {
+                            let range = calendar.range(of: .day, in: .month, for: currentDate)!
+                            let lastDayOfMonth = range.upperBound - 1
+                            if patterns.contains(where: { $0.ordinal == -1 && $0.weekday == weekday }) {
+                                for dayOffset in 0..<7 {
+                                    let checkDay = lastDayOfMonth - dayOffset
+                                    if checkDay < 1 { break }
+                                    if let checkDate = calendar.date(bySetting: .day, value: checkDay, of: currentDate),
+                                       calendar.component(.weekday, from: checkDate) == weekday {
+                                        return day == checkDay ? -1 : ((day - 1) / 7 + 1)
+                                    }
+                                }
+                            }
+                            return (day - 1) / 7 + 1
+                        }()
+                        if let override = overridesByMonthOrdinalKey["\(ordinal)_\(weekday)"] {
+                            var comps = DateComponents()
+                            comps.hour = override.hour
+                            comps.minute = override.minute
+                            return comps
+                        }
+                    case .yearly:
+                        if let override = recurrence.yearlyTimeOverride {
+                            var comps = DateComponents()
+                            comps.hour = override.hour
+                            comps.minute = override.minute
+                            return comps
+                        }
+                    case .daily:
+                        break
+                    }
+                    return calendar.dateComponents([.hour, .minute], from: task.startTime)
+                }()
+
+                let dateComponents = calendar.dateComponents([.year, .month, .day], from: currentDate)
+                var candidateComponents = DateComponents()
+                candidateComponents.year = dateComponents.year
+                candidateComponents.month = dateComponents.month
+                candidateComponents.day = dateComponents.day
+                candidateComponents.hour = timeComponents.hour
+                candidateComponents.minute = timeComponents.minute
+
+                if let occurrenceDate = calendar.date(from: candidateComponents) {
+                    let offset = TimeInterval(task.notificationLeadTimeMinutes) * 60
+                    let notificationDate = occurrenceDate.addingTimeInterval(-offset)
+                    if notificationDate > now {
+                        dates.append(notificationDate)
+                    }
+                }
+            }
+
+            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
+            currentDate = nextDate
+        }
+
+        return dates.sorted()
+    }
     
     func scheduleNotification(for task: TodoTask) async -> String? {
+        let status = await refreshAuthorizationStatus()
         guard areTaskNotificationsEnabled,
-              authorizationStatus == .authorized,
+              status == .authorized,
               task.hasSpecificTime,
               task.hasNotification else {
+            if task.hasNotification {
+                print("⚠️ Skip scheduling notification for task: \(task.name) | enabled=\(areTaskNotificationsEnabled) status=\(status.rawValue) hasSpecificTime=\(task.hasSpecificTime) hasNotification=\(task.hasNotification)")
+            }
             return nil
         }
-        
-        let lead = TimeInterval(max(0, task.notificationLeadTimeMinutes) * 60)
-        let fireDate = task.startTime.addingTimeInterval(-lead)
+
+        let offset = TimeInterval(task.notificationLeadTimeMinutes) * 60
+        let fireDate = task.startTime.addingTimeInterval(-offset)
         
         guard fireDate > Date() else {
             return nil
@@ -123,11 +251,15 @@ class TaskNotificationManager: NSObject, ObservableObject {
     }
     
     func scheduleRecurringNotifications(for task: TodoTask) async -> [String] {
+        let status = await refreshAuthorizationStatus()
         guard areTaskNotificationsEnabled,
-              authorizationStatus == .authorized,
+              status == .authorized,
               task.hasSpecificTime,
               task.hasNotification,
               let recurrence = task.recurrence else {
+            if task.hasNotification {
+                print("⚠️ Skip scheduling recurring notifications for task: \(task.name) | enabled=\(areTaskNotificationsEnabled) status=\(status.rawValue) hasSpecificTime=\(task.hasSpecificTime) hasNotification=\(task.hasNotification) hasRecurrence=\(task.recurrence != nil)")
+            }
             return []
         }
         
@@ -139,6 +271,7 @@ class TaskNotificationManager: NSObject, ObservableObject {
         let remainingBudget = max(0, maxPendingNotificationsBudget - pendingNow.count)
         let perTaskBudget = min(maxRecurringNotificationsPerTask, remainingBudget)
         if perTaskBudget <= 0 {
+            print("⚠️ Skip scheduling recurring notifications for task: \(task.name) | pending=\(pendingNow.count) remainingBudget=\(remainingBudget)")
             return []
         }
 
@@ -230,8 +363,8 @@ class TaskNotificationManager: NSObject, ObservableObject {
                 candidateComponents.minute = timeComponents.minute
                 
                 if let occurrenceDate = calendar.date(from: candidateComponents) {
-                    let lead = TimeInterval(max(0, task.notificationLeadTimeMinutes) * 60)
-                    let notificationDate = occurrenceDate.addingTimeInterval(-lead)
+                    let offset = TimeInterval(task.notificationLeadTimeMinutes) * 60
+                    let notificationDate = occurrenceDate.addingTimeInterval(-offset)
                     
                     if notificationDate > Date() {
                         if identifiers.count >= perTaskBudget {
@@ -281,11 +414,15 @@ class TaskNotificationManager: NSObject, ObservableObject {
         }
         Self.lastRollingRescheduleTime = now
 
-        guard areTaskNotificationsEnabled, authorizationStatus == .authorized else { return }
+        let status = await refreshAuthorizationStatus()
+        guard areTaskNotificationsEnabled, status == .authorized else {
+            print("⚠️ Skip rolling reschedule | enabled=\(areTaskNotificationsEnabled) status=\(status.rawValue)")
+            return
+        }
 
         for task in tasks {
             guard task.hasNotification, task.hasSpecificTime, task.recurrence != nil else { continue }
-            cancelAllNotificationsForTask(task.id)
+            await cancelAllNotificationsForTask(task.id)
             _ = await scheduleRecurringNotifications(for: task)
         }
     }
@@ -300,16 +437,15 @@ class TaskNotificationManager: NSObject, ObservableObject {
         print("🗑️ Cancelled \(identifiers.count) notifications")
     }
     
-    func cancelAllNotificationsForTask(_ taskId: UUID) {
-        center.getPendingNotificationRequests { requests in
-            let taskIdentifiers = requests
-                .filter { $0.identifier.contains("task_\(taskId.uuidString)") }
-                .map { $0.identifier }
-            
-            if !taskIdentifiers.isEmpty {
-                self.center.removePendingNotificationRequests(withIdentifiers: taskIdentifiers)
-                print("🗑️ Cancelled \(taskIdentifiers.count) notifications for task: \(taskId)")
-            }
+    func cancelAllNotificationsForTask(_ taskId: UUID) async {
+        let requests = await center.pendingNotificationRequests()
+        let taskIdentifiers = requests
+            .filter { $0.identifier.contains("task_\(taskId.uuidString)") }
+            .map { $0.identifier }
+        
+        if !taskIdentifiers.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: taskIdentifiers)
+            print("🗑️ Cancelled \(taskIdentifiers.count) notifications for task: \(taskId)")
         }
     }
     
@@ -354,6 +490,17 @@ class TaskNotificationManager: NSObject, ObservableObject {
             let next = (req.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()
             print("🔎 \(req.identifier) -> \(next?.description ?? "nil")")
         }
+    }
+
+    func debugDiagnoseScheduling(for task: TodoTask) async {
+        let status = await refreshAuthorizationStatus()
+        print("🧪 Diagnose scheduling | task=\(task.name) id=\(task.id)")
+        print("🧪 enabled=\(areTaskNotificationsEnabled) status=\(status.rawValue) hasSpecificTime=\(task.hasSpecificTime) hasNotification=\(task.hasNotification) isRecurring=\(task.recurrence != nil)")
+        print("🧪 startTime=\(task.startTime) leadMinutes=\(task.notificationLeadTimeMinutes)")
+
+        let pending = await center.pendingNotificationRequests()
+        let matching = pending.filter { $0.identifier.contains("task_\(task.id.uuidString)") }
+        print("🧪 pendingTotal=\(pending.count) pendingForTask=\(matching.count)")
     }
 }
 

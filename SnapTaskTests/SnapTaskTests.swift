@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import SnapTask
+@testable import SnapTask_Pro
 
 struct SnapTaskTests {
 

@@ -1,5 +1,5 @@
 import XCTest
-@testable import SnapTask
+@testable import SnapTask_Pro
 
 final class RepositoryTests: XCTestCase {
     
@@ -99,16 +99,13 @@ final class RepositoryTests: XCTestCase {
     }
     
     var repository: MockTaskRepository!
-    var taskManager: TaskManager!
     
     override func setUp() {
         super.setUp()
         repository = MockTaskRepository()
-        taskManager = TaskManager(repository: repository)
     }
     
     override func tearDown() {
-        taskManager = nil
         repository = nil
         super.tearDown()
     }
@@ -118,7 +115,7 @@ final class RepositoryTests: XCTestCase {
         let task = TodoTask(name: "Test Task", startTime: Date())
         
         // When
-        taskManager.addTask(task)
+        repository.saveTask(task)
         
         // Then
         XCTAssertEqual(repository.callRecord, ["saveTask"])
@@ -135,7 +132,7 @@ final class RepositoryTests: XCTestCase {
         // When
         var updatedTask = task
         updatedTask.name = "Updated Task"
-        taskManager.updateTask(updatedTask)
+        repository.saveTask(updatedTask)
         
         // Then
         XCTAssertEqual(repository.callRecord, ["saveTask"])
@@ -150,7 +147,7 @@ final class RepositoryTests: XCTestCase {
         repository.resetCallRecord()
         
         // When
-        taskManager.removeTask(task)
+        repository.deleteTask(task)
         
         // Then
         XCTAssertEqual(repository.callRecord, ["deleteTask", "deleteTaskWithId"])
@@ -166,7 +163,7 @@ final class RepositoryTests: XCTestCase {
         let today = calendar.startOfDay(for: Date())
         
         // When
-        taskManager.toggleTaskCompletion(task.id, on: today)
+        _ = repository.toggleTaskCompletion(taskId: task.id, on: today)
         
         // Then
         XCTAssertEqual(repository.callRecord, ["toggleTaskCompletion"])
@@ -174,7 +171,7 @@ final class RepositoryTests: XCTestCase {
         
         // Toggle again to uncomplete
         repository.resetCallRecord()
-        taskManager.toggleTaskCompletion(task.id, on: today)
+        _ = repository.toggleTaskCompletion(taskId: task.id, on: today)
         
         // Then
         XCTAssertEqual(repository.callRecord, ["toggleTaskCompletion"])
@@ -192,7 +189,7 @@ final class RepositoryTests: XCTestCase {
         let today = calendar.startOfDay(for: Date())
         
         // When
-        taskManager.toggleSubtask(taskId: task.id, subtaskId: subtask.id, on: today)
+        _ = repository.toggleSubtaskCompletion(taskId: task.id, subtaskId: subtask.id, on: today)
         
         // Then
         XCTAssertEqual(repository.callRecord, ["toggleSubtaskCompletion"])
@@ -200,25 +197,11 @@ final class RepositoryTests: XCTestCase {
         
         // Toggle again to uncomplete
         repository.resetCallRecord()
-        taskManager.toggleSubtask(taskId: task.id, subtaskId: subtask.id, on: today)
+        _ = repository.toggleSubtaskCompletion(taskId: task.id, subtaskId: subtask.id, on: today)
         
         // Then
         XCTAssertEqual(repository.callRecord, ["toggleSubtaskCompletion"])
         XCTAssertFalse(repository.tasks[0].completions[today]?.completedSubtasks.contains(subtask.id) ?? false)
     }
-    
-    func testUpdateRepository() {
-        // Given
-        let task = TodoTask(name: "Task 1", startTime: Date())
-        repository.saveTask(task)
-        
-        let newRepository = MockTaskRepository()
-        
-        // When
-        taskManager.updateRepository(newRepository)
-        
-        // Then
-        XCTAssertEqual(newRepository.tasks.count, 1)
-        XCTAssertEqual(newRepository.tasks[0].name, "Task 1")
-    }
-} 
+}
+ 

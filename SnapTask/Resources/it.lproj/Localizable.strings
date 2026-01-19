@@ -68,6 +68,9 @@
 "notification_lead_h_m_before" = "%dh %dm prima";
 "notification_lead_h_before" = "%dh prima";
 "notification_lead_m_before" = "%d min prima";
+"notification_lead_h_m_after" = "%dh %dm dopo";
+"notification_lead_h_after" = "%dh dopo";
+"notification_lead_m_after" = "%d min dopo";
 
 // Accessibility Support
 "completed" = "completata";
@@ -486,6 +489,9 @@
 "lead_time_hours_minutes_before_format" = "%dh %dm prima";
 "lead_time_hours_before_format" = "%dh prima";
 "lead_time_minutes_before_format" = "%d min prima";
+"lead_time_hours_minutes_after_format" = "%dh %dm dopo";
+"lead_time_hours_after_format" = "%dh dopo";
+"lead_time_minutes_after_format" = "%d min dopo";
 "lead_time_short_exact" = "All'ora";
 
 // Rewards View
