@@ -29,6 +29,7 @@
 		AC8F53382ED859DE009561B2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 42E919B783BB4EB99F43A4C3 /* WidgetKit.framework */; };
 		AC8F53392ED859DE009561B2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A5D885DF271547BCAB71EBED /* SwiftUI.framework */; };
 		AC8F534A2ED859DE009561B2 /* SnapTaskWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC8F53372ED859DE009561B2 /* SnapTaskWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B1C2D3E4F5061728394A5B6C /* SnapTaskWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DF3E8C8915BC225849BFE4B9 /* SnapTaskWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BD83171E0885A8E6CFCAC523 /* WatchRewardsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F8F53D077C291019B59AB9 /* WatchRewardsListView.swift */; };
 		BF646021570935DCC0892B91 /* WatchPomodoroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372E76F9143F217AB12B7B79 /* WatchPomodoroView.swift */; };
 		C651E61C661542ADE4C52AD9 /* WatchRewardFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B1415D6FBEC7923F3E0BC2 /* WatchRewardFormView.swift */; };
@@ -53,6 +54,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AC8F53362ED859DE009561B2;
 			remoteInfo = SnapTaskWidgetExtension;
+		};
+		C1D2E3F405162738495A6B7C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FD3DCF475E4A4C8CABD44701 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EAC44CD682917A8C442E5B7A;
+			remoteInfo = SnapTaskWatch;
 		};
 		CB092F97BB274760BEF0ADAC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -80,6 +88,17 @@
 				AC8F534A2ED859DE009561B2 /* SnapTaskWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60718293A4B5C /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				B1C2D3E4F5061728394A5B6C /* SnapTaskWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		FC2AE96E2E605FAC0039612E /* Embed Foundation Extensions */ = {
@@ -385,11 +404,13 @@
 				20933D2559A0439FAC4E551F /* Frameworks */,
 				02B5105D61A843DC8E5D1709 /* Resources */,
 				153710D2849F4F38ADE66640 /* Embed Foundation Extensions */,
+				A1B2C3D4E5F60718293A4B5C /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				AC8F53492ED859DE009561B2 /* PBXTargetDependency */,
+				D1E2F3041526374895A6B7C8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				836D3975FC0642468BE2CA9B /* SnapTask */,
@@ -730,6 +751,11 @@
 			isa = PBXTargetDependency;
 			target = 077E0902895D492899F3A510 /* SnapTask */;
 			targetProxy = CF3FBA583CBA4F8FB83F26AC /* PBXContainerItemProxy */;
+		};
+		D1E2F3041526374895A6B7C8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EAC44CD682917A8C442E5B7A /* SnapTaskWatch */;
+			targetProxy = C1D2E3F405162738495A6B7C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

@@ -6,63 +6,74 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             List {
-                // Tasks Section - Main feature
                 NavigationLink {
                     WatchTaskListView()
                 } label: {
                     Label {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Tasks")
-                                .font(.headline)
+                                .font(.system(.body, design: .rounded, weight: .medium))
                             Text("\(todayTasksCount) today")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
                     } icon: {
                         Image(systemName: "checklist")
-                            .foregroundColor(.blue)
+                            .foregroundColor(.accentColor)
                     }
                 }
                 
-                // Timer
                 NavigationLink {
                     WatchTimerSelectionView()
                 } label: {
-                    Label("Timer", systemImage: "timer")
-                        .foregroundColor(.orange)
+                    Label {
+                        Text("Timer")
+                            .font(.system(.body, design: .rounded, weight: .medium))
+                    } icon: {
+                        Image(systemName: "timer")
+                            .foregroundColor(.orange)
+                    }
                 }
                 
-                // Rewards
                 NavigationLink {
                     WatchRewardsListView()
                 } label: {
                     Label {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Rewards")
+                                .font(.system(.body, design: .rounded, weight: .medium))
                             Text("\(syncManager.totalPoints) pts")
                                 .font(.caption2)
-                                .foregroundColor(.yellow)
+                                .foregroundColor(.secondary)
                         }
                     } icon: {
                         Image(systemName: "gift.fill")
-                            .foregroundColor(.purple)
+                            .foregroundColor(.yellow)
                     }
                 }
                 
-                // Stats
                 NavigationLink {
                     WatchStatisticsView()
                 } label: {
-                    Label("Statistics", systemImage: "chart.pie.fill")
-                        .foregroundColor(.green)
+                    Label {
+                        Text("Statistics")
+                            .font(.system(.body, design: .rounded, weight: .medium))
+                    } icon: {
+                        Image(systemName: "chart.pie.fill")
+                            .foregroundColor(.green)
+                    }
                 }
                 
-                // Settings
                 NavigationLink {
                     WatchSettingsView()
                 } label: {
-                    Label("Settings", systemImage: "gear")
-                        .foregroundColor(.gray)
+                    Label {
+                        Text("Settings")
+                            .font(.system(.body, design: .rounded, weight: .medium))
+                    } icon: {
+                        Image(systemName: "gear")
+                            .foregroundColor(.gray)
+                    }
                 }
             }
             .navigationTitle("SnapTask")

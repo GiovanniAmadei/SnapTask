@@ -1,0 +1,34 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+
+# Gradle files
+.gradle/
+local.properties
+
+# Android Studio
+*.iml
+.idea/
+.DS_Store
+
+# Signing files
+*.jks
+*.keystore
+
+# Proguard
+mapping.txt
+seeds.txt
+usage.txt

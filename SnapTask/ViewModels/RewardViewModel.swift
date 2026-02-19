@@ -6,6 +6,8 @@ class RewardViewModel: ObservableObject {
     @Published var dailyRewards: [Reward] = []
     @Published var weeklyRewards: [Reward] = []
     @Published var monthlyRewards: [Reward] = []
+    @Published var yearlyRewards: [Reward] = []
+    @Published var oneTimeRewards: [Reward] = []
     @Published var dailyPoints: Int = 0
     @Published var weeklyPoints: Int = 0
     @Published var monthlyPoints: Int = 0
@@ -41,6 +43,8 @@ class RewardViewModel: ObservableObject {
         dailyRewards = rewards.filter { $0.frequency == .daily }
         weeklyRewards = rewards.filter { $0.frequency == .weekly }
         monthlyRewards = rewards.filter { $0.frequency == .monthly }
+        yearlyRewards = rewards.filter { $0.frequency == .yearly }
+        oneTimeRewards = rewards.filter { $0.frequency == .oneTime }
     }
     
     func addReward(_ reward: Reward) {

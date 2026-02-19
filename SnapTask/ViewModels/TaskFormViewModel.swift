@@ -300,6 +300,21 @@ class TaskFormViewModel: ObservableObject {
         hasSpecificTime = false
         // Day selection is always applicable for "today"; optional for other scopes
         hasSpecificDay = (timeScope == .today)
+
+        let calendar = Calendar.current
+        switch timeScope {
+        case .week:
+            selectedWeekDate = calendar.startOfWeek(for: startDate)
+        case .month:
+            selectedMonth = calendar.component(.month, from: startDate)
+            selectedYear = calendar.component(.year, from: startDate)
+            selectedMonthDate = calendar.startOfMonth(for: startDate)
+        case .year:
+            selectedYear = calendar.component(.year, from: startDate)
+            selectedYearDate = calendar.startOfYear(for: startDate)
+        default:
+            break
+        }
     }
     
     var isValid: Bool {

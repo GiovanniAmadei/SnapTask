@@ -8,21 +8,22 @@ struct WatchSettingsView: View {
     @State private var notificationsEnabled = true
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                // Sync section
+        List {
+            Section("Sync") {
                 syncSection
-                
-                // Preferences
+            }
+
+            Section("Preferences") {
                 preferencesSection
-                
-                // Account info
+            }
+
+            Section("Account") {
                 accountSection
-                
-                // About
+            }
+
+            Section("About") {
                 aboutSection
             }
-            .padding(.horizontal, 8)
         }
         .navigationTitle("Settings")
     }
@@ -30,114 +31,89 @@ struct WatchSettingsView: View {
     // MARK: - Sync Section
     private var syncSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Sync")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            VStack(spacing: 8) {
-                // Sync status
-                HStack {
-                    Image(systemName: syncManager.syncStatus.icon)
-                        .foregroundColor(statusColor)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(syncManager.syncStatus.description)
-                            .font(.caption)
-                        
-                        if let lastSync = syncManager.lastSyncDate {
-                            Text("Last: \(lastSync, style: .relative)")
-                                .font(.system(size: 9))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    Spacer()
-                }
-                
-                // Connection status
-                HStack {
-                    Image(systemName: syncManager.isPhoneReachable ? "iphone" : "wifi")
+            // Sync status
+            HStack {
+                Image(systemName: syncManager.syncStatus.icon)
+                    .foregroundColor(statusColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(syncManager.syncStatus.description)
                         .font(.caption)
-                    
-                    Text(syncManager.isPhoneReachable ? "iPhone Connected" : "CloudKit Sync")
-                        .font(.caption2)
-                    
-                    Spacer()
-                    
-                    Circle()
-                        .fill(syncManager.isPhoneReachable ? Color.green : Color.blue)
-                        .frame(width: 8, height: 8)
-                }
-                .foregroundColor(.secondary)
-                
-                // Sync button
-                Button {
-                    performSync()
-                } label: {
-                    HStack {
-                        if isSyncing {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                        }
-                        Text("Sync Now")
+
+                    if let lastSync = syncManager.lastSyncDate {
+                        Text("Last: \(lastSync, style: .relative)")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
                     }
-                    .font(.caption)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
                 }
-                .buttonStyle(.plain)
-                .disabled(isSyncing)
+
+                Spacer()
             }
-            .padding(10)
-            .background(Color.gray.opacity(0.15))
-            .cornerRadius(10)
+
+            // Connection status
+            HStack {
+                Image(systemName: syncManager.isPhoneReachable ? "iphone" : "wifi")
+                    .font(.caption)
+
+                Text(syncManager.isPhoneReachable ? "iPhone Connected" : "CloudKit Sync")
+                    .font(.caption2)
+
+                Spacer()
+
+                Circle()
+                    .fill(syncManager.isPhoneReachable ? Color.green : Color.gray)
+                    .frame(width: 8, height: 8)
+            }
+            .foregroundColor(.secondary)
+
+            Button {
+                performSync()
+            } label: {
+                HStack {
+                    if isSyncing {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                    Text("Sync Now")
+                }
+                .font(.caption)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.accentColor)
+            .disabled(isSyncing)
         }
     }
     
     // MARK: - Preferences Section
     private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Preferences")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            VStack(spacing: 4) {
-                Toggle(isOn: $hapticEnabled) {
-                    HStack {
-                        Image(systemName: "hand.tap")
-                            .font(.caption)
-                        Text("Haptic Feedback")
-                            .font(.caption)
-                    }
-                }
-                .onChange(of: hapticEnabled) { _, newValue in
-                    savePreference("haptic_enabled", value: newValue)
-                }
-                
-                Divider()
-                
-                Toggle(isOn: $notificationsEnabled) {
-                    HStack {
-                        Image(systemName: "bell")
-                            .font(.caption)
-                        Text("Notifications")
-                            .font(.caption)
-                    }
-                }
-                .onChange(of: notificationsEnabled) { _, newValue in
-                    savePreference("notifications_enabled", value: newValue)
+        VStack(spacing: 4) {
+            Toggle(isOn: $hapticEnabled) {
+                HStack {
+                    Image(systemName: "hand.tap")
+                        .font(.caption)
+                    Text("Haptic Feedback")
+                        .font(.caption)
                 }
             }
-            .padding(10)
-            .background(Color.gray.opacity(0.15))
-            .cornerRadius(10)
+            .onChange(of: hapticEnabled) { _, newValue in
+                savePreference("haptic_enabled", value: newValue)
+            }
+
+            Divider()
+
+            Toggle(isOn: $notificationsEnabled) {
+                HStack {
+                    Image(systemName: "bell")
+                        .font(.caption)
+                    Text("Notifications")
+                        .font(.caption)
+                }
+            }
+            .onChange(of: notificationsEnabled) { _, newValue in
+                savePreference("notifications_enabled", value: newValue)
+            }
         }
         .onAppear {
             loadPreferences()
@@ -146,94 +122,74 @@ struct WatchSettingsView: View {
     
     // MARK: - Account Section
     private var accountSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Account")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            VStack(spacing: 8) {
-                HStack {
-                    Image(systemName: "icloud")
-                        .font(.caption)
-                    Text("iCloud")
-                        .font(.caption)
-                    Spacer()
-                    Text("Connected")
-                        .font(.caption2)
-                        .foregroundColor(.green)
-                }
-                
-                HStack {
-                    Image(systemName: "checklist")
-                        .font(.caption)
-                    Text("Tasks")
-                        .font(.caption)
-                    Spacer()
-                    Text("\(syncManager.tasks.count)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack {
-                    Image(systemName: "gift")
-                        .font(.caption)
-                    Text("Rewards")
-                        .font(.caption)
-                    Spacer()
-                    Text("\(syncManager.rewards.count)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack {
-                    Image(systemName: "star.fill")
-                        .font(.caption)
-                        .foregroundColor(.yellow)
-                    Text("Points")
-                        .font(.caption)
-                    Spacer()
-                    Text("\(syncManager.totalPoints)")
-                        .font(.caption2)
-                        .foregroundColor(.yellow)
-                }
+        VStack(spacing: 8) {
+            HStack {
+                Image(systemName: "icloud")
+                    .font(.caption)
+                Text("iCloud")
+                    .font(.caption)
+                Spacer()
+                Text("Connected")
+                    .font(.caption2)
+                    .foregroundColor(.green)
             }
-            .padding(10)
-            .background(Color.gray.opacity(0.15))
-            .cornerRadius(10)
+
+            HStack {
+                Image(systemName: "checklist")
+                    .font(.caption)
+                Text("Tasks")
+                    .font(.caption)
+                Spacer()
+                Text("\(syncManager.tasks.count)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Image(systemName: "gift")
+                    .font(.caption)
+                Text("Rewards")
+                    .font(.caption)
+                Spacer()
+                Text("\(syncManager.rewards.count)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Image(systemName: "star.fill")
+                    .font(.caption)
+                    .foregroundColor(.accentColor)
+                Text("Points")
+                    .font(.caption)
+                Spacer()
+                Text("\(syncManager.totalPoints)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
     }
     
     // MARK: - About Section
     private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("About")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-            
-            VStack(spacing: 4) {
-                HStack {
-                    Text("Version")
-                        .font(.caption)
-                    Spacer()
-                    Text("1.0.0")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                
-                HStack {
-                    Text("SnapTask Watch")
-                        .font(.caption)
-                    Spacer()
-                    Image(systemName: "applewatch")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+        VStack(spacing: 4) {
+            HStack {
+                Text("Version")
+                    .font(.caption)
+                Spacer()
+                Text("1.0.0")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
-            .padding(10)
-            .background(Color.gray.opacity(0.15))
-            .cornerRadius(10)
+
+            HStack {
+                Text("SnapTask Watch")
+                    .font(.caption)
+                Spacer()
+                Image(systemName: "applewatch")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
     
@@ -241,7 +197,7 @@ struct WatchSettingsView: View {
     private var statusColor: Color {
         switch syncManager.syncStatus {
         case .idle: return .gray
-        case .syncing: return .blue
+        case .syncing: return .accentColor
         case .success: return .green
         case .error: return .red
         }

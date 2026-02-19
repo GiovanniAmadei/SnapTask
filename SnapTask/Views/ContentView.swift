@@ -35,15 +35,17 @@ struct ContentView: View {
                     }
                     .tag(2)
                 
-                StatisticsView()
+                NavigationStack {
+                    FinanceDashboardView()
+                }
                     .tabItem {
-                        Label("statistics".localized, systemImage: "chart.bar")
+                        Label("finance".localized, systemImage: "banknote")
                     }
                     .tag(3)
                 
-                SettingsView()
+                StatisticsView()
                     .tabItem {
-                        Label("settings".localized, systemImage: "gearshape")
+                        Label("statistics".localized, systemImage: "chart.bar")
                     }
                     .tag(4)
             }

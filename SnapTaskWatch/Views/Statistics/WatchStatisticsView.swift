@@ -19,21 +19,24 @@ struct WatchStatisticsView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                // Time range picker
+        List {
+            Section {
                 timeRangePicker
-                
-                // Time Distribution by Category
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowBackground(Color.clear)
+            }
+
+            Section {
                 timeDistributionCard
-                
-                // Task Completion
+            }
+
+            Section {
                 taskCompletionCard
-                
-                // Streak
+            }
+
+            Section {
                 streakCard
             }
-            .padding(.horizontal, 8)
         }
         .navigationTitle("Stats")
     }
@@ -48,7 +51,7 @@ struct WatchStatisticsView: View {
                         .font(.system(size: 11, weight: .medium))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(selectedTimeRange == range ? Color.blue : Color.gray.opacity(0.3))
+                        .background(selectedTimeRange == range ? Color.accentColor : Color.gray.opacity(0.3))
                         .foregroundColor(selectedTimeRange == range ? .white : .primary)
                         .cornerRadius(6)
                 }
@@ -105,9 +108,7 @@ struct WatchStatisticsView: View {
                 }
             }
         }
-        .padding(10)
-        .background(Color.gray.opacity(0.15))
-        .cornerRadius(10)
+        .padding(.vertical, 2)
     }
     
     // MARK: - Task Completion Card
@@ -165,9 +166,7 @@ struct WatchStatisticsView: View {
                 .frame(height: 40)
             }
         }
-        .padding(10)
-        .background(Color.gray.opacity(0.15))
-        .cornerRadius(10)
+        .padding(.vertical, 2)
     }
     
     // MARK: - Streak Card
@@ -210,9 +209,7 @@ struct WatchStatisticsView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(10)
-        .background(Color.gray.opacity(0.15))
-        .cornerRadius(10)
+        .padding(.vertical, 2)
     }
     
     // MARK: - Helper Views

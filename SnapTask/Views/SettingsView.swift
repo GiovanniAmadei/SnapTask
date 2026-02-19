@@ -398,6 +398,24 @@ struct SettingsView: View {
                         .themedSecondaryText()
                 }
                 
+                // Finance Section
+                Section {
+                    NavigationLink(destination: FinanceDashboardView()) {
+                        HStack {
+                            Image(systemName: "banknote.fill")
+                                .foregroundColor(.green)
+                                .frame(width: 24)
+                            Text("finance_dashboard".localized)
+                                .themedPrimaryText()
+                            Spacer()
+                        }
+                    }
+                    .listRowBackground(theme.surfaceColor)
+                } header: {
+                    Text("finance".localized)
+                        .themedSecondaryText()
+                }
+                
                 // Synchronization Section
                 Section {
                     NavigationLink(destination: CloudKitSyncSettingsView()) {

@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SnapTask</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_timeline">Timeline</string>
+    <string name="nav_focus">Focus</string>
+    <string name="nav_rewards">Rewards</string>
+    <string name="nav_finance">Finance</string>
+    <string name="nav_statistics">Statistics</string>
+
+    <!-- Common Actions -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_add">Add</string>
+    <string name="action_done">Done</string>
+    <string name="action_close">Close</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_back">Back</string>
+
+    <!-- Task -->
+    <string name="task_name">Task name</string>
+    <string name="task_description">Description</string>
+    <string name="task_new">New Task</string>
+    <string name="task_edit">Edit Task</string>
+    <string name="task_no_tasks">No tasks for this date</string>
+
+    <!-- Priority -->
+    <string name="priority_high">High</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_low">Low</string>
+    <string name="priority_none">None</string>
+
+    <!-- Pomodoro -->
+    <string name="pomodoro_start">Start</string>
+    <string name="pomodoro_pause">Pause</string>
+    <string name="pomodoro_resume">Resume</string>
+    <string name="pomodoro_stop">Stop</string>
+    <string name="pomodoro_skip">Skip</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance_system">System</string>
+    <string name="settings_appearance_light">Light</string>
+    <string name="settings_appearance_dark">Dark</string>
+    <string name="settings_themes_customization">Themes &amp; Customization</string>
+    <string name="settings_category_gradients">Category Gradients</string>
+    <string name="settings_daily_quote_reminder">Daily Quote Reminder</string>
+    <string name="settings_diary_reminder">Diary Reminder</string>
+    <string name="settings_task_notifications">Task Notifications</string>
+    <string name="settings_task_notifications_subtitle">Master control for all task reminders</string>
+    <string name="settings_notification_time">Notification time</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_section_categories">Categories</string>
+    <string name="settings_section_behavior">Behaviour</string>
+    <string name="settings_section_support">Support</string>
+    <string name="settings_section_data">Data Management</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_manage_categories">Manage Categories</string>
+    <string name="settings_categories_count">%d categories</string>
+    <string name="settings_auto_complete_subtasks">Auto-complete with Subtasks</string>
+    <string name="settings_auto_complete_subtasks_subtitle">Automatically complete task when all subtasks done</string>
+    <string name="settings_contact_support">Contact Support</string>
+    <string name="settings_rate_app">Rate App</string>
+    <string name="settings_rate_app_subtitle">Help us improve with your feedback</string>
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_donation">Donation</string>
+    <string name="settings_terms">Terms of Service</string>
+    <string name="settings_privacy">Privacy Policy</string>
+    <string name="settings_delete_all_data">Delete All Data</string>
+    <string name="settings_delete_all_data_subtitle">Permanently remove all tasks, categories, and settings</string>
+    <string name="settings_delete_confirm_title">Delete All Data</string>
+    <string name="settings_delete_confirm_message">This will permanently delete all your tasks, categories, and settings. This action cannot be undone.</string>
+    <string name="settings_delete_everything">Delete Everything</string>
+    <string name="settings_app_version">App Version</string>
+    <string name="settings_show_welcome_again">Show Welcome again</string>
+    <string name="settings_show_welcome_again_subtitle">Show onboarding screens next launch</string>
+
+    <!-- Language names for selector -->
+    <string name="language_english">English</string>
+    <string name="language_italian">Italiano</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_french">Français</string>
+    <string name="language_portuguese">Português</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_japanese">日本語</string>
+
+    <!-- Quote -->
+    <string name="quote_of_the_day">Quote of the Day</string>
+    <string name="loading_inspiration">Loading inspiration…</string>
+
+    <!-- Journal -->
+    <string name="journal">Journal</string>
+    <string name="journal_page_title_placeholder">Page title…</string>
+    <string name="journal_content_placeholder">Write about your day…</string>
+    <string name="journal_worth_it_title">Was Today Worth It?</string>
+    <string name="journal_worth_it_subtitle">Quick daily reflection</string>
+    <string name="journal_tags">Tags</string>
+    <string name="journal_add_tag_placeholder">Add a tag…</string>
+    <string name="journal_previous_day">Previous day</string>
+    <string name="journal_next_day">Next day</string>
+    <string name="content_description_add_tag">Add tag</string>
+    <string name="content_description_remove">Remove</string>
+
+    <!-- Welcome / Onboarding -->
+    <string name="welcome_skip">Skip</string>
+    <string name="welcome_next">Next</string>
+    <string name="welcome_back">Back</string>
+    <string name="welcome_get_started">Get Started</string>
+    <string name="welcome_page1_title">Organize Your Tasks</string>
+    <string name="welcome_page1_desc">Create, schedule, and manage your tasks with ease. Stay on top of your daily goals.</string>
+    <string name="welcome_page2_title">Track Your Focus</string>
+    <string name="welcome_page2_desc">Use the Pomodoro timer or stopwatch to stay focused and productive throughout the day.</string>
+    <string name="welcome_page3_title">Earn Rewards</string>
+    <string name="welcome_page3_desc">Complete tasks to earn points and redeem them for custom rewards. Stay motivated!</string>
+    <string name="welcome_page4_title">Track Finances</string>
+    <string name="welcome_page4_desc">Monitor your income, expenses, and budgets. Keep your finances under control.</string>
+    <string name="welcome_page5_title">View Statistics</string>
+    <string name="welcome_page5_desc">Analyze your productivity with detailed charts, streaks, and performance metrics.</string>
+
+    <!-- Task Detail -->
+    <string name="task_details">Task Details</string>
+    <string name="task_detail_description">Description</string>
+    <string name="task_detail_time">Time</string>
+    <string name="task_detail_time_range">Time Range</string>
+    <string name="task_detail_date">Date</string>
+    <string name="task_detail_start_time">Start Time</string>
+    <string name="task_detail_notifications">Notifications</string>
+    <string name="task_detail_notifications_enabled">Enabled</string>
+    <string name="task_detail_notifications_disabled">Disabled</string>
+    <string name="task_detail_lead_time">Lead Time</string>
+    <string name="task_detail_duration">Duration</string>
+    <string name="task_detail_duration_none">None</string>
+    <string name="task_detail_recurrence">Recurrence</string>
+    <string name="task_detail_pattern">Pattern</string>
+    <string name="task_detail_end_date">End Date</string>
+    <string name="task_detail_current_streak">Current Streak</string>
+    <string name="task_detail_subtasks">Subtasks</string>
+    <string name="task_detail_pomodoro">Pomodoro</string>
+    <string name="task_detail_work_duration">Work Duration</string>
+    <string name="task_detail_break_time">Break Time</string>
+    <string name="task_detail_start_pomodoro">Start Pomodoro</string>
+    <string name="task_detail_rewards">Rewards</string>
+    <string name="task_detail_available_points">Available Points</string>
+    <string name="task_detail_points">Points</string>
+    <string name="task_detail_track">Track</string>
+    <string name="task_detail_undo">Undo</string>
+    <string name="task_detail_done">Done</string>
+    <string name="task_detail_performance">Performance</string>
+    <string name="task_detail_view_analytics">View analytics for this task</string>
+
+    <!-- Task Detail Media -->
+    <string name="task_detail_photos">Photos</string>
+    <string name="task_detail_voice_memos">Voice Memos</string>
+    <string name="task_detail_add_photos">Add photos</string>
+    <string name="task_detail_take_photo">Take photo</string>
+    <string name="task_detail_choose_photos">Choose photos</string>
+    <string name="task_detail_add_photos_remaining">Add photos (%d left)</string>
+    <string name="task_detail_change_photo">Change photo</string>
+    <string name="task_detail_remove_photo">Remove photo</string>
+    <string name="task_detail_photo_limit_title">Photo limit reached</string>
+    <string name="task_detail_photo_limit_message">You can add up to %d photos per task.</string>
+    <string name="task_detail_voice_memo_limit_title">Voice memo limit reached</string>
+    <string name="task_detail_voice_memo_limit_message">You can add up to %d voice memos per task.</string>
+    <string name="task_detail_microphone_denied_title">Microphone access denied</string>
+    <string name="task_detail_microphone_denied_message">Enable microphone permission in Settings to record voice memos.</string>
+    <string name="task_detail_max_duration_title">Max duration reached</string>
+    <string name="task_detail_max_duration_message">Voice memos can be up to %d minutes. The memo was saved automatically.</string>
+    <string name="task_detail_max_duration_info">Max %d min</string>
+    <string name="task_detail_record">Record</string>
+    <string name="task_detail_stop">Stop</string>
+    <string name="task_detail_recording">Recording</string>
+    <string name="task_detail_no_voice_memos">No voice memos yet</string>
+    <string name="task_detail_rename">Rename</string>
+    <string name="notification_lead_exact">At exact time</string>
+    <string name="notification_lead_min_before">%d min before</string>
+    <string name="recurrence_daily">Daily</string>
+    <string name="recurrence_weekly">%d days/week</string>
+    <string name="recurrence_monthly">Monthly</string>
+    <string name="recurrence_monthly_patterns">Monthly Patterns</string>
+    <string name="recurrence_yearly">Yearly</string>
+    <string name="min_unit">min</string>
+
+    <!-- Focus -->
+    <string name="focus_mode">Focus Mode</string>
+    <string name="focus_simple_timer">Simple Timer</string>
+    <string name="focus_simple_timer_desc">Free-form focus session with manual timing</string>
+    <string name="focus_pomodoro_technique">Pomodoro Technique</string>
+    <string name="focus_pomodoro_technique_desc">25 min work sessions with 5 min breaks</string>
+    <string name="focus_timer">Timer</string>
+    <string name="focus_pomodoro">Pomodoro</string>
+    <string name="focus_today_s_focus">Today\'s Focus</string>
+    <string name="focus_time">Focus Time</string>
+    <string name="focus_sessions">Sessions</string>
+    <string name="focus_recent_sessions">Recent Sessions</string>
+    <string name="tracking_mode">Tracking Mode</string>
+    <string name="general_focus_session">General Focus Session</string>
+    <string name="general_pomodoro_session">General Pomodoro Session</string>
+
+    <!-- Rewards -->
+    <string name="rewards_title">Rewards</string>
+
+    <!-- Timeline -->
+    <string name="timeline_view_mode_list">List</string>
+    <string name="timeline_view_mode_time">Time</string>
+    <string name="timeline_history">History</string>
+    <string name="timeline_empty_state_cta">Tap + to add your first task</string>
+
+    <!-- Task Creation Options -->
+    <string name="task_creation_title">Create Task</string>
+    <string name="task_creation_blank_task">Blank Task</string>
+    <string name="task_creation_blank_task_subtitle">Start from scratch</string>
+    <string name="task_creation_templates">TEMPLATES</string>
+
+    <!-- Finance -->
+    <string name="finance_title">Finance</string>
+    <string name="finance_current_balance">Current Balance</string>
+    <string name="finance_budget_management">Budget Management</string>
+    <string name="finance_left_this_month">left this month</string>
+    <string name="finance_settings_title">Finance Settings</string>
+    <string name="finance_currency">Currency</string>
+    <string name="finance_starting_balance">Starting Balance</string>
+    <string name="finance_monthly_budget_target">Monthly Budget Target</string>
+    <string name="finance_savings_goal">Savings Goal</string>
+    <string name="finance_income_goal">Income Goal</string>
+    <string name="finance_category_budgets">Category Budgets</string>
+    <string name="finance_reset_all_data">Reset All Finance Data</string>
+    <string name="finance_select_currency">Select Currency</string>
+    <string name="finance_starting_balance_footer">Set your starting balance to track your total net worth.</string>
+    <string name="finance_monthly_budget_target_footer">Set a monthly spending limit. This powers the budget gauge.</string>
+    <string name="finance_income_goal_footer">Set a monthly income target to track against.</string>
+    <string name="finance_category_budgets_footer">Set per-category spending limits to track spending habits.</string>
+    <string name="finance_savings_goal_percentage">Percentage</string>
+    <string name="finance_savings_goal_fixed_amount">Fixed Amount</string>
+    <string name="finance_savings_goal_percent_footer">Set a target savings rate as a percentage of income.</string>
+    <string name="finance_savings_goal_fixed_amount_footer">Set a fixed monthly savings target amount.</string>
+
+    <!-- Statistics -->
+    <string name="statistics_overview">Overview</string>
+    <string name="statistics_streaks">Streaks</string>
+    <string name="statistics_consistency">Consistency</string>
+    <string name="statistics_performance">Performance</string>
+    <string name="statistics_time_distribution">Time Distribution</string>
+    <string name="statistics_task_completion">Task Completion</string>
+    <string name="statistics_no_time_data">No Time Data</string>
+    <string name="statistics_complete_tasks_to_see">Complete tasks to see your time distribution</string>
+    <string name="statistics_current_streak">Current Streak</string>
+    <string name="statistics_best_streak">Best Streak</string>
+    <string name="statistics_days">days</string>
+
+    <!-- Task Form -->
+    <string name="task_form_new_task">New Task</string>
+    <string name="task_form_enter_name">Enter task name…</string>
+    <string name="task_form_add_description">Add description…</string>
+    <string name="task_form_save_task">Save Task</string>
+    <string name="task_form_icon">Icon</string>
+    <string name="task_form_specific_time">Specific Time</string>
+    <string name="task_form_add_duration">Add duration</string>
+    <string name="task_form_repeat_task">Repeat Task</string>
+    <string name="task_form_subtasks">Subtasks</string>
+    <string name="task_form_reward_points">Reward Points</string>
+    <string name="task_form_enable_pomodoro">Enable Pomodoro</string>
+    <string name="task_form_notifications">Notifications</string>
+    <string name="task_form_lead_time">Lead time</string>
+    <string name="task_form_none">None</string>
+    <string name="task_form_all_day">All day</string>
+
+    <!-- Settings extra -->
+    <string name="settings_backup_restore">Backup &amp; Restore</string>
+    <string name="settings_backup_restore_subtitle">Export or restore your data</string>
+    <string name="settings_eisenhower">Eisenhower Matrix</string>
+    <string name="settings_eisenhower_subtitle">Urgent/Important task settings</string>
+    <string name="settings_eisenhower_urgent_hours_desc">Tasks due within this many hours today are considered \"urgent\" in the matrix.</string>
+    <string name="settings_eisenhower_urgent_hours_value">%d hours</string>
+    <string name="settings_enable_in_settings">Enable in Settings</string>
+    <string name="task_performance_no_data">No performance data yet. Complete this task to see analytics.</string>
+    <string name="backup_export">Export backup</string>
+    <string name="backup_import">Import from file</string>
+    <string name="backup_share_title">Share backup</string>
+    <string name="backup_restore_success">Restore completed successfully.</string>
+    <string name="backup_restore_error">Restore failed: %s</string>
+    <string name="notification_task_reminder_title">Task reminder</string>
+    <string name="notification_channel_task_reminders">Task reminders</string>
+    <string name="settings_notifications_disabled_message">Enable notifications in Settings to receive task reminders.</string>
+    <string name="settings_open_settings">Open Settings</string>
+
+    <!-- Task Form (full) -->
+    <string name="task_form_task_details">Task Details</string>
+    <string name="task_form_enter_task_name">Enter task name</string>
+    <string name="task_form_add_description_plain">Add description</string>
+    <string name="task_form_time">Time</string>
+    <string name="task_form_set_exact_time">Set exact time for task</string>
+    <string name="task_form_notification">Notification</string>
+    <string name="task_form_get_notified">Get notified before task</string>
+    <string name="task_form_auto_carry_over">Auto Carry Over</string>
+    <string name="task_form_move_incomplete">Move incomplete tasks to next day</string>
+    <string name="task_form_specific_day">Specific Day</string>
+    <string name="task_form_set_specific_day">Set a specific day within this period</string>
+    <string name="task_form_get_notified_short">Get notified</string>
+    <string name="task_form_duration">Duration</string>
+    <string name="task_form_add_estimated_duration">Add estimated duration</string>
+    <string name="task_form_category_priority">Category &amp; Priority</string>
+    <string name="category">Category</string>
+    <string name="priority_label">Priority</string>
+    <string name="task_form_when_to_notify">When to Notify</string>
+    <string name="task_form_recurrence">Recurrence</string>
+    <string name="task_form_frequency">Frequency</string>
+    <string name="task_form_add_subtask">Add subtask</string>
+    <string name="task_form_add">Add</string>
+    <string name="task_form_earn_reward_points">Earn Reward Points</string>
+    <string name="task_form_ok">OK</string>
+    <string name="task_form_set_duration">Set Duration</string>
+    <string name="task_form_week_of">Week of %s</string>
+
+    <!-- Statistics (full) -->
+    <string name="stat_time_distribution">Time Distribution</string>
+    <string name="stat_no_time_data">No Time Data</string>
+    <string name="stat_complete_tasks_distribution">Complete tasks to see your time distribution</string>
+    <string name="stat_task_completion_rate">Task Completion Rate</string>
+    <string name="stat_completed">Completed</string>
+    <string name="stat_total">Total</string>
+    <string name="stat_no_completion_data">No Completion Data</string>
+    <string name="stat_complete_tasks_trends">Complete tasks to see completion rate trends</string>
+    <string name="stat_overall_streak">Overall Streak</string>
+    <string name="stat_current">Current</string>
+    <string name="stat_best">Best</string>
+    <string name="stat_mood_trend">Mood Trend</string>
+    <string name="stat_no_mood_data">No Mood Data Yet</string>
+    <string name="stat_track_mood">Track your mood to see trends over time</string>
+    <string name="stat_chart">Chart</string>
+    <string name="stat_heat_map">Heat Map</string>
+    <string name="stat_no_streaks_yet">No Streaks Yet</string>
+    <string name="stat_complete_recurring_streaks">Complete recurring tasks to build streaks</string>
+    <string name="stat_complete">Complete</string>
+    <string name="stat_done">Done</string>
+    <string name="stat_task_progress_over_time">Task Progress Over Time</string>
+    <string name="stat_track_recurring">Track your recurring task consistency</string>
+    <string name="stat_no_consistency_data">No Consistency Data</string>
+    <string name="stat_add_recurring_consistency">Add recurring tasks to track consistency</string>
+    <string name="stat_penalize_missed">Penalize Missed Tasks</string>
+    <string name="stat_progress_decreases">Progress decreases when tasks are missed</string>
+    <string name="stat_tasks">Tasks</string>
+    <string name="stat_no_performance_data">No Performance Data</string>
+    <string name="stat_complete_quality_ratings">Complete recurring tasks with quality ratings to see performance analytics</string>
+    <string name="stat_top_performing">Top Performing</string>
+    <string name="stat_needs_improvement">Needs Improvement</string>
+    <string name="stat_all_tasks_performance">All Tasks with Performance Data</string>
+    <string name="stat_avg_quality">Avg Quality</string>
+    <string name="stat_avg_difficulty">Avg Difficulty</string>
+    <string name="stat_estimation">Estimation</string>
+    <string name="task_form_select_week">Select Week</string>
+    <string name="task_form_select_month">Select Month</string>
+    <string name="task_form_select_year">Select Year</string>
+    <string name="task_form_long_term_no_date">Long-term tasks have no specific date</string>
+    <string name="task_form_track_in_statistics">Track in Statistics</string>
+
+    <!-- Location -->
+    <string name="location">Location</string>
+    <string name="select_location">Select Location</string>
+    <string name="search_for_a_place">Search for a place</string>
+    <string name="search_results">Search Results</string>
+    <string name="no_results_found">No results found</string>
+    <string name="location_picker_hint">Search for locations to attach to your task</string>
+    <string name="selected_location">Selected Location</string>
+    <string name="add_location">Add Location</string>
+    <string name="remove_location">Remove Location</string>
+
+    <!-- Task Detail Performance Analytics -->
+    <string name="task_detail_performance_analytics">Performance Analytics</string>
+    <string name="task_detail_difficulty_rating">Difficulty Rating</string>
+    <string name="task_detail_quality_rating">Quality Rating</string>
+    <string name="task_detail_tap_to_rate_difficulty">Tap to rate difficulty</string>
+    <string name="task_detail_tap_to_rate_quality">Tap to rate quality</string>
+    <string name="task_detail_complete_to_track">Complete this task to start tracking</string>
+    <string name="task_detail_performance_charts">Performance Charts</string>
+    <string name="task_detail_notes">Notes</string>
+    <string name="task_detail_add_notes">Add notes…</string>
+    <string name="task_detail_actual_duration">Actual Duration</string>
+    <string name="task_detail_add_duration">Add duration</string>
+    <string name="task_detail_estimation_accuracy">Estimation Accuracy</string>
+    <string name="task_detail_set_actual_duration">Set Actual Duration</string>
+    <string name="task_detail_hours">Hours</string>
+    <string name="task_detail_minutes">Minutes</string>
+    <string name="difficulty_very_easy">Very Easy</string>
+    <string name="difficulty_easy">Easy</string>
+    <string name="difficulty_moderate">Moderate</string>
+    <string name="difficulty_challenging">Challenging</string>
+    <string name="difficulty_hard">Hard</string>
+    <string name="difficulty_extremely_hard">Extremely Hard</string>
+    <string name="quality_poor">Poor</string>
+    <string name="quality_below_average">Below Average</string>
+    <string name="quality_average">Average</string>
+    <string name="quality_good">Good</string>
+    <string name="quality_excellent">Excellent</string>
+    <string name="quality_perfect">Perfect</string>
+</resources>

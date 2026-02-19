@@ -19,27 +19,20 @@ struct WatchRewardDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
-                // Header
-                headerSection
+            VStack(spacing: 6) {
+                headerCard
                 
-                Divider()
-                
-                // Details
-                detailsSection
-                
-                // Redemption history
-                if !reward.redemptions.isEmpty {
-                    Divider()
-                    redemptionHistorySection
+                if hasDetails {
+                    detailsCard
                 }
                 
-                Divider()
+                if !reward.redemptions.isEmpty {
+                    redemptionHistoryCard
+                }
                 
-                // Actions
-                actionsSection
+                actionsCard
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 4)
         }
         .navigationTitle(reward.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -61,138 +54,159 @@ struct WatchRewardDetailView: View {
         }
     }
     
-    private var headerSection: some View {
+    private var hasDetails: Bool {
+        (reward.description != nil && !reward.description!.isEmpty)
+    }
+    
+    private var headerCard: some View {
         VStack(spacing: 8) {
             // Icon
             Image(systemName: reward.icon)
-                .font(.system(size: 36))
-                .foregroundColor(.yellow)
+                .font(.system(size: 28))
+                .foregroundColor(.accentColor)
             
             // Cost
             HStack(spacing: 4) {
                 Image(systemName: "star.fill")
+                    .font(.caption)
                     .foregroundColor(.yellow)
                 Text("\(reward.pointsCost)")
                     .font(.system(.title3, design: .rounded, weight: .bold))
             }
             
-            // Frequency
+            // Frequency badge
             Text(reward.frequency.displayName)
-                .font(.caption2)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
                 .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.3))
-                .cornerRadius(6)
+                .padding(.vertical, 3)
+                .background(Color.gray.opacity(0.25))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
             
             // Status
             if isRedeemed {
-                Text("Already redeemed")
-                    .font(.caption2)
+                Label("Already redeemed", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundColor(.green)
             } else if !canAfford {
-                Text("Need \(reward.pointsCost - syncManager.totalPoints) more points")
-                    .font(.caption2)
+                Label("Need \(reward.pointsCost - syncManager.totalPoints) more", systemImage: "exclamationmark.triangle")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
                     .foregroundColor(.orange)
             }
-        }
-    }
-    
-    private var detailsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let description = reward.description, !description.isEmpty {
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
             
-            // Your points
+            // Your points bar
             HStack {
-                Text("Your points:")
-                    .font(.caption2)
+                Text("Your points")
+                    .font(.system(size: 10, design: .rounded))
                     .foregroundColor(.secondary)
-                
                 Spacer()
-                
                 Text("\(syncManager.totalPoints)")
                     .font(.system(.caption, design: .rounded, weight: .bold))
-                    .foregroundColor(.yellow)
             }
+            .padding(.top, 4)
         }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.14))
+        )
     }
     
-    private var redemptionHistorySection: some View {
+    private var detailsCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Recent Redemptions")
-                .font(.caption)
-                .fontWeight(.semibold)
+            if let description = reward.description, !description.isEmpty {
+                Text(description)
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.14))
+        )
+    }
+    
+    private var redemptionHistoryCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Recent")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+                .padding(.bottom, 2)
             
             ForEach(reward.redemptions.suffix(3).reversed(), id: \.self) { date in
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.caption2)
+                        .font(.system(size: 10))
                         .foregroundColor(.green)
-                    
                     Text(date, style: .date)
-                        .font(.caption2)
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundColor(.secondary)
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.14))
+        )
     }
     
-    private var actionsSection: some View {
-        VStack(spacing: 8) {
+    private var actionsCard: some View {
+        VStack(spacing: 6) {
             // Redeem button
             if !isRedeemed && canAfford {
                 Button {
                     showingRedeemConfirmation = true
                 } label: {
-                    HStack {
+                    HStack(spacing: 6) {
                         Image(systemName: "gift.fill")
+                            .font(.system(size: 11))
                         Text("Redeem")
+                            .font(.system(.caption, design: .rounded, weight: .semibold))
                     }
-                    .font(.caption)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.yellow)
-                    .foregroundColor(.black)
-                    .cornerRadius(8)
+                    .padding(.vertical, 8)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderedProminent)
+                .tint(.accentColor)
             }
             
-            // Edit
-            Button {
-                showingEditSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "pencil")
-                    Text("Edit")
+            // Edit & Delete row
+            HStack(spacing: 6) {
+                Button {
+                    showingEditSheet = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 10))
+                        Text("Edit")
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .font(.caption)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.gray.opacity(0.3))
-                .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
-            
-            // Delete
-            Button {
-                showingDeleteConfirmation = true
-            } label: {
-                HStack {
-                    Image(systemName: "trash")
-                    Text("Delete")
+                .buttonStyle(.bordered)
+                .tint(.gray)
+                
+                Button {
+                    showingDeleteConfirmation = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                        Text("Delete")
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .font(.caption)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.red.opacity(0.2))
-                .foregroundColor(.red)
-                .cornerRadius(8)
+                .buttonStyle(.bordered)
+                .tint(.red)
             }
-            .buttonStyle(.plain)
         }
     }
     

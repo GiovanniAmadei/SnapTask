@@ -72,7 +72,7 @@ class WatchConnectivityHandler: NSObject, ObservableObject {
             tasks: relevantTasks,
             categories: CategoryManager.shared.categories,
             rewards: RewardManager.shared.rewards,
-            totalPoints: RewardManager.shared.totalPoints()
+            totalPoints: RewardManager.shared.availablePoints(for: .oneTime)
         )
         
         do {

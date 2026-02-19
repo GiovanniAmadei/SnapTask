@@ -25,27 +25,24 @@ struct WatchTaskDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                // Header
-                headerSection
+            VStack(spacing: 6) {
+                // MARK: - Header Card
+                headerCard
                 
-                Divider()
-                
-                // Details
-                detailsSection
-                
-                // Subtasks
-                if !task.subtasks.isEmpty {
-                    Divider()
-                    subtasksSection
+                // MARK: - Details Card
+                if hasDetails {
+                    detailsCard
                 }
                 
-                Divider()
+                // MARK: - Subtasks Card
+                if !task.subtasks.isEmpty {
+                    subtasksCard
+                }
                 
-                // Actions
-                actionsSection
+                // MARK: - Actions
+                actionsCard
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 4)
         }
         .navigationTitle(task.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -64,115 +61,153 @@ struct WatchTaskDetailView: View {
         }
     }
     
-    private var headerSection: some View {
-        VStack(spacing: 8) {
-            // Icon and category
-            HStack {
+    private var hasDetails: Bool {
+        (task.description != nil && !task.description!.isEmpty)
+        || task.hasSpecificTime
+        || (task.hasDuration && task.duration > 0)
+        || (task.hasRewardPoints && task.rewardPoints > 0)
+    }
+    
+    // MARK: - Header Card
+    private var headerCard: some View {
+        VStack(spacing: 10) {
+            // Icon + Name + Category
+            HStack(spacing: 8) {
                 Image(systemName: task.icon)
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundColor(categoryColor)
                 
-                Spacer()
-                
-                if let category = task.category {
-                    Text(category.name)
-                        .font(.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(categoryColor.opacity(0.2))
-                        .cornerRadius(4)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(task.name)
+                        .font(.system(.footnote, design: .rounded, weight: .semibold))
+                        .lineLimit(2)
+                    
+                    if let category = task.category {
+                        Text(category.name)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundColor(categoryColor)
+                    }
                 }
+                
+                Spacer(minLength: 0)
+                
+                // Priority badge
+                priorityBadge
             }
             
             // Completion toggle
             Button {
                 syncManager.toggleTaskCompletion(task, on: selectedDate)
             } label: {
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isCompleted ? .green : .secondary)
+                        .font(.body)
                     Text(isCompleted ? "Completed" : "Mark Complete")
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded, weight: .medium))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(isCompleted ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
-                .cornerRadius(8)
+                .padding(.vertical, 6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
+            .tint(isCompleted ? .green : .gray)
         }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.14))
+        )
     }
     
-    private var detailsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    // MARK: - Priority Badge
+    private var priorityBadge: some View {
+        HStack(spacing: 3) {
+            Image(systemName: task.priority.icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(task.priority.displayName)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+        }
+        .foregroundColor(Color(hex: task.priority.color))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(Color(hex: task.priority.color).opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+    
+    // MARK: - Details Card
+    private var detailsCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
             // Description
             if let description = task.description, !description.isEmpty {
                 Text(description)
-                    .font(.caption)
+                    .font(.system(.caption2, design: .rounded))
                     .foregroundColor(.secondary)
+                    .lineLimit(3)
             }
             
-            // Time
-            if task.hasSpecificTime {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.caption2)
-                    Text(task.startTime, style: .time)
-                        .font(.caption)
+            // Info row
+            HStack(spacing: 8) {
+                // Time
+                if task.hasSpecificTime {
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 9))
+                        Text(task.startTime, style: .time)
+                            .font(.system(size: 11, design: .rounded))
+                    }
+                    .foregroundColor(.secondary)
                 }
-                .foregroundColor(.secondary)
-            }
-            
-            // Duration
-            if task.hasDuration && task.duration > 0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "hourglass")
-                        .font(.caption2)
-                    Text(formatDuration(task.duration))
-                        .font(.caption)
+                
+                // Duration
+                if task.hasDuration && task.duration > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 9))
+                        Text(formatDuration(task.duration))
+                            .font(.system(size: 11, design: .rounded))
+                    }
+                    .foregroundColor(.secondary)
                 }
-                .foregroundColor(.secondary)
-            }
-            
-            // Priority
-            HStack(spacing: 4) {
-                Image(systemName: task.priority.icon)
-                    .font(.caption2)
-                Text(task.priority.displayName)
-                    .font(.caption)
-            }
-            .foregroundColor(Color(hex: task.priority.color))
-            
-            // Points
-            if task.hasRewardPoints && task.rewardPoints > 0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .font(.caption2)
-                    Text("\(task.rewardPoints) points")
-                        .font(.caption)
+                
+                // Points
+                if task.hasRewardPoints && task.rewardPoints > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                        Text("\(task.rewardPoints)")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                    }
+                    .foregroundColor(.yellow)
                 }
-                .foregroundColor(.yellow)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.14))
+        )
     }
     
-    private var subtasksSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    // MARK: - Subtasks Card
+    private var subtasksCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
             Text("Subtasks")
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary)
+                .textCase(.uppercase)
+                .padding(.bottom, 2)
             
             ForEach(task.subtasks) { subtask in
                 Button {
                     syncManager.toggleSubtaskCompletion(task, subtaskId: subtask.id, on: selectedDate)
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: subtask.isCompleted ? "checkmark.square.fill" : "square")
-                            .font(.caption)
+                        Image(systemName: subtask.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 14))
                             .foregroundColor(subtask.isCompleted ? .green : .secondary)
                         
                         Text(subtask.name)
-                            .font(.caption2)
+                            .font(.system(.caption2, design: .rounded))
                             .strikethrough(subtask.isCompleted)
                             .foregroundColor(subtask.isCompleted ? .secondary : .primary)
                         
@@ -182,59 +217,65 @@ struct WatchTaskDetailView: View {
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.gray.opacity(0.14))
+        )
     }
     
-    private var actionsSection: some View {
-        VStack(spacing: 8) {
+    // MARK: - Actions Card
+    private var actionsCard: some View {
+        VStack(spacing: 6) {
             // Start Timer
             Button {
                 showingTimerSelection = true
             } label: {
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: "play.fill")
+                        .font(.system(size: 11))
                     Text("Start Timer")
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
                 }
-                .font(.caption)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(8)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .tint(.accentColor)
             
-            // Edit
-            Button {
-                showingEditSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "pencil")
-                    Text("Edit")
+            // Edit & Delete row
+            HStack(spacing: 6) {
+                Button {
+                    showingEditSheet = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 10))
+                        Text("Edit")
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .font(.caption)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.gray.opacity(0.3))
-                .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
-            
-            // Delete
-            Button {
-                showingDeleteConfirmation = true
-            } label: {
-                HStack {
-                    Image(systemName: "trash")
-                    Text("Delete")
+                .buttonStyle(.bordered)
+                .tint(.gray)
+                
+                Button {
+                    showingDeleteConfirmation = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                        Text("Delete")
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .font(.caption)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.red.opacity(0.2))
-                .foregroundColor(.red)
-                .cornerRadius(8)
+                .buttonStyle(.bordered)
+                .tint(.red)
             }
-            .buttonStyle(.plain)
         }
     }
     

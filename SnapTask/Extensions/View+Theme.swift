@@ -80,3 +80,45 @@ extension View {
         )
     }
 }
+
+// MARK: - Themed Segmented Picker (selection buttons in line with app theme)
+struct ThemedSegmentedPicker<SelectionValue: Hashable, Label: View>: View {
+    @Binding var selection: SelectionValue
+    let options: [SelectionValue]
+    @ViewBuilder let label: (SelectionValue) -> Label
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(options, id: \.self) { opt in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { selection = opt }
+                } label: {
+                    label(opt)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(selection == opt ? theme.primaryColor : theme.secondaryTextColor)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(selection == opt ? theme.primaryColor.opacity(0.12) : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(selection == opt ? theme.primaryColor.opacity(0.4) : Color.clear, lineWidth: 1.5)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surfaceColor.opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(theme.borderColor.opacity(0.5), lineWidth: 1)
+        )
+    }
+}

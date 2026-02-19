@@ -87,6 +87,36 @@ class RewardManager: ObservableObject {
 
         return perDay.values.reduce(0) { $0 + max($1, 0) }
     }
+
+    private func expectedAllTimePointsFromSources() -> Int {
+        let calendar = Calendar.current
+        let now = Date()
+
+        // Build per-day points from task completions across all time
+        var perDay: [Date: Int] = [:]
+        for task in TaskManager.shared.tasks {
+            guard task.hasRewardPoints, task.rewardPoints > 0 else { continue }
+            var seenCompletions: Set<Int64> = []
+            for completionDate in task.completionDates {
+                guard completionDate <= now else { continue }
+                let completionKey = Int64(completionDate.timeIntervalSince1970.rounded())
+                guard seenCompletions.insert(completionKey).inserted else { continue }
+                let day = calendar.startOfDay(for: completionDate)
+                perDay[day, default: 0] += task.rewardPoints
+            }
+        }
+
+        // Subtract general reward redemptions, clamping per-day to >= 0
+        for reward in rewards where reward.isGeneralReward {
+            for redemptionDate in reward.redemptions {
+                let day = calendar.startOfDay(for: redemptionDate)
+                let current = perDay[day] ?? 0
+                perDay[day] = max(current - reward.pointsCost, 0)
+            }
+        }
+
+        return perDay.values.reduce(0) { $0 + max($1, 0) }
+    }
     
     // MARK: - Rewards Management
     
@@ -173,10 +203,9 @@ class RewardManager: ObservableObject {
         
         dailyPointsHistory[startOfDay] = finalTotal
         saveDailyPointsHistory()
+        syncDailyPointsToCloudKit()
         
         print("🎯 Points updated for \(startOfDay): \(currentDailyPoints) + \(points) = \(finalTotal)")
-        
-        // CloudKitService.shared.savePointsEntry(pointsEntry)
         
         objectWillChange.send()
     }
@@ -197,16 +226,11 @@ class RewardManager: ObservableObject {
         
         categoryPointsHistory[categoryId]![startOfDay] = finalTotal
         
-        // let currentDailyPoints = dailyPointsHistory[startOfDay] ?? 0
-        // let newDailyTotal = currentDailyPoints + points
-        // dailyPointsHistory[startOfDay] = max(newDailyTotal, 0)
-        
         saveDailyPointsHistory()
         saveCategoryPointsHistory()
+        syncDailyPointsToCloudKit()
         
         print("🏷️ Category points updated for \(categoryName ?? "Unknown") on \(startOfDay): \(currentCategoryPoints) + \(points) = \(finalTotal)")
-        
-        // CloudKitService.shared.savePointsEntry(categoryPointsEntry)
         
         objectWillChange.send()
     }
@@ -439,10 +463,8 @@ class RewardManager: ObservableObject {
             return yearlyTotal
             
         case .oneTime:
-            // Per le reward one-time, usa tutti i punti giornalieri accumulati
-            return dailyPointsHistory.values.reduce(0) { total, points in
-                total + max(points, 0)
-            }
+            // Per le reward one-time (all time), calcola dai dati sorgente per evitare errori dovuti a storicizzazione/sync
+            return expectedAllTimePointsFromSources()
         }
     }
     
@@ -561,12 +583,15 @@ class RewardManager: ObservableObject {
             let data = try JSONEncoder().encode(dailyPointsHistory)
             UserDefaults.standard.set(data, forKey: dailyPointsHistoryKey)
             UserDefaults.standard.synchronize()
-            
-            // Sync with CloudKit if enabled
-            CloudKitService.shared.syncPointsHistory(dailyPointsHistory)
+            // NOTE: CloudKit sync is NOT triggered here to avoid upload loops on init.
+            // Call syncDailyPointsToCloudKit() explicitly after user-driven changes.
         } catch {
             print("Error saving daily points history: \(error)")
         }
+    }
+    
+    private func syncDailyPointsToCloudKit() {
+        CloudKitService.shared.syncPointsHistory(dailyPointsHistory)
     }
     
     private func loadDailyPointsHistory() {

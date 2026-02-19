@@ -32,6 +32,10 @@ final class MoodManager: ObservableObject {
         NotificationCenter.default.post(name: .moodDidUpdate, object: nil)
     }
 
+    func allEntries() -> [MoodEntry] {
+        Array(entries.values).sorted { $0.date < $1.date }
+    }
+    
     func entries(in range: ClosedRange<Date>) -> [(date: Date, type: MoodType)] {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: range.lowerBound)

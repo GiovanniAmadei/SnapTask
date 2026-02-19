@@ -22,6 +22,10 @@ class CloudKitService: ObservableObject {
     private let settingsRecordType = "AppSettings"
     private let deletionMarkerRecordType = "DeletionMarker"
     private let journalEntryRecordType = "JournalEntry"
+    private let financeEntryRecordType = "FinanceEntry"
+    private let financeBudgetRecordType = "FinanceBudget"
+    private let financialGoalRecordType = "FinancialGoal"
+    private let customFinanceCategoryRecordType = "CustomFinanceCategory"
     
     // Subscription IDs
     private let subscriptionID = "SnapTaskZone-changes"
@@ -212,6 +216,7 @@ class CloudKitService: ObservableObject {
             try await ensureZoneExists()
             await setupSubscription()
             await performFullSync()
+            await uploadLocalDataIfNeeded()
             
         } catch {
             await handleSyncError(error)
@@ -346,7 +351,7 @@ class CloudKitService: ObservableObject {
                 let record = createTaskRecord(from: task)
                 
                 let operation = CKModifyRecordsOperation(recordsToSave: [record])
-                operation.savePolicy = .changedKeys // Only update changed fields
+                operation.savePolicy = .allKeys // Write all fields so creation works even if record doesn't exist yet
                 operation.isAtomic = false // Allow partial success
                 
                 let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CKRecord], Error>) in
@@ -645,6 +650,70 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    // MARK: - Initial Local Upload
+    // Uploads all local tasks and rewards to CloudKit once, so existing data
+    // on iPhone becomes visible on new devices (iPad, etc.).
+    private func uploadLocalDataIfNeeded() async {
+        let uploadDoneKey = "cloudkit_initial_upload_v2_done" // v2: includes hasSpecificDay
+        guard !UserDefaults.standard.bool(forKey: uploadDoneKey) else {
+            print(" Initial upload already done, skipping")
+            return
+        }
+        guard isCloudKitEnabled else { return }
+        
+        print(" Starting initial upload of local data to CloudKit...")
+        
+        // Upload tasks
+        let tasks = await MainActor.run { TaskManager.shared.tasks }
+        if !tasks.isEmpty {
+            let taskRecords = tasks.map { createTaskRecord(from: $0) }
+            do {
+                try await batchSaveRecords(taskRecords)
+                print(" Initial upload: \(tasks.count) tasks uploaded")
+            } catch {
+                print(" Initial task upload failed: \(error) — will retry next launch")
+                return
+            }
+        }
+        
+        // Upload rewards
+        let rewards = await MainActor.run { RewardManager.shared.rewards }
+        if !rewards.isEmpty {
+            let rewardRecords = rewards.map { createRewardRecord(from: $0) }
+            do {
+                try await batchSaveRecords(rewardRecords)
+                print(" Initial upload: \(rewards.count) rewards uploaded")
+            } catch {
+                print(" Initial reward upload failed: \(error) — will retry next launch")
+                return
+            }
+        }
+        
+        // Mark as done only if everything succeeded
+        UserDefaults.standard.set(true, forKey: uploadDoneKey)
+        print(" Initial upload completed successfully")
+    }
+    
+    private func batchSaveRecords(_ records: [CKRecord]) async throws {
+        let batchSize = 100
+        for i in stride(from: 0, to: records.count, by: batchSize) {
+            let batch = Array(records[i..<min(i + batchSize, records.count)])
+            let operation = CKModifyRecordsOperation(recordsToSave: batch)
+            operation.savePolicy = .allKeys
+            operation.isAtomic = false
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                operation.modifyRecordsCompletionBlock = { _, _, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+                self.privateDatabase.add(operation)
+            }
+        }
+    }
+    
     struct SyncChanges {
         var tasks: [TodoTask] = []
         var categories: [Category] = []
@@ -653,6 +722,10 @@ class CloudKitService: ObservableObject {
         var trackingSessions: [TrackingSession] = []
         var journalEntries: [JournalEntry] = []
         var settings: [String: Any] = [:]
+        var financeEntries: [FinanceEntry] = []
+        var financeBudgets: [FinanceBudget] = []
+        var financialGoals: [FinancialGoal] = []
+        var customFinanceCategories: [CustomFinanceCategory] = []
         struct DeletionMarkerEvent {
             let type: String
             let id: String
@@ -707,6 +780,22 @@ class CloudKitService: ObservableObject {
             case self.journalEntryRecordType:
                 if let entry = self.createJournalEntry(from: record) {
                     changes.journalEntries.append(entry)
+                }
+            case self.financeEntryRecordType:
+                if let entry = self.createFinanceEntry(from: record) {
+                    changes.financeEntries.append(entry)
+                }
+            case self.financeBudgetRecordType:
+                if let budget = self.createFinanceBudget(from: record) {
+                    changes.financeBudgets.append(budget)
+                }
+            case self.financialGoalRecordType:
+                if let goal = self.createFinancialGoal(from: record) {
+                    changes.financialGoals.append(goal)
+                }
+            case self.customFinanceCategoryRecordType:
+                if let category = self.createCustomFinanceCategory(from: record) {
+                    changes.customFinanceCategories.append(category)
                 }
             case self.deletionMarkerRecordType:
                 if let type = record["type"] as? String,
@@ -800,6 +889,22 @@ class CloudKitService: ObservableObject {
                 if let entry = self.createJournalEntry(from: record) {
                     changes.journalEntries.append(entry)
                 }
+            case self.financeEntryRecordType:
+                if let entry = self.createFinanceEntry(from: record) {
+                    changes.financeEntries.append(entry)
+                }
+            case self.financeBudgetRecordType:
+                if let budget = self.createFinanceBudget(from: record) {
+                    changes.financeBudgets.append(budget)
+                }
+            case self.financialGoalRecordType:
+                if let goal = self.createFinancialGoal(from: record) {
+                    changes.financialGoals.append(goal)
+                }
+            case self.customFinanceCategoryRecordType:
+                if let category = self.createCustomFinanceCategory(from: record) {
+                    changes.customFinanceCategories.append(category)
+                }
             case self.deletionMarkerRecordType:
                 if let type = record["type"] as? String,
                    let itemId = record["itemId"] as? String {
@@ -846,6 +951,7 @@ class CloudKitService: ObservableObject {
         await mergePointsHistory(changes.pointsHistory)
         await mergeTrackingSessions(changes.trackingSessions)
         await mergeJournalEntries(changes.journalEntries)
+        await mergeFinanceData(entries: changes.financeEntries, budgets: changes.financeBudgets, goals: changes.financialGoals, customCategories: changes.customFinanceCategories)
         
         if !changes.settings.isEmpty {
             await applySettings(changes.settings)
@@ -1032,6 +1138,38 @@ class CloudKitService: ObservableObject {
                 
             case "PointsHistory":
                 markAsDeleted(itemID: idString, type: .pointsHistory)
+                
+            case "FinanceEntry":
+                let entries = FinanceManager.shared.entries
+                if let idx = entries.firstIndex(where: { $0.id == uuid }) {
+                    let entry = entries[idx]
+                    FinanceManager.shared.removeEntry(entry)
+                    print(" Applied tombstone for FinanceEntry \(entry.name)")
+                }
+                
+            case "FinanceBudget":
+                let budgets = FinanceManager.shared.budgets
+                if let idx = budgets.firstIndex(where: { $0.id == uuid }) {
+                    let budget = budgets[idx]
+                    FinanceManager.shared.removeBudget(budget)
+                    print(" Applied tombstone for FinanceBudget \(budget.category.displayName)")
+                }
+                
+            case "FinancialGoal":
+                let goals = FinanceManager.shared.financialGoals
+                if let idx = goals.firstIndex(where: { $0.id == uuid }) {
+                    let goal = goals[idx]
+                    FinanceManager.shared.removeFinancialGoal(goal)
+                    print(" Applied tombstone for FinancialGoal \(goal.name)")
+                }
+                
+            case "CustomFinanceCategory":
+                let categories = FinanceManager.shared.customCategories
+                if let idx = categories.firstIndex(where: { $0.id == uuid }) {
+                    let category = categories[idx]
+                    FinanceManager.shared.removeCustomCategory(category)
+                    print(" Applied tombstone for CustomFinanceCategory \(category.name)")
+                }
                 
             default:
                 print(" Unknown tombstone type \(marker.type) for id \(idString)")
@@ -1286,6 +1424,19 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    private func mergeFinanceData(entries: [FinanceEntry], budgets: [FinanceBudget], goals: [FinancialGoal], customCategories: [CustomFinanceCategory]) async {
+        guard !entries.isEmpty || !budgets.isEmpty || !goals.isEmpty || !customCategories.isEmpty else { return }
+        
+        let hasEntryChanges = FinanceManager.shared.mergeEntriesFromCloud(entries)
+        let hasBudgetChanges = FinanceManager.shared.mergeBudgetsFromCloud(budgets)
+        let hasGoalChanges = FinanceManager.shared.mergeGoalsFromCloud(goals)
+        let hasCategoryChanges = FinanceManager.shared.mergeCustomCategoriesFromCloud(customCategories)
+        
+        if hasEntryChanges || hasBudgetChanges || hasGoalChanges || hasCategoryChanges {
+            print(" Merged finance data from cloud: \(entries.count) entries, \(budgets.count) budgets, \(goals.count) goals, \(customCategories.count) categories")
+        }
+    }
+    
     private func applySettings(_ settings: [String: Any]) async {
         for (key, value) in settings {
             UserDefaults.standard.set(value, forKey: "cloudkit_\(key)")
@@ -1303,6 +1454,7 @@ class CloudKitService: ObservableObject {
         record["name"] = task.name.isEmpty ? "untitled_task".localized : task.name
         record["taskDescription"] = task.description
         record["startTime"] = task.startTime
+        record["hasSpecificDay"] = task.hasSpecificDay
         record["hasSpecificTime"] = task.hasSpecificTime
         record["notificationLeadTimeMinutes"] = task.notificationLeadTimeMinutes
         record["duration"] = max(0, task.duration) 
@@ -1370,6 +1522,7 @@ class CloudKitService: ObservableObject {
         
         let description = record["taskDescription"] as? String
         let startTime = record["startTime"] as? Date ?? Date()
+        let hasSpecificDay = record["hasSpecificDay"] as? Bool ?? false
         let hasSpecificTime = record["hasSpecificTime"] as? Bool ?? true
         let notificationLeadTimeMinutes = record["notificationLeadTimeMinutes"] as? Int ?? 0
         let duration = record["duration"] as? TimeInterval ?? 0
@@ -1401,6 +1554,7 @@ class CloudKitService: ObservableObject {
             description: description,
             location: location,
             startTime: startTime,
+            hasSpecificDay: hasSpecificDay,
             hasSpecificTime: hasSpecificTime,
             duration: duration,
             hasDuration: hasDuration,
@@ -2515,5 +2669,315 @@ class CloudKitService: ObservableObject {
         } catch {
             print(" Failed to clear PointsHistory from CloudKit: \(error)")
         }
+    }
+}
+
+// MARK: - Finance Data CloudKit Extension
+
+extension CloudKitService {
+    
+    // MARK: - Save/Delete Operations
+    
+    func saveFinanceEntry(_ entry: FinanceEntry) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createFinanceEntryRecord(from: entry)
+                _ = try await privateDatabase.save(record)
+                print(" Finance entry saved: \(entry.name)")
+            } catch {
+                print(" Failed to save finance entry: \(error)")
+            }
+        }
+    }
+    
+    func deleteFinanceEntry(_ entry: FinanceEntry) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                await saveDeletionMarker(type: "FinanceEntry", id: entry.id.uuidString)
+                print(" Finance entry deleted: \(entry.name)")
+            } catch let error as CKError where error.code == .unknownItem {
+                await saveDeletionMarker(type: "FinanceEntry", id: entry.id.uuidString)
+            } catch {
+                print(" Failed to delete finance entry: \(error)")
+            }
+        }
+    }
+    
+    func saveFinanceBudget(_ budget: FinanceBudget) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createFinanceBudgetRecord(from: budget)
+                _ = try await privateDatabase.save(record)
+                print(" Finance budget saved: \(budget.category.displayName)")
+            } catch {
+                print(" Failed to save finance budget: \(error)")
+            }
+        }
+    }
+    
+    func deleteFinanceBudget(_ budget: FinanceBudget) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let recordID = CKRecord.ID(recordName: budget.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                await saveDeletionMarker(type: "FinanceBudget", id: budget.id.uuidString)
+                print(" Finance budget deleted: \(budget.category.displayName)")
+            } catch let error as CKError where error.code == .unknownItem {
+                await saveDeletionMarker(type: "FinanceBudget", id: budget.id.uuidString)
+            } catch {
+                print(" Failed to delete finance budget: \(error)")
+            }
+        }
+    }
+    
+    func saveFinancialGoal(_ goal: FinancialGoal) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createFinancialGoalRecord(from: goal)
+                _ = try await privateDatabase.save(record)
+                print(" Financial goal saved: \(goal.name)")
+            } catch {
+                print(" Failed to save financial goal: \(error)")
+            }
+        }
+    }
+    
+    func deleteFinancialGoal(_ goal: FinancialGoal) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let recordID = CKRecord.ID(recordName: goal.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                await saveDeletionMarker(type: "FinancialGoal", id: goal.id.uuidString)
+                print(" Financial goal deleted: \(goal.name)")
+            } catch let error as CKError where error.code == .unknownItem {
+                await saveDeletionMarker(type: "FinancialGoal", id: goal.id.uuidString)
+            } catch {
+                print(" Failed to delete financial goal: \(error)")
+            }
+        }
+    }
+    
+    func saveCustomFinanceCategory(_ category: CustomFinanceCategory) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let record = createCustomFinanceCategoryRecord(from: category)
+                _ = try await privateDatabase.save(record)
+                print(" Custom finance category saved: \(category.name)")
+            } catch {
+                print(" Failed to save custom finance category: \(error)")
+            }
+        }
+    }
+    
+    func deleteCustomFinanceCategory(_ category: CustomFinanceCategory) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
+                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                await saveDeletionMarker(type: "CustomFinanceCategory", id: category.id.uuidString)
+                print(" Custom finance category deleted: \(category.name)")
+            } catch let error as CKError where error.code == .unknownItem {
+                await saveDeletionMarker(type: "CustomFinanceCategory", id: category.id.uuidString)
+            } catch {
+                print(" Failed to delete custom finance category: \(error)")
+            }
+        }
+    }
+    
+    // MARK: - Record Creation (Model -> CKRecord)
+    
+    private func createFinanceEntryRecord(from entry: FinanceEntry) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: financeEntryRecordType, recordID: recordID)
+        
+        record["entryId"] = entry.id.uuidString
+        record["name"] = entry.name
+        record["amount"] = entry.amount
+        record["type"] = entry.type.rawValue
+        record["category"] = entry.category.rawValue
+        record["customCategoryId"] = entry.customCategoryId?.uuidString
+        record["date"] = entry.date
+        record["notes"] = entry.notes
+        record["isRecurring"] = entry.isRecurring
+        record["recurringFrequency"] = entry.recurringFrequency?.rawValue
+        record["recurringEndDate"] = entry.recurringEndDate
+        record["tags"] = entry.tags
+        record["creationDate"] = entry.creationDate
+        record["lastModifiedDate"] = entry.lastModifiedDate
+        
+        return record
+    }
+    
+    private func createFinanceBudgetRecord(from budget: FinanceBudget) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: budget.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: financeBudgetRecordType, recordID: recordID)
+        
+        record["budgetId"] = budget.id.uuidString
+        record["category"] = budget.category.rawValue
+        record["monthlyLimit"] = budget.monthlyLimit
+        record["isActive"] = budget.isActive
+        record["creationDate"] = budget.creationDate
+        
+        return record
+    }
+    
+    private func createFinancialGoalRecord(from goal: FinancialGoal) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: goal.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: financialGoalRecordType, recordID: recordID)
+        
+        record["goalId"] = goal.id.uuidString
+        record["name"] = goal.name
+        record["targetAmount"] = goal.targetAmount
+        record["currentAmount"] = goal.currentAmount
+        record["targetDate"] = goal.targetDate
+        record["type"] = goal.type.rawValue
+        record["isActive"] = goal.isActive
+        record["creationDate"] = goal.creationDate
+        record["lastModifiedDate"] = goal.lastModifiedDate
+        
+        return record
+    }
+    
+    private func createCustomFinanceCategoryRecord(from category: CustomFinanceCategory) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: customFinanceCategoryRecordType, recordID: recordID)
+        
+        record["categoryId"] = category.id.uuidString
+        record["name"] = category.name
+        record["icon"] = category.icon
+        record["isExpenseCategory"] = category.isExpenseCategory
+        record["creationDate"] = category.creationDate
+        
+        return record
+    }
+    
+    // MARK: - Record Parsing (CKRecord -> Model)
+    
+    internal func createFinanceEntry(from record: CKRecord) -> FinanceEntry? {
+        guard let idString = record["entryId"] as? String,
+              let id = UUID(uuidString: idString),
+              let name = record["name"] as? String,
+              let amount = record["amount"] as? Double,
+              let typeString = record["type"] as? String,
+              let type = FinanceEntryType(rawValue: typeString),
+              let categoryString = record["category"] as? String,
+              let category = FinanceCategory(rawValue: categoryString),
+              let date = record["date"] as? Date else {
+            return nil
+        }
+        
+        let customCategoryId = (record["customCategoryId"] as? String).flatMap { UUID(uuidString: $0) }
+        let notes = record["notes"] as? String
+        let isRecurring = record["isRecurring"] as? Bool ?? false
+        let recurringFrequency = (record["recurringFrequency"] as? String).flatMap { SubscriptionFrequency(rawValue: $0) }
+        let recurringEndDate = record["recurringEndDate"] as? Date
+        let tags = record["tags"] as? [String] ?? []
+        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
+        let lastModifiedDate = record["lastModifiedDate"] as? Date ?? record.modificationDate ?? creationDate
+        
+        return FinanceEntry(
+            id: id,
+            name: name,
+            amount: amount,
+            type: type,
+            category: category,
+            customCategoryId: customCategoryId,
+            date: date,
+            notes: notes,
+            isRecurring: isRecurring,
+            recurringFrequency: recurringFrequency,
+            recurringEndDate: recurringEndDate,
+            tags: tags,
+            creationDate: creationDate,
+            lastModifiedDate: lastModifiedDate
+        )
+    }
+    
+    internal func createFinanceBudget(from record: CKRecord) -> FinanceBudget? {
+        guard let idString = record["budgetId"] as? String,
+              let id = UUID(uuidString: idString),
+              let categoryString = record["category"] as? String,
+              let category = FinanceCategory(rawValue: categoryString),
+              let monthlyLimit = record["monthlyLimit"] as? Double,
+              let isActive = record["isActive"] as? Bool else {
+            return nil
+        }
+        
+        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
+        
+        return FinanceBudget(
+            id: id,
+            category: category,
+            monthlyLimit: monthlyLimit,
+            isActive: isActive,
+            creationDate: creationDate
+        )
+    }
+    
+    internal func createFinancialGoal(from record: CKRecord) -> FinancialGoal? {
+        guard let idString = record["goalId"] as? String,
+              let id = UUID(uuidString: idString),
+              let name = record["name"] as? String,
+              let targetAmount = record["targetAmount"] as? Double,
+              let currentAmount = record["currentAmount"] as? Double,
+              let typeString = record["type"] as? String,
+              let type = FinancialGoalType(rawValue: typeString),
+              let isActive = record["isActive"] as? Bool else {
+            return nil
+        }
+        
+        let targetDate = record["targetDate"] as? Date
+        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
+        let lastModifiedDate = record["lastModifiedDate"] as? Date ?? record.modificationDate ?? creationDate
+        
+        return FinancialGoal(
+            id: id,
+            name: name,
+            targetAmount: targetAmount,
+            currentAmount: currentAmount,
+            targetDate: targetDate,
+            type: type,
+            isActive: isActive,
+            creationDate: creationDate,
+            lastModifiedDate: lastModifiedDate
+        )
+    }
+    
+    internal func createCustomFinanceCategory(from record: CKRecord) -> CustomFinanceCategory? {
+        guard let idString = record["categoryId"] as? String,
+              let id = UUID(uuidString: idString),
+              let name = record["name"] as? String,
+              let icon = record["icon"] as? String,
+              let isExpenseCategory = record["isExpenseCategory"] as? Bool else {
+            return nil
+        }
+        
+        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
+        
+        return CustomFinanceCategory(
+            id: id,
+            name: name,
+            icon: icon,
+            isExpenseCategory: isExpenseCategory,
+            creationDate: creationDate
+        )
     }
 }

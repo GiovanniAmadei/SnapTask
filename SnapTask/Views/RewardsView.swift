@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 
+
 struct RewardsView: View {
     @StateObject private var viewModel = RewardViewModel()
     @StateObject private var categoryManager = CategoryManager.shared
@@ -10,22 +11,39 @@ struct RewardsView: View {
     @State private var showingPointsHistory = false
     @State private var showingRedeemedRewards = false
     @State private var showingCategoryPointsBreakdown = false
-    @State private var selectedFilter: RewardFrequency = .daily
     @State private var showingPremiumPaywall = false
+    @State private var selectedFrequencyFilter: RewardFrequency? = nil
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
     
-    private var filteredRewards: [Reward] {
-        let allRewards = (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards)
-        return allRewards.filter { $0.frequency == selectedFilter }
+    private var allRewards: [Reward] {
+        (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards + viewModel.yearlyRewards + viewModel.oneTimeRewards)
             .sorted { $0.pointsCost < $1.pointsCost }
+    }
+    
+    private func rewards(for frequency: RewardFrequency) -> [Reward] {
+        allRewards.filter { $0.frequency == frequency }
+    }
+    
+    private var rewardFrequencySections: [(RewardFrequency, [Reward])] {
+        let frequencies: [RewardFrequency] = [.daily, .weekly, .monthly, .yearly, .oneTime]
+        return frequencies.compactMap { freq in
+            let r = rewards(for: freq)
+            return r.isEmpty ? nil : (freq, r)
+        }
+    }
+    
+    private var filteredRewardSections: [(RewardFrequency, [Reward])] {
+        guard let filter = selectedFrequencyFilter else { return rewardFrequencySections }
+        let r = rewards(for: filter)
+        return r.isEmpty ? [] : [(filter, r)]
     }
     
     private var canAddMoreRewards: Bool {
         if subscriptionManager.hasAccess(to: .unlimitedRewards) {
             return true
         }
-        let totalRewards = viewModel.dailyRewards.count + viewModel.weeklyRewards.count + viewModel.monthlyRewards.count
+        let totalRewards = viewModel.dailyRewards.count + viewModel.weeklyRewards.count + viewModel.monthlyRewards.count + viewModel.yearlyRewards.count + viewModel.oneTimeRewards.count
         return totalRewards < SubscriptionManager.maxRewardsForFree
     }
     
@@ -67,6 +85,7 @@ struct RewardsView: View {
                         .padding(.horizontal, 16)
                         .padding(.bottom, 100)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 
                 // Centered Add Button - stesso posizionamento della Timeline
@@ -111,7 +130,7 @@ struct RewardsView: View {
     }
     
     private var unifiedPointsFilterView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Header with total points and detail button
             Button(action: {
                 showingCategoryPointsBreakdown = true
@@ -122,17 +141,15 @@ struct RewardsView: View {
                             .font(.system(size: 13, weight: .medium))
                             .themedSecondaryText()
                         
-                        // FIXED: Show points based on selected filter instead of total points
-                        let filteredPoints = viewModel.currentPoints(for: selectedFilter)
-                        
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(filteredPoints)")
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("\(viewModel.dailyPoints + viewModel.weeklyPoints + viewModel.monthlyPoints)")
                                 .font(.system(size: 32, weight: .bold))
                                 .themedPrimaryText()
-                            
-                            Text(selectedFilter.displayName.localized)
-                                .font(.system(size: 14, weight: .medium))
+
+                            Text("pts".localized)
+                                .font(.system(size: 12, weight: .semibold))
                                 .themedSecondaryText()
+                                .lineLimit(1)
                         }
                     }
                     
@@ -159,63 +176,12 @@ struct RewardsView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Period breakdown chips - using theme colors
+            // Period breakdown chips
             HStack(spacing: 6) {
                 CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: theme.primaryColor)
                 CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: theme.secondaryColor)
                 CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: theme.accentColor)
                 CompactPointsChip(title: "year_short".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: theme.primaryColor.opacity(0.8))
-            }
-            
-            // Filter Section - themed
-            VStack(spacing: 10) {
-                HStack {
-                    Text("filter_by_frequency".localized)
-                        .font(.system(size: 14, weight: .semibold))
-                        .themedPrimaryText()
-                    
-                    Spacer()
-                    
-                    let currentPoints = viewModel.currentPoints(for: selectedFilter)
-                    Text("\(currentPoints) " + "pts_available".localized)
-                        .font(.system(size: 12, weight: .medium))
-                        .themedSecondaryText()
-                }
-                
-                HStack(spacing: 6) {
-                    ForEach([RewardFrequency.daily, .weekly, .monthly, .yearly], id: \.self) { frequency in
-                        Button(action: {
-                            selectedFilter = frequency
-                        }) {
-                            VStack(spacing: 3) {
-                                Image(systemName: frequency.iconName)
-                                    .font(.system(size: 14, weight: .medium))
-                                
-                                Text(frequency.shortDisplayName.localized)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(selectedFilter == frequency ? theme.primaryColor : theme.surfaceColor)
-                            )
-                            .foregroundColor(selectedFilter == frequency ? theme.backgroundColor : theme.textColor)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(
-                                        selectedFilter == frequency ? 
-                                        Color.clear : 
-                                        theme.borderColor, 
-                                        lineWidth: 1
-                                    )
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
             }
         }
         .padding(.horizontal, 18)
@@ -223,7 +189,8 @@ struct RewardsView: View {
         .themedCard()
         .padding(.top, 4)
     }
-    
+
+
     private var quickActionsView: some View {
         HStack(spacing: 8) {
             CompactActionCard(
@@ -244,8 +211,45 @@ struct RewardsView: View {
         }
     }
     
+    private var frequencyFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // All pill
+                FilterPill(
+                    label: "all".localized,
+                    icon: "square.grid.2x2",
+                    isSelected: selectedFrequencyFilter == nil,
+                    color: theme.primaryColor
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedFrequencyFilter = nil
+                    }
+                }
+                
+                ForEach([RewardFrequency.daily, .weekly, .monthly, .yearly, .oneTime], id: \.self) { freq in
+                    let count = rewards(for: freq).count
+                    if count > 0 {
+                        FilterPill(
+                            label: freq.shortDisplayName.localized,
+                            icon: freq.iconName,
+                            isSelected: selectedFrequencyFilter == freq,
+                            color: theme.primaryColor,
+                            badge: count
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedFrequencyFilter = (selectedFrequencyFilter == freq) ? nil : freq
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+        }
+    }
+    
     private var rewardsListView: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("available_rewards".localized)
                     .font(.system(size: 20, weight: .semibold))
@@ -253,38 +257,69 @@ struct RewardsView: View {
                 
                 Spacer()
                 
-                Text("\(filteredRewards.count) " + "rewards_count".localized)
+                Text("\(allRewards.count) " + "rewards_count".localized)
                     .font(.system(size: 14))
                     .themedSecondaryText()
             }
             
-            if filteredRewards.isEmpty {
+            frequencyFilterBar
+            
+            if allRewards.isEmpty {
                 emptyRewardsView
+            } else if filteredRewardSections.isEmpty {
+                // Filtered but nothing
+                VStack(spacing: 12) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 32))
+                        .themedSecondaryText()
+                    Text("no_rewards_for_filter".localized)
+                        .font(.system(size: 15))
+                        .themedSecondaryText()
+                }
+                .frame(maxWidth: .infinity)
+                .padding(40)
+                .themedCard()
             } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(filteredRewards) { reward in
-                        RewardCard(
-                            reward: reward,
-                            canRedeem: viewModel.canRedeemReward(reward),
-                            currentPoints: viewModel.currentPoints(for: reward.frequency),
-                            onRedeemTapped: {
-                                // Check if we can actually redeem (fixed logic)
-                                if viewModel.canRedeemReward(reward) {
-                                    // Haptic feedback
-                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                                    impactFeedback.impactOccurred()
-                                    
-                                    // Redeem reward
-                                    viewModel.redeemReward(reward)
-                                }
-                            },
-                            onEditTapped: {
-                                selectedReward = reward
-                            },
-                            onDeleteTapped: {
-                                viewModel.removeReward(reward)
+                LazyVStack(spacing: 20) {
+                    ForEach(filteredRewardSections, id: \.0) { frequency, sectionRewards in
+                        VStack(alignment: .leading, spacing: 10) {
+                            // Section header
+                            HStack(spacing: 6) {
+                                Image(systemName: frequency.iconName)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .themedPrimary()
+                                Text(frequency.displayName.localized)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .themedSecondaryText()
+                                    .textCase(.uppercase)
+                                Spacer()
+                                Text("\(viewModel.currentPoints(for: frequency)) pts")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .themedPrimary()
                             }
-                        )
+                            .padding(.horizontal, 4)
+                            
+                            ForEach(sectionRewards) { reward in
+                                RewardCard(
+                                    reward: reward,
+                                    canRedeem: viewModel.canRedeemReward(reward),
+                                    currentPoints: viewModel.currentPoints(for: reward.frequency),
+                                    onRedeemTapped: {
+                                        if viewModel.canRedeemReward(reward) {
+                                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                            impactFeedback.impactOccurred()
+                                            viewModel.redeemReward(reward)
+                                        }
+                                    },
+                                    onEditTapped: {
+                                        selectedReward = reward
+                                    },
+                                    onDeleteTapped: {
+                                        viewModel.removeReward(reward)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -334,7 +369,7 @@ struct RewardsView: View {
                 .themedSecondaryText()
             
             HStack {
-                let totalRewards = viewModel.dailyRewards.count + viewModel.weeklyRewards.count + viewModel.monthlyRewards.count
+                let totalRewards = viewModel.dailyRewards.count + viewModel.weeklyRewards.count + viewModel.monthlyRewards.count + viewModel.yearlyRewards.count + viewModel.oneTimeRewards.count
                 Text("\(totalRewards)/\(SubscriptionManager.maxRewardsForFree)")
                     .font(.caption)
                     .themedSecondaryText()
@@ -1085,6 +1120,54 @@ struct ParticleView: View {
             .opacity(particle.opacity)
             .rotationEffect(.degrees(particle.rotation))
             .position(x: particle.x, y: particle.y)
+    }
+}
+
+
+struct FilterPill: View {
+    let label: String
+    let icon: String
+    let isSelected: Bool
+    let color: Color
+    var badge: Int? = nil
+    let action: () -> Void
+    @Environment(\.theme) private var theme
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                
+                Text(label)
+                    .font(.system(size: 12, weight: .semibold))
+                
+                if let badge = badge {
+                    Text("\(badge)")
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? Color.white.opacity(0.3) : color.opacity(0.15))
+                        )
+                }
+            }
+            .foregroundColor(isSelected ? .white : color)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                Capsule()
+                    .fill(isSelected ? color : color.opacity(0.1))
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(color.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
+                    )
+            )
+            .shadow(color: isSelected ? color.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.15), value: isSelected)
     }
 }
 

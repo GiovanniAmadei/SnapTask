@@ -7,10 +7,9 @@ struct SnapTaskWatchApp: App {
     
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                WatchTaskListView()
-            }
+            ContentView()
                 .environmentObject(syncManager)
+                .tint(.orange)
         }
     }
 }

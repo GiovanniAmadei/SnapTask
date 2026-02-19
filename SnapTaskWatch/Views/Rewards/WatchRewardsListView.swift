@@ -13,26 +13,12 @@ struct WatchRewardsListView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                // Points header
-                pointsHeader
-                
-                // Available rewards
-                if !availableRewards.isEmpty {
-                    rewardsSection(title: "Available", rewards: availableRewards, canRedeem: true)
-                }
-                
-                // Redeemed today
-                if !redeemedRewards.isEmpty {
-                    rewardsSection(title: "Redeemed", rewards: redeemedRewards, canRedeem: false)
-                }
-                
-                if syncManager.rewards.isEmpty {
-                    emptyStateView
-                }
+        Group {
+            if syncManager.rewards.isEmpty {
+                emptyState
+            } else {
+                rewardsList
             }
-            .padding(.horizontal, 8)
         }
         .navigationTitle("Rewards")
         .toolbar {
@@ -49,56 +35,69 @@ struct WatchRewardsListView: View {
         }
     }
     
-    private var pointsHeader: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
+    private var emptyState: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                Spacer().frame(height: 8)
                 
-                Text("\(syncManager.totalPoints)")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
+                Image(systemName: "gift")
+                    .font(.system(size: 32))
+                    .foregroundColor(.gray.opacity(0.5))
+                
+                Text("No rewards")
+                    .font(.system(.headline, design: .rounded))
+                
+                Text("Tap + to add a reward")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundColor(.secondary)
             }
-            
-            Text("Available Points")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color.yellow.opacity(0.15))
-        .cornerRadius(10)
     }
     
-    private func rewardsSection(title: String, rewards: [Reward], canRedeem: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
+    private var rewardsList: some View {
+        List {
+            // Points header
+            Section {
+                pointsHeader
+            }
             
-            ForEach(rewards) { reward in
-                NavigationLink(destination: WatchRewardDetailView(reward: reward)) {
-                    WatchRewardRowView(reward: reward, canRedeem: canRedeem)
+            if !availableRewards.isEmpty {
+                Section("Available") {
+                    ForEach(availableRewards) { reward in
+                        NavigationLink(destination: WatchRewardDetailView(reward: reward)) {
+                            WatchRewardRowView(reward: reward, canRedeem: true)
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
+            }
+            
+            if !redeemedRewards.isEmpty {
+                Section("Redeemed") {
+                    ForEach(redeemedRewards) { reward in
+                        NavigationLink(destination: WatchRewardDetailView(reward: reward)) {
+                            WatchRewardRowView(reward: reward, canRedeem: false)
+                        }
+                    }
+                }
             }
         }
     }
     
-    private var emptyStateView: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "gift")
-                .font(.system(size: 32))
-                .foregroundColor(.secondary)
+    private var pointsHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "star.fill")
+                .foregroundColor(.yellow)
             
-            Text("No rewards")
-                .font(.headline)
+            Text("\(syncManager.totalPoints)")
+                .font(.system(.title3, design: .rounded, weight: .bold))
             
-            Text("Tap + to add a reward")
+            Spacer()
+            
+            Text("Points")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
-        .padding(.vertical, 20)
     }
 }
 
@@ -116,7 +115,7 @@ struct WatchRewardRowView: View {
             // Icon
             Image(systemName: reward.icon)
                 .font(.title3)
-                .foregroundColor(canRedeem && canAfford ? .yellow : .gray)
+                .foregroundColor(canRedeem && canAfford ? .accentColor : .gray)
                 .frame(width: 30)
             
             // Info
@@ -131,7 +130,7 @@ struct WatchRewardRowView: View {
                     Text("\(reward.pointsCost)")
                         .font(.caption2)
                 }
-                .foregroundColor(.yellow)
+                .foregroundColor(.accentColor)
             }
             
             Spacer()
@@ -144,9 +143,7 @@ struct WatchRewardRowView: View {
                 .background(Color.gray.opacity(0.3))
                 .cornerRadius(4)
         }
-        .padding(8)
-        .background(Color.gray.opacity(0.15))
-        .cornerRadius(8)
+        .padding(.vertical, 4)
         .opacity(canRedeem ? 1 : 0.6)
     }
 }

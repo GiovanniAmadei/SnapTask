@@ -21,6 +21,10 @@ struct WatchTaskRowView: View {
     private var priorityColor: Color {
         Color(hex: task.priority.color)
     }
+
+    private var categoryName: String? {
+        task.category?.name
+    }
     
     var body: some View {
         HStack(spacing: 8) {
@@ -29,9 +33,22 @@ struct WatchTaskRowView: View {
                 Text(task.name)
                     .font(.system(.footnote, design: .rounded, weight: .medium))
                     .lineLimit(1)
-                    .foregroundColor(.primary)
+                    .foregroundColor(isCompleted ? .secondary : .primary)
+                    .strikethrough(isCompleted)
                 
                 HStack(spacing: 4) {
+                    // Category
+                    if let categoryName {
+                        Text(categoryName)
+                            .font(.system(.caption2, design: .rounded, weight: .medium))
+                            .lineLimit(1)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(categoryColor.opacity(0.2))
+                            .foregroundColor(categoryColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    }
+
                     // Time
                     if task.hasSpecificTime {
                         HStack(spacing: 2) {
@@ -56,7 +73,7 @@ struct WatchTaskRowView: View {
                             Text("\(task.rewardPoints)")
                         }
                         .font(.system(.caption2, design: .rounded))
-                        .foregroundColor(.yellow)
+                        .foregroundColor(.secondary)
                     }
                 }
             }
@@ -67,22 +84,25 @@ struct WatchTaskRowView: View {
             Button {
                 syncManager.toggleTaskCompletion(task, on: date)
             } label: {
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundColor(isCompleted ? .green : categoryColor.opacity(0.6))
+                ZStack {
+                    Circle()
+                        .stroke(isCompleted ? Color.accentColor : Color.gray.opacity(0.5), lineWidth: 1.5)
+                        .frame(width: 22, height: 22)
+
+                    if isCompleted {
+                        Circle()
+                            .fill(Color.accentColor)
+                            .frame(width: 22, height: 22)
+
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(categoryColor.opacity(0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(categoryColor.opacity(0.3), lineWidth: 1)
-                )
-        )
+        .padding(.vertical, 4)
     }
 }
 

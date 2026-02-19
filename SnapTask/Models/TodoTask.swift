@@ -83,6 +83,10 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var scopeEndDate: Date? = nil
     var notificationLeadTimeMinutes: Int = 0
     var autoCarryOver: Bool = false
+    
+    // Life Orchestration properties
+    var domainId: UUID? = nil
+    var goalId: UUID? = nil
 
     init(
         id: UUID = UUID(),
@@ -112,7 +116,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
         photos: [TaskPhoto] = [],
         voiceMemos: [TaskVoiceMemo] = [],
         notificationLeadTimeMinutes: Int = 0,
-        autoCarryOver: Bool = false
+        autoCarryOver: Bool = false,
+        domainId: UUID? = nil,
+        goalId: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -144,6 +150,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.voiceMemos = voiceMemos
         self.notificationLeadTimeMinutes = notificationLeadTimeMinutes
         self.autoCarryOver = autoCarryOver
+        self.domainId = domainId
+        self.goalId = goalId
     }
     
     var displayPeriod: String {
@@ -382,7 +390,9 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.photos == rhs.photos &&
         lhs.voiceMemos == rhs.voiceMemos &&
         lhs.notificationLeadTimeMinutes == rhs.notificationLeadTimeMinutes &&
-        lhs.autoCarryOver == rhs.autoCarryOver
+        lhs.autoCarryOver == rhs.autoCarryOver &&
+        lhs.domainId == rhs.domainId &&
+        lhs.goalId == rhs.goalId
     }
     
     // MARK: - Completion Key Helper
@@ -666,6 +676,8 @@ extension TodoTask {
         case voiceMemos
         case notificationLeadTimeMinutes
         case autoCarryOver
+        case domainId
+        case goalId
     }
     
     init(from decoder: Decoder) throws {
@@ -704,5 +716,7 @@ extension TodoTask {
         voiceMemos = try c.decodeIfPresent([TaskVoiceMemo].self, forKey: .voiceMemos) ?? []
         notificationLeadTimeMinutes = try c.decodeIfPresent(Int.self, forKey: .notificationLeadTimeMinutes) ?? 0
         autoCarryOver = try c.decodeIfPresent(Bool.self, forKey: .autoCarryOver) ?? false
+        domainId = try c.decodeIfPresent(UUID.self, forKey: .domainId)
+        goalId = try c.decodeIfPresent(UUID.self, forKey: .goalId)
     }
 }

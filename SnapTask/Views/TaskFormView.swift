@@ -1,6 +1,12 @@
 import SwiftUI
 import Combine
 
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
+
 struct TaskFormView: View {
     @StateObject private var viewModel: TaskFormViewModel
     @StateObject private var taskNotificationManager = TaskNotificationManager.shared
@@ -21,6 +27,50 @@ struct TaskFormView: View {
         case taskDescription
         case subtaskName
         case customPoints
+    }
+
+    private var clipboardString: String? {
+        #if os(iOS)
+        return UIPasteboard.general.string
+        #elseif os(macOS)
+        return NSPasteboard.general.string(forType: .string)
+        #else
+        return nil
+        #endif
+    }
+
+    private func setClipboardString(_ text: String) {
+        #if os(iOS)
+        UIPasteboard.general.string = text
+        #elseif os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #else
+        _ = text
+        #endif
+    }
+
+    private func pasteIntoDescription() {
+        guard let text = clipboardString, !text.isEmpty else { return }
+        if viewModel.description.isEmpty {
+            viewModel.description = text
+        } else {
+            viewModel.description += "\n" + text
+        }
+        focusedField = .taskDescription
+    }
+
+    private func copyDescription() {
+        guard !viewModel.description.isEmpty else { return }
+        setClipboardString(viewModel.description)
+        focusedField = .taskDescription
+    }
+
+    private func cutDescription() {
+        guard !viewModel.description.isEmpty else { return }
+        setClipboardString(viewModel.description)
+        viewModel.description = ""
+        focusedField = .taskDescription
     }
     
     init(initialDate: Date, onSave: @escaping (TodoTask) -> Void) {
@@ -194,34 +244,69 @@ struct TaskFormView: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("task_description".localized)
-                                    .font(.subheadline.weight(.medium))
-                                    .themedPrimaryText()
-                                
-                                TextField("add_description".localized, text: $viewModel.description, axis: .vertical)
-                                    .textFieldStyle(PlainTextFieldStyle())
-                                    .lineLimit(3...6)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(theme.backgroundColor)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 10)
-                                                    .strokeBorder(
-                                                        focusedField == .taskDescription ? 
-                                                        theme.primaryColor : 
-                                                        theme.borderColor, 
-                                                        lineWidth: focusedField == .taskDescription ? 2 : 1
-                                                    )
-                                            )
-                                    )
-                                    .themedPrimaryText()
-                                    .accentColor(theme.primaryColor)
-                                    .autocorrectionDisabled(true)
-                                    .textInputAutocapitalization(.sentences)
-                                    .focused($focusedField, equals: .taskDescription)
-                                    .animation(.easeInOut(duration: 0.2), value: focusedField)
+                                HStack {
+                                    Text("task_description".localized)
+                                        .font(.subheadline.weight(.medium))
+                                        .themedPrimaryText()
+
+                                    Spacer()
+
+                                    Menu {
+                                        Button("Copia") {
+                                            copyDescription()
+                                        }
+                                        .disabled(viewModel.description.isEmpty)
+
+                                        Button("Taglia") {
+                                            cutDescription()
+                                        }
+                                        .disabled(viewModel.description.isEmpty)
+
+                                        Button("Incolla") {
+                                            pasteIntoDescription()
+                                        }
+                                        .disabled((clipboardString ?? "").isEmpty)
+                                    } label: {
+                                        Image(systemName: "ellipsis.circle")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(theme.secondaryTextColor)
+                                    }
+                                }
+
+                                ZStack(alignment: .topLeading) {
+                                    if viewModel.description.isEmpty {
+                                        Text("add_description".localized)
+                                            .foregroundColor(theme.secondaryTextColor)
+                                            .padding(.horizontal, 20)
+                                            .padding(.vertical, 18)
+                                            .allowsHitTesting(false)
+                                    }
+
+                                    TextEditor(text: $viewModel.description)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                        .frame(minHeight: 110)
+                                        .scrollContentBackground(.hidden)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(theme.backgroundColor)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 10)
+                                                        .strokeBorder(
+                                                            focusedField == .taskDescription ?
+                                                            theme.primaryColor :
+                                                            theme.borderColor,
+                                                            lineWidth: focusedField == .taskDescription ? 2 : 1
+                                                        )
+                                                )
+                                        )
+                                        .themedPrimaryText()
+                                        .accentColor(theme.primaryColor)
+                                        .autocorrectionDisabled(true)
+                                        .textInputAutocapitalization(.sentences)
+                                        .focused($focusedField, equals: .taskDescription)
+                                        .animation(.easeInOut(duration: 0.2), value: focusedField)
+                                }
                             }
                             
                             NavigationLink {
@@ -1117,20 +1202,19 @@ struct TaskFormView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 32)
                 }
+                .background(Color.clear.contentShape(Rectangle()).onTapGesture {
+                    focusedField = nil
+                })
                 .padding(.top, 8)
             }
             .themedBackground()
-            .simultaneousGesture(
-                TapGesture()
-                    .onEnded { _ in
-                        focusedField = nil
-                    }
-            )
-            .contentShape(Rectangle())
-            .navigationTitle("new_task".localized)
+            #if os(iOS)
+            .scrollDismissesKeyboard(.interactively)
+            #endif
+            .navigationTitle(viewModel.taskId == nil ? "new_task".localized : "edit_task".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("cancel".localized) {
                         dismiss()
                     }
@@ -1148,6 +1232,15 @@ struct TaskFormView: View {
                     .themedPrimary()
                     .disabled(!viewModel.isValid)
                 }
+
+                #if os(iOS)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Fine") {
+                        focusedField = nil
+                    }
+                }
+                #endif
             }
             .sheet(isPresented: $showDurationPicker) {
                 DurationPickerView(duration: $viewModel.duration)

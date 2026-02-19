@@ -1449,3 +1449,400 @@
 "performance" = "Prestazione";
 "difficulty" = "Difficoltà";
 "quality" = "Qualità";
+
+// Life Orchestration
+"life_orchestration" = "Orchestrazione Vita";
+"life_orchestration_footer" = "Monitora i tuoi domini di vita, imposta obiettivi e ricevi consigli personalizzati";
+"life_dashboard" = "Dashboard Vita";
+"life_pulse" = "Polso Vita";
+"life_alignment" = "Allineamento Vita";
+"manage_domains" = "Gestisci Domini";
+"manage_goals" = "Gestisci Obiettivi";
+"category_domain_mapping" = "Collegamento Categorie-Domini";
+"category_domain_mapping_header" = "Categorie";
+"category_domain_mapping_footer" = "Collega le tue categorie ai domini di vita per tracciare le attività automaticamente";
+"not_mapped" = "Non collegato";
+"no_categories_yet" = "Nessuna categoria ancora";
+
+// Life Domains
+"life_domain" = "Dominio di Vita";
+"life_domain_health" = "Salute";
+"life_domain_work" = "Lavoro";
+"life_domain_learning" = "Apprendimento";
+"life_domain_finance" = "Finanze";
+"life_domain_relationships" = "Relazioni";
+"life_domain_freedom" = "Libertà";
+"life_domain_custom" = "Personalizzato";
+"domain" = "Dominio";
+"domain_name" = "Nome Dominio";
+"domains" = "Domini";
+"your_domains" = "I Tuoi Domini";
+"new_domain" = "Nuovo Dominio";
+"edit_domain" = "Modifica Dominio";
+"add_custom_domain" = "Aggiungi Dominio Personalizzato";
+"select_domain" = "Seleziona Dominio";
+"domain_setup_footer" = "Attiva e dai priorità alle aree della vita che vuoi monitorare";
+"importance" = "Importanza";
+
+// Goals
+"goals" = "Obiettivi";
+"goal_name" = "Nome Obiettivo";
+"goal_description" = "Descrizione Obiettivo";
+"goal_info" = "Collega le attività a questo obiettivo per tracciare i progressi automaticamente";
+"new_goal" = "Nuovo Obiettivo";
+"edit_goal" = "Modifica Obiettivo";
+"active_goals" = "Obiettivi Attivi";
+"add_first_goal" = "Aggiungi il tuo primo obiettivo";
+"no_goals_yet" = "Nessun obiettivo ancora";
+"no_goals_for_domain" = "Nessun obiettivo per questo dominio";
+"goals_count" = "Obiettivi";
+"has_deadline" = "Ha una Scadenza";
+"target_date" = "Data Obiettivo";
+"linked_tasks" = "Attività Collegate";
+"unassigned" = "Non assegnato";
+
+// Scores & Evaluation
+"score_breakdown" = "Dettaglio Punteggio";
+"score_trend" = "Andamento Punteggio";
+"consistency" = "Costanza";
+"momentum" = "Slancio";
+"balance" = "Equilibrio";
+"integrity" = "Integrità";
+"no_evaluation_yet" = "Nessuna valutazione ancora";
+"no_data_yet" = "Nessun dato ancora";
+"insights" = "Analisi";
+"focus_today" = "Focus Oggi";
+"detected_patterns" = "Pattern Rilevati";
+"show_more" = "Mostra di più";
+"show_less" = "Mostra meno";
+"refresh" = "Aggiorna";
+"details" = "Dettagli";
+"classification" = "Classificazione";
+"overdue" = "In ritardo";
+"mood_trend_format" = "Umore: %@";
+"days_left_format" = "%d giorni rimanenti";
+"days_overdue_format" = "%d giorni in ritardo";
+"tasks_short" = "attività";
+"deadline" = "Scadenza";
+
+// Tasks for domain
+"no_tasks_for_domain" = "Nessuna attività per questo dominio";
+
+// Finance
+"finance" = "Finanze";
+"finance_dashboard" = "Finanze";
+"finance_settings" = "Impostazioni Finanze";
+"starting_balance" = "Saldo Iniziale";
+"starting_balance_footer" = "Il saldo attuale del tuo conto prima del tracciamento";
+"monthly_budget_target" = "Budget Mensile";
+"monthly_budget_footer" = "Importo massimo che vuoi spendere al mese";
+"current_spending" = "Spesa Attuale";
+"savings_goal" = "Obiettivo Risparmio";
+"savings_goal_footer" = "Percentuale del reddito che vuoi risparmiare ogni mese";
+"current_savings_rate" = "Tasso di Risparmio Attuale";
+"income_goal" = "Obiettivo Guadagno";
+"income_goal_footer" = "Obiettivo di guadagno mensile che vuoi raggiungere";
+"current_income" = "Guadagno Attuale";
+"category_budgets" = "Budget per Categoria";
+"category_budgets_footer" = "Imposta limiti di spesa per le singole categorie";
+"add_category_budget" = "Aggiungi Budget Categoria";
+"monthly_limit" = "Limite Mensile";
+"over_budget" = "Oltre il Budget";
+"reset_finance_data" = "Resetta Tutti i Dati Finanziari";
+"your_goals" = "I Tuoi Obiettivi";
+"period" = "Periodo";
+"period_day" = "Giorno";
+"period_week" = "Settimana";
+"period_month" = "Mese";
+"period_year" = "Anno";
+"hourly_trend" = "Andamento di Oggi";
+"daily_trend" = "Andamento Settimanale";
+"yearly_trend" = "Andamento Annuale";
+"savings_goal_mode" = "Tipo Obiettivo";
+"percentage" = "Percentuale";
+"fixed_amount" = "Importo Fisso";
+"savings_goal_amount_footer" = "Importo fisso che vuoi risparmiare ogni mese";
+"financial_health" = "Salute Finanziaria";
+"monthly_overview" = "Riepilogo Mensile";
+"income" = "Entrate";
+"expenses" = "Uscite";
+"net" = "Netto";
+"savings_rate" = "Tasso di Risparmio";
+"months_runway" = "mesi di autonomia";
+"active_subscriptions" = "Abbonamenti Attivi";
+"sub_monthly_short" = "/mese";
+"recent_entries" = "Movimenti Recenti";
+"no_finance_entries" = "Nessun movimento finanziario";
+"new_entry" = "Nuovo Movimento";
+"edit_entry" = "Modifica Movimento";
+"add_entry" = "Aggiungi Movimento";
+"entry_name" = "Nome Movimento";
+"amount" = "Importo";
+"date_and_time" = "Data e ora";
+"recurring" = "Ricorrente";
+"notes_optional" = "Note (opzionale)";
+"stress_comfortable" = "Confortevole";
+"stress_balanced" = "Equilibrato";
+"stress_tight" = "Stretto";
+"stress_stressed" = "Sotto pressione";
+"stress_critical" = "Critico";
+"current_balance" = "Saldo Attuale";
+"set_starting_balance" = "Saldo Iniziale";
+"set_starting_balance_message" = "Inserisci il saldo attuale del tuo conto per iniziare a tracciare";
+"since_start" = "dall'inizio";
+"expense_breakdown" = "Ripartizione Spese";
+"monthly_trend" = "Andamento Mensile";
+"budget_management" = "Gestione Budget";
+"budget_management_limit" = "Limite";
+"budget_management_spent" = "Speso";
+"budget_total" = "Budget Totale";
+"left_this_month" = "rimasti questo mese";
+"budget_days_left" = "%d giorni rimanenti";
+"finance_direction" = "Direzione";
+"finance_outflow" = "Uscita";
+"finance_inflow" = "Entrata";
+
+// Finance Entry Types
+"finance_income" = "Entrata";
+"finance_expense" = "Spesa";
+"finance_subscription" = "Abbonamento";
+"finance_saving" = "Risparmio";
+"finance_investment" = "Investimento";
+"finance_debt" = "Debito";
+
+// Finance Categories
+"finance_cat_housing" = "Abitazione";
+"finance_cat_food" = "Alimentari";
+"finance_cat_transport" = "Trasporti";
+"finance_cat_health" = "Salute";
+"finance_cat_entertainment" = "Intrattenimento";
+"finance_cat_education" = "Istruzione";
+"finance_cat_clothing" = "Abbigliamento";
+"finance_cat_utilities" = "Utenze";
+"finance_cat_insurance" = "Assicurazioni";
+"finance_cat_salary" = "Stipendio";
+"finance_cat_freelance" = "Freelance";
+"finance_cat_passive" = "Reddito Passivo";
+"finance_cat_gifts" = "Regali";
+"finance_cat_other" = "Altro";
+
+// Chart Styles
+"chart_pie" = "Torta";
+"chart_bar" = "Barre";
+"chart_style" = "Stile Grafico";
+
+// Currency
+"currency" = "Valuta";
+"currency_footer" = "Seleziona la valuta per tutti i dati finanziari";
+
+// Custom Categories
+"builtin_categories" = "Categorie predefinite";
+"builtin_categories_footer" = "Personalizza nome e icona delle categorie predefinite";
+"reset_to_default" = "Ripristina predefinito";
+"custom_categories" = "Categorie Personalizzate";
+"custom_categories_footer" = "Crea categorie personalizzate per i tuoi movimenti";
+"add_custom_category" = "Aggiungi Categoria";
+"category_name" = "Nome Categoria";
+"category_type" = "Tipo Categoria";
+"new_category" = "Nuova Categoria";
+"edit_category" = "Modifica Categoria";
+"icon" = "Icona";
+
+// Subscription Frequencies
+"sub_weekly" = "Settimanale";
+"sub_monthly" = "Mensile";
+"sub_quarterly" = "Trimestrale";
+"sub_yearly" = "Annuale";
+
+// Financial Goals
+"fin_goal_savings" = "Risparmi";
+"fin_goal_debt_payoff" = "Estinzione Debito";
+"fin_goal_investment" = "Investimento";
+"fin_goal_emergency" = "Fondo Emergenza";
+"fin_goal_purchase" = "Acquisto";
+
+// Goal Importance
+"goal_importance_critical" = "Critico";
+"goal_importance_high" = "Alto";
+"goal_importance_medium" = "Medio";
+"goal_importance_aspirational" = "Aspirazionale";
+
+// Goal Status
+"goal_status_active" = "Attivo";
+"goal_status_paused" = "In pausa";
+"goal_status_completed" = "Completato";
+"goal_status_abandoned" = "Abbandonato";
+
+// Goal Auto-Tracking
+"goal_auto_tracking_info" = "I progressi vengono tracciati automaticamente in base alle attività nello stesso dominio di vita. Collega le categorie ai domini nelle Impostazioni.";
+
+// Score Levels
+"score_excellent" = "Eccellente";
+"score_good" = "Buono";
+"score_fair" = "Discreto";
+"score_poor" = "Scarso";
+"score_critical" = "Critico";
+
+// Behavior Patterns
+"pattern_avoidance" = "Evitamento";
+"pattern_avoidance_desc" = "Stai evitando le attività in quest'area";
+"pattern_overload" = "Sovraccarico";
+"pattern_overload_desc" = "Troppe attività, rischio burnout";
+"pattern_stagnation" = "Stagnazione";
+"pattern_stagnation_desc" = "Nessun progresso in quest'area di recente";
+"pattern_momentum" = "Slancio";
+"pattern_momentum_desc" = "Ottima costanza, continua così!";
+"pattern_breakthrough" = "Svolta";
+"pattern_breakthrough_desc" = "Progressi significativi raggiunti";
+"pattern_burnout_risk" = "Rischio Burnout";
+"pattern_burnout_desc" = "Carico di lavoro elevato troppo a lungo";
+"pattern_neglect" = "Trascuratezza";
+"pattern_neglect_desc" = "Questo dominio ha bisogno di attenzione";
+"pattern_neglect_no_tasks_desc" = "Nessuna attività assegnata a questo dominio";
+"pattern_inconsistency" = "Incostanza";
+"pattern_inconsistency_desc" = "Completamento irregolare";
+"pattern_financial_stress" = "Stress Finanziario";
+"pattern_financial_stress_desc" = "Le spese superano le entrate";
+"pattern_financial_freedom" = "Libertà Finanziaria";
+"pattern_financial_freedom_desc" = "Risparmi sani e stress basso";
+
+// Pattern Actions
+"action_avoidance" = "Inizia con una piccola attività oggi";
+"action_overload" = "Considera di delegare o rimandare alcune attività";
+"action_stagnation" = "Imposta un piccolo obiettivo raggiungibile per questa settimana";
+"action_momentum" = "Mantieni questo ritmo!";
+"action_breakthrough" = "Festeggia e imposta il prossimo traguardo";
+"action_burnout" = "Prenditi una pausa e riduci il carico";
+"action_neglect" = "Pianifica almeno un'attività questa settimana";
+"action_inconsistency" = "Prova a costruire una routine quotidiana";
+"action_financial_stress" = "Rivedi le spese e trova aree dove tagliare";
+"action_financial_freedom" = "Considera di investire il surplus";
+
+// Insights
+"insight_avoidance" = "Stai evitando %@ da %d giorni. Cosa ti trattiene?";
+"insight_breakthrough" = "Progressi incredibili in %@! Hai completato %d attività questa settimana.";
+"insight_burnout" = "Stai spingendo forte in %@. Considera una pausa.";
+"insight_momentum" = "Ottimo slancio in %@! %d giorni di lavoro costante.";
+"insight_neglect" = "Hai detto che %@ è importante (%d/10), ma nessuna attività da %d giorni.";
+"insight_inconsistency" = "Il tuo ritmo in %@ è irregolare. Prova a fissare un programma.";
+"insight_financial_stress" = "Le tue spese sono il %.0f%% delle entrate. Rivedi le spese in %@.";
+"insight_financial_stress_generic" = "Le spese superano le entrate. È ora di rivedere il budget.";
+"insight_financial_freedom" = "Ottima salute finanziaria! Risparmi il %.0f%% delle entrate. Categoria principale: %@.";
+"insight_financial_freedom_generic" = "Le tue finanze sono in ottima forma. Continua così!";
+"insight_global_high" = "Il tuo allineamento vita è forte al %d%%. Ottimo lavoro!";
+"insight_global_high_action" = "Concentrati sul mantenere le abitudini attuali";
+"insight_global_low" = "Il tuo allineamento vita è al %d%%. Lavoriamo per migliorarlo.";
+"insight_global_low_action" = "Scegli un dominio su cui concentrarti questa settimana";
+"insight_global_neutral" = "Il tuo allineamento vita è al %d%%. C'è margine di miglioramento.";
+
+// Insight Tones
+"insight_tone_celebratory" = "Celebrazione";
+"insight_tone_encouraging" = "Incoraggiante";
+"insight_tone_firm" = "Deciso";
+"insight_tone_reality_check" = "Dose di Realtà";
+"insight_tone_reflective" = "Riflessivo";
+
+// Recommendations
+"rec_focus_today" = "Concentrati su questo oggi";
+"rec_focus_today_title" = "Focus Giornaliero";
+"rec_focus_today_reason" = "Questo dominio ha bisogno della tua attenzione oggi";
+"rec_rebalance" = "Riequilibra i tuoi sforzi";
+"rec_rebalance_title" = "Riequilibrio";
+"rec_rebalance_reason" = "Alcuni domini vengono trascurati";
+"rec_reduce_load" = "Riduci il carico di lavoro";
+"rec_reduce_load_title" = "Riduci Carico";
+"rec_start_new_habit" = "Inizia una nuova abitudine";
+"rec_new_habit_title" = "Nuova Abitudine";
+"rec_new_habit_reason" = "Questo dominio non ha attività regolari";
+"rec_protect_momentum" = "Proteggi il tuo slancio";
+"rec_protect_momentum_title" = "Continua Così";
+"rec_overdue_goal_title" = "Obiettivo Scaduto";
+"rec_overdue_goal_reason" = "Questo obiettivo ha superato la scadenza";
+"rec_pause_goal" = "Considera di mettere in pausa questo obiettivo";
+"rec_pause_goal_title" = "Pausa Obiettivo";
+"rec_pause_goal_reason" = "Nessun progresso da un po'";
+"rec_remove_goal" = "Considera di rimuovere questo obiettivo";
+"rec_remove_goal_title" = "Rimuovi Obiettivo";
+"rec_remove_goal_reason" = "Questo obiettivo sembra abbandonato";
+"rec_financial_action" = "Rivedi le tue finanze";
+"rec_financial_review_title" = "Revisione Finanziaria";
+"rec_financial_review_reason" = "La tua salute finanziaria ha bisogno di attenzione";
+"rec_savings_title" = "Opportunità di Risparmio";
+"rec_savings_reason" = "Potresti risparmiare di più questo mese";
+"rec_top_expense_title" = "Spesa Principale";
+"rec_top_expense_reason" = "La tua categoria di spesa più grande questo mese";
+
+// Etichette Severità Pattern
+"severity_critical" = "CRITICO";
+"severity_warning" = "ATTENZIONE";
+"severity_info" = "INFO";
+
+// MARK: - Chiavi Generali Mancanti
+"active_sessions" = "Sessioni Attive";
+"advanced_timer" = "Timer Avanzato";
+"cannot_delete_category" = "Impossibile Eliminare la Categoria";
+"category_used_by_tasks_message" = "Questa categoria è usata da attività esistenti";
+"continue_session" = "Continua Sessione";
+"delete_anyway" = "Elimina Comunque";
+"delete_category" = "Elimina Categoria";
+"delete_category_message" = "Sei sicuro di voler eliminare questa categoria?";
+"delete_category_with_tasks_warning" = "Questa categoria è usata da alcune attività. Eliminandola verrà rimossa da quelle attività.";
+"deutsch" = "Tedesco";
+"discard_session" = "Scarta Sessione";
+"donation_helps_development" = "La tua donazione aiuta lo sviluppo";
+"effective_time" = "Tempo Effettivo";
+"email_client_not_available" = "Email Non Disponibile";
+"email_client_not_available_message" = "Configura un account email per inviare feedback";
+"error_loading_categories" = "Errore nel caricamento delle categorie";
+"error_loading_rewards" = "Errore nel caricamento delle ricompense";
+"error_loading_tasks" = "Errore nel caricamento delle attività";
+"error_loading_tracking_sessions" = "Errore nel caricamento delle sessioni";
+"export_all_data" = "Esporta Tutti i Dati";
+"export_backup" = "Esporta Backup";
+"feedback_submission_failed_alert_message" = "Invio feedback fallito. Riprova.";
+"getting_location_info" = "Ottenendo info posizione...";
+"import_backup" = "Importa Backup";
+"lead_time_hours_after_format" = "%dh dopo";
+"lead_time_hours_minutes_after_format" = "%dh %dm dopo";
+"lead_time_minutes_after_format" = "%dm dopo";
+"list_view" = "Lista";
+"loading_map" = "Caricamento mappa...";
+"no_category" = "Nessuna Categoria";
+"no_results_found" = "Nessun risultato trovato";
+"notification_lead_h_after" = "%d ora/e dopo";
+"notification_lead_h_m_after" = "%dh %dm dopo";
+"notification_lead_m_after" = "%d minuto/i dopo";
+"now" = "Ora";
+"operation_completed" = "Operazione Completata";
+"operation_success" = "Operazione completata con successo";
+"paused_caps" = "IN PAUSA";
+"paused_time" = "Tempo in Pausa";
+"pick_location" = "Scegli Posizione";
+"pomodoro_complete" = "Pomodoro Completato!";
+"processing" = "Elaborazione...";
+"rate_app" = "Valuta l'App";
+"rate_app_subtitle" = "Se ti piace SnapTask, lascia una valutazione!";
+"ready_to_start_tracking" = "Pronto per iniziare il tracciamento";
+"redeemed" = "Riscattato";
+"restore_from_backup" = "Ripristina da Backup";
+"reward_redeemed" = "Ricompensa Riscattata!";
+"save_session" = "Salva Sessione";
+"searching" = "Ricerca...";
+"select" = "Seleziona";
+"session_in_progress" = "Sessione in Corso";
+"session_not_available" = "Sessione non disponibile";
+"sessions" = "Sessioni";
+"smart_goal_system" = "Sistema Obiettivi Smart";
+"subscription" = "Abbonamento";
+"sync_state_mismatch" = "Stato sincronizzazione non corrispondente";
+"sync_token_expired" = "Token di sincronizzazione scaduto";
+"tap_play_to_resume" = "Tocca play per riprendere";
+"timeline_view" = "Timeline";
+"timer_session" = "Sessione Timer";
+"tracked_x" = "Tracciato: %@";
+"untitled_task" = "Attività Senza Titolo";
+"user" = "Utente";
+"warning" = "Attenzione";
+"will_overwrite_data" = "Questo sovrascriverà i dati attuali";
+"you_focused_for" = "Ti sei concentrato per";
+"zone_missing_recreating" = "Zona mancante, ricreazione...";

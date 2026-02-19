@@ -805,6 +805,7 @@ struct TimelineHeaderView: View {
     @Binding var scrollProxy: ScrollViewProxy?
     @Environment(\.theme) private var theme
     @State private var showingJournal = false
+    @State private var showingSettings = false
     @ObservedObject private var journalManager = JournalManager.shared
 
     var body: some View {
@@ -817,6 +818,29 @@ struct TimelineHeaderView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .layoutPriority(1)
+                    
+                    Button(action: { showingSettings = true }) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(theme.primaryColor.opacity(0.12))
+                                .frame(width: 34, height: 34)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
+                                )
+                                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(theme.primaryColor)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showingSettings) {
+                        NavigationStack {
+                            SettingsView()
+                        }
+                    }
                     
                     Button(action: { showingJournal = true }) {
                         ZStack {
@@ -1147,6 +1171,7 @@ struct TaskListView: View {
                         .padding(.top, 8)
                         .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .refreshable {
                         await performCloudKitSync()
                     }
