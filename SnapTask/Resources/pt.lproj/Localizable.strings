@@ -880,6 +880,7 @@
 "points_history_sync_description" = "Pontos ganhos em tarefas concluídas";
 "categories_sync_description" = "Suas categorias de tarefas personalizadas";
 "app_settings_sync_description" = "Suas preferências e configurações do app";
+"finance_sync_description" = "Lançamentos, orçamentos, metas, categorias e configurações de finanças";
 "synchronized_data" = "Dados sincronizados";
 "all_data_types_synced" = "Todos os tipos de dados são sincronizados automaticamente";
 "sync_options_title" = "Opções de sincronização";
@@ -1566,6 +1567,7 @@
 "finance_settings" = "Configurações de Finanças";
 "starting_balance" = "Saldo Inicial";
 "starting_balance_footer" = "Seu saldo atual antes do rastreamento";
+"monthly_goals" = "Metas Mensais";
 "monthly_budget_target" = "Orçamento Mensal";
 "monthly_budget_footer" = "Valor máximo que você deseja gastar por mês";
 "current_spending" = "Gastos Atuais";
@@ -1594,6 +1596,12 @@
 "percentage" = "Porcentagem";
 "fixed_amount" = "Valor Fixo";
 "savings_goal_amount_footer" = "Valor fixo que você deseja poupar a cada mês";
+"yearly_overview" = "Ano";
+"ytd" = "Desde início do ano";
+"avg_monthly" = "Média mensal";
+"projected" = "Projetado";
+"annual_net" = "Líquido anual";
+"ytd_savings_rate" = "Taxa poupança YTD";
 "financial_health" = "Saúde Financeira";
 "monthly_overview" = "Resumo Mensal";
 "income" = "Receitas";
@@ -1852,3 +1860,19 @@
 "will_overwrite_data" = "Isso substituirá seus dados atuais";
 "you_focused_for" = "Você se concentrou por";
 "zone_missing_recreating" = "Zona ausente, recriando...";
+
+// MARK: - Finance Category Hide/Restore
+"hide_category" = "Ocultar Categoria";
+"hide_category_message" = "Tem certeza que deseja ocultar";
+"hide" = "Ocultar";
+"restore" = "Restaurar";
+
+// MARK: - Finance Widget
+"finance_widget_name" = "Finanças";
+"finance_widget_description" = "Ver saldo mensal, receitas e despesas.";
+"widget_balance" = "Saldo";
+"widget_income" = "Receitas";
+"widget_expenses" = "Despesas";
+"widget_budget" = "Orçamento";
+"widget_no_data" = "Sem dados financeiros";
+"widget_this_month" = "Este mês";

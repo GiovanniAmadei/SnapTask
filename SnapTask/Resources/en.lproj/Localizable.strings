@@ -881,6 +881,7 @@
 "points_history_sync_description" = "Points earned from completed tasks";
 "categories_sync_description" = "Your custom task categories";
 "app_settings_sync_description" = "Your preferences and app settings";
+"finance_sync_description" = "Finance entries, budgets, goals, categories and settings";
 "synchronized_data" = "Synchronized Data";
 "all_data_types_synced" = "All data types are automatically synchronized";
 "sync_options_title" = "Sync Options";
@@ -1576,6 +1577,7 @@
 "finance_settings" = "Finance Settings";
 "starting_balance" = "Starting Balance";
 "starting_balance_footer" = "Your current account balance before tracking";
+"monthly_goals" = "Monthly Goals";
 "monthly_budget_target" = "Monthly Budget";
 "monthly_budget_footer" = "Maximum amount you want to spend per month";
 "current_spending" = "Current Spending";
@@ -1604,6 +1606,12 @@
 "percentage" = "Percentage";
 "fixed_amount" = "Fixed Amount";
 "savings_goal_amount_footer" = "Fixed amount you want to save each month";
+"yearly_overview" = "Year";
+"ytd" = "YTD";
+"avg_monthly" = "Monthly Avg";
+"projected" = "Projected";
+"annual_net" = "Annual Net";
+"ytd_savings_rate" = "YTD Savings Rate";
 "financial_health" = "Financial Health";
 "monthly_overview" = "Monthly Overview";
 "income" = "Income";
@@ -1887,3 +1895,19 @@
 "will_overwrite_data" = "This will overwrite your current data";
 "you_focused_for" = "You focused for";
 "zone_missing_recreating" = "Zone missing, recreating...";
+
+// MARK: - Finance Category Hide/Restore
+"hide_category" = "Hide Category";
+"hide_category_message" = "Are you sure you want to hide";
+"hide" = "Hide";
+"restore" = "Restore";
+
+// MARK: - Finance Widget
+"finance_widget_name" = "Finance";
+"finance_widget_description" = "View your monthly balance, income and expenses.";
+"widget_balance" = "Balance";
+"widget_income" = "Income";
+"widget_expenses" = "Expenses";
+"widget_budget" = "Budget";
+"widget_no_data" = "No finance data";
+"widget_this_month" = "This month";

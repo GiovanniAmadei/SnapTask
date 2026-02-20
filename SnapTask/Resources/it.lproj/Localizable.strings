@@ -886,6 +886,7 @@
 "points_history_sync_description" = "Punti guadagnati dalle attività completate";
 "categories_sync_description" = "Le tue categorie attività personalizzate";
 "app_settings_sync_description" = "Le tue preferenze e impostazioni dell'app";
+"finance_sync_description" = "Movimenti, budget, obiettivi, categorie e impostazioni finanze";
 "synchronized_data" = "Dati sincronizzati";
 "all_data_types_synced" = "Tutti i tipi di dati vengono sincronizzati automaticamente";
 "sync_options_title" = "Opzioni di sync";
@@ -1534,6 +1535,7 @@
 "finance_settings" = "Impostazioni Finanze";
 "starting_balance" = "Saldo Iniziale";
 "starting_balance_footer" = "Il saldo attuale del tuo conto prima del tracciamento";
+"monthly_goals" = "Obiettivi Mensili";
 "monthly_budget_target" = "Budget Mensile";
 "monthly_budget_footer" = "Importo massimo che vuoi spendere al mese";
 "current_spending" = "Spesa Attuale";
@@ -1562,6 +1564,12 @@
 "percentage" = "Percentuale";
 "fixed_amount" = "Importo Fisso";
 "savings_goal_amount_footer" = "Importo fisso che vuoi risparmiare ogni mese";
+"yearly_overview" = "Anno";
+"ytd" = "Da inizio anno";
+"avg_monthly" = "Media mensile";
+"projected" = "Proiettato";
+"annual_net" = "Netto annuale";
+"ytd_savings_rate" = "Tasso risparmio YTD";
 "financial_health" = "Salute Finanziaria";
 "monthly_overview" = "Riepilogo Mensile";
 "income" = "Entrate";
@@ -1846,3 +1854,19 @@
 "will_overwrite_data" = "Questo sovrascriverà i dati attuali";
 "you_focused_for" = "Ti sei concentrato per";
 "zone_missing_recreating" = "Zona mancante, ricreazione...";
+
+// MARK: - Finance Category Hide/Restore
+"hide_category" = "Nascondi Categoria";
+"hide_category_message" = "Sei sicuro di voler nascondere";
+"hide" = "Nascondi";
+"restore" = "Ripristina";
+
+// MARK: - Finance Widget
+"finance_widget_name" = "Finanze";
+"finance_widget_description" = "Visualizza saldo mensile, entrate e uscite.";
+"widget_balance" = "Saldo";
+"widget_income" = "Entrate";
+"widget_expenses" = "Uscite";
+"widget_budget" = "Budget";
+"widget_no_data" = "Nessun dato finanziario";
+"widget_this_month" = "Questo mese";

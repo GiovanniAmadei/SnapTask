@@ -421,9 +421,9 @@ struct FinanceEntryFormView: View {
     
     private var filteredCategories: [FinanceCategory] {
         if isExpense {
-            return FinanceCategory.allCases.filter { !$0.isIncomeCategory }
+            return FinanceCategory.allCases.filter { !$0.isIncomeCategory && !financeManager.isHidden($0) }
         } else {
-            return FinanceCategory.allCases.filter { $0.isIncomeCategory || $0 == .other || $0 == .gifts }
+            return FinanceCategory.allCases.filter { ($0.isIncomeCategory || $0 == .other || $0 == .gifts) && !financeManager.isHidden($0) }
         }
     }
     

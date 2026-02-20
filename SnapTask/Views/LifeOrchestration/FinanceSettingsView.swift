@@ -11,12 +11,25 @@ struct FinanceSettingsView: View {
     @State private var savingsIsPercent: Bool = true
     @State private var incomeText: String = ""
     @State private var showingAddCategory = false
+    @State private var newCategoryIsExpense: Bool = true
     @State private var editingCategory: CustomFinanceCategory? = nil
     @State private var showingBuiltInCategoryEdit = false
     @State private var builtInCategoryToEdit: FinanceCategory = .other
+    @State private var categoryToHide: FinanceCategory? = nil
+    @State private var showingHideBuiltInAlert = false
+    @State private var customCategoryToDelete: CustomFinanceCategory? = nil
+    @State private var showingDeleteCustomAlert = false
     
     private var currencySymbol: String {
         financeManager.selectedCurrency.symbol
+    }
+    
+    private var expenseCustomCategories: [CustomFinanceCategory] {
+        financeManager.customCategories.filter { $0.isExpenseCategory }
+    }
+    
+    private var incomeCustomCategories: [CustomFinanceCategory] {
+        financeManager.customCategories.filter { !$0.isExpenseCategory }
     }
     
     var body: some View {
@@ -184,61 +197,87 @@ struct FinanceSettingsView: View {
                     .themedSecondaryText()
             }
             
-            // Built-in categories (customizable name & icon)
+            // Expense built-in categories
             Section {
-                ForEach(FinanceCategory.allCases, id: \.self) { cat in
+                ForEach(FinanceCategory.allCases.filter { !$0.isIncomeCategory }, id: \.self) { cat in
                     HStack {
                         Image(systemName: financeManager.icon(for: cat))
-                            .foregroundColor(theme.primaryColor)
+                            .foregroundColor(financeManager.isHidden(cat) ? theme.secondaryTextColor.opacity(0.4) : .red.opacity(0.8))
                             .frame(width: 24)
                         Text(financeManager.displayName(for: cat))
                             .themedPrimaryText()
+                            .opacity(financeManager.isHidden(cat) ? 0.4 : 1)
                         Spacer()
-                        Image(systemName: "pencil")
-                            .font(.caption)
-                            .foregroundColor(theme.secondaryTextColor)
                     }
                     .listRowBackground(theme.surfaceColor)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        builtInCategoryToEdit = cat
-                        showingBuiltInCategoryEdit = true
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        if financeManager.isHidden(cat) {
+                            Button {
+                                financeManager.restoreBuiltInCategory(cat)
+                            } label: {
+                                Label("restore".localized, systemImage: "arrow.uturn.backward")
+                            }
+                            .tint(.blue)
+                        } else {
+                            Button(role: .destructive) {
+                                categoryToHide = cat
+                                showingHideBuiltInAlert = true
+                            } label: {
+                                Label("delete".localized, systemImage: "trash")
+                            }
+                            Button {
+                                builtInCategoryToEdit = cat
+                                showingBuiltInCategoryEdit = true
+                            } label: {
+                                Label("edit".localized, systemImage: "pencil")
+                            }
+                            .tint(theme.primaryColor)
+                        }
                     }
                 }
             } header: {
-                Text("builtin_categories".localized)
+                Text("finance_outflow".localized)
                     .themedSecondaryText()
             } footer: {
                 Text("builtin_categories_footer".localized)
                     .themedSecondaryText()
             }
             
-            // Custom Categories
+            // Expense custom categories (deletable)
+            if !expenseCustomCategories.isEmpty {
+                Section {
+                    ForEach(expenseCustomCategories) { cat in
+                        HStack {
+                            Image(systemName: cat.icon)
+                                .foregroundColor(.red.opacity(0.8))
+                                .frame(width: 24)
+                            Text(cat.name)
+                                .themedPrimaryText()
+                            Spacer()
+                        }
+                        .listRowBackground(theme.surfaceColor)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                customCategoryToDelete = cat
+                                showingDeleteCustomAlert = true
+                            } label: {
+                                Label("delete".localized, systemImage: "trash")
+                            }
+                            Button {
+                                editingCategory = cat
+                            } label: {
+                                Label("edit".localized, systemImage: "pencil")
+                            }
+                            .tint(theme.primaryColor)
+                        }
+                    }
+                }
+            }
+            
+            // Add expense category button
             Section {
-                ForEach(financeManager.customCategories) { cat in
-                    HStack {
-                        Image(systemName: cat.icon)
-                            .foregroundColor(theme.primaryColor)
-                            .frame(width: 24)
-                        Text(cat.name)
-                            .themedPrimaryText()
-                        Spacer()
-                        Text(cat.isExpenseCategory ? "finance_outflow".localized : "finance_inflow".localized)
-                            .font(.caption)
-                            .foregroundColor(theme.secondaryTextColor)
-                    }
-                    .listRowBackground(theme.surfaceColor)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        editingCategory = cat
-                    }
-                }
-                .onDelete { indexSet in
-                    let toRemove = indexSet.map { financeManager.customCategories[$0] }
-                    toRemove.forEach { financeManager.removeCustomCategory($0) }
-                }
-                
                 Button {
+                    newCategoryIsExpense = true
                     showingAddCategory = true
                 } label: {
                     HStack {
@@ -249,12 +288,96 @@ struct FinanceSettingsView: View {
                     }
                 }
                 .listRowBackground(theme.surfaceColor)
+            }
+            
+            // Income built-in categories
+            Section {
+                ForEach(FinanceCategory.allCases.filter { $0.isIncomeCategory }, id: \.self) { cat in
+                    HStack {
+                        Image(systemName: financeManager.icon(for: cat))
+                            .foregroundColor(financeManager.isHidden(cat) ? theme.secondaryTextColor.opacity(0.4) : .green.opacity(0.8))
+                            .frame(width: 24)
+                        Text(financeManager.displayName(for: cat))
+                            .themedPrimaryText()
+                            .opacity(financeManager.isHidden(cat) ? 0.4 : 1)
+                        Spacer()
+                    }
+                    .listRowBackground(theme.surfaceColor)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        if financeManager.isHidden(cat) {
+                            Button {
+                                financeManager.restoreBuiltInCategory(cat)
+                            } label: {
+                                Label("restore".localized, systemImage: "arrow.uturn.backward")
+                            }
+                            .tint(.blue)
+                        } else {
+                            Button(role: .destructive) {
+                                categoryToHide = cat
+                                showingHideBuiltInAlert = true
+                            } label: {
+                                Label("delete".localized, systemImage: "trash")
+                            }
+                            Button {
+                                builtInCategoryToEdit = cat
+                                showingBuiltInCategoryEdit = true
+                            } label: {
+                                Label("edit".localized, systemImage: "pencil")
+                            }
+                            .tint(theme.primaryColor)
+                        }
+                    }
+                }
             } header: {
-                Text("custom_categories".localized)
+                Text("finance_inflow".localized)
                     .themedSecondaryText()
-            } footer: {
-                Text("custom_categories_footer".localized)
-                    .themedSecondaryText()
+            }
+            
+            // Income custom categories (deletable)
+            if !incomeCustomCategories.isEmpty {
+                Section {
+                    ForEach(incomeCustomCategories) { cat in
+                        HStack {
+                            Image(systemName: cat.icon)
+                                .foregroundColor(.green.opacity(0.8))
+                                .frame(width: 24)
+                            Text(cat.name)
+                                .themedPrimaryText()
+                            Spacer()
+                        }
+                        .listRowBackground(theme.surfaceColor)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                customCategoryToDelete = cat
+                                showingDeleteCustomAlert = true
+                            } label: {
+                                Label("delete".localized, systemImage: "trash")
+                            }
+                            Button {
+                                editingCategory = cat
+                            } label: {
+                                Label("edit".localized, systemImage: "pencil")
+                            }
+                            .tint(theme.primaryColor)
+                        }
+                    }
+                }
+            }
+            
+            // Add income category button
+            Section {
+                Button {
+                    newCategoryIsExpense = false
+                    showingAddCategory = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(theme.primaryColor)
+                        Text("add_custom_category".localized)
+                            .foregroundColor(theme.primaryColor)
+                    }
+                }
+                .listRowBackground(theme.surfaceColor)
             }
             
             // Category Budgets
@@ -341,7 +464,7 @@ struct FinanceSettingsView: View {
         }
         .sheet(isPresented: $showingAddCategory) {
             NavigationStack {
-                CustomCategoryFormView()
+                CustomCategoryFormView(initialIsExpense: newCategoryIsExpense)
             }
         }
         .sheet(item: $editingCategory) { cat in
@@ -352,6 +475,32 @@ struct FinanceSettingsView: View {
         .sheet(isPresented: $showingBuiltInCategoryEdit) {
             NavigationStack {
                 BuiltInCategoryFormView(category: builtInCategoryToEdit)
+            }
+        }
+        .alert("hide_category".localized, isPresented: $showingHideBuiltInAlert) {
+            Button("cancel".localized, role: .cancel) { categoryToHide = nil }
+            Button("hide".localized, role: .destructive) {
+                if let cat = categoryToHide {
+                    financeManager.hideBuiltInCategory(cat)
+                }
+                categoryToHide = nil
+            }
+        } message: {
+            if let cat = categoryToHide {
+                Text("hide_category_message".localized + " '\(financeManager.displayName(for: cat))'?")
+            }
+        }
+        .alert("delete_category".localized, isPresented: $showingDeleteCustomAlert) {
+            Button("cancel".localized, role: .cancel) { customCategoryToDelete = nil }
+            Button("delete".localized, role: .destructive) {
+                if let cat = customCategoryToDelete {
+                    financeManager.removeCustomCategory(cat)
+                }
+                customCategoryToDelete = nil
+            }
+        } message: {
+            if let cat = customCategoryToDelete {
+                Text("delete_category_message".localized + " '\(cat.name)'?")
             }
         }
     }
@@ -464,6 +613,7 @@ struct CustomCategoryFormView: View {
     @Environment(\.dismiss) private var dismiss
     
     var editingCategory: CustomFinanceCategory? = nil
+    var initialIsExpense: Bool = true
     
     @State private var name: String = ""
     @State private var selectedIcon: String = "tag.fill"
@@ -564,6 +714,8 @@ struct CustomCategoryFormView: View {
                 name = cat.name
                 selectedIcon = cat.icon
                 isExpenseCategory = cat.isExpenseCategory
+            } else {
+                isExpenseCategory = initialIsExpense
             }
         }
     }

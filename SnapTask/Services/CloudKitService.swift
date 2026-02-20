@@ -96,6 +96,10 @@ class CloudKitService: ObservableObject {
         var journalEntries: Set<String> = []
         var journalPhotos: Set<String> = []
         var journalVoiceMemos: Set<String> = []
+        var financeEntries: Set<String> = []
+        var financeBudgets: Set<String> = []
+        var financialGoals: Set<String> = []
+        var customFinanceCategories: Set<String> = []
     }
     
     private var deletedItems: DeletionTracker {
@@ -120,6 +124,10 @@ class CloudKitService: ObservableObject {
         case journalEntry = "journalEntry"
         case journalPhoto = "journalPhoto"
         case journalVoiceMemo = "journalVoiceMemo"
+        case financeEntry = "financeEntry"
+        case financeBudget = "financeBudget"
+        case financialGoal = "financialGoal"
+        case customFinanceCategory = "customFinanceCategory"
     }
     
     private func markAsDeleted(itemID: String, type: ItemType) {
@@ -142,6 +150,14 @@ class CloudKitService: ObservableObject {
             tracker.journalPhotos.insert(itemID)
         case .journalVoiceMemo:
             tracker.journalVoiceMemos.insert(itemID)
+        case .financeEntry:
+            tracker.financeEntries.insert(itemID)
+        case .financeBudget:
+            tracker.financeBudgets.insert(itemID)
+        case .financialGoal:
+            tracker.financialGoals.insert(itemID)
+        case .customFinanceCategory:
+            tracker.customFinanceCategories.insert(itemID)
         }
         
         deletedItems = tracker
@@ -168,6 +184,14 @@ class CloudKitService: ObservableObject {
             tracker.journalPhotos.remove(itemID)
         case .journalVoiceMemo:
             tracker.journalVoiceMemos.remove(itemID)
+        case .financeEntry:
+            tracker.financeEntries.remove(itemID)
+        case .financeBudget:
+            tracker.financeBudgets.remove(itemID)
+        case .financialGoal:
+            tracker.financialGoals.remove(itemID)
+        case .customFinanceCategory:
+            tracker.customFinanceCategories.remove(itemID)
         }
         
         deletedItems = tracker
@@ -563,11 +587,35 @@ class CloudKitService: ObservableObject {
         
         Task {
             do {
-                let record = createSettingsRecord(from: settings)
+                let recordID = CKRecord.ID(recordName: "AppSettings", zoneID: zoneID)
+                
+                // Fetch existing record so we can mutate it (preserves changeTag, avoids conflict errors)
+                let record: CKRecord
+                do {
+                    record = try await privateDatabase.record(for: recordID)
+                } catch let ckError as CKError where ckError.code == .unknownItem || ckError.code == .zoneNotFound {
+                    record = CKRecord(recordType: settingsRecordType, recordID: recordID)
+                }
+                
+                // Merge: start from what's already stored in the record, overlay new keys
+                var mergedSettings: [String: Any] = [:]
+                if let existing = createSettings(from: record) {
+                    mergedSettings = existing
+                }
+                for (key, value) in settings {
+                    mergedSettings[key] = value
+                }
+                
+                let jsonCompatible = makeJSONCompatible(mergedSettings)
+                if let data = try? JSONSerialization.data(withJSONObject: jsonCompatible) {
+                    record["settings"] = data
+                }
+                record["lastUpdated"] = Date()
+                
                 _ = try await privateDatabase.save(record)
-                print(" App settings saved")
+                print("✅ App settings saved (merged \(mergedSettings.count) keys)")
             } catch {
-                print(" Failed to save app settings: \(error)")
+                print("❌ Failed to save app settings: \(error)")
             }
         }
     }
@@ -654,7 +702,7 @@ class CloudKitService: ObservableObject {
     // Uploads all local tasks and rewards to CloudKit once, so existing data
     // on iPhone becomes visible on new devices (iPad, etc.).
     private func uploadLocalDataIfNeeded() async {
-        let uploadDoneKey = "cloudkit_initial_upload_v2_done" // v2: includes hasSpecificDay
+        let uploadDoneKey = "cloudkit_initial_upload_v4_done" // v4: includes finance settings
         guard !UserDefaults.standard.bool(forKey: uploadDoneKey) else {
             print(" Initial upload already done, skipping")
             return
@@ -688,7 +736,93 @@ class CloudKitService: ObservableObject {
                 return
             }
         }
+
+        // Upload finance
+        let financeEntries = await MainActor.run { FinanceManager.shared.entries }
+        if !financeEntries.isEmpty {
+            let records = financeEntries.map { createFinanceEntryRecord(from: $0) }
+            do {
+                try await batchSaveRecords(records)
+                print(" Initial upload: \(financeEntries.count) finance entries uploaded")
+            } catch {
+                print(" Initial finance entries upload failed: \(error) — will retry next launch")
+                return
+            }
+        }
+
+        let financeBudgets = await MainActor.run { FinanceManager.shared.budgets }
+        if !financeBudgets.isEmpty {
+            let records = financeBudgets.map { createFinanceBudgetRecord(from: $0) }
+            do {
+                try await batchSaveRecords(records)
+                print(" Initial upload: \(financeBudgets.count) finance budgets uploaded")
+            } catch {
+                print(" Initial finance budgets upload failed: \(error) — will retry next launch")
+                return
+            }
+        }
+
+        let financeGoals = await MainActor.run { FinanceManager.shared.financialGoals }
+        if !financeGoals.isEmpty {
+            let records = financeGoals.map { createFinancialGoalRecord(from: $0) }
+            do {
+                try await batchSaveRecords(records)
+                print(" Initial upload: \(financeGoals.count) finance goals uploaded")
+            } catch {
+                print(" Initial finance goals upload failed: \(error) — will retry next launch")
+                return
+            }
+        }
+
+        let customFinanceCategories = await MainActor.run { FinanceManager.shared.customCategories }
+        if !customFinanceCategories.isEmpty {
+            let records = customFinanceCategories.map { createCustomFinanceCategoryRecord(from: $0) }
+            do {
+                try await batchSaveRecords(records)
+                print(" Initial upload: \(customFinanceCategories.count) custom finance categories uploaded")
+            } catch {
+                print(" Initial custom finance categories upload failed: \(error) — will retry next launch")
+                return
+            }
+        }
         
+        // Upload finance settings
+        let financeSettings: [String: Any] = await MainActor.run {
+            let fm = FinanceManager.shared
+            return [
+                "finance_startingBalance": fm.startingBalance,
+                "finance_monthlyBudgetTarget": fm.monthlyBudgetTarget,
+                "finance_savingsGoalPercent": fm.savingsGoalPercent,
+                "finance_savingsGoalAmount": fm.savingsGoalAmount,
+                "finance_savingsGoalIsPercent": fm.savingsGoalIsPercent,
+                "finance_monthlyIncomeGoal": fm.monthlyIncomeGoal,
+                "finance_selectedCurrency": fm.selectedCurrency.rawValue,
+                "lastUpdated": Date().timeIntervalSince1970,
+                "deviceId": UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+            ]
+        }
+        do {
+            let recordID = CKRecord.ID(recordName: "AppSettings", zoneID: zoneID)
+            let record: CKRecord
+            do {
+                record = try await privateDatabase.record(for: recordID)
+            } catch let ckError as CKError where ckError.code == .unknownItem || ckError.code == .zoneNotFound {
+                record = CKRecord(recordType: settingsRecordType, recordID: recordID)
+            }
+            var mergedSettings: [String: Any] = createSettings(from: record) ?? [:]
+            for (key, value) in financeSettings { mergedSettings[key] = value }
+            let jsonCompatible = makeJSONCompatible(mergedSettings)
+            if let data = try? JSONSerialization.data(withJSONObject: jsonCompatible) {
+                record["settings"] = data
+            }
+            record["lastUpdated"] = Date()
+            _ = try await privateDatabase.save(record)
+            print("✅ Initial upload: finance settings uploaded")
+        } catch {
+            print("⚠️ Initial finance settings upload failed: \(error) — will retry next launch")
+            return
+        }
+
         // Mark as done only if everything succeeded
         UserDefaults.standard.set(true, forKey: uploadDoneKey)
         print(" Initial upload completed successfully")
@@ -1042,6 +1176,42 @@ class CloudKitService: ObservableObject {
                     JournalManager.shared.deleteEntry(for: entryToDelete.date)
                     markAsDeleted(itemID: entryToDelete.id.uuidString, type: .journalEntry)
                     print(" Deleted journal entry from remote: \(entryToDelete.date)")
+                }
+
+            case financeEntryRecordType:
+                let entries = FinanceManager.shared.entries
+                if let idx = entries.firstIndex(where: { $0.id == uuid }) {
+                    let entry = entries[idx]
+                    FinanceManager.shared.removeEntry(entry)
+                    markAsDeleted(itemID: entry.id.uuidString, type: .financeEntry)
+                    print(" Deleted finance entry from remote: \(entry.name)")
+                }
+
+            case financeBudgetRecordType:
+                let budgets = FinanceManager.shared.budgets
+                if let idx = budgets.firstIndex(where: { $0.id == uuid }) {
+                    let budget = budgets[idx]
+                    FinanceManager.shared.removeBudget(budget)
+                    markAsDeleted(itemID: budget.id.uuidString, type: .financeBudget)
+                    print(" Deleted finance budget from remote: \(budget.category.displayName)")
+                }
+
+            case financialGoalRecordType:
+                let goals = FinanceManager.shared.financialGoals
+                if let idx = goals.firstIndex(where: { $0.id == uuid }) {
+                    let goal = goals[idx]
+                    FinanceManager.shared.removeFinancialGoal(goal)
+                    markAsDeleted(itemID: goal.id.uuidString, type: .financialGoal)
+                    print(" Deleted financial goal from remote: \(goal.name)")
+                }
+
+            case customFinanceCategoryRecordType:
+                let categories = FinanceManager.shared.customCategories
+                if let idx = categories.firstIndex(where: { $0.id == uuid }) {
+                    let category = categories[idx]
+                    FinanceManager.shared.removeCustomCategory(category)
+                    markAsDeleted(itemID: category.id.uuidString, type: .customFinanceCategory)
+                    print(" Deleted custom finance category from remote: \(category.name)")
                 }
                 
             default:
@@ -2439,7 +2609,11 @@ class CloudKitService: ObservableObject {
                 "trackingSessions": deletedItems.trackingSessions.count,
                 "journalEntries": deletedItems.journalEntries.count,
                 "journalPhotos": deletedItems.journalPhotos.count,
-                "journalVoiceMemos": deletedItems.journalVoiceMemos.count
+                "journalVoiceMemos": deletedItems.journalVoiceMemos.count,
+                "financeEntries": deletedItems.financeEntries.count,
+                "financeBudgets": deletedItems.financeBudgets.count,
+                "financialGoals": deletedItems.financialGoals.count,
+                "customFinanceCategories": deletedItems.customFinanceCategories.count
             ]
         ]
     }
@@ -2819,9 +2993,9 @@ extension CloudKitService {
         record["isRecurring"] = entry.isRecurring
         record["recurringFrequency"] = entry.recurringFrequency?.rawValue
         record["recurringEndDate"] = entry.recurringEndDate
-        record["tags"] = entry.tags
-        record["creationDate"] = entry.creationDate
-        record["lastModifiedDate"] = entry.lastModifiedDate
+        record["tags"] = entry.tags.isEmpty ? nil : entry.tags
+        record["createdAt"] = entry.creationDate
+        record["updatedAt"] = entry.lastModifiedDate
         
         return record
     }
@@ -2834,7 +3008,7 @@ extension CloudKitService {
         record["category"] = budget.category.rawValue
         record["monthlyLimit"] = budget.monthlyLimit
         record["isActive"] = budget.isActive
-        record["creationDate"] = budget.creationDate
+        record["createdAt"] = budget.creationDate
         
         return record
     }
@@ -2850,8 +3024,8 @@ extension CloudKitService {
         record["targetDate"] = goal.targetDate
         record["type"] = goal.type.rawValue
         record["isActive"] = goal.isActive
-        record["creationDate"] = goal.creationDate
-        record["lastModifiedDate"] = goal.lastModifiedDate
+        record["createdAt"] = goal.creationDate
+        record["updatedAt"] = goal.lastModifiedDate
         
         return record
     }
@@ -2864,7 +3038,7 @@ extension CloudKitService {
         record["name"] = category.name
         record["icon"] = category.icon
         record["isExpenseCategory"] = category.isExpenseCategory
-        record["creationDate"] = category.creationDate
+        record["createdAt"] = category.creationDate
         
         return record
     }
@@ -2890,8 +3064,8 @@ extension CloudKitService {
         let recurringFrequency = (record["recurringFrequency"] as? String).flatMap { SubscriptionFrequency(rawValue: $0) }
         let recurringEndDate = record["recurringEndDate"] as? Date
         let tags = record["tags"] as? [String] ?? []
-        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
-        let lastModifiedDate = record["lastModifiedDate"] as? Date ?? record.modificationDate ?? creationDate
+        let creationDate = record["createdAt"] as? Date ?? record.creationDate ?? Date()
+        let lastModifiedDate = record["updatedAt"] as? Date ?? record.modificationDate ?? creationDate
         
         return FinanceEntry(
             id: id,
@@ -2921,7 +3095,7 @@ extension CloudKitService {
             return nil
         }
         
-        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
+        let creationDate = record["createdAt"] as? Date ?? record.creationDate ?? Date()
         
         return FinanceBudget(
             id: id,
@@ -2945,8 +3119,8 @@ extension CloudKitService {
         }
         
         let targetDate = record["targetDate"] as? Date
-        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
-        let lastModifiedDate = record["lastModifiedDate"] as? Date ?? record.modificationDate ?? creationDate
+        let creationDate = record["createdAt"] as? Date ?? record.creationDate ?? Date()
+        let lastModifiedDate = record["updatedAt"] as? Date ?? record.modificationDate ?? creationDate
         
         return FinancialGoal(
             id: id,
@@ -2970,7 +3144,7 @@ extension CloudKitService {
             return nil
         }
         
-        let creationDate = record["creationDate"] as? Date ?? record.creationDate ?? Date()
+        let creationDate = record["createdAt"] as? Date ?? record.creationDate ?? Date()
         
         return CustomFinanceCategory(
             id: id,

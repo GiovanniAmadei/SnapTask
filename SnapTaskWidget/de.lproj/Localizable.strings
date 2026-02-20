@@ -74,6 +74,35 @@
 "Content" = "Inhalt";
 
 "Hello" = "Hallo";
+
+/* Finance Widget */
+"Finance" = "Finanzen";
+"View your monthly balance, income and expenses." = "Monatliches Guthaben, Einnahmen und Ausgaben anzeigen.";
+"Balance" = "Guthaben";
+"Income" = "Einnahmen";
+"Expenses" = "Ausgaben";
+"Budget" = "Budget";
+"No finance data" = "Keine Finanzdaten";
+"This month" = "Diesen Monat";
+"of budget" = "des Budgets";
+"Total Balance" = "Gesamtguthaben";
+"Balance Mode" = "Guthabenmodus";
+"Starting balance + all movements" = "Startguthaben + alle Bewegungen";
+"Income and expenses of the current month" = "Einnahmen und Ausgaben des aktuellen Monats";
+"Category Budgets" = "Kategoriebudgets";
+"Net" = "Netto";
+"No budgets" = "Keine Budgets";
+"Budgets" = "Budgets";
+"left this month" = "diesen Monat übrig";
+"spent" = "ausgegeben";
+"Total Budget" = "Gesamtbudget";
+"Spent" = "Ausgegeben";
+"Limit" = "Limit";
+"Remaining" = "Verbleibend";
+"Category" = "Kategorie";
+"net" = "netto";
+"Total" = "Gesamt";
+"Month" = "Monat";
 "Leading" = "Links";
 "Trailing" = "Rechts";
 "Bottom" = "Unten";

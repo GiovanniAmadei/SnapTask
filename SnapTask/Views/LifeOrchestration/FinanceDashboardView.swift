@@ -37,12 +37,14 @@ struct FinanceDashboardView: View {
     @Environment(\.theme) private var theme
     @State private var showingAddEntry = false
     @State private var editingEntry: FinanceEntry?
+    @State private var showingAllEntries = false
     @State private var balanceText: String = ""
     @State private var breakdownPeriod: ChartPeriod = .month
     @State private var breakdownStyle: ChartStyle = .pie
     @State private var trendPeriod: ChartPeriod = .month
     @State private var trendStyle: ChartStyle = .bar
     @State private var selectedBudgetIndex: Int = 0
+    @State private var summaryShowsYearly: Bool = false
     
     private var hasGoalsConfigured: Bool {
         financeManager.monthlyBudgetTarget > 0 ||
@@ -77,15 +79,15 @@ struct FinanceDashboardView: View {
                     
                     // Quick actions
                     quickActions
+
+                    // Recent entries (preview)
+                    recentEntriesSection
                     
                     // Goal progress (if configured)
                     if hasGoalsConfigured {
                         goalProgressSection
                     }
                     
-                    // Summary card
-                    summaryCard
-                                        
                     // Budget alerts
                     if !financeManager.overBudgetCategories().isEmpty {
                         budgetAlertsCard
@@ -93,9 +95,6 @@ struct FinanceDashboardView: View {
                     
                     // Charts combined in TabView with swipe
                     chartsSection
-                    
-                    // Recent entries
-                    recentEntriesSection
                     
                     // Subscriptions
                     if !financeManager.activeSubscriptions.isEmpty {
@@ -122,6 +121,14 @@ struct FinanceDashboardView: View {
                 FinanceEntryFormView(editingEntry: entry)
             }
         }
+        .sheet(isPresented: $showingAllEntries) {
+            NavigationStack {
+                FinanceAllEntriesView(onSelect: { entry in
+                    showingAllEntries = false
+                    editingEntry = entry
+                })
+            }
+        }
     }
     
     // MARK: - Goal Progress Section
@@ -132,7 +139,7 @@ struct FinanceDashboardView: View {
                 Image(systemName: "target")
                     .font(.subheadline)
                     .foregroundColor(theme.primaryColor)
-                Text("monthly_budget_target".localized)
+                Text("monthly_goals".localized)
                     .font(.subheadline.weight(.semibold))
                     .themedPrimaryText()
                 Spacer()
@@ -141,7 +148,7 @@ struct FinanceDashboardView: View {
             if let progress = financeManager.budgetProgress {
                 goalRow(
                     icon: "cart.fill",
-                    title: "",
+                    title: "monthly_budget_target".localized,
                     current: formatCurrency(financeManager.monthlyExpenses),
                     target: formatCurrency(financeManager.monthlyBudgetTarget),
                     progress: min(progress, 1.5),
@@ -342,6 +349,61 @@ struct FinanceDashboardView: View {
         .padding(16)
         .themedCard()
     }
+
+    private struct FinanceAllEntriesView: View {
+        @StateObject private var financeManager = FinanceManager.shared
+        @Environment(\.theme) private var theme
+
+        let onSelect: (FinanceEntry) -> Void
+
+        private func formatCurrency(_ amount: Double) -> String {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = financeManager.selectedCurrency.rawValue
+            formatter.currencySymbol = financeManager.selectedCurrency.symbol
+            return formatter.string(from: NSNumber(value: amount)) ?? "\(financeManager.selectedCurrency.symbol)0.00"
+        }
+
+        var body: some View {
+            List {
+                ForEach(financeManager.entries.sorted(by: { $0.date > $1.date })) { entry in
+                    HStack(spacing: 12) {
+                        Image(systemName: financeManager.categoryIcon(for: entry))
+                            .font(.caption)
+                            .foregroundColor(Color(hex: entry.type.color))
+                            .frame(width: 32, height: 32)
+                            .background(Color(hex: entry.type.color).opacity(0.12))
+                            .clipShape(Circle())
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.name)
+                                .font(.subheadline.weight(.medium))
+                                .themedPrimaryText()
+                                .lineLimit(1)
+                            Text(financeManager.categoryDisplayName(for: entry))
+                                .font(.caption)
+                                .foregroundColor(theme.secondaryTextColor)
+                        }
+
+                        Spacer()
+
+                        Text((entry.type.isOutflow ? "-" : "+") + formatCurrency(entry.amount))
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundColor(entry.type.isOutflow ? .red : .green)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onSelect(entry)
+                    }
+                    .listRowBackground(theme.surfaceColor)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .themedBackground()
+            .navigationTitle("recent_entries".localized)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
     
     /// All items that can be shown in the gauge (overall + per-category budgets)
     private var budgetGaugeItems: [(label: String, limit: Double, spent: Double)] {
@@ -423,81 +485,32 @@ struct FinanceDashboardView: View {
     
     private var balanceCard: some View {
         VStack(spacing: 12) {
-            if financeManager.startingBalance == 0 && financeManager.entries.isEmpty {
-                // Setup card
-                VStack(spacing: 12) {
-                    Image(systemName: "banknote.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(theme.primaryColor)
-                    
-                    Text("set_starting_balance".localized)
-                        .font(.headline)
-                        .themedPrimaryText()
-                    
-                    Text("set_starting_balance_message".localized)
-                        .font(.caption)
-                        .foregroundColor(theme.secondaryTextColor)
-                        .multilineTextAlignment(.center)
-                    
-                    HStack {
-                        Text(financeManager.selectedCurrency.symbol)
-                            .font(.title3.weight(.semibold))
-                            .foregroundColor(theme.secondaryTextColor)
-                        TextField("0.00", text: $balanceText)
-                            .font(.title3.weight(.semibold).monospacedDigit())
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.center)
+            // Always show balance
+            VStack(spacing: 10) {
+                Text("current_balance".localized)
+                    .font(.subheadline)
+                    .foregroundColor(theme.secondaryTextColor)
+                
+                Text(formatCurrency(financeManager.currentBalance))
+                    .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundColor(financeManager.currentBalance >= 0 ? .green : .red)
+                
+                if financeManager.startingBalance > 0 {
+                    let change = financeManager.currentBalance - financeManager.startingBalance
+                    HStack(spacing: 4) {
+                        Image(systemName: change >= 0 ? "arrow.up.right" : "arrow.down.right")
+                            .font(.system(size: 11))
+                        Text(formatCurrency(abs(change)))
+                            .font(.subheadline.weight(.medium).monospacedDigit())
+                        Text("since_start".localized)
+                            .font(.caption)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(theme.secondaryTextColor.opacity(0.08))
-                    .cornerRadius(10)
-                    
-                    Button {
-                        if let val = Double(balanceText.replacingOccurrences(of: ",", with: ".")), val > 0 {
-                            financeManager.setStartingBalance(val)
-                        }
-                    } label: {
-                        Text("save".localized)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(theme.primaryColor)
-                            .cornerRadius(10)
-                    }
+                    .foregroundColor(change >= 0 ? .green : .red)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(20)
-                .themedCard()
-            } else {
-                // Normal balance display
-                VStack(spacing: 10) {
-                    Text("current_balance".localized)
-                        .font(.subheadline)
-                        .foregroundColor(theme.secondaryTextColor)
-                    
-                    Text(formatCurrency(financeManager.currentBalance))
-                        .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundColor(financeManager.currentBalance >= 0 ? .green : .red)
-                    
-                    if financeManager.startingBalance > 0 {
-                        let change = financeManager.currentBalance - financeManager.startingBalance
-                        HStack(spacing: 4) {
-                            Image(systemName: change >= 0 ? "arrow.up.right" : "arrow.down.right")
-                                .font(.system(size: 11))
-                            Text(formatCurrency(abs(change)))
-                                .font(.subheadline.weight(.medium).monospacedDigit())
-                            Text("since_start".localized)
-                                .font(.caption)
-                        }
-                        .foregroundColor(change >= 0 ? .green : .red)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(20)
-                .themedCard()
             }
+            .frame(maxWidth: .infinity)
+            .padding(20)
+            .themedCard()
         }
     }
     
@@ -520,25 +533,68 @@ struct FinanceDashboardView: View {
         }
     }
     
-    // MARK: - Summary Card
+    // MARK: - Summary Content (Monthly / Yearly toggle) — lives inside chartsSection card
     
-    private var summaryCard: some View {
-        VStack(spacing: 14) {
+    private var summaryCardContent: some View {
+        let isYearly = summaryShowsYearly
+        let income    = isYearly ? financeManager.yearlyIncome    : financeManager.monthlyIncome
+        let expenses  = isYearly ? financeManager.yearlyExpenses  : financeManager.monthlyExpenses
+        let net       = income - expenses
+        let rate      = isYearly ? financeManager.yearlySavingsRate : financeManager.monthlySavingsRate
+        let rateColor: Color = rate >= 0.2 ? .green : rate >= 0.1 ? .orange : .red
+        let currentYear = Calendar.current.component(.year, from: Date())
+        
+        return VStack(spacing: 14) {
+            // Header with toggle
             HStack {
-                Text("monthly_overview".localized)
+                Text(isYearly
+                     ? "yearly_overview".localized + " \(currentYear)"
+                     : "monthly_overview".localized)
                     .font(.subheadline.weight(.semibold))
                     .themedPrimaryText()
                 Spacer()
+                // Monthly / Yearly pill toggle
+                HStack(spacing: 0) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { summaryShowsYearly = false }
+                    } label: {
+                        Text("period_month".localized)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(!isYearly ? .white : theme.secondaryTextColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(!isYearly ? theme.primaryColor : Color.clear)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { summaryShowsYearly = true }
+                    } label: {
+                        Text("ytd".localized)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(isYearly ? .white : theme.secondaryTextColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(isYearly ? theme.primaryColor : Color.clear)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .background(theme.secondaryTextColor.opacity(0.1))
+                .clipShape(Capsule())
             }
             
+            // Numbers row
             HStack(spacing: 0) {
                 VStack(spacing: 6) {
                     Image(systemName: "arrow.down.circle.fill")
                         .font(.title3)
                         .foregroundColor(.green)
-                    Text(formatCurrency(financeManager.monthlyIncome))
+                    Text(formatCurrency(income))
                         .font(.subheadline.weight(.bold).monospacedDigit())
                         .foregroundColor(.green)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
                     Text("income".localized)
                         .font(.caption)
                         .foregroundColor(theme.secondaryTextColor)
@@ -549,9 +605,11 @@ struct FinanceDashboardView: View {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title3)
                         .foregroundColor(.red)
-                    Text(formatCurrency(financeManager.monthlyExpenses))
+                    Text(formatCurrency(expenses))
                         .font(.subheadline.weight(.bold).monospacedDigit())
                         .foregroundColor(.red)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
                     Text("expenses".localized)
                         .font(.caption)
                         .foregroundColor(theme.secondaryTextColor)
@@ -559,13 +617,14 @@ struct FinanceDashboardView: View {
                 .frame(maxWidth: .infinity)
                 
                 VStack(spacing: 6) {
-                    let net = financeManager.monthlyIncome - financeManager.monthlyExpenses
                     Image(systemName: net >= 0 ? "plus.circle.fill" : "minus.circle.fill")
                         .font(.title3)
                         .foregroundColor(net >= 0 ? .green : .red)
                     Text(formatCurrency(abs(net)))
                         .font(.subheadline.weight(.bold).monospacedDigit())
                         .foregroundColor(net >= 0 ? .green : .red)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
                     Text("net".localized)
                         .font(.caption)
                         .foregroundColor(theme.secondaryTextColor)
@@ -573,33 +632,79 @@ struct FinanceDashboardView: View {
                 .frame(maxWidth: .infinity)
             }
             
+            // Yearly-only: averages + projection
+            if isYearly {
+                Divider().background(theme.secondaryTextColor.opacity(0.15))
+                HStack(spacing: 0) {
+                    VStack(spacing: 4) {
+                        Text("avg_monthly".localized)
+                            .font(.caption2)
+                            .foregroundColor(theme.secondaryTextColor)
+                        Text(formatCurrency(financeManager.yearlyAverageMonthlyIncome))
+                            .font(.caption.weight(.semibold).monospacedDigit())
+                            .foregroundColor(.green)
+                            .minimumScaleFactor(0.7).lineLimit(1)
+                        Text("income".localized)
+                            .font(.caption2)
+                            .foregroundColor(theme.secondaryTextColor.opacity(0.7))
+                    }
+                    .frame(maxWidth: .infinity)
+                    VStack(spacing: 4) {
+                        Text("avg_monthly".localized)
+                            .font(.caption2)
+                            .foregroundColor(theme.secondaryTextColor)
+                        Text(formatCurrency(financeManager.yearlyAverageMonthlyExpenses))
+                            .font(.caption.weight(.semibold).monospacedDigit())
+                            .foregroundColor(.red)
+                            .minimumScaleFactor(0.7).lineLimit(1)
+                        Text("expenses".localized)
+                            .font(.caption2)
+                            .foregroundColor(theme.secondaryTextColor.opacity(0.7))
+                    }
+                    .frame(maxWidth: .infinity)
+                    VStack(spacing: 4) {
+                        Text("projected".localized)
+                            .font(.caption2)
+                            .foregroundColor(theme.secondaryTextColor)
+                        let projNet = financeManager.projectedAnnualIncome - financeManager.projectedAnnualExpenses
+                        Text(formatCurrency(abs(projNet)))
+                            .font(.caption.weight(.semibold).monospacedDigit())
+                            .foregroundColor(projNet >= 0 ? .green : .red)
+                            .minimumScaleFactor(0.7).lineLimit(1)
+                        Text("annual_net".localized)
+                            .font(.caption2)
+                            .foregroundColor(theme.secondaryTextColor.opacity(0.7))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            
             // Savings rate bar
             VStack(spacing: 6) {
                 HStack {
-                    Text("savings_rate".localized)
+                    Text(isYearly ? "ytd_savings_rate".localized : "savings_rate".localized)
                         .font(.caption)
                         .foregroundColor(theme.secondaryTextColor)
                     Spacer()
-                    Text("\(Int(financeManager.monthlySavingsRate * 100))%")
+                    Text("\(Int(rate * 100))%")
                         .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundColor(savingsColor)
+                        .foregroundColor(rateColor)
                 }
-                
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(theme.secondaryTextColor.opacity(0.12))
                             .frame(height: 8)
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(savingsColor)
-                            .frame(width: geo.size.width * min(financeManager.monthlySavingsRate, 1.0), height: 8)
+                            .fill(rateColor)
+                            .frame(width: geo.size.width * min(rate, 1.0), height: 8)
                     }
                 }
                 .frame(height: 8)
             }
         }
-        .padding(16)
-        .themedCard()
+        .padding(.horizontal, 16)
+        .animation(.easeInOut(duration: 0.2), value: summaryShowsYearly)
     }
     
     private var savingsColor: Color {
@@ -712,9 +817,8 @@ struct FinanceDashboardView: View {
                     }
                 }
                 
-                // Legend with better layout for single item
-                let columns = breakdown.count == 1 ? [GridItem(.flexible())] : [GridItem(.flexible()), GridItem(.flexible())]
-                LazyVGrid(columns: columns, spacing: 8) {
+                // Legend — always a VStack so it never clips
+                VStack(spacing: 6) {
                     ForEach(breakdown.prefix(6), id: \.0) { item in
                         HStack(spacing: 6) {
                             Circle()
@@ -731,7 +835,6 @@ struct FinanceDashboardView: View {
                         }
                     }
                 }
-                .padding(.horizontal, breakdown.count == 1 ? 20 : 0)
             }
         }
         .padding(.horizontal, 16)
@@ -854,7 +957,7 @@ struct FinanceDashboardView: View {
         VStack(spacing: 12) {
             // Tab indicator dots
             HStack(spacing: 8) {
-                ForEach(0..<2) { index in
+                ForEach(0..<3) { index in
                     Circle()
                         .fill(selectedChartTab == index ? theme.primaryColor : theme.secondaryTextColor.opacity(0.3))
                         .frame(width: 8, height: 8)
@@ -868,13 +971,19 @@ struct FinanceDashboardView: View {
             
             TabView(selection: $selectedChartTab) {
                 expenseBreakdownChartContent
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .tag(0)
                 
                 trendChartContent
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .tag(1)
+                
+                summaryCardContent
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 360)
+            .frame(height: 420)
         }
         .padding(16)
         .themedCard()
@@ -893,9 +1002,22 @@ struct FinanceDashboardView: View {
     
     private var recentEntriesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("recent_entries".localized)
-                .font(.subheadline.weight(.semibold))
-                .themedPrimaryText()
+            HStack {
+                Text("recent_entries".localized)
+                    .font(.subheadline.weight(.semibold))
+                    .themedPrimaryText()
+                Spacer()
+                Button {
+                    showingAllEntries = true
+                } label: {
+                    Text("show_more".localized)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(theme.primaryColor)
+                }
+                .buttonStyle(.plain)
+                .opacity(financeManager.entries.isEmpty ? 0 : 1)
+                .disabled(financeManager.entries.isEmpty)
+            }
             
             if financeManager.entries.isEmpty {
                 VStack(spacing: 8) {
@@ -909,7 +1031,7 @@ struct FinanceDashboardView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
             } else {
-                ForEach(financeManager.entries.sorted(by: { $0.date > $1.date }).prefix(8)) { entry in
+                ForEach(financeManager.entries.sorted(by: { $0.date > $1.date }).prefix(4)) { entry in
                     HStack(spacing: 12) {
                         Image(systemName: financeManager.categoryIcon(for: entry))
                             .font(.caption)
@@ -1138,7 +1260,7 @@ private struct BudgetOverallGauge: View {
     var body: some View {
         VStack(spacing: 0) {
             GeometryReader { geo in
-                let gaugeWidth = geo.size.width
+                let gaugeWidth = min(geo.size.width, 420)
                 let gaugeHeight = gaugeWidth / 2
                 
                 ZStack {
@@ -1184,6 +1306,7 @@ private struct BudgetOverallGauge: View {
                 .frame(width: gaugeWidth, height: gaugeHeight + 20)
             }
             .frame(height: 170)
+            .frame(maxWidth: .infinity)
             
             // Min & Max labels
             HStack {

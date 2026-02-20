@@ -14,6 +14,8 @@ struct SnapTaskWidgetBundle: WidgetBundle {
         SnapTaskWidget()
         PerformanceWidget()
         PerformanceWidgetLarge()
+        FinanceWidget()
+        FinanceBudgetWidget()
         SnapTaskWidgetControl()
         SnapTaskWidgetLiveActivity()
     }

@@ -72,6 +72,35 @@
 "Content" = "Content";
 
 "Hello" = "Hello";
+
+/* Finance Widget */
+"Finance" = "Finance";
+"View your monthly balance, income and expenses." = "View your monthly balance, income and expenses.";
+"Balance" = "Balance";
+"Income" = "Income";
+"Expenses" = "Expenses";
+"Budget" = "Budget";
+"No finance data" = "No finance data";
+"This month" = "This month";
+"of budget" = "of budget";
+"Total Balance" = "Total Balance";
+"Balance Mode" = "Balance Mode";
+"Starting balance + all movements" = "Starting balance + all movements";
+"Income and expenses of the current month" = "Income and expenses of the current month";
+"Category Budgets" = "Category Budgets";
+"Net" = "Net";
+"No budgets" = "No budgets";
+"Budgets" = "Budgets";
+"left this month" = "left this month";
+"spent" = "spent";
+"Total Budget" = "Total Budget";
+"Spent" = "Spent";
+"Limit" = "Limit";
+"Remaining" = "Remaining";
+"Category" = "Category";
+"net" = "net";
+"Total" = "Total";
+"Month" = "Month";
 "Leading" = "Leading";
 "Trailing" = "Trailing";
 "Bottom" = "Bottom";

@@ -881,6 +881,7 @@
 "points_history_sync_description" = "完了したタスクから獲得したポイント";
 "categories_sync_description" = "カスタムタスクカテゴリ";
 "app_settings_sync_description" = "設定とアプリ設定";
+"finance_sync_description" = "財務記録、予算、目標、カテゴリおよび設定";
 "synchronized_data" = "同期されたデータ";
 "all_data_types_synced" = "すべてのデータタイプが自動的に同期されます";
 "sync_options_title" = "同期オプション";
@@ -1567,6 +1568,7 @@
 "finance_settings" = "財務設定";
 "starting_balance" = "開始残高";
 "starting_balance_footer" = "追跡開始前の現在の口座残高";
+"monthly_goals" = "月次目標";
 "monthly_budget_target" = "月間予算";
 "monthly_budget_footer" = "月に使いたい最大金額";
 "current_spending" = "現在の支出";
@@ -1595,6 +1597,12 @@
 "percentage" = "パーセント";
 "fixed_amount" = "固定金額";
 "savings_goal_amount_footer" = "毎月貯蓄したい固定金額";
+"yearly_overview" = "年間";
+"ytd" = "年初来";
+"avg_monthly" = "月平均";
+"projected" = "予測";
+"annual_net" = "年間純額";
+"ytd_savings_rate" = "YTD貯蓄率";
 "financial_health" = "財務健全性";
 "monthly_overview" = "月次概要";
 "income" = "収入";
@@ -1853,3 +1861,19 @@
 "will_overwrite_data" = "現在のデータが上書きされます";
 "you_focused_for" = "集中した時間";
 "zone_missing_recreating" = "ゾーンが見つかりません、再作成中...";
+
+// MARK: - Finance Category Hide/Restore
+"hide_category" = "カテゴリを非表示";
+"hide_category_message" = "本当に非表示にしますか";
+"hide" = "非表示";
+"restore" = "復元";
+
+// MARK: - Finance Widget
+"finance_widget_name" = "財務";
+"finance_widget_description" = "月次残高、収入、支出を表示します。";
+"widget_balance" = "残高";
+"widget_income" = "収入";
+"widget_expenses" = "支出";
+"widget_budget" = "予算";
+"widget_no_data" = "財務データなし";
+"widget_this_month" = "今月";

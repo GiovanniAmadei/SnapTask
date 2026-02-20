@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import UIKit
+import WidgetKit
 
 @MainActor
 class FinanceManager: ObservableObject {
@@ -16,6 +18,7 @@ class FinanceManager: ObservableObject {
     @Published var monthlyIncomeGoal: Double = 0
     @Published var customCategories: [CustomFinanceCategory] = []
     @Published var categoryOverrides: [FinanceCategoryOverride] = []
+    @Published var hiddenBuiltInCategories: Set<String> = []
     @Published var selectedCurrency: SupportedCurrency = .eur
     
     private let entriesKey = "savedFinanceEntries"
@@ -29,11 +32,104 @@ class FinanceManager: ObservableObject {
     private let monthlyIncomeGoalKey = "financeMonthlyIncomeGoal"
     private let customCategoriesKey = "financeCustomCategories"
     private let categoryOverridesKey = "financeCategoryOverrides"
+    private let hiddenBuiltInCategoriesKey = "financeHiddenBuiltInCategories"
     private let selectedCurrencyKey = "financeSelectedCurrency"
     private var cancellables: Set<AnyCancellable> = []
+    private var isApplyingCloudSettings: Bool = false
     
     private init() {
         loadAll()
+        setupCloudKitSettingsObserver()
+    }
+
+    private func setupCloudKitSettingsObserver() {
+        NotificationCenter.default.publisher(for: .cloudKitSettingsChanged)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self else { return }
+                guard let settings = notification.object as? [String: Any] else { return }
+                self.applyRemoteFinanceSettings(settings)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func applyRemoteFinanceSettings(_ settings: [String: Any]) {
+        isApplyingCloudSettings = true
+        defer { isApplyingCloudSettings = false }
+
+        if let startingBalance = (settings["finance_startingBalance"] as? Double) {
+            self.startingBalance = startingBalance
+            UserDefaults.standard.set(startingBalance, forKey: startingBalanceKey)
+        } else if let startingBalance = (settings["finance_startingBalance"] as? NSNumber)?.doubleValue {
+            self.startingBalance = startingBalance
+            UserDefaults.standard.set(startingBalance, forKey: startingBalanceKey)
+        }
+
+        if let monthlyBudgetTarget = (settings["finance_monthlyBudgetTarget"] as? Double) {
+            self.monthlyBudgetTarget = monthlyBudgetTarget
+            UserDefaults.standard.set(monthlyBudgetTarget, forKey: monthlyBudgetTargetKey)
+        } else if let monthlyBudgetTarget = (settings["finance_monthlyBudgetTarget"] as? NSNumber)?.doubleValue {
+            self.monthlyBudgetTarget = monthlyBudgetTarget
+            UserDefaults.standard.set(monthlyBudgetTarget, forKey: monthlyBudgetTargetKey)
+        }
+
+        if let savingsGoalPercent = (settings["finance_savingsGoalPercent"] as? Double) {
+            self.savingsGoalPercent = savingsGoalPercent
+            UserDefaults.standard.set(savingsGoalPercent, forKey: savingsGoalPercentKey)
+        } else if let savingsGoalPercent = (settings["finance_savingsGoalPercent"] as? NSNumber)?.doubleValue {
+            self.savingsGoalPercent = savingsGoalPercent
+            UserDefaults.standard.set(savingsGoalPercent, forKey: savingsGoalPercentKey)
+        }
+
+        if let savingsGoalAmount = (settings["finance_savingsGoalAmount"] as? Double) {
+            self.savingsGoalAmount = savingsGoalAmount
+            UserDefaults.standard.set(savingsGoalAmount, forKey: savingsGoalAmountKey)
+        } else if let savingsGoalAmount = (settings["finance_savingsGoalAmount"] as? NSNumber)?.doubleValue {
+            self.savingsGoalAmount = savingsGoalAmount
+            UserDefaults.standard.set(savingsGoalAmount, forKey: savingsGoalAmountKey)
+        }
+
+        if let savingsGoalIsPercent = (settings["finance_savingsGoalIsPercent"] as? Bool) {
+            self.savingsGoalIsPercent = savingsGoalIsPercent
+            UserDefaults.standard.set(savingsGoalIsPercent, forKey: savingsGoalIsPercentKey)
+        } else if let savingsGoalIsPercent = (settings["finance_savingsGoalIsPercent"] as? NSNumber)?.boolValue {
+            self.savingsGoalIsPercent = savingsGoalIsPercent
+            UserDefaults.standard.set(savingsGoalIsPercent, forKey: savingsGoalIsPercentKey)
+        }
+
+        if let monthlyIncomeGoal = (settings["finance_monthlyIncomeGoal"] as? Double) {
+            self.monthlyIncomeGoal = monthlyIncomeGoal
+            UserDefaults.standard.set(monthlyIncomeGoal, forKey: monthlyIncomeGoalKey)
+        } else if let monthlyIncomeGoal = (settings["finance_monthlyIncomeGoal"] as? NSNumber)?.doubleValue {
+            self.monthlyIncomeGoal = monthlyIncomeGoal
+            UserDefaults.standard.set(monthlyIncomeGoal, forKey: monthlyIncomeGoalKey)
+        }
+
+        if let currencyRaw = settings["finance_selectedCurrency"] as? String,
+           let currency = SupportedCurrency(rawValue: currencyRaw) {
+            self.selectedCurrency = currency
+            UserDefaults.standard.set(currencyRaw, forKey: selectedCurrencyKey)
+        }
+
+        notifyFinanceChanged()
+    }
+
+    private func syncFinanceSettingsToCloud() {
+        guard !isApplyingCloudSettings else { return }
+        guard CloudKitService.shared.isCloudKitEnabled else { return }
+
+        let payload: [String: Any] = [
+            "finance_startingBalance": startingBalance,
+            "finance_monthlyBudgetTarget": monthlyBudgetTarget,
+            "finance_savingsGoalPercent": savingsGoalPercent,
+            "finance_savingsGoalAmount": savingsGoalAmount,
+            "finance_savingsGoalIsPercent": savingsGoalIsPercent,
+            "finance_monthlyIncomeGoal": monthlyIncomeGoal,
+            "finance_selectedCurrency": selectedCurrency.rawValue,
+            "lastUpdated": Date().timeIntervalSince1970,
+            "deviceId": UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+        ]
+        CloudKitService.shared.saveAppSettings(payload)
     }
     
     // MARK: - Starting Balance
@@ -42,51 +138,59 @@ class FinanceManager: ObservableObject {
         startingBalance = amount
         UserDefaults.standard.set(amount, forKey: startingBalanceKey)
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func setMonthlyBudgetTarget(_ amount: Double) {
         monthlyBudgetTarget = amount
         UserDefaults.standard.set(amount, forKey: monthlyBudgetTargetKey)
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func setSavingsGoalPercent(_ percent: Double) {
         savingsGoalPercent = min(max(percent, 0), 100)
         UserDefaults.standard.set(savingsGoalPercent, forKey: savingsGoalPercentKey)
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func setSavingsGoalAmount(_ amount: Double) {
         savingsGoalAmount = max(amount, 0)
         UserDefaults.standard.set(savingsGoalAmount, forKey: savingsGoalAmountKey)
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func setSavingsGoalIsPercent(_ isPercent: Bool) {
         savingsGoalIsPercent = isPercent
         UserDefaults.standard.set(isPercent, forKey: savingsGoalIsPercentKey)
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func setMonthlyIncomeGoal(_ amount: Double) {
         monthlyIncomeGoal = amount
         UserDefaults.standard.set(amount, forKey: monthlyIncomeGoalKey)
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func setSelectedCurrency(_ currency: SupportedCurrency) {
         selectedCurrency = currency
         UserDefaults.standard.set(currency.rawValue, forKey: selectedCurrencyKey)
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
-    // MARK: - Custom Category CRUD
+    // MARK: - Custom Category CRUD with CloudKit
     
     func addCustomCategory(_ category: CustomFinanceCategory) {
         guard !customCategories.contains(where: { $0.id == category.id }) else { return }
         customCategories.append(category)
         saveCustomCategories()
         notifyFinanceChanged()
+        CloudKitService.shared.saveCustomFinanceCategory(category)
     }
     
     func updateCustomCategory(_ category: CustomFinanceCategory) {
@@ -94,12 +198,14 @@ class FinanceManager: ObservableObject {
         customCategories[index] = category
         saveCustomCategories()
         notifyFinanceChanged()
+        CloudKitService.shared.saveCustomFinanceCategory(category)
     }
     
     func removeCustomCategory(_ category: CustomFinanceCategory) {
         customCategories.removeAll { $0.id == category.id }
         saveCustomCategories()
         notifyFinanceChanged()
+        CloudKitService.shared.deleteCustomFinanceCategory(category)
     }
     
     func customCategory(for id: UUID?) -> CustomFinanceCategory? {
@@ -121,6 +227,37 @@ class FinanceManager: ObservableObject {
         categoryOverrides = list
         saveCategoryOverrides()
         notifyFinanceChanged()
+    }
+    
+    // MARK: - Hidden Built-in Categories
+    
+    func hideBuiltInCategory(_ category: FinanceCategory) {
+        hiddenBuiltInCategories.insert(category.rawValue)
+        saveHiddenBuiltInCategories()
+        notifyFinanceChanged()
+    }
+    
+    func restoreBuiltInCategory(_ category: FinanceCategory) {
+        hiddenBuiltInCategories.remove(category.rawValue)
+        saveHiddenBuiltInCategories()
+        notifyFinanceChanged()
+    }
+    
+    func isHidden(_ category: FinanceCategory) -> Bool {
+        hiddenBuiltInCategories.contains(category.rawValue)
+    }
+    
+    var visibleExpenseCategories: [FinanceCategory] {
+        FinanceCategory.allCases.filter { !$0.isIncomeCategory && !isHidden($0) }
+    }
+    
+    var visibleIncomeCategories: [FinanceCategory] {
+        FinanceCategory.allCases.filter { $0.isIncomeCategory && !isHidden($0) }
+    }
+    
+    private func saveHiddenBuiltInCategories() {
+        let array = Array(hiddenBuiltInCategories)
+        UserDefaults.standard.set(array, forKey: hiddenBuiltInCategoriesKey)
     }
     
     func override(for category: FinanceCategory) -> FinanceCategoryOverride? {
@@ -235,23 +372,6 @@ class FinanceManager: ObservableObject {
         CloudKitService.shared.deleteFinancialGoal(goal)
     }
     
-    // MARK: - Custom Category CRUD with CloudKit
-    
-    func addCustomCategory(_ category: CustomFinanceCategory) {
-        guard !customCategories.contains(where: { $0.id == category.id }) else { return }
-        customCategories.append(category)
-        saveCustomCategories()
-        notifyFinanceChanged()
-        CloudKitService.shared.saveCustomFinanceCategory(category)
-    }
-    
-    func removeCustomCategory(_ category: CustomFinanceCategory) {
-        customCategories.removeAll { $0.id == category.id }
-        saveCustomCategories()
-        notifyFinanceChanged()
-        CloudKitService.shared.deleteCustomFinanceCategory(category)
-    }
-    
     // MARK: - Queries: Entries
     
     func entries(for period: DateInterval) -> [FinanceEntry] {
@@ -337,6 +457,96 @@ class FinanceManager: ObservableObject {
     var monthlySavingsRate: Double {
         guard monthlyIncome > 0 else { return 0 }
         return max((monthlyIncome - monthlyExpenses) / monthlyIncome, 0)
+    }
+    
+    // MARK: - Calculations: Yearly (YTD)
+    
+    func currentYearPeriod() -> DateInterval {
+        let calendar = Calendar.current
+        let now = Date()
+        let start = calendar.dateInterval(of: .year, for: now)?.start ?? now
+        let end = calendar.date(byAdding: .year, value: 1, to: start) ?? now
+        return DateInterval(start: start, end: end)
+    }
+    
+    /// YTD = from Jan 1 of current year to now
+    func yearToDatePeriod() -> DateInterval {
+        let calendar = Calendar.current
+        let now = Date()
+        let start = calendar.dateInterval(of: .year, for: now)?.start ?? now
+        return DateInterval(start: start, end: now)
+    }
+    
+    var yearlyIncome: Double {
+        totalIncome(for: yearToDatePeriod())
+    }
+    
+    var yearlyExpenses: Double {
+        totalExpenses(for: yearToDatePeriod())
+    }
+    
+    var yearlyNetFlow: Double {
+        yearlyIncome - yearlyExpenses
+    }
+    
+    var yearlySavingsRate: Double {
+        guard yearlyIncome > 0 else { return 0 }
+        return max(yearlyNetFlow / yearlyIncome, 0)
+    }
+    
+    var yearlyAverageMonthlyIncome: Double {
+        let calendar = Calendar.current
+        let now = Date()
+        let monthsElapsed = max(calendar.component(.month, from: now), 1)
+        return yearlyIncome / Double(monthsElapsed)
+    }
+    
+    var yearlyAverageMonthlyExpenses: Double {
+        let calendar = Calendar.current
+        let now = Date()
+        let monthsElapsed = max(calendar.component(.month, from: now), 1)
+        return yearlyExpenses / Double(monthsElapsed)
+    }
+    
+    /// Breakdown of expenses by month for the current year (for charts)
+    func yearlyMonthlyBreakdown() -> [(month: Int, income: Double, expenses: Double)] {
+        let calendar = Calendar.current
+        let now = Date()
+        let currentMonth = calendar.component(.month, from: now)
+        let year = calendar.component(.year, from: now)
+        
+        return (1...currentMonth).map { month in
+            guard let start = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
+                  let end = calendar.date(byAdding: .month, value: 1, to: start) else {
+                return (month: month, income: 0, expenses: 0)
+            }
+            let period = DateInterval(start: start, end: end)
+            return (
+                month: month,
+                income: totalIncome(for: period),
+                expenses: totalExpenses(for: period)
+            )
+        }
+    }
+    
+    /// Expense breakdown by category for the current year
+    func yearlyExpenseBreakdown() -> [(FinanceCategory, Double)] {
+        expenseBreakdown(for: yearToDatePeriod())
+    }
+    
+    /// Top expense category for the year
+    var topYearlyExpenseCategory: FinanceCategory? {
+        yearlyExpenseBreakdown().first?.0
+    }
+    
+    /// Projected annual income based on YTD average
+    var projectedAnnualIncome: Double {
+        yearlyAverageMonthlyIncome * 12
+    }
+    
+    /// Projected annual expenses based on YTD average
+    var projectedAnnualExpenses: Double {
+        yearlyAverageMonthlyExpenses * 12
     }
     
     // MARK: - Calculations: Stress & Freedom
@@ -560,6 +770,9 @@ class FinanceManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: categoryOverridesKey) {
             categoryOverrides = (try? JSONDecoder().decode([FinanceCategoryOverride].self, from: data)) ?? []
         }
+        if let array = UserDefaults.standard.array(forKey: hiddenBuiltInCategoriesKey) as? [String] {
+            hiddenBuiltInCategories = Set(array)
+        }
         if let currencyRaw = UserDefaults.standard.string(forKey: selectedCurrencyKey),
            let currency = SupportedCurrency(rawValue: currencyRaw) {
             selectedCurrency = currency
@@ -587,12 +800,46 @@ class FinanceManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: monthlyIncomeGoalKey)
         customCategories.removeAll()
         categoryOverrides.removeAll()
+        hiddenBuiltInCategories.removeAll()
         UserDefaults.standard.removeObject(forKey: customCategoriesKey)
         UserDefaults.standard.removeObject(forKey: categoryOverridesKey)
+        UserDefaults.standard.removeObject(forKey: hiddenBuiltInCategoriesKey)
     }
     
     private func notifyFinanceChanged() {
         NotificationCenter.default.post(name: .financeDataDidUpdate, object: nil)
+        writeWidgetData()
+    }
+    
+    private func writeWidgetData() {
+        guard let shared = UserDefaults(suiteName: "group.com.snapTask.shared") else { return }
+        shared.set(currentBalance, forKey: "finance_balance")
+        shared.set(monthlyIncome, forKey: "finance_monthlyIncome")
+        shared.set(monthlyExpenses, forKey: "finance_monthlyExpenses")
+        shared.set(monthlyBudgetTarget, forKey: "finance_monthlyBudgetTarget")
+        shared.set(selectedCurrency.rawValue, forKey: "finance_currencyCode")
+        shared.set(selectedCurrency.symbol, forKey: "finance_currencySymbol")
+        shared.set(startingBalance, forKey: "finance_startingBalance")
+        
+        // Write budget data as JSON array
+        let budgetData = budgets.filter { $0.isActive }.map { budget -> [String: Any] in
+            let period = currentMonthPeriod()
+            let spent = entries(for: period)
+                .filter { $0.category == budget.category && $0.type.isOutflow }
+                .reduce(0) { $0 + $1.amount }
+            return [
+                "categoryRaw": budget.category.rawValue,
+                "categoryName": displayName(for: budget.category),
+                "categoryIcon": icon(for: budget.category),
+                "monthlyLimit": budget.monthlyLimit,
+                "spent": spent
+            ]
+        }
+        if let encoded = try? JSONSerialization.data(withJSONObject: budgetData) {
+            shared.set(encoded, forKey: "finance_budgets")
+        }
+        
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
 

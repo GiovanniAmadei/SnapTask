@@ -75,6 +75,35 @@
 
 /* Live Activity */
 "Hello" = "こんにちは";
+
+/* Finance Widget */
+"Finance" = "財務";
+"View your monthly balance, income and expenses." = "月次残高、収入、支出を表示します。";
+"Balance" = "残高";
+"Income" = "収入";
+"Expenses" = "支出";
+"Budget" = "予算";
+"No finance data" = "財務データなし";
+"This month" = "今月";
+"of budget" = "の予算";
+"Total Balance" = "総残高";
+"Balance Mode" = "残高モード";
+"Starting balance + all movements" = "開始残高 + すべての取引";
+"Income and expenses of the current month" = "今月の収入と支出";
+"Category Budgets" = "カテゴリ予算";
+"Net" = "純額";
+"No budgets" = "予算なし";
+"Budgets" = "予算";
+"left this month" = "今月の残り";
+"spent" = "使用済み";
+"Total Budget" = "合計予算";
+"Spent" = "支出";
+"Limit" = "上限";
+"Remaining" = "残り";
+"Category" = "カテゴリ";
+"net" = "純額";
+"Total" = "合計";
+"Month" = "月";
 "Leading" = "左";
 "Trailing" = "右";
 "Bottom" = "下";

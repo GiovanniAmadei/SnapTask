@@ -874,6 +874,7 @@
 "points_history_sync_description" = "Puntos ganados por tareas completadas";
 "categories_sync_description" = "Tus categorías de tareas personalizadas";
 "app_settings_sync_description" = "Tus preferencias y ajustes de la app";
+"finance_sync_description" = "Movimientos, presupuestos, objetivos, categorías y ajustes de finanzas";
 "synchronized_data" = "Datos sincronizados";
 "all_data_types_synced" = "Todos los tipos de datos se sincronizan automáticamente";
 "sync_options_title" = "Opciones de sincronización";
@@ -1336,6 +1337,7 @@
 "points_history_sync_description" = "Puntos ganados de tareas completadas";
 "categories_sync_description" = "Tus categorías de tareas personalizadas";
 "app_settings_sync_description" = "Tus preferencias y ajustes";
+"finance_sync_description" = "Movimientos, presupuestos, objetivos, categorías y ajustes de finanzas";
 "synchronized_data" = "Datos sincronizados";
 "all_data_types_synced" = "Todos los tipos de datos se sincronizan automáticamente";
 "sync_options_title" = "Opciones de sincronización";
@@ -1777,6 +1779,7 @@
 "finance_settings" = "Ajustes de Finanzas";
 "starting_balance" = "Saldo Inicial";
 "starting_balance_footer" = "Tu saldo actual antes de empezar a rastrear";
+"monthly_goals" = "Objetivos Mensuales";
 "monthly_budget_target" = "Presupuesto Mensual";
 "monthly_budget_footer" = "Cantidad máxima que quieres gastar al mes";
 "current_spending" = "Gasto Actual";
@@ -1805,6 +1808,12 @@
 "percentage" = "Porcentaje";
 "fixed_amount" = "Importe Fijo";
 "savings_goal_amount_footer" = "Importe fijo que quieres ahorrar cada mes";
+"yearly_overview" = "Año";
+"ytd" = "Desde inicio de año";
+"avg_monthly" = "Promedio mensual";
+"projected" = "Proyectado";
+"annual_net" = "Neto anual";
+"ytd_savings_rate" = "Tasa ahorro YTD";
 "financial_health" = "Salud Financiera";
 "monthly_overview" = "Resumen Mensual";
 "income" = "Ingresos";
@@ -2063,3 +2072,19 @@
 "will_overwrite_data" = "Esto sobrescribirá tus datos actuales";
 "you_focused_for" = "Te concentraste durante";
 "zone_missing_recreating" = "Zona faltante, recreando...";
+
+// MARK: - Finance Category Hide/Restore
+"hide_category" = "Ocultar Categoría";
+"hide_category_message" = "¿Estás seguro de que quieres ocultar";
+"hide" = "Ocultar";
+"restore" = "Restaurar";
+
+// MARK: - Finance Widget
+"finance_widget_name" = "Finanzas";
+"finance_widget_description" = "Ver saldo mensual, ingresos y gastos.";
+"widget_balance" = "Saldo";
+"widget_income" = "Ingresos";
+"widget_expenses" = "Gastos";
+"widget_budget" = "Presupuesto";
+"widget_no_data" = "Sin datos financieros";
+"widget_this_month" = "Este mes";

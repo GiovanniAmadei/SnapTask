@@ -870,6 +870,7 @@
 "points_history_sync_description" = "Aus abgeschlossenen Aufgaben verdiente Punkte";
 "categories_sync_description" = "Ihre benutzerdefinierten Aufgabenkategorien";
 "app_settings_sync_description" = "Ihre Einstellungen und App‑Präferenzen";
+"finance_sync_description" = "Finanzbuchungen, Budgets, Ziele, Kategorien und Einstellungen";
 "synchronized_data" = "Synchronisierte Daten";
 "all_data_types_synced" = "Alle Datentypen werden automatisch synchronisiert";
 "sync_options_title" = "Synchronisationsoptionen";
@@ -1494,6 +1495,7 @@
 "finance_settings" = "Finanz-Einstellungen";
 "starting_balance" = "Anfangssaldo";
 "starting_balance_footer" = "Dein aktueller Kontostand vor der Verfolgung";
+"monthly_goals" = "Monatliche Ziele";
 "monthly_budget_target" = "Monatsbudget";
 "monthly_budget_footer" = "Maximaler Betrag, den du pro Monat ausgeben möchtest";
 "current_spending" = "Aktuelle Ausgaben";
@@ -1522,6 +1524,12 @@
 "percentage" = "Prozentsatz";
 "fixed_amount" = "Fester Betrag";
 "savings_goal_amount_footer" = "Fester Betrag, den du jeden Monat sparen möchtest";
+"yearly_overview" = "Jahr";
+"ytd" = "Seit Jahresbeginn";
+"avg_monthly" = "Monatsdurchschnitt";
+"projected" = "Prognostiziert";
+"annual_net" = "Jährliches Netto";
+"ytd_savings_rate" = "Sparquote YTD";
 "financial_health" = "Finanzielle Gesundheit";
 "monthly_overview" = "Monatsübersicht";
 "income" = "Einnahmen";
@@ -1780,3 +1788,19 @@
 "will_overwrite_data" = "Dies überschreibt deine aktuellen Daten";
 "you_focused_for" = "Du hast dich konzentriert für";
 "zone_missing_recreating" = "Zone fehlt, wird neu erstellt...";
+
+// MARK: - Finance Category Hide/Restore
+"hide_category" = "Kategorie ausblenden";
+"hide_category_message" = "Möchtest du wirklich ausblenden";
+"hide" = "Ausblenden";
+"restore" = "Wiederherstellen";
+
+// MARK: - Finance Widget
+"finance_widget_name" = "Finanzen";
+"finance_widget_description" = "Monatliches Guthaben, Einnahmen und Ausgaben anzeigen.";
+"widget_balance" = "Guthaben";
+"widget_income" = "Einnahmen";
+"widget_expenses" = "Ausgaben";
+"widget_budget" = "Budget";
+"widget_no_data" = "Keine Finanzdaten";
+"widget_this_month" = "Diesen Monat";

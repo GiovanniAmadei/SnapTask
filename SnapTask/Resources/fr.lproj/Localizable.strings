@@ -871,6 +871,7 @@
 "points_history_sync_description" = "Points gagnés des tâches terminées";
 "categories_sync_description" = "Vos catégories de tâches personnalisées";
 "app_settings_sync_description" = "Vos préférences et réglages d'app";
+"finance_sync_description" = "Transactions, budgets, objectifs, catégories et paramètres financiers";
 "synchronized_data" = "Données synchronisées";
 "all_data_types_synced" = "Tous les types de données sont automatiquement synchronisés";
 "sync_options_title" = "Options de synchronisation";
@@ -1483,6 +1484,7 @@
 "finance_settings" = "Paramètres Finances";
 "starting_balance" = "Solde Initial";
 "starting_balance_footer" = "Votre solde actuel avant le suivi";
+"monthly_goals" = "Objectifs Mensuels";
 "monthly_budget_target" = "Budget Mensuel";
 "monthly_budget_footer" = "Montant maximum que vous souhaitez dépenser par mois";
 "current_spending" = "Dépenses Actuelles";
@@ -1511,6 +1513,12 @@
 "percentage" = "Pourcentage";
 "fixed_amount" = "Montant Fixe";
 "savings_goal_amount_footer" = "Montant fixe que vous souhaitez épargner chaque mois";
+"yearly_overview" = "Année";
+"ytd" = "Depuis début d'année";
+"avg_monthly" = "Moy. mensuelle";
+"projected" = "Projeté";
+"annual_net" = "Net annuel";
+"ytd_savings_rate" = "Taux épargne YTD";
 "financial_health" = "Santé Financière";
 "monthly_overview" = "Aperçu Mensuel";
 "income" = "Revenus";
@@ -1769,3 +1777,19 @@
 "will_overwrite_data" = "Cela écrasera vos données actuelles";
 "you_focused_for" = "Vous vous êtes concentré pendant";
 "zone_missing_recreating" = "Zone manquante, recréation...";
+
+// MARK: - Finance Category Hide/Restore
+"hide_category" = "Masquer la Catégorie";
+"hide_category_message" = "Voulez-vous vraiment masquer";
+"hide" = "Masquer";
+"restore" = "Restaurer";
+
+// MARK: - Finance Widget
+"finance_widget_name" = "Finances";
+"finance_widget_description" = "Voir le solde mensuel, les revenus et les dépenses.";
+"widget_balance" = "Solde";
+"widget_income" = "Revenus";
+"widget_expenses" = "Dépenses";
+"widget_budget" = "Budget";
+"widget_no_data" = "Aucune donnée financière";
+"widget_this_month" = "Ce mois";

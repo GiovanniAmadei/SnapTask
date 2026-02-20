@@ -251,6 +251,13 @@ struct SyncDataOptionsView: View {
                     description: "app_settings_sync_description".localized,
                     isEnabled: true
                 )
+                
+                SyncOptionRow(
+                    icon: "banknote",
+                    title: "finance".localized,
+                    description: "finance_sync_description".localized,
+                    isEnabled: true
+                )
             } header: {
                 Text("synchronized_data".localized)
                     .themedSecondaryText()
