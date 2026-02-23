@@ -74,3 +74,6 @@ Carthage/Build/
 *~ 
 
 tmp/firebase/
+# Apple Watch App (work in progress - not ready for App Store)
+SnapTaskWatch/
+SnapTask.xcodeproj/xcshareddata/xcschemes/SnapTaskWatch.xcscheme
