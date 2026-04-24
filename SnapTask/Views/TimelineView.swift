@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UniformTypeIdentifiers
 
 struct TimelineView: View {
     @StateObject var viewModel: TimelineViewModel
@@ -78,6 +79,22 @@ struct TimelineView: View {
                         viewModel.organization = .none
                     }
                 }
+            }
+            .onAppear {
+                // Fallback for cold-start: the notification may have fired
+                // before this view subscribed, so also check the in-memory flag.
+                if QuickAddTrigger.pending {
+                    QuickAddTrigger.pending = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingNewTask = true
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openQuickAdd)) { _ in
+                // Triggered when the Control Center / Lock Screen / Action
+                // Button "Quick Add Task" button opens the app.
+                QuickAddTrigger.pending = false
+                showingNewTask = true
             }
         }
     }
@@ -816,59 +833,38 @@ struct TimelineHeaderView: View {
                         .font(.title2.bold())
                         .themedPrimaryText()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .layoutPriority(1)
+                        .minimumScaleFactor(0.5)
+                        .fixedSize(horizontal: false, vertical: true)
                     
-                    Button(action: { showingSettings = true }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(theme.primaryColor.opacity(0.12))
-                                .frame(width: 34, height: 34)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
-                                )
-                                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+                    if viewModel.selectedTimeScope == .today {
+                        Button(action: { showingJournal = true }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(theme.primaryColor.opacity(0.12))
+                                    .frame(width: 34, height: 34)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
+                                    )
+                                    .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
 
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(theme.primaryColor)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .sheet(isPresented: $showingSettings) {
-                        NavigationStack {
-                            SettingsView()
-                        }
-                    }
-                    
-                    Button(action: { showingJournal = true }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(theme.primaryColor.opacity(0.12))
-                                .frame(width: 34, height: 34)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
-                                )
-                                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+                                Image(systemName: "book.closed.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(theme.primaryColor)
 
-                            Image(systemName: "book.closed.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(theme.primaryColor)
-
-                            if hasJournalContentForSelectedDate {
-                                Circle()
-                                    .fill(theme.accentColor)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 12, y: -12)
-                                    .shadow(color: theme.accentColor.opacity(0.5), radius: 2)
+                                if hasJournalContentForSelectedDate {
+                                    Circle()
+                                        .fill(theme.accentColor)
+                                        .frame(width: 8, height: 8)
+                                        .offset(x: 12, y: -12)
+                                        .shadow(color: theme.accentColor.opacity(0.5), radius: 2)
+                                }
                             }
                         }
-                    }
-                    .buttonStyle(.plain)
-                    .sheet(isPresented: $showingJournal) {
-                        JournalView(date: viewModel.selectedDate)
+                        .buttonStyle(.plain)
+                        .sheet(isPresented: $showingJournal) {
+                            JournalView(date: viewModel.selectedDate)
+                        }
                     }
                     
                     Spacer(minLength: 8)
@@ -963,11 +959,7 @@ struct TimelineHeaderView: View {
                         }
                         .menuStyle(.borderlessButton)
                         .fixedSize(horizontal: true, vertical: false)
-                        
-                        Button(action: {
-                        }) {
-                        }
-                        
+
                         if viewModel.selectedTimeScope == .today {
                             Button(action: { showingCalendarPicker = true }) {
                                 Image(systemName: "calendar")
@@ -978,6 +970,29 @@ struct TimelineHeaderView: View {
                                         Circle()
                                             .fill(theme.primaryColor.opacity(0.1))
                                     )
+                            }
+                        }
+
+                        Button(action: { showingSettings = true }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(theme.primaryColor.opacity(0.12))
+                                    .frame(width: 34, height: 34)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
+                                    )
+                                    .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(theme.primaryColor)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .sheet(isPresented: $showingSettings) {
+                            NavigationStack {
+                                SettingsView()
                             }
                         }
                     }
@@ -1028,7 +1043,7 @@ struct DateSelectorView: View {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedDayOffset = offset
                                     viewModel.selectDate(offset)
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    HapticManager.shared.selection()
                                     
                                     proxy.scrollTo(offset, anchor: .center)
                                 }
@@ -1071,7 +1086,7 @@ struct DateSelectorView: View {
                                     selectedDayOffset = newOffset
                                     viewModel.selectDate(newOffset)
                                     proxy.scrollTo(newOffset, anchor: .center)
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    HapticManager.shared.selection()
                                 }
                             } else {
                                 let cellWidth: CGFloat = 62
@@ -1083,7 +1098,7 @@ struct DateSelectorView: View {
                                         selectedDayOffset = newOffset
                                         viewModel.selectDate(newOffset)
                                         proxy.scrollTo(newOffset, anchor: .center)
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        HapticManager.shared.selection()
                                     }
                                 } else {
                                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -1155,6 +1170,11 @@ struct TaskListView: View {
                                         },
                                         viewModel: viewModel
                                     )
+                                    .onDrag {
+                                        viewModel.draggedTask = task
+                                        return NSItemProvider(object: task.id.uuidString as NSString)
+                                    }
+                                    .onDrop(of: [UTType.text], delegate: TaskDropDelegate(item: task, viewModel: viewModel))
                                 }
                             
                             case .sections(let sections):
@@ -1867,6 +1887,11 @@ private struct TimelineTaskCard: View {
                     }
                     
                     Button(action: {
+                        if isCompleted {
+                            HapticManager.shared.impact(.light)
+                        } else {
+                            HapticManager.shared.notification(.success)
+                        }
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             onToggleComplete()
                         }
@@ -2069,6 +2094,31 @@ private struct TimelineTaskCard: View {
                 await TaskManager.shared.removeTask(task)
             }
         }
+    }
+}
+
+struct TaskDropDelegate: DropDelegate {
+    let item: TodoTask
+    let viewModel: TimelineViewModel
+    
+    func performDrop(info: DropInfo) -> Bool {
+        viewModel.draggedTask = nil
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        guard let draggedItem = viewModel.draggedTask,
+              draggedItem.id != item.id,
+              viewModel.organization == .none,
+              viewModel.viewMode == .list else {
+            return
+        }
+        
+        viewModel.moveTask(draggedItem, toTarget: item)
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        return DropProposal(operation: viewModel.organization == .none ? .move : .forbidden)
     }
 }
 

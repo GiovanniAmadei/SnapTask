@@ -71,12 +71,45 @@ class TimelineViewModel: ObservableObject {
     @Published var timelineEndHour: Int = 22
     private let taskManager = TaskManager.shared
     
+    private let selectedTimeScopeKey = "timeline_selectedTimeScope"
+    private let viewModeKey = "timeline_viewMode"
+    private let organizationKey = "timeline_organization"
+    private let timeSortOrderKey = "timeline_timeSortOrder"
+    
     // New view mode and organization properties
     @Published var viewMode: TimelineViewMode = .list
     @Published var organization: TimelineOrganization = .time
     @Published var timeSortOrder: TimeSortOrder = .ascending
     @Published var showingFilterSheet = false
     @Published var showingTimelineView = false
+    
+    @Published var draggedTask: TodoTask? = nil
+    
+    // MARK: - Task Reordering
+    func moveTask(_ draggedItem: TodoTask, toTarget targetItem: TodoTask) {
+        guard let draggedIndex = tasks.firstIndex(where: { $0.id == draggedItem.id }),
+              let targetIndex = tasks.firstIndex(where: { $0.id == targetItem.id }) else {
+            return
+        }
+        
+        let draggedTask = tasks.remove(at: draggedIndex)
+        let actualTargetIndex = targetIndex > draggedIndex ? targetIndex - 1 : targetIndex
+        
+        tasks.insert(draggedTask, at: actualTargetIndex)
+        
+        // Update order indices for all tasks to persist the new order
+        updateOrderIndices()
+    }
+    
+    private func updateOrderIndices() {
+        for (index, task) in tasks.enumerated() {
+            var updatedTask = task
+            updatedTask.orderIndex = Double(index)
+            Task {
+                await TaskManager.shared.updateTask(updatedTask)
+            }
+        }
+    }
     
     // MARK: - TimeScope Properties
     @Published var selectedTimeScope: TaskTimeScope = .today
@@ -129,8 +162,11 @@ class TimelineViewModel: ObservableObject {
     }
     
     init() {
-        updateMonthYearString()
         initializePeriods()
+        restoreTimelinePreferences()
+        normalizeSelectionsForCurrentScope()
+        updateMonthYearString()
+        setupPreferencesPersistence()
         
         // Observe TaskManager changes
         NotificationCenter.default.publisher(for: .tasksDidUpdate)
@@ -162,6 +198,80 @@ class TimelineViewModel: ObservableObject {
         
         // Initial load
         refreshTasks()
+    }
+
+    private func restoreTimelinePreferences() {
+        let defaults = UserDefaults.standard
+        
+        if let raw = defaults.string(forKey: selectedTimeScopeKey),
+           let saved = TaskTimeScope(rawValue: raw) {
+            selectedTimeScope = saved
+        }
+        
+        if let raw = defaults.string(forKey: viewModeKey),
+           let saved = TimelineViewMode(rawValue: raw) {
+            viewMode = saved
+        }
+        
+        if let raw = defaults.string(forKey: organizationKey),
+           let saved = TimelineOrganization(rawValue: raw) {
+            organization = saved
+        }
+        
+        if let raw = defaults.string(forKey: timeSortOrderKey),
+           let saved = TimeSortOrder(rawValue: raw) {
+            timeSortOrder = saved
+        }
+    }
+
+    private func normalizeSelectionsForCurrentScope() {
+        if selectedTimeScope != .today {
+            if viewMode == .timeline {
+                viewMode = .list
+            }
+            if organization == .time {
+                organization = .none
+            }
+        }
+    }
+
+    private func setupPreferencesPersistence() {
+        $selectedTimeScope
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                UserDefaults.standard.set(newValue.rawValue, forKey: self.selectedTimeScopeKey)
+                self.normalizeSelectionsForCurrentScope()
+            }
+            .store(in: &cancellables)
+        
+        $viewMode
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                UserDefaults.standard.set(newValue.rawValue, forKey: self.viewModeKey)
+            }
+            .store(in: &cancellables)
+        
+        $organization
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                UserDefaults.standard.set(newValue.rawValue, forKey: self.organizationKey)
+            }
+            .store(in: &cancellables)
+        
+        $timeSortOrder
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                UserDefaults.standard.set(newValue.rawValue, forKey: self.timeSortOrderKey)
+            }
+            .store(in: &cancellables)
     }
     
     private func initializePeriods() {
@@ -649,7 +759,14 @@ class TimelineViewModel: ObservableObject {
             ]
             return OrganizedTasks.sections(sections)
         case .none:
-            return OrganizedTasks.single(scopedTasks)
+            let sortedTasks = scopedTasks.sorted { task1, task2 in
+                if let order1 = task1.orderIndex, let order2 = task2.orderIndex {
+                    return order1 < order2
+                }
+                // Fallback a startTime se non c'è orderIndex
+                return task1.startTime < task2.startTime
+            }
+            return OrganizedTasks.single(sortedTasks)
         }
     }
     
