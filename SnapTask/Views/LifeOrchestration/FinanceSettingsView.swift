@@ -19,6 +19,8 @@ struct FinanceSettingsView: View {
     @State private var showingHideBuiltInAlert = false
     @State private var customCategoryToDelete: CustomFinanceCategory? = nil
     @State private var showingDeleteCustomAlert = false
+    @State private var editingBudget: FinanceBudget? = nil
+    @State private var showingEditBudget = false
     
     private var currencySymbol: String {
         financeManager.selectedCurrency.symbol
@@ -44,6 +46,7 @@ struct FinanceSettingsView: View {
                         Text(currency.displayName).tag(currency)
                     }
                 }
+                .pickerStyle(.navigationLink)
                 .listRowBackground(theme.surfaceColor)
             } header: {
                 Text("currency".localized)
@@ -202,7 +205,11 @@ struct FinanceSettingsView: View {
                 ForEach(FinanceCategory.allCases.filter { !$0.isIncomeCategory }, id: \.self) { cat in
                     HStack {
                         Image(systemName: financeManager.icon(for: cat))
-                            .foregroundColor(financeManager.isHidden(cat) ? theme.secondaryTextColor.opacity(0.4) : .red.opacity(0.8))
+                            .foregroundColor(
+                                financeManager.isHidden(cat)
+                                    ? theme.secondaryTextColor.opacity(0.4)
+                                    : Color(hex: financeManager.colorHex(for: cat)).opacity(0.9)
+                            )
                             .frame(width: 24)
                         Text(financeManager.displayName(for: cat))
                             .themedPrimaryText()
@@ -239,8 +246,16 @@ struct FinanceSettingsView: View {
                 Text("finance_outflow".localized)
                     .themedSecondaryText()
             } footer: {
-                Text("builtin_categories_footer".localized)
-                    .themedSecondaryText()
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("builtin_categories_footer".localized)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left")
+                            .font(.caption2)
+                        Text("swipe_to_edit_delete".localized)
+                            .font(.caption)
+                    }
+                }
+                .themedSecondaryText()
             }
             
             // Expense custom categories (deletable)
@@ -249,7 +264,7 @@ struct FinanceSettingsView: View {
                     ForEach(expenseCustomCategories) { cat in
                         HStack {
                             Image(systemName: cat.icon)
-                                .foregroundColor(.red.opacity(0.8))
+                                .foregroundColor(Color(hex: financeManager.colorHex(for: cat.id)).opacity(0.9))
                                 .frame(width: 24)
                             Text(cat.name)
                                 .themedPrimaryText()
@@ -271,6 +286,14 @@ struct FinanceSettingsView: View {
                             .tint(theme.primaryColor)
                         }
                     }
+                } footer: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left")
+                            .font(.caption2)
+                        Text("swipe_to_edit_delete".localized)
+                            .font(.caption)
+                    }
+                    .themedSecondaryText()
                 }
             }
             
@@ -295,7 +318,11 @@ struct FinanceSettingsView: View {
                 ForEach(FinanceCategory.allCases.filter { $0.isIncomeCategory }, id: \.self) { cat in
                     HStack {
                         Image(systemName: financeManager.icon(for: cat))
-                            .foregroundColor(financeManager.isHidden(cat) ? theme.secondaryTextColor.opacity(0.4) : .green.opacity(0.8))
+                            .foregroundColor(
+                                financeManager.isHidden(cat)
+                                    ? theme.secondaryTextColor.opacity(0.4)
+                                    : Color(hex: financeManager.colorHex(for: cat)).opacity(0.9)
+                            )
                             .frame(width: 24)
                         Text(financeManager.displayName(for: cat))
                             .themedPrimaryText()
@@ -331,6 +358,14 @@ struct FinanceSettingsView: View {
             } header: {
                 Text("finance_inflow".localized)
                     .themedSecondaryText()
+            } footer: {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.left")
+                        .font(.caption2)
+                    Text("swipe_to_edit_delete".localized)
+                        .font(.caption)
+                }
+                .themedSecondaryText()
             }
             
             // Income custom categories (deletable)
@@ -339,7 +374,7 @@ struct FinanceSettingsView: View {
                     ForEach(incomeCustomCategories) { cat in
                         HStack {
                             Image(systemName: cat.icon)
-                                .foregroundColor(.green.opacity(0.8))
+                                .foregroundColor(Color(hex: financeManager.colorHex(for: cat.id)).opacity(0.9))
                                 .frame(width: 24)
                             Text(cat.name)
                                 .themedPrimaryText()
@@ -361,6 +396,14 @@ struct FinanceSettingsView: View {
                             .tint(theme.primaryColor)
                         }
                     }
+                } footer: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left")
+                            .font(.caption2)
+                        Text("swipe_to_edit_delete".localized)
+                            .font(.caption)
+                    }
+                    .themedSecondaryText()
                 }
             }
             
@@ -384,31 +427,47 @@ struct FinanceSettingsView: View {
             Section {
                 ForEach(financeManager.budgets) { budget in
                     HStack {
-                        Image(systemName: financeManager.icon(for: budget.category))
+                        Image(systemName: financeManager.budgetIcon(for: budget))
                             .foregroundColor(theme.primaryColor)
                             .frame(width: 24)
-                        Text(financeManager.displayName(for: budget.category))
+                        Text(financeManager.budgetDisplayName(for: budget))
                             .themedPrimaryText()
                         Spacer()
                         Text(formatCurrency(budget.monthlyLimit))
                             .font(.subheadline.weight(.medium).monospacedDigit())
                             .themedSecondaryText()
                         
-                        let usage = financeManager.budgetUsage(for: budget.category)
+                        let usage = financeManager.budgetUsage(for: budget)
                         if usage > 0 {
                             Text(String(format: "%.0f%%", usage * 100))
                                 .font(.caption.weight(.bold).monospacedDigit())
                                 .foregroundColor(usage > 1 ? .red : usage > 0.8 ? .orange : .green)
                                 .frame(width: 44)
                         }
+                        
+                        // Swipe hint indicator
+                        Image(systemName: "chevron.left")
+                            .font(.caption2)
+                            .foregroundColor(theme.secondaryTextColor.opacity(0.4))
+                            .padding(.leading, 4)
                     }
                     .listRowBackground(theme.surfaceColor)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            financeManager.removeBudget(budget)
+                        } label: {
+                            Label("delete".localized, systemImage: "trash")
+                        }
+                        Button {
+                            editingBudget = budget
+                            showingEditBudget = true
+                        } label: {
+                            Label("edit".localized, systemImage: "pencil")
+                        }
+                        .tint(theme.primaryColor)
+                    }
                 }
-                .onDelete { indexSet in
-                    let toRemove = indexSet.map { financeManager.budgets[$0] }
-                    toRemove.forEach { financeManager.removeBudget($0) }
-                }
-                
+
                 NavigationLink(destination: AddCategoryBudgetView()) {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -422,8 +481,13 @@ struct FinanceSettingsView: View {
                 Text("category_budgets".localized)
                     .themedSecondaryText()
             } footer: {
-                Text("category_budgets_footer".localized)
-                    .themedSecondaryText()
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.left")
+                        .font(.caption2)
+                    Text("swipe_to_edit_delete".localized)
+                        .font(.caption)
+                }
+                .themedSecondaryText()
             }
             
             // Reset
@@ -475,6 +539,11 @@ struct FinanceSettingsView: View {
         .sheet(isPresented: $showingBuiltInCategoryEdit) {
             NavigationStack {
                 BuiltInCategoryFormView(category: builtInCategoryToEdit)
+            }
+        }
+        .sheet(isPresented: $showingEditBudget) {
+            NavigationStack {
+                EditCategoryBudgetView(budget: editingBudget)
             }
         }
         .alert("hide_category".localized, isPresented: $showingHideBuiltInAlert) {
@@ -540,24 +609,42 @@ struct AddCategoryBudgetView: View {
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     
-    @State private var selectedCategory: FinanceCategory = .food
+    private enum BudgetCategorySelection: Hashable {
+        case builtIn(FinanceCategory)
+        case custom(UUID)
+    }
+    
+    @State private var selectedCategory: BudgetCategorySelection = .builtIn(.food)
     @State private var limitText: String = ""
     
-    private var availableCategories: [FinanceCategory] {
-        let existingCategories = Set(financeManager.budgets.map { $0.category })
-        return FinanceCategory.allCases.filter { !$0.isIncomeCategory && !existingCategories.contains($0) }
+    private var availableBuiltInCategories: [FinanceCategory] {
+        let existing = Set(financeManager.budgets.filter { $0.customCategoryId == nil }.map { $0.category })
+        return FinanceCategory.allCases.filter { !$0.isIncomeCategory && !existing.contains($0) }
+    }
+    
+    private var availableCustomCategories: [CustomFinanceCategory] {
+        let existing = Set(financeManager.budgets.compactMap { $0.customCategoryId })
+        return financeManager.customCategories
+            .filter { $0.isExpenseCategory && !existing.contains($0.id) }
     }
     
     var body: some View {
         Form {
             Section {
                 Picker("category".localized, selection: $selectedCategory) {
-                    ForEach(availableCategories) { cat in
+                    ForEach(availableBuiltInCategories) { cat in
                         HStack {
                             Image(systemName: financeManager.icon(for: cat))
                             Text(financeManager.displayName(for: cat))
                         }
-                        .tag(cat)
+                        .tag(BudgetCategorySelection.builtIn(cat))
+                    }
+                    ForEach(availableCustomCategories) { custom in
+                        HStack {
+                            Image(systemName: custom.icon)
+                            Text(custom.name)
+                        }
+                        .tag(BudgetCategorySelection.custom(custom.id))
                     }
                 }
                 .listRowBackground(theme.surfaceColor)
@@ -585,10 +672,13 @@ struct AddCategoryBudgetView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("save".localized) {
                     if let val = Double(limitText.replacingOccurrences(of: ",", with: ".")), val > 0 {
-                        let budget = FinanceBudget(
-                            category: selectedCategory,
-                            monthlyLimit: val
-                        )
+                        let budget: FinanceBudget
+                        switch selectedCategory {
+                        case .builtIn(let cat):
+                            budget = FinanceBudget(category: cat, monthlyLimit: val)
+                        case .custom(let id):
+                            budget = FinanceBudget(category: .other, customCategoryId: id, monthlyLimit: val)
+                        }
                         financeManager.addBudget(budget)
                         dismiss()
                     }
@@ -598,8 +688,82 @@ struct AddCategoryBudgetView: View {
             }
         }
         .onAppear {
-            if let first = availableCategories.first {
-                selectedCategory = first
+            if let first = availableBuiltInCategories.first {
+                selectedCategory = .builtIn(first)
+            } else if let firstCustom = availableCustomCategories.first {
+                selectedCategory = .custom(firstCustom.id)
+            }
+        }
+    }
+}
+
+// MARK: - Edit Category Budget View
+
+struct EditCategoryBudgetView: View {
+    @StateObject private var financeManager = FinanceManager.shared
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    
+    var budget: FinanceBudget?
+    
+    @State private var limitText: String = ""
+    
+    private var currencySymbol: String {
+        financeManager.selectedCurrency.symbol
+    }
+    
+    var body: some View {
+        Form {
+            Section {
+                HStack {
+                    Image(systemName: budget.map { financeManager.budgetIcon(for: $0) } ?? "banknote")
+                        .foregroundColor(theme.primaryColor)
+                        .frame(width: 24)
+                    Text(budget.map { financeManager.budgetDisplayName(for: $0) } ?? "")
+                        .themedPrimaryText()
+                    Spacer()
+                }
+                .listRowBackground(theme.surfaceColor)
+                
+                HStack {
+                    Text(currencySymbol)
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(theme.secondaryTextColor)
+                    TextField("0.00", text: $limitText)
+                        .keyboardType(.decimalPad)
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .themedPrimaryText()
+                }
+                .listRowBackground(theme.surfaceColor)
+            } header: {
+                Text("monthly_limit".localized)
+                    .themedSecondaryText()
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .themedBackground()
+        .navigationTitle("edit_budget".localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("cancel".localized) { dismiss() }
+                    .themedSecondaryText()
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("save".localized) {
+                    if let val = Double(limitText.replacingOccurrences(of: ",", with: ".")), val > 0, var existingBudget = budget {
+                        existingBudget.monthlyLimit = val
+                        financeManager.updateBudget(existingBudget)
+                        dismiss()
+                    }
+                }
+                .fontWeight(.semibold)
+                .disabled(Double(limitText.replacingOccurrences(of: ",", with: ".")) ?? 0 <= 0)
+            }
+        }
+        .onAppear {
+            if let b = budget {
+                limitText = String(format: "%.2f", b.monthlyLimit)
             }
         }
     }
@@ -617,6 +781,7 @@ struct CustomCategoryFormView: View {
     
     @State private var name: String = ""
     @State private var selectedIcon: String = "tag.fill"
+    @State private var selectedColorHex: String = "#3B82F6"
     @State private var isExpenseCategory: Bool = true
     
     private let availableIcons = [
@@ -691,6 +856,14 @@ struct CustomCategoryFormView: View {
                 Text("icon".localized)
                     .themedSecondaryText()
             }
+
+            Section {
+                ColorPickerGrid(selectedColor: $selectedColorHex)
+                    .listRowBackground(theme.surfaceColor)
+            } header: {
+                Text("color".localized)
+                    .themedSecondaryText()
+            }
         }
         .scrollContentBackground(.hidden)
         .themedBackground()
@@ -714,8 +887,10 @@ struct CustomCategoryFormView: View {
                 name = cat.name
                 selectedIcon = cat.icon
                 isExpenseCategory = cat.isExpenseCategory
+                selectedColorHex = cat.colorHex ?? financeManager.colorHex(for: cat.id)
             } else {
                 isExpenseCategory = initialIsExpense
+                selectedColorHex = initialIsExpense ? "#EF4444" : "#22C55E"
             }
         }
     }
@@ -724,12 +899,14 @@ struct CustomCategoryFormView: View {
         if var existing = editingCategory {
             existing.name = name.trimmingCharacters(in: .whitespaces)
             existing.icon = selectedIcon
+            existing.colorHex = selectedColorHex
             existing.isExpenseCategory = isExpenseCategory
             financeManager.updateCustomCategory(existing)
         } else {
             let cat = CustomFinanceCategory(
                 name: name.trimmingCharacters(in: .whitespaces),
                 icon: selectedIcon,
+                colorHex: selectedColorHex,
                 isExpenseCategory: isExpenseCategory
             )
             financeManager.addCustomCategory(cat)
@@ -749,6 +926,7 @@ struct BuiltInCategoryFormView: View {
     
     @State private var customName: String = ""
     @State private var selectedIcon: String = ""
+    @State private var selectedColorHex: String = "#3B82F6"
     
     private let availableIcons = [
         "tag.fill", "cart.fill", "bag.fill", "creditcard.fill",
@@ -772,7 +950,8 @@ struct BuiltInCategoryFormView: View {
     private var hasChanges: Bool {
         let currentName = financeManager.override(for: category)?.customName ?? category.displayName
         let currentIcon = financeManager.override(for: category)?.customIcon ?? category.icon
-        return customName != currentName || selectedIcon != currentIcon
+        let currentColor = financeManager.override(for: category)?.customColorHex ?? financeManager.baseColorHex(for: category)
+        return customName != currentName || selectedIcon != currentIcon || selectedColorHex != currentColor
     }
     
     private var canReset: Bool {
@@ -818,11 +997,19 @@ struct BuiltInCategoryFormView: View {
                 Text("icon".localized)
                     .themedSecondaryText()
             }
+
+            Section {
+                ColorPickerGrid(selectedColor: $selectedColorHex)
+                    .listRowBackground(theme.surfaceColor)
+            } header: {
+                Text("color".localized)
+                    .themedSecondaryText()
+            }
             
             if canReset {
                 Section {
                     Button(role: .destructive) {
-                        financeManager.setCategoryOverride(category, customName: nil, customIcon: nil)
+                        financeManager.setCategoryOverride(category, customName: nil, customIcon: nil, customColorHex: nil)
                         dismiss()
                     } label: {
                         HStack {
@@ -853,9 +1040,11 @@ struct BuiltInCategoryFormView: View {
             if let ov = financeManager.override(for: category) {
                 customName = ov.customName ?? category.displayName
                 selectedIcon = ov.customIcon ?? category.icon
+                selectedColorHex = ov.customColorHex ?? financeManager.baseColorHex(for: category)
             } else {
                 customName = category.displayName
                 selectedIcon = category.icon
+                selectedColorHex = financeManager.baseColorHex(for: category)
             }
         }
     }
@@ -864,7 +1053,9 @@ struct BuiltInCategoryFormView: View {
         let nameToSave = customName.trimmingCharacters(in: .whitespaces)
         let nameNilIfDefault = nameToSave.isEmpty || nameToSave == category.displayName ? nil : nameToSave
         let iconNilIfDefault = selectedIcon == category.icon ? nil : selectedIcon
-        financeManager.setCategoryOverride(category, customName: nameNilIfDefault, customIcon: iconNilIfDefault)
+        let baseColor = financeManager.baseColorHex(for: category)
+        let colorNilIfDefault = selectedColorHex == baseColor ? nil : selectedColorHex
+        financeManager.setCategoryOverride(category, customName: nameNilIfDefault, customIcon: iconNilIfDefault, customColorHex: colorNilIfDefault)
         dismiss()
     }
 }

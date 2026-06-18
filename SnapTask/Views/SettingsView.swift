@@ -335,26 +335,23 @@ struct SettingsView: View {
                 
                 // Appearance Section
                 Section {
-                    HStack {
-                        Image(systemName: "circle.lefthalf.filled")
-                            .foregroundColor(.indigo)
-                            .frame(width: 24)
-                        
-                        Text("appearance".localized)
-                            .themedPrimaryText()
-                        
-                        Spacer()
-                        
-                        Picker("", selection: $appearanceMode) {
-                            Text("system".localized).tag("system")
-                            Text("light".localized).tag("light")
-                            Text("dark".localized).tag("dark")
+                    Picker(selection: $appearanceMode) {
+                        Text("system".localized).tag("system")
+                        Text("light".localized).tag("light")
+                        Text("dark".localized).tag("dark")
+                    } label: {
+                        HStack {
+                            Image(systemName: "circle.lefthalf.filled")
+                                .foregroundColor(.indigo)
+                                .frame(width: 24)
+                            Text("appearance".localized)
+                                .themedPrimaryText()
                         }
-                        .pickerStyle(.menu)
-                        .tint(theme.accentColor)
-                        .onChange(of: appearanceMode) { _, newValue in
-                            handleAppearanceModeChange(newValue)
-                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                    .tint(theme.accentColor)
+                    .onChange(of: appearanceMode) { _, newValue in
+                        handleAppearanceModeChange(newValue)
                     }
                     .listRowBackground(theme.surfaceColor)
                     
@@ -400,7 +397,7 @@ struct SettingsView: View {
                 
                 // Finance Section
                 Section {
-                    NavigationLink(destination: FinanceDashboardView()) {
+                    NavigationLink(destination: FinanceSettingsView()) {
                         HStack {
                             Image(systemName: "banknote.fill")
                                 .foregroundColor(.green)
