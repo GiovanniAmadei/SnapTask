@@ -461,13 +461,13 @@ struct FinanceDashboardView: View {
                 Spacer()
             }
             
-            ForEach(financeManager.overBudgetCategories(), id: \.0) { category, usage in
+            ForEach(financeManager.overBudgetCategories(), id: \.0.id) { budget, usage in
                 HStack {
-                    Image(systemName: financeManager.icon(for: category))
+                    Image(systemName: financeManager.icon(for: budget.category))
                         .font(.caption)
                         .foregroundColor(.red)
                         .frame(width: 20)
-                    Text(financeManager.displayName(for: category))
+                    Text(financeManager.displayName(for: budget.category))
                         .font(.caption)
                         .themedPrimaryText()
                     Spacer()
