@@ -70,7 +70,7 @@ struct FinanceDashboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
-            .background(Color.black)
+            .background(theme.backgroundColor)
             
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
@@ -109,7 +109,7 @@ struct FinanceDashboardView: View {
                 .padding(16)
             }
         }
-        .background(Color.black)
+        .background(theme.backgroundColor)
         .navigationBarHidden(true)
         .sheet(isPresented: $showingAddEntry) {
             NavigationStack {
