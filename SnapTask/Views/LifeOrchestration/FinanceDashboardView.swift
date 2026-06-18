@@ -41,10 +41,14 @@ struct FinanceDashboardView: View {
     @State private var balanceText: String = ""
     @State private var breakdownPeriod: ChartPeriod = .month
     @State private var breakdownStyle: ChartStyle = .pie
+    @State private var breakdownOffset: Int = 0
+    @State private var selectedBreakdownKey: FinanceExpenseBreakdownKey? = nil
     @State private var trendPeriod: ChartPeriod = .month
     @State private var trendStyle: ChartStyle = .bar
+    @State private var trendOffset: Int = 0
     @State private var selectedBudgetIndex: Int = 0
     @State private var summaryShowsYearly: Bool = false
+    @State private var summaryOffset: Int = 0
     
     private var hasGoalsConfigured: Bool {
         financeManager.monthlyBudgetTarget > 0 ||
@@ -70,7 +74,7 @@ struct FinanceDashboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
-            .background(Color.black)
+            .background(theme.backgroundColor)
             
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 16) {
@@ -109,7 +113,7 @@ struct FinanceDashboardView: View {
                 .padding(16)
             }
         }
-        .background(Color.black)
+        .background(theme.backgroundColor)
         .navigationBarHidden(true)
         .sheet(isPresented: $showingAddEntry) {
             NavigationStack {
@@ -293,16 +297,16 @@ struct FinanceDashboardView: View {
                                 } label: {
                                     Text(item.label)
                                         .font(.caption.weight(.semibold))
-                                        .foregroundColor(selectedBudgetIndex == index ? .white : theme.secondaryTextColor)
+                                        .foregroundColor(selectedBudgetIndex == index ? theme.buttonTextColor : theme.secondaryTextColor)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 7)
                                         .background(
                                             Capsule(style: .continuous)
-                                                .fill(selectedBudgetIndex == index ? theme.primaryColor.opacity(0.95) : Color.white.opacity(0.06))
+                                                .fill(selectedBudgetIndex == index ? theme.primaryColor.opacity(0.95) : theme.surfaceColor.opacity(0.6))
                                         )
                                         .overlay(
                                             Capsule(style: .continuous)
-                                                .stroke(selectedBudgetIndex == index ? theme.primaryColor.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 1)
+                                                .stroke(selectedBudgetIndex == index ? theme.primaryColor.opacity(0.35) : theme.borderColor.opacity(0.35), lineWidth: 1)
                                         )
                                 }
                                 .buttonStyle(.plain)
@@ -364,6 +368,15 @@ struct FinanceDashboardView: View {
             return formatter.string(from: NSNumber(value: amount)) ?? "\(financeManager.selectedCurrency.symbol)0.00"
         }
 
+        private func entryDateText(_ date: Date) -> String {
+            let calendar = Calendar.current
+            if calendar.component(.year, from: date) == calendar.component(.year, from: Date()) {
+                return date.formatted(.dateTime.day().month(.abbreviated))
+            } else {
+                return date.formatted(.dateTime.day().month(.abbreviated).year())
+            }
+        }
+
         var body: some View {
             List {
                 ForEach(financeManager.entries.sorted(by: { $0.date > $1.date })) { entry in
@@ -387,9 +400,14 @@ struct FinanceDashboardView: View {
 
                         Spacer()
 
-                        Text((entry.type.isOutflow ? "-" : "+") + formatCurrency(entry.amount))
-                            .font(.subheadline.weight(.bold).monospacedDigit())
-                            .foregroundColor(entry.type.isOutflow ? .red : .green)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text((entry.type.isOutflow ? "-" : "+") + formatCurrency(entry.amount))
+                                .font(.subheadline.weight(.bold).monospacedDigit())
+                                .foregroundColor(entry.type.isOutflow ? .red : .green)
+                            Text(entryDateText(entry.date))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundColor(theme.secondaryTextColor)
+                        }
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -419,11 +437,9 @@ struct FinanceDashboardView: View {
         }
         
         for budget in financeManager.budgets where budget.isActive {
-            let spent = financeManager.entries(for: period)
-                .filter { $0.category == budget.category && $0.type.isOutflow }
-                .reduce(0) { $0 + $1.amount }
+            let spent = financeManager.spentAmount(for: budget, in: period)
             items.append((
-                label: financeManager.displayName(for: budget.category),
+                label: financeManager.budgetDisplayName(for: budget),
                 limit: budget.monthlyLimit,
                 spent: spent
             ))
@@ -435,15 +451,13 @@ struct FinanceDashboardView: View {
     private var budgetCategoryItems: [(label: String, icon: String, limit: Double, spent: Double, color: Color)] {
         let period = financeManager.currentMonthPeriod()
         return financeManager.budgets.filter { $0.isActive }.map { budget in
-            let spent = financeManager.entries(for: period)
-                .filter { $0.category == budget.category && $0.type.isOutflow }
-                .reduce(0) { $0 + $1.amount }
+            let spent = financeManager.spentAmount(for: budget, in: period)
             return (
-                label: financeManager.displayName(for: budget.category),
-                icon: financeManager.icon(for: budget.category),
+                label: financeManager.budgetDisplayName(for: budget),
+                icon: financeManager.budgetIcon(for: budget),
                 limit: budget.monthlyLimit,
                 spent: spent,
-                color: Color(hex: categoryColor(budget.category))
+                color: Color(hex: financeManager.budgetColorHex(for: budget))
             )
         }
     }
@@ -451,7 +465,8 @@ struct FinanceDashboardView: View {
     // MARK: - Budget Alerts
     
     private var budgetAlertsCard: some View {
-        VStack(spacing: 8) {
+        let items = financeManager.overBudgetCategories()
+        return VStack(spacing: 10) {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
@@ -460,15 +475,15 @@ struct FinanceDashboardView: View {
                     .themedPrimaryText()
                 Spacer()
             }
-            
-            ForEach(financeManager.overBudgetCategories(), id: \.0) { category, usage in
+
+            ForEach(items, id: \.0.id) { budget, usage in
                 HStack {
-                    Image(systemName: financeManager.icon(for: category))
+                    Image(systemName: financeManager.budgetIcon(for: budget))
                         .font(.caption)
                         .foregroundColor(.red)
                         .frame(width: 20)
-                    Text(financeManager.displayName(for: category))
-                        .font(.caption)
+                    Text(financeManager.budgetDisplayName(for: budget))
+                        .font(.caption.weight(.medium))
                         .themedPrimaryText()
                     Spacer()
                     Text(String(format: "%.0f%%", usage * 100))
@@ -525,7 +540,7 @@ struct FinanceDashboardView: View {
                 Text("add_entry".localized)
             }
             .font(.subheadline.weight(.semibold))
-            .foregroundColor(.white)
+            .foregroundColor(theme.buttonTextColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(theme.primaryColor)
@@ -537,174 +552,259 @@ struct FinanceDashboardView: View {
     
     private var summaryCardContent: some View {
         let isYearly = summaryShowsYearly
-        let income    = isYearly ? financeManager.yearlyIncome    : financeManager.monthlyIncome
-        let expenses  = isYearly ? financeManager.yearlyExpenses  : financeManager.monthlyExpenses
-        let net       = income - expenses
-        let rate      = isYearly ? financeManager.yearlySavingsRate : financeManager.monthlySavingsRate
-        let rateColor: Color = rate >= 0.2 ? .green : rate >= 0.1 ? .orange : .red
-        let currentYear = Calendar.current.component(.year, from: Date())
-        
-        return VStack(spacing: 14) {
-            // Header with toggle
-            HStack {
-                Text(isYearly
-                     ? "yearly_overview".localized + " \(currentYear)"
-                     : "monthly_overview".localized)
-                    .font(.subheadline.weight(.semibold))
-                    .themedPrimaryText()
-                Spacer()
-                // Monthly / Yearly pill toggle
-                HStack(spacing: 0) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { summaryShowsYearly = false }
-                    } label: {
-                        Text("period_month".localized)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(!isYearly ? .white : theme.secondaryTextColor)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(!isYearly ? theme.primaryColor : Color.clear)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { summaryShowsYearly = true }
-                    } label: {
-                        Text("ytd".localized)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(isYearly ? .white : theme.secondaryTextColor)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(isYearly ? theme.primaryColor : Color.clear)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-                .background(theme.secondaryTextColor.opacity(0.1))
-                .clipShape(Capsule())
+        let calendar = Calendar.current
+        let now = Date()
+
+        // Compute the exact period based on offset
+        let periodIncome: Double
+        let periodExpenses: Double
+        let periodLabel: String
+        let periodRate: Double
+
+        if isYearly {
+            let base = calendar.date(byAdding: .year, value: -summaryOffset, to: now) ?? now
+            let year = calendar.component(.year, from: base)
+            guard let yearStart = calendar.dateInterval(of: .year, for: base)?.start,
+                  let yearEnd = calendar.date(byAdding: .year, value: 1, to: yearStart) else {
+                return AnyView(EmptyView())
             }
-            
-            // Numbers row
-            HStack(spacing: 0) {
-                VStack(spacing: 6) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(.green)
-                    Text(formatCurrency(income))
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .foregroundColor(.green)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                    Text("income".localized)
-                        .font(.caption)
-                        .foregroundColor(theme.secondaryTextColor)
-                }
-                .frame(maxWidth: .infinity)
-                
-                VStack(spacing: 6) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(.red)
-                    Text(formatCurrency(expenses))
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .foregroundColor(.red)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                    Text("expenses".localized)
-                        .font(.caption)
-                        .foregroundColor(theme.secondaryTextColor)
-                }
-                .frame(maxWidth: .infinity)
-                
-                VStack(spacing: 6) {
-                    Image(systemName: net >= 0 ? "plus.circle.fill" : "minus.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(net >= 0 ? .green : .red)
-                    Text(formatCurrency(abs(net)))
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .foregroundColor(net >= 0 ? .green : .red)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                    Text("net".localized)
-                        .font(.caption)
-                        .foregroundColor(theme.secondaryTextColor)
-                }
-                .frame(maxWidth: .infinity)
+            let interval = DateInterval(start: yearStart, end: summaryOffset == 0 ? now : yearEnd)
+            periodIncome   = financeManager.totalIncome(for: interval)
+            periodExpenses = financeManager.totalExpenses(for: interval)
+            periodLabel    = "\(year)"
+            let inc = periodIncome
+            periodRate = inc > 0 ? max((inc - periodExpenses) / inc, 0) : 0
+        } else {
+            let base = calendar.date(byAdding: .month, value: -summaryOffset, to: now) ?? now
+            guard let monthInterval = calendar.dateInterval(of: .month, for: base) else {
+                return AnyView(EmptyView())
             }
-            
-            // Yearly-only: averages + projection
-            if isYearly {
-                Divider().background(theme.secondaryTextColor.opacity(0.15))
-                HStack(spacing: 0) {
-                    VStack(spacing: 4) {
-                        Text("avg_monthly".localized)
-                            .font(.caption2)
-                            .foregroundColor(theme.secondaryTextColor)
-                        Text(formatCurrency(financeManager.yearlyAverageMonthlyIncome))
-                            .font(.caption.weight(.semibold).monospacedDigit())
-                            .foregroundColor(.green)
-                            .minimumScaleFactor(0.7).lineLimit(1)
-                        Text("income".localized)
-                            .font(.caption2)
-                            .foregroundColor(theme.secondaryTextColor.opacity(0.7))
-                    }
-                    .frame(maxWidth: .infinity)
-                    VStack(spacing: 4) {
-                        Text("avg_monthly".localized)
-                            .font(.caption2)
-                            .foregroundColor(theme.secondaryTextColor)
-                        Text(formatCurrency(financeManager.yearlyAverageMonthlyExpenses))
-                            .font(.caption.weight(.semibold).monospacedDigit())
-                            .foregroundColor(.red)
-                            .minimumScaleFactor(0.7).lineLimit(1)
-                        Text("expenses".localized)
-                            .font(.caption2)
-                            .foregroundColor(theme.secondaryTextColor.opacity(0.7))
-                    }
-                    .frame(maxWidth: .infinity)
-                    VStack(spacing: 4) {
-                        Text("projected".localized)
-                            .font(.caption2)
-                            .foregroundColor(theme.secondaryTextColor)
-                        let projNet = financeManager.projectedAnnualIncome - financeManager.projectedAnnualExpenses
-                        Text(formatCurrency(abs(projNet)))
-                            .font(.caption.weight(.semibold).monospacedDigit())
-                            .foregroundColor(projNet >= 0 ? .green : .red)
-                            .minimumScaleFactor(0.7).lineLimit(1)
-                        Text("annual_net".localized)
-                            .font(.caption2)
-                            .foregroundColor(theme.secondaryTextColor.opacity(0.7))
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            
-            // Savings rate bar
-            VStack(spacing: 6) {
-                HStack {
-                    Text(isYearly ? "ytd_savings_rate".localized : "savings_rate".localized)
-                        .font(.caption)
-                        .foregroundColor(theme.secondaryTextColor)
-                    Spacer()
-                    Text("\(Int(rate * 100))%")
-                        .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundColor(rateColor)
-                }
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(theme.secondaryTextColor.opacity(0.12))
-                            .frame(height: 8)
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(rateColor)
-                            .frame(width: geo.size.width * min(rate, 1.0), height: 8)
-                    }
-                }
-                .frame(height: 8)
-            }
+            let df = DateFormatter()
+            df.locale = Locale.current
+            df.dateFormat = "MMMM yyyy"
+            periodLabel    = df.string(from: monthInterval.start)
+            let interval   = summaryOffset == 0
+                ? DateInterval(start: monthInterval.start, end: now)
+                : monthInterval
+            periodIncome   = financeManager.totalIncome(for: interval)
+            periodExpenses = financeManager.totalExpenses(for: interval)
+            let inc = periodIncome
+            periodRate = inc > 0 ? max((inc - periodExpenses) / inc, 0) : 0
         }
-        .padding(.horizontal, 16)
-        .animation(.easeInOut(duration: 0.2), value: summaryShowsYearly)
+
+        let net = periodIncome - periodExpenses
+        let rateColor: Color = periodRate >= 0.2 ? .green : periodRate >= 0.1 ? .orange : .red
+
+        // Yearly avg/projection helpers (only used when isYearly + offset 0)
+        let calendar2 = Calendar.current
+        let monthsElapsed = max(calendar2.component(.month, from: now), 1)
+        let avgIncome   = summaryOffset == 0 ? periodIncome / Double(monthsElapsed) : periodIncome / 12.0
+        let avgExpenses = summaryOffset == 0 ? periodExpenses / Double(monthsElapsed) : periodExpenses / 12.0
+        let projNet = avgIncome * 12 - avgExpenses * 12
+
+        return AnyView(
+            VStack(spacing: 14) {
+                // Header: label on left, month/year toggle on right, then nav
+                HStack {
+                    Text(isYearly ? "yearly_overview".localized : "monthly_overview".localized)
+                        .font(.subheadline.weight(.semibold))
+                        .themedPrimaryText()
+                    Spacer()
+                    HStack(spacing: 0) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                summaryShowsYearly = false
+                                summaryOffset = 0
+                            }
+                        } label: {
+                            Text("period_month".localized)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(!isYearly ? theme.buttonTextColor : theme.secondaryTextColor)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(!isYearly ? theme.primaryColor : Color.clear)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                summaryShowsYearly = true
+                                summaryOffset = 0
+                            }
+                        } label: {
+                            Text("ytd".localized)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(isYearly ? theme.buttonTextColor : theme.secondaryTextColor)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(isYearly ? theme.primaryColor : Color.clear)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .background(theme.secondaryTextColor.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+
+                // Period navigation row
+                HStack(spacing: 8) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { summaryOffset += 1 }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(theme.primaryColor)
+                            .frame(width: 28, height: 28)
+                            .background(theme.primaryColor.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer()
+
+                    Text(periodLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(theme.secondaryTextColor)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { summaryOffset -= 1 }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(summaryOffset > 0 ? theme.primaryColor : theme.secondaryTextColor.opacity(0.3))
+                            .frame(width: 28, height: 28)
+                            .background((summaryOffset > 0 ? theme.primaryColor : theme.secondaryTextColor).opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(summaryOffset == 0)
+                }
+
+                // Numbers row
+                HStack(spacing: 0) {
+                    VStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.green)
+                        Text(formatCurrency(periodIncome))
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundColor(.green)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                        Text("income".localized)
+                            .font(.caption)
+                            .foregroundColor(theme.secondaryTextColor)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    VStack(spacing: 6) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.red)
+                        Text(formatCurrency(periodExpenses))
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundColor(.red)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                        Text("expenses".localized)
+                            .font(.caption)
+                            .foregroundColor(theme.secondaryTextColor)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    VStack(spacing: 6) {
+                        Image(systemName: net >= 0 ? "plus.circle.fill" : "minus.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(net >= 0 ? .green : .red)
+                        Text(formatCurrency(abs(net)))
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundColor(net >= 0 ? .green : .red)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                        Text("net".localized)
+                            .font(.caption)
+                            .foregroundColor(theme.secondaryTextColor)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                // Yearly-only: averages + projection
+                if isYearly {
+                    Divider().background(theme.secondaryTextColor.opacity(0.15))
+                    HStack(spacing: 0) {
+                        VStack(spacing: 4) {
+                            Text("avg_monthly".localized)
+                                .font(.caption2)
+                                .foregroundColor(theme.secondaryTextColor)
+                            Text(formatCurrency(avgIncome))
+                                .font(.caption.weight(.semibold).monospacedDigit())
+                                .foregroundColor(.green)
+                                .minimumScaleFactor(0.7).lineLimit(1)
+                            Text("income".localized)
+                                .font(.caption2)
+                                .foregroundColor(theme.secondaryTextColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                        VStack(spacing: 4) {
+                            Text("avg_monthly".localized)
+                                .font(.caption2)
+                                .foregroundColor(theme.secondaryTextColor)
+                            Text(formatCurrency(avgExpenses))
+                                .font(.caption.weight(.semibold).monospacedDigit())
+                                .foregroundColor(.red)
+                                .minimumScaleFactor(0.7).lineLimit(1)
+                            Text("expenses".localized)
+                                .font(.caption2)
+                                .foregroundColor(theme.secondaryTextColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                        VStack(spacing: 4) {
+                            Text("projected".localized)
+                                .font(.caption2)
+                                .foregroundColor(theme.secondaryTextColor)
+                            Text(formatCurrency(abs(projNet)))
+                                .font(.caption.weight(.semibold).monospacedDigit())
+                                .foregroundColor(projNet >= 0 ? .green : .red)
+                                .minimumScaleFactor(0.7).lineLimit(1)
+                            Text("annual_net".localized)
+                                .font(.caption2)
+                                .foregroundColor(theme.secondaryTextColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+
+                // Savings rate bar
+                VStack(spacing: 6) {
+                    HStack {
+                        Text(isYearly ? "ytd_savings_rate".localized : "savings_rate".localized)
+                            .font(.caption)
+                            .foregroundColor(theme.secondaryTextColor)
+                        Spacer()
+                        Text("\(Int(periodRate * 100))%")
+                            .font(.caption.weight(.bold).monospacedDigit())
+                            .foregroundColor(rateColor)
+                    }
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(theme.secondaryTextColor.opacity(0.12))
+                                .frame(height: 8)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(rateColor)
+                                .frame(width: geo.size.width * min(periodRate, 1.0), height: 8)
+                        }
+                    }
+                    .frame(height: 8)
+                }
+            }
+            .padding(.horizontal, 16)
+            .animation(.easeInOut(duration: 0.2), value: summaryShowsYearly)
+            .animation(.easeInOut(duration: 0.2), value: summaryOffset)
+        )
     }
     
     private var savingsColor: Color {
@@ -716,25 +816,66 @@ struct FinanceDashboardView: View {
     }
     
     // MARK: - Chart Helpers
-    
-    private func periodInterval(for period: ChartPeriod) -> DateInterval {
+
+    private func periodInterval(for period: ChartPeriod, offset: Int = 0) -> DateInterval {
         let calendar = Calendar.current
         let now = Date()
         switch period {
         case .day:
-            let start = calendar.startOfDay(for: now)
-            let end = calendar.date(byAdding: .day, value: 1, to: start) ?? now
+            let base = calendar.date(byAdding: .day, value: -offset, to: now) ?? now
+            let start = calendar.startOfDay(for: base)
+            let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
             return DateInterval(start: start, end: end)
         case .week:
-            let start = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
-            let end = calendar.date(byAdding: .weekOfYear, value: 1, to: start) ?? now
+            let base = calendar.date(byAdding: .weekOfYear, value: -offset, to: now) ?? now
+            let start = calendar.dateInterval(of: .weekOfYear, for: base)?.start ?? base
+            let end = calendar.date(byAdding: .weekOfYear, value: 1, to: start) ?? start
             return DateInterval(start: start, end: end)
         case .month:
-            return financeManager.currentMonthPeriod()
-        case .year:
-            let start = calendar.dateInterval(of: .year, for: now)?.start ?? now
-            let end = calendar.date(byAdding: .year, value: 1, to: start) ?? now
+            let base = calendar.date(byAdding: .month, value: -offset, to: now) ?? now
+            let start = calendar.dateInterval(of: .month, for: base)?.start ?? base
+            let end = calendar.date(byAdding: .month, value: 1, to: start) ?? start
             return DateInterval(start: start, end: end)
+        case .year:
+            let base = calendar.date(byAdding: .year, value: -offset, to: now) ?? now
+            let start = calendar.dateInterval(of: .year, for: base)?.start ?? base
+            let end = calendar.date(byAdding: .year, value: 1, to: start) ?? start
+            return DateInterval(start: start, end: end)
+        }
+    }
+
+    private func periodLabel(for period: ChartPeriod, offset: Int) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+
+        switch period {
+        case .day:
+            if offset == 0 { return "today".localized }
+            if offset == 1 { return "yesterday".localized }
+            let date = calendar.date(byAdding: .day, value: -offset, to: now) ?? now
+            formatter.dateFormat = "EEE d MMM"
+            return formatter.string(from: date)
+        case .week:
+            let base = calendar.date(byAdding: .weekOfYear, value: -offset, to: now) ?? now
+            guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: base)?.start,
+                  let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) else {
+                return ""
+            }
+            let weekNum = calendar.component(.weekOfYear, from: weekStart)
+            formatter.dateFormat = "d MMM"
+            let startStr = formatter.string(from: weekStart)
+            let endStr = formatter.string(from: weekEnd)
+            return "W\(weekNum) • \(startStr)–\(endStr)"
+        case .month:
+            let base = calendar.date(byAdding: .month, value: -offset, to: now) ?? now
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: base)
+        case .year:
+            let base = calendar.date(byAdding: .year, value: -offset, to: now) ?? now
+            formatter.dateFormat = "yyyy"
+            return formatter.string(from: base)
         }
     }
     
@@ -742,22 +883,63 @@ struct FinanceDashboardView: View {
     
     private var expenseBreakdownChartContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(alignment: .center) {
                 Text("expense_breakdown".localized)
                     .font(.subheadline.weight(.semibold))
                     .themedPrimaryText()
                 Spacer()
                 ThemedSegmentedPicker(selection: $breakdownStyle, options: Array(ChartStyle.allCases)) { style in
                     Image(systemName: style.icon)
+                        .font(.system(size: 18, weight: .semibold))
                 }
-                .frame(width: 100)
+                .frame(width: 108, height: 48)
             }
-            
+            .padding(.top, 4)
+
             ThemedSegmentedPicker(selection: $breakdownPeriod, options: Array(ChartPeriod.allCases)) { period in
                 Text(period.displayName)
             }
-            
-            let breakdown = financeManager.expenseBreakdown(for: periodInterval(for: breakdownPeriod))
+            .onChange(of: breakdownPeriod) { _ in breakdownOffset = 0; selectedBreakdownKey = nil }
+            .onChange(of: breakdownStyle) { _ in selectedBreakdownKey = nil }
+
+            // Period navigation row
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { breakdownOffset += 1; selectedBreakdownKey = nil }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(theme.primaryColor)
+                        .frame(width: 28, height: 28)
+                        .background(theme.primaryColor.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text(periodLabel(for: breakdownPeriod, offset: breakdownOffset))
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(theme.secondaryTextColor)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { breakdownOffset -= 1; selectedBreakdownKey = nil }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(breakdownOffset > 0 ? theme.primaryColor : theme.secondaryTextColor.opacity(0.3))
+                        .frame(width: 28, height: 28)
+                        .background((breakdownOffset > 0 ? theme.primaryColor : theme.secondaryTextColor).opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(breakdownOffset == 0)
+            }
+
+            let breakdown = financeManager.expenseBreakdownDetailed(for: periodInterval(for: breakdownPeriod, offset: breakdownOffset))
             
             if breakdown.isEmpty {
                 Text("no_data_yet".localized)
@@ -767,79 +949,227 @@ struct FinanceDashboardView: View {
                     .padding(.vertical, 20)
             } else {
                 let isSingleBar = breakdown.count == 1
-                
+
                 if breakdownStyle == .pie {
-                    Chart(breakdown.prefix(6), id: \.0) { item in
-                        SectorMark(
-                            angle: .value(financeManager.displayName(for: item.0), item.1),
-                            innerRadius: .ratio(0.55),
-                            angularInset: 2
-                        )
-                        .foregroundStyle(Color(hex: categoryColor(item.0)))
-                        .cornerRadius(4)
+                    // Interactive donut chart
+                    ZStack {
+                        Chart(breakdown, id: \.0.id) { item in
+                            let isSelected = selectedBreakdownKey == item.0
+                            SectorMark(
+                                angle: .value(financeManager.expenseBreakdownDisplayName(for: item.0), item.1),
+                                innerRadius: .ratio(isSelected ? 0.45 : 0.55),
+                                outerRadius: .ratio(isSelected ? 1.0 : 0.95),
+                                angularInset: 2
+                            )
+                            .foregroundStyle(Color(hex: financeManager.expenseBreakdownColorHex(for: item.0)))
+                            .cornerRadius(4)
+                            .opacity(selectedBreakdownKey == nil || isSelected ? 1.0 : 0.45)
+                        }
+                        .chartOverlay { proxy in
+                            GeometryReader { geo in
+                                Color.clear
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { location in
+                                        guard let plotFrame = proxy.plotFrame.map({ geo[$0] }) else { return }
+                                        let center = CGPoint(x: plotFrame.midX, y: plotFrame.midY)
+                                        let dx = location.x - center.x
+                                        let dy = location.y - center.y
+                                        // angle from top (12 o'clock), clockwise, 0-360°
+                                        var angle = atan2(dx, -dy) * 180 / .pi
+                                        if angle < 0 { angle += 360 }
+                                        let total = breakdown.reduce(0.0) { $0 + $1.1 }
+                                        var cumulative = 0.0
+                                        for item in breakdown {
+                                            cumulative += item.1 / total * 360
+                                            if angle <= cumulative {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    selectedBreakdownKey = (selectedBreakdownKey == item.0) ? nil : item.0
+                                                }
+                                                return
+                                            }
+                                        }
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            selectedBreakdownKey = nil
+                                        }
+                                    }
+                            }
+                        }
+                        .frame(height: 180)
+                        .padding(.vertical, 4)
+
+                        // Center label when a sector is selected — non-interactive so it never blocks chart taps
+                        if let key = selectedBreakdownKey,
+                           let item = breakdown.first(where: { $0.0 == key }) {
+                            VStack(spacing: 2) {
+                                Text(financeManager.expenseBreakdownDisplayName(for: item.0))
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundColor(theme.secondaryTextColor)
+                                    .lineLimit(1)
+                                    .multilineTextAlignment(.center)
+                                Text(formatCurrency(item.1))
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundColor(Color(hex: financeManager.expenseBreakdownColorHex(for: item.0)))
+                                let total = breakdown.reduce(0.0) { $0 + $1.1 }
+                                Text(String(format: "%.0f%%", item.1 / total * 100))
+                                    .font(.caption2)
+                                    .foregroundColor(theme.secondaryTextColor)
+                            }
+                            .frame(width: 90)
+                            .allowsHitTesting(false)
+                        }
                     }
-                    .frame(height: 200)
-                    .padding(.vertical, 4)
+                    .frame(height: 188)
                 } else {
-                    // Bar chart con padding laterale per barre singole
-                    let isSingleBar = breakdown.count == 1
-                    Chart(breakdown.prefix(6), id: \.0) { item in
-                        BarMark(
-                            x: .value("category".localized, financeManager.displayName(for: item.0)),
-                            y: .value("amount".localized, item.1)
-                        )
-                        .foregroundStyle(Color(hex: categoryColor(item.0)))
-                        .cornerRadius(4)
+                    // Bar chart: horizontal scroll to avoid label overlap
+                    let barWidth: CGFloat = isSingleBar ? 60 : 52
+                    let chartWidth = max(280, CGFloat(breakdown.count) * barWidth)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        Chart(breakdown, id: \.0.id) { item in
+                            BarMark(
+                                x: .value("category".localized, financeManager.expenseBreakdownDisplayName(for: item.0)),
+                                y: .value("amount".localized, item.1)
+                            )
+                            .foregroundStyle(Color(hex: financeManager.expenseBreakdownColorHex(for: item.0)))
+                            .cornerRadius(4)
+                            .opacity(selectedBreakdownKey == nil || selectedBreakdownKey == item.0 ? 1.0 : 0.35)
+                        }
+                        .frame(width: chartWidth, height: 180)
+                        .padding(.vertical, 4)
+                        .chartXAxis(.hidden)
+                        .chartYAxis {
+                            AxisMarks(position: .leading) { value in
+                                AxisValueLabel {
+                                    if let v = value.as(Double.self) {
+                                        Text(formatCompact(v))
+                                            .font(.caption2)
+                                    }
+                                }
+                            }
+                        }
+                        .chartOverlay { proxy in
+                            GeometryReader { geo in
+                                Color.clear.contentShape(Rectangle())
+                                    .onTapGesture { location in
+                                        guard let frame = proxy.plotFrame.map({ geo[$0] }) else { return }
+                                        let x = location.x - frame.minX
+                                        if let tappedLabel: String = proxy.value(atX: x) {
+                                            if let tappedKey = breakdown.first(where: {
+                                                financeManager.expenseBreakdownDisplayName(for: $0.0) == tappedLabel
+                                            })?.0 {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    selectedBreakdownKey = (selectedBreakdownKey == tappedKey) ? nil : tappedKey
+                                                }
+                                            }
+                                        }
+                                    }
+                            }
+                        }
                     }
-                    .frame(height: 200)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, isSingleBar ? 80 : 0)
-                    .chartXAxis {
-                        AxisMarks { value in
-                            AxisValueLabel {
-                                if let label = value.as(String.self) {
-                                    Text(label)
-                                        .font(.caption2)
+                    .frame(height: 188)
+                }
+
+                // Single ScrollView always at fixed height — prevents ANY layout shift on selection
+                ScrollView(.vertical, showsIndicators: false) {
+                    if let key = selectedBreakdownKey,
+                       let selectedItem = breakdown.first(where: { $0.0 == key }) {
+                        let accentColor = Color(hex: financeManager.expenseBreakdownColorHex(for: key))
+                        let interval = periodInterval(for: breakdownPeriod, offset: breakdownOffset)
+                        let detailEntries = financeManager.entries(for: interval)
+                            .filter { entry in
+                                guard entry.type.isOutflow else { return false }
+                                switch key {
+                                case .builtIn(let cat): return entry.customCategoryId == nil && entry.category == cat
+                                case .custom(let id): return entry.customCategoryId == id
+                                }
+                            }
+                            .sorted { $0.date > $1.date }
+
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Selected category header
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(accentColor)
+                                    .frame(width: 10, height: 10)
+                                Image(systemName: financeManager.expenseBreakdownIcon(for: key))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(accentColor)
+                                Text(financeManager.expenseBreakdownDisplayName(for: key))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(accentColor)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(formatCurrency(selectedItem.1))
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundColor(accentColor)
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(theme.secondaryTextColor.opacity(0.5))
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.2)) { selectedBreakdownKey = nil }
+                            }
+                            .padding(.bottom, 8)
+
+                            Divider().padding(.bottom, 4)
+
+                            ForEach(detailEntries) { entry in
+                                HStack(spacing: 8) {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(entry.name)
+                                            .font(.caption.weight(.medium))
+                                            .themedPrimaryText()
+                                            .lineLimit(1)
+                                        Text(entryDateText(entry.date))
+                                            .font(.caption2)
+                                            .foregroundColor(theme.secondaryTextColor)
+                                    }
+                                    Spacer()
+                                    Text("-" + formatCurrency(entry.amount))
+                                        .font(.caption.weight(.semibold).monospacedDigit())
+                                        .foregroundColor(.red)
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture { editingEntry = entry }
+                                .padding(.vertical, 5)
+
+                                if entry.id != detailEntries.last?.id {
+                                    Divider()
+                                }
+                            }
+                        }
+                    } else {
+                        VStack(spacing: 6) {
+                            ForEach(breakdown, id: \.0.id) { item in
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(Color(hex: financeManager.expenseBreakdownColorHex(for: item.0)))
+                                        .frame(width: 10, height: 10)
+                                    Text(financeManager.expenseBreakdownDisplayName(for: item.0))
+                                        .font(.caption)
+                                        .themedPrimaryText()
                                         .lineLimit(1)
+                                    Spacer()
+                                    Text(formatCurrency(item.1))
+                                        .font(.caption.weight(.medium).monospacedDigit())
+                                        .foregroundColor(theme.secondaryTextColor)
                                 }
-                            }
-                        }
-                    }
-                    .chartYAxis {
-                        AxisMarks(position: .leading) { value in
-                            AxisValueLabel {
-                                if let v = value.as(Double.self) {
-                                    Text(formatCompact(v))
-                                        .font(.caption2)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedBreakdownKey = item.0
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                
-                // Legend — always a VStack so it never clips
-                VStack(spacing: 6) {
-                    ForEach(breakdown.prefix(6), id: \.0) { item in
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(Color(hex: categoryColor(item.0)))
-                                .frame(width: 10, height: 10)
-                            Text(financeManager.displayName(for: item.0))
-                                .font(.caption)
-                                .themedPrimaryText()
-                                .lineLimit(1)
-                            Spacer()
-                            Text(formatCurrency(item.1))
-                                .font(.caption.weight(.medium).monospacedDigit())
-                                .foregroundColor(theme.secondaryTextColor)
-                        }
-                    }
-                }
+                .frame(maxHeight: 200)
             }
         }
         .padding(.horizontal, 16)
     }
-    
+
     // MARK: - Trend Chart Content (without card wrapper)
     
     private var trendChartContent: some View {
@@ -854,12 +1184,50 @@ struct FinanceDashboardView: View {
                 }
                 .frame(width: 100)
             }
-            
+
             ThemedSegmentedPicker(selection: $trendPeriod, options: Array(ChartPeriod.allCases)) { period in
                 Text(period.displayName)
             }
-            
-            let trendData = trendData(for: trendPeriod)
+            .onChange(of: trendPeriod) { _ in trendOffset = 0 }
+
+            // Period navigation row
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { trendOffset += 1 }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(theme.primaryColor)
+                        .frame(width: 28, height: 28)
+                        .background(theme.primaryColor.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text(periodLabel(for: trendPeriod, offset: trendOffset))
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(theme.secondaryTextColor)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { trendOffset -= 1 }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(trendOffset > 0 ? theme.primaryColor : theme.secondaryTextColor.opacity(0.3))
+                        .frame(width: 28, height: 28)
+                        .background((trendOffset > 0 ? theme.primaryColor : theme.secondaryTextColor).opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(trendOffset == 0)
+            }
+
+            let trendData = trendData(for: trendPeriod, offset: trendOffset)
             
             if trendData.isEmpty {
                 Text("no_data_yet".localized)
@@ -983,7 +1351,7 @@ struct FinanceDashboardView: View {
                     .tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 420)
+            .frame(height: 560)
         }
         .padding(16)
         .themedCard()
@@ -1058,9 +1426,14 @@ struct FinanceDashboardView: View {
                         
                         Spacer()
                         
-                        Text((entry.type.isOutflow ? "-" : "+") + formatCurrency(entry.amount))
-                            .font(.subheadline.weight(.bold).monospacedDigit())
-                            .foregroundColor(entry.type.isOutflow ? .red : .green)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text((entry.type.isOutflow ? "-" : "+") + formatCurrency(entry.amount))
+                                .font(.subheadline.weight(.bold).monospacedDigit())
+                                .foregroundColor(entry.type.isOutflow ? .red : .green)
+                            Text(entryDateText(entry.date))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundColor(theme.secondaryTextColor)
+                        }
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -1118,8 +1491,15 @@ struct FinanceDashboardView: View {
                             .font(.caption)
                             .foregroundColor(theme.secondaryTextColor)
                     }
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(theme.secondaryTextColor.opacity(0.4))
                 }
                 .padding(.vertical, 3)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    editingEntry = sub
+                }
             }
         }
         .padding(16)
@@ -1152,7 +1532,7 @@ struct FinanceDashboardView: View {
         let expenses: Double
     }
     
-    private func trendData(for period: ChartPeriod) -> [TrendItem] {
+    private func trendData(for period: ChartPeriod, offset: Int = 0) -> [TrendItem] {
         let calendar = Calendar.current
         let now = Date()
         var items: [TrendItem] = []
@@ -1160,11 +1540,13 @@ struct FinanceDashboardView: View {
         
         switch period {
         case .day:
-            // Show hours of today
+            // Show 3-hour buckets of the target day
             formatter.dateFormat = "HH"
-            let startOfDay = calendar.startOfDay(for: now)
-            let currentHour = calendar.component(.hour, from: now)
-            for h in stride(from: 0, through: currentHour, by: 3) {
+            let base = calendar.date(byAdding: .day, value: -offset, to: now) ?? now
+            let startOfDay = calendar.startOfDay(for: base)
+            let isToday = offset == 0
+            let lastHour = isToday ? calendar.component(.hour, from: now) : 23
+            for h in stride(from: 0, through: lastHour, by: 3) {
                 guard let hourStart = calendar.date(byAdding: .hour, value: h, to: startOfDay),
                       let hourEnd = calendar.date(byAdding: .hour, value: 3, to: hourStart) else { continue }
                 let interval = DateInterval(start: hourStart, end: hourEnd)
@@ -1176,9 +1558,10 @@ struct FinanceDashboardView: View {
                 ))
             }
         case .week:
-            // Show days of current week
+            // Show days of the target week
             formatter.dateFormat = "EEE"
-            guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start else { return [] }
+            let base = calendar.date(byAdding: .weekOfYear, value: -offset, to: now) ?? now
+            guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: base)?.start else { return [] }
             for d in 0..<7 {
                 guard let dayStart = calendar.date(byAdding: .day, value: d, to: weekStart),
                       let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
@@ -1191,10 +1574,10 @@ struct FinanceDashboardView: View {
                 ))
             }
         case .month:
-            // Show last 6 months
+            // Show 6 monthly buckets ending at `offset` months ago
             formatter.dateFormat = "MMM"
             for i in (0..<6).reversed() {
-                guard let monthStart = calendar.date(byAdding: .month, value: -i, to: now),
+                guard let monthStart = calendar.date(byAdding: .month, value: -(i + offset), to: now),
                       let interval = calendar.dateInterval(of: .month, for: monthStart) else { continue }
                 items.append(TrendItem(
                     date: interval.start,
@@ -1204,10 +1587,10 @@ struct FinanceDashboardView: View {
                 ))
             }
         case .year:
-            // Show last 4 years
+            // Show 4 yearly buckets ending at `offset` years ago
             formatter.dateFormat = "yyyy"
             for i in (0..<4).reversed() {
-                guard let yearStart = calendar.date(byAdding: .year, value: -i, to: now),
+                guard let yearStart = calendar.date(byAdding: .year, value: -(i + offset), to: now),
                       let interval = calendar.dateInterval(of: .year, for: yearStart) else { continue }
                 items.append(TrendItem(
                     date: interval.start,
@@ -1237,6 +1620,15 @@ struct FinanceDashboardView: View {
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: amount)) ?? "\(financeManager.selectedCurrency.symbol)\(Int(amount))"
     }
+
+    private func entryDateText(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.component(.year, from: date) == calendar.component(.year, from: Date()) {
+            return date.formatted(.dateTime.day().month(.abbreviated))
+        } else {
+            return date.formatted(.dateTime.day().month(.abbreviated).year())
+        }
+    }
 }
 
 // MARK: - Budget Overall Gauge (large speedometer-style semicircle)
@@ -1258,69 +1650,68 @@ private struct BudgetOverallGauge: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            GeometryReader { geo in
-                let gaugeWidth = min(geo.size.width, 420)
-                let gaugeHeight = gaugeWidth / 2
-                
-                ZStack {
-                    // Background track (semicircle arc)
-                    ArcShape(startAngle: .degrees(180), endAngle: .degrees(0))
-                        .stroke(
-                            Color.white.opacity(0.1),
-                            style: StrokeStyle(lineWidth: gaugeLineWidth, lineCap: .round)
-                        )
-                        .frame(width: gaugeWidth, height: gaugeHeight)
-                    
-                    // Filled arc
-                    ArcShape(
-                        startAngle: .degrees(180),
-                        endAngle: .degrees(180 + min(progress, 1.0) * 180)
-                    )
+        GeometryReader { geo in
+            let gaugeWidth = geo.size.width
+            let gaugeHeight = gaugeWidth / 2
+            let extraBottom: CGFloat = 40  // room for labels perfectly below arc endpoints
+            
+            ZStack(alignment: .top) {
+                // Background track
+                ArcShape(startAngle: .degrees(180), endAngle: .degrees(0))
                     .stroke(
-                        gaugeColor,
+                        Color.gray.opacity(0.25),
                         style: StrokeStyle(lineWidth: gaugeLineWidth, lineCap: .round)
                     )
                     .frame(width: gaugeWidth, height: gaugeHeight)
+                
+                // Filled arc
+                ArcShape(
+                    startAngle: .degrees(180),
+                    endAngle: .degrees(180 + min(progress, 1.0) * 180)
+                )
+                .stroke(
+                    gaugeColor,
+                    style: StrokeStyle(lineWidth: gaugeLineWidth, lineCap: .round)
+                )
+                .frame(width: gaugeWidth, height: gaugeHeight)
+                
+                // Needle indicator
+                GaugeNeedle(progress: min(progress, 1.0))
+                    .frame(width: gaugeWidth, height: gaugeHeight)
+                
+                // Center text: positioned in the open belly of the semicircle
+                VStack(spacing: 3) {
+                    Text("\(spentPercent)%")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(gaugeColor)
                     
-                    // Needle indicator
-                    GaugeNeedle(progress: min(progress, 1.0))
-                        .frame(width: gaugeWidth, height: gaugeHeight)
+                    Text(formatCurrency(remaining))
+                        .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
+                        .foregroundColor(theme.textColor)
                     
-                    // Center text: remaining amount + percentage
-                    VStack(spacing: 3) {
-                        Text("\(spentPercent)%")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(gaugeColor)
-                        
-                        Text(formatCurrency(remaining))
-                            .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
-                            .foregroundColor(.white)
-                        
-                        Text("left_this_month".localized)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Color.white.opacity(0.5))
-                    }
-                    .offset(y: gaugeHeight * 0.28)
+                    Text("left_this_month".localized)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(theme.secondaryTextColor)
                 }
-                .frame(width: gaugeWidth, height: gaugeHeight + 20)
-            }
-            .frame(height: 170)
-            .frame(maxWidth: .infinity)
-            
-            // Min & Max labels
-            HStack {
+                .position(x: gaugeWidth / 2, y: gaugeHeight * 0.72)
+                
+                // Min label — slightly inward to perfectly align with the arc stroke's visual bounds
                 Text("0,00")
                     .font(.caption.monospacedDigit())
-                    .foregroundColor(Color.white.opacity(0.4))
-                Spacer()
+                    .foregroundColor(theme.secondaryTextColor)
+                    .position(x: gaugeLineWidth * 0.5, y: gaugeHeight + 25)
+                
+                // Max label — slightly inward
                 Text(formatCurrency(totalLimit))
                     .font(.caption.monospacedDigit())
-                    .foregroundColor(Color.white.opacity(0.4))
+                    .foregroundColor(theme.secondaryTextColor)
+                    .position(x: gaugeWidth - gaugeLineWidth * 0.5, y: gaugeHeight + 25)
             }
-            .padding(.horizontal, 4)
-            .offset(y: 8)
+            // Add extra height purely for the label bounds so they don't clip
+            .frame(width: gaugeWidth, height: gaugeHeight + extraBottom)
         }
+        // Aspect Ratio 1 : 0.6 to allocate the space properly considering labels
+        .aspectRatio(CGSize(width: 1, height: 0.6), contentMode: .fit)
     }
 }
 
@@ -1366,14 +1757,14 @@ private struct BudgetCategoryCard: View {
                     .foregroundColor(categoryColor)
                 Text(label)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(theme.textColor)
                     .lineLimit(1)
             }
             
             // Days left
             Text(String(format: "budget_days_left".localized, daysLeft))
                 .font(.caption)
-                .foregroundColor(Color.white.opacity(0.5))
+                .foregroundColor(theme.secondaryTextColor)
             
             Spacer(minLength: 4)
             
@@ -1384,26 +1775,26 @@ private struct BudgetCategoryCard: View {
                     .foregroundColor(spentColor)
                 Text("(\(formatCurrency(spent)))")
                     .font(.system(size: 11, weight: .medium).monospacedDigit())
-                    .foregroundColor(Color.white.opacity(0.6))
+                    .foregroundColor(theme.secondaryTextColor)
                 Text("SPENT")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(Color.white.opacity(0.55))
+                    .foregroundColor(theme.secondaryTextColor)
             }
             
             // Remaining amount
             Text(formatCurrency(remaining))
                 .font(.title3.weight(.bold).monospacedDigit())
-                .foregroundColor(.white)
+                .foregroundColor(theme.textColor)
             
             Text("left_this_month".localized)
                 .font(.caption2)
-                .foregroundColor(Color.white.opacity(0.5))
+                .foregroundColor(theme.secondaryTextColor)
             
             // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.1))
+                        .fill(theme.secondaryTextColor.opacity(0.12))
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             LinearGradient(
@@ -1421,10 +1812,10 @@ private struct BudgetCategoryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(theme.surfaceColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                        .stroke(theme.borderColor.opacity(0.25), lineWidth: 1)
                 )
         )
     }
@@ -1463,6 +1854,7 @@ private struct ArcShape: Shape {
 
 private struct GaugeNeedle: View {
     let progress: Double  // 0...1
+    @Environment(\.theme) private var theme
     
     var body: some View {
         GeometryReader { geo in
@@ -1476,9 +1868,8 @@ private struct GaugeNeedle: View {
             Circle()
                 .fill(Color.white)
                 .frame(width: 12, height: 12)
-                .shadow(color: .white.opacity(0.6), radius: 6)
+                .shadow(color: Color.black.opacity(0.35), radius: 6)
                 .position(x: tipX, y: tipY)
         }
     }
 }
-

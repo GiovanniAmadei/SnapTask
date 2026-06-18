@@ -1072,17 +1072,16 @@ struct TaskDetailView: View {
         Button(action: {
             TaskManager.shared.toggleTaskCompletion(task.id, on: fixedDate)
         }) {
-            HStack(spacing: 8) {
+            HStack(spacing: 4) {
                 Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                 Text(isCompleted ? "mark_incomplete".localized : "done".localized)
                     .font(.headline)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .minimumScaleFactor(0.6)
                     .allowsTightening(true)
-                    .truncationMode(.tail)
             }
-            .themedButtonText()
+            .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
