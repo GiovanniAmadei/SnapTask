@@ -1927,3 +1927,10 @@
 "time_format" = "Zeitformat";
 "time_format_12h" = "12 Stunden";
 "time_format_24h" = "24 Stunden";
+
+/* Categories: icons & editor */
+"category_name_exists" = "Eine Kategorie mit diesem Namen existiert bereits";
+"all_icons" = "Alle Symbole";
+"category_tasks_count" = "%d Aufgaben";
+"no_categories_hint" = "Erstelle Kategorien, um deine Aufgaben nach Bereichen zu gruppieren – jede mit eigener Farbe und eigenem Symbol.";
+"category_tasks_count_one" = "1 Aufgabe";

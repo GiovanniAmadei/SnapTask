@@ -99,21 +99,21 @@ final class DemoDataSeeder {
         // De-duplica per nome in modo sicuro
         var existingByName = Dictionary(CategoryManager.shared.categories.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
 
-        let desired: [(String, String)] = [
-            ("Work", "#3B82F6"),         // Blue - Professional tasks
-            ("Health & Fitness", "#10B981"), // Green - Wellness activities  
-            ("Personal", "#F59E0B"),     // Orange - Personal development
-            ("Home & Family", "#EC4899"), // Pink - Domestic and family tasks
-            ("Learning", "#8B5CF6"),     // Purple - Educational activities
-            ("Finance", "#059669")       // Teal - Money management
+        let desired: [(String, String, String)] = [
+            ("Work", "#3B82F6", "briefcase.fill"),              // Blue - Professional tasks
+            ("Health & Fitness", "#10B981", "heart.fill"),      // Green - Wellness activities
+            ("Personal", "#F59E0B", "person.fill"),             // Orange - Personal development
+            ("Home & Family", "#EC4899", "house.fill"),         // Pink - Domestic and family tasks
+            ("Learning", "#8B5CF6", "graduationcap.fill"),      // Purple - Educational activities
+            ("Finance", "#059669", "banknote.fill")             // Teal - Money management
         ]
 
         var map: [String: Category] = [:]
-        for (name, color) in desired {
+        for (name, color, icon) in desired {
             if let found = existingByName[name.lowercased()] {
                 map[name] = found
             } else {
-                let cat = Category(id: UUID(), name: name, color: color)
+                let cat = Category(id: UUID(), name: name, color: color, icon: icon)
                 CategoryManager.shared.addCategory(cat)
                 map[name] = cat
                 existingByName[name.lowercased()] = cat

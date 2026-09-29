@@ -2074,3 +2074,10 @@
 "time_format" = "Time format";
 "time_format_12h" = "12-hour";
 "time_format_24h" = "24-hour";
+
+/* Categories: icons & editor */
+"category_name_exists" = "A category with this name already exists";
+"all_icons" = "All icons";
+"category_tasks_count" = "%d tasks";
+"no_categories_hint" = "Create categories to group your tasks by area, with their own color and icon.";
+"category_tasks_count_one" = "1 task";

@@ -7,7 +7,7 @@ struct CategoryPickerView: View {
     @StateObject private var settingsViewModel = SettingsViewModel.shared
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showingCategoryEditor = false
-    @State private var editingCategory: Category? = nil
+    @State private var showingNewCategory = false
     @State private var showingPremiumPaywall = false
     
     private var canAddMoreCategories: Bool {
@@ -30,11 +30,10 @@ struct CategoryPickerView: View {
                             }
                             dismiss()
                         }) {
-                            HStack {
-                                Circle()
-                                    .fill(Color(hex: category.color))
-                                    .frame(width: 20, height: 20)
+                            HStack(spacing: 12) {
+                                CategoryIconTile(icon: category.displayIcon, color: Color(hex: category.color), size: 32)
                                 Text(category.name)
+                                    .font(.body.weight(.medium))
                                     .themedPrimaryText()
                                 Spacer()
                                 if selectedCategory?.id == category.id {
@@ -101,15 +100,11 @@ struct CategoryPickerView: View {
                     CategoryEditorView()
                 }
             }
-            .sheet(item: $editingCategory) { category in
+            .sheet(isPresented: $showingNewCategory) {
                 NavigationStack {
-                    CategoryFormView(editingCategory: category) { updatedCategory in
-                        if let _ = settingsViewModel.categories.firstIndex(where: { $0.id == updatedCategory.id }) {
-                            settingsViewModel.updateCategory(updatedCategory)
-                        } else {
-                            settingsViewModel.addCategory(updatedCategory)
-                            selectedCategory = updatedCategory
-                        }
+                    CategoryFormView { newCategory in
+                        settingsViewModel.addCategory(newCategory)
+                        selectedCategory = newCategory
                     }
                 }
             }
@@ -121,7 +116,7 @@ struct CategoryPickerView: View {
     
     private func handleAddCategory() {
         if canAddMoreCategories {
-            editingCategory = Category(id: UUID(), name: "", color: "#FF0000")
+            showingNewCategory = true
         } else {
             showingPremiumPaywall = true
         }

@@ -1916,3 +1916,10 @@
 "time_format" = "Format de l'heure";
 "time_format_12h" = "12 heures";
 "time_format_24h" = "24 heures";
+
+/* Categories: icons & editor */
+"category_name_exists" = "Une catégorie avec ce nom existe déjà";
+"all_icons" = "Toutes les icônes";
+"category_tasks_count" = "%d tâches";
+"no_categories_hint" = "Crée des catégories pour regrouper tes tâches par domaine, chacune avec sa couleur et son icône.";
+"category_tasks_count_one" = "1 tâche";

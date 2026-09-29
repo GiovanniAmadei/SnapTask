@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CategoriesView: View {
+    @Environment(\.theme) private var theme
     @ObservedObject var viewModel: SettingsViewModel
     @ObservedObject var subscriptionManager = SubscriptionManager.shared
     @State private var showingNewCategorySheet = false
@@ -21,46 +22,98 @@ struct CategoriesView: View {
         return viewModel.categories.count < SubscriptionManager.maxCategoriesForFree
     }
     
+    private func taskCount(for category: Category) -> Int {
+        TaskManager.shared.tasks.filter { $0.category?.id == category.id }.count
+    }
+    
     var body: some View {
         List {
-            ForEach(viewModel.categories) { category in
-                HStack {
-                    Circle()
-                        .fill(Color(hex: category.color))
-                        .frame(width: 12, height: 12)
-                    Text(category.name)
-                    Spacer()
-                    
-                    // Edit button
-                    Button(action: { editingCategory = category }) {
-                        Image(systemName: "pencil")
-                            .foregroundColor(.gray)
+            if viewModel.categories.isEmpty {
+                Section {
+                    VStack(spacing: 10) {
+                        Image(systemName: "square.grid.2x2")
+                            .font(.system(size: 34, weight: .semibold))
+                            .foregroundColor(theme.secondaryTextColor.opacity(0.6))
+                        Text("no_categories_yet".localized)
+                            .font(.headline)
+                            .themedPrimaryText()
+                        Text("no_categories_hint".localized)
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                            .themedSecondaryText()
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    // Delete button
-                    Button(action: { 
-                        categoryToDelete = category
-                        showingDeleteAlert = true
-                    }) {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
                 }
-            }
-            .onDelete { indexSet in
-                viewModel.removeCategory(at: indexSet)
+                .listRowBackground(theme.surfaceColor)
+            } else {
+                Section {
+                    ForEach(viewModel.categories) { category in
+                        Button {
+                            editingCategory = category
+                        } label: {
+                            HStack(spacing: 12) {
+                                CategoryIconTile(icon: category.displayIcon, color: Color(hex: category.color), size: 36)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(category.name)
+                                        .font(.body.weight(.medium))
+                                        .themedPrimaryText()
+                                    let count = taskCount(for: category)
+                                    Text((count == 1 ? "category_tasks_count_one" : "category_tasks_count").localized.replacingOccurrences(of: "%d", with: "\(count)"))
+                                        .font(.caption)
+                                        .themedSecondaryText()
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundColor(theme.secondaryTextColor.opacity(0.6))
+                            }
+                            .padding(.vertical, 2)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                categoryToDelete = category
+                                showingDeleteAlert = true
+                            } label: {
+                                Label("delete".localized, systemImage: "trash")
+                            }
+                        }
+                        .contextMenu {
+                            Button {
+                                editingCategory = category
+                            } label: {
+                                Label("edit".localized, systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                categoryToDelete = category
+                                showingDeleteAlert = true
+                            } label: {
+                                Label("delete".localized, systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+                .listRowBackground(theme.surfaceColor)
             }
             
-            // Add Category Button
-            addCategoryButton
+            Section {
+                addCategoryButton
+            }
+            .listRowBackground(theme.surfaceColor)
             
             // Premium limit info
             if !subscriptionManager.hasAccess(to: .unlimitedCategories) {
                 limitInfoSection
+                    .listRowBackground(theme.surfaceColor)
             }
         }
+        .scrollContentBackground(.hidden)
+        .themedBackground()
         .navigationTitle("categories".localized)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingNewCategorySheet) {
@@ -143,16 +196,29 @@ struct CategoriesView: View {
     
     private var addCategoryButton: some View {
         Button(action: handleAddCategory) {
-            HStack {
-                Label("add_category".localized, systemImage: "plus")
+            HStack(spacing: 12) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(canAddMoreCategories ? theme.primaryColor : theme.secondaryTextColor)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                            .foregroundColor(canAddMoreCategories ? theme.primaryColor.opacity(0.6) : theme.secondaryTextColor.opacity(0.5))
+                    )
+                Text("add_category".localized)
+                    .font(.body.weight(.medium))
+                    .foregroundColor(canAddMoreCategories ? theme.primaryColor : theme.secondaryTextColor)
+                
+                Spacer()
                 
                 if !canAddMoreCategories {
-                    Spacer()
                     PremiumBadge(size: .small)
                 }
             }
+            .contentShape(Rectangle())
         }
-        .foregroundColor(canAddMoreCategories ? .blue : .gray)
+        .buttonStyle(.plain)
     }
     
     private var limitInfoSection: some View {

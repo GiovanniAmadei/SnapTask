@@ -2033,3 +2033,10 @@
 "time_format" = "Formato orario";
 "time_format_12h" = "12 ore";
 "time_format_24h" = "24 ore";
+
+/* Categories: icons & editor */
+"category_name_exists" = "Esiste già una categoria con questo nome";
+"all_icons" = "Tutte le icone";
+"category_tasks_count" = "%d attività";
+"no_categories_hint" = "Crea delle categorie per raggruppare le attività per area, ognuna con il suo colore e la sua icona.";
+"category_tasks_count_one" = "1 attività";

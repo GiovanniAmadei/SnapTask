@@ -23,6 +23,7 @@ extension CloudKitService {
                 let cloned = CKRecord(recordType: self.categoryRecordType, recordID: newID)
                 cloned["name"]  = old["name"]
                 cloned["color"] = old["color"]
+                cloned["icon"] = old["icon"]
                 cloned["categoryID"] = old["categoryID"]
                 newRecords.append(cloned)
                 oldIDs.append(old.recordID)

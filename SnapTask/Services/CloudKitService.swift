@@ -1877,6 +1877,7 @@ class CloudKitService: ObservableObject {
         
         record["name"] = category.name
         record["color"] = category.color
+        record["icon"] = category.icon
         
         return record
     }
@@ -1888,7 +1889,7 @@ class CloudKitService: ObservableObject {
             return nil
         }
         
-        return Category(id: uuid, name: name, color: color)
+        return Category(id: uuid, name: name, color: color, icon: record["icon"] as? String)
     }
     
     private func createRewardRecord(from reward: Reward) -> CKRecord {

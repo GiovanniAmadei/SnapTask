@@ -2000,3 +2000,10 @@
 "time_format" = "時刻の表示形式";
 "time_format_12h" = "12時間表示";
 "time_format_24h" = "24時間表示";
+
+/* Categories: icons & editor */
+"category_name_exists" = "この名前のカテゴリはすでに存在します";
+"all_icons" = "すべてのアイコン";
+"category_tasks_count" = "%d件のタスク";
+"no_categories_hint" = "カテゴリを作成して、色とアイコンでタスクを分野ごとにまとめましょう。";
+"category_tasks_count_one" = "1件のタスク";

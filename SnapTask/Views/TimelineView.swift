@@ -1773,9 +1773,11 @@ struct TimelineTaskCard: View {
         task.category.map { Color(hex: $0.color) } ?? theme.accentColor
     }
 
-    /// "circle" is the default when no icon was picked: it would read as a second checkbox.
+    /// "circle" is the default when no icon was picked: it would read as a second checkbox,
+    /// so fall back to the category icon (or a neutral symbol).
     private var displayIcon: String {
-        task.icon == "circle" || task.icon.isEmpty ? "list.bullet" : task.icon
+        guard task.icon == "circle" || task.icon.isEmpty else { return task.icon }
+        return task.category?.icon ?? "list.bullet"
     }
 
     private var taskIcon: some View {
