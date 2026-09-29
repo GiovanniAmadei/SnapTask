@@ -1995,3 +1995,8 @@
 "recurrence_desc_week" = "週単位の繰り返しを設定します（特定日なし）。";
 "recurrence_desc_month" = "月単位の繰り返しを設定します。";
 "recurrence_desc_year" = "年単位の繰り返しを設定します。";
+
+/* Time format (12/24h) */
+"time_format" = "時刻の表示形式";
+"time_format_12h" = "12時間表示";
+"time_format_24h" = "24時間表示";

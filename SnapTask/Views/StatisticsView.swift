@@ -2091,7 +2091,7 @@ private struct CompletionRowView: View {
                 Text(completion.date.formatted(.dateTime.month().day().year()))
                     .font(.subheadline.bold())
                     .themedPrimaryText()
-                Text(completion.date.formatted(.dateTime.hour().minute()))
+                Text(TimeFormat.time(completion.date))
                     .font(.caption)
                     .themedSecondaryText()
             }

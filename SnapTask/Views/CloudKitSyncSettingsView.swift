@@ -377,6 +377,7 @@ struct SyncDetailsView: View {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
+        formatter.locale = TimeFormatPreference.current.locale
         return formatter.string(from: date)
     }
 }

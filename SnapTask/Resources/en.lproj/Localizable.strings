@@ -2069,3 +2069,8 @@
 "mandala_create_chart_subtitle" = "Break down a big ambition into 8 pillars and 64 daily actions scheduled on your agenda.";
 "mandala_create_custom_title" = "Create from Scratch (Blank)";
 "mandala_create_custom_subtitle" = "Define your core goal and customize all 8 pillars step by step.";
+
+/* Time format (12/24h) */
+"time_format" = "Time format";
+"time_format_12h" = "12-hour";
+"time_format_24h" = "24-hour";

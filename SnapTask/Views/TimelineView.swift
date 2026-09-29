@@ -622,6 +622,8 @@ struct TimelineContentView: View {
 
 // MARK: - Enhanced Timeline Hour Row
 struct EnhancedTimelineHourRow: View {
+    /// Re-render when the 12/24h preference changes (it is injected as the locale).
+    @Environment(\.locale) private var locale
     let hour: Int
     let tasks: [TodoTask]
     @ObservedObject var viewModel: TimelineViewModel
@@ -634,15 +636,7 @@ struct EnhancedTimelineHourRow: View {
     let onScheduleAtHour: (Int) -> Void
     
     private var hourString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let date = Calendar.current.date(
-            bySettingHour: hour,
-            minute: 0,
-            second: 0,
-            of: Date()
-        ) ?? Date()
-        return formatter.string(from: date)
+        TimeFormat.hourLabel(hour)
     }
     
     var body: some View {
@@ -657,6 +651,8 @@ struct EnhancedTimelineHourRow: View {
                     }
                     Text(hourString)
                         .font(.system(size: 12, weight: isCurrentHour ? .bold : .medium, design: .monospaced))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .foregroundColor(isCurrentHour ? theme.primaryColor : theme.secondaryTextColor)
                 }
                 .offset(y: -7) // Vertically aligned with the top grid line
@@ -1546,6 +1542,8 @@ private struct DayCell: View {
 }
 
 struct TimelineTaskCard: View {
+    /// Re-render when the 12/24h preference changes (it is injected as the locale).
+    @Environment(\.locale) private var locale
     let task: TodoTask
     let onToggleComplete: () -> Void
     let onToggleSubtask: (UUID) -> Void
@@ -1634,9 +1632,7 @@ struct TimelineTaskCard: View {
 
     private var timeBadgeText: String? {
         guard task.hasSpecificTime else { return nil }
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f.string(from: occurrenceDateForBadges)
+        return TimeFormat.time(occurrenceDateForBadges)
     }
 
     private var isCurrentlyActiveNow: Bool {
@@ -1910,18 +1906,12 @@ struct TimelineTaskCard: View {
                     
                     if viewModel.selectedTimeScope == .today {
                         if task.hasSpecificTime {
-                            let calendar = Calendar.current
                             let t = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
-                            let hour = calendar.component(.hour, from: t)
-                            let minute = calendar.component(.minute, from: t)
                             let timeText: String = {
                                 if task.hasDuration && task.duration > 0 {
-                                    let end = t.addingTimeInterval(task.duration)
-                                    let endH = calendar.component(.hour, from: end)
-                                    let endM = calendar.component(.minute, from: end)
-                                    return String(format: "%02d:%02d - %02d:%02d", hour, minute, endH, endM)
+                                    return TimeFormat.range(t, t.addingTimeInterval(task.duration))
                                 }
-                                return String(format: "%02d:%02d", hour, minute)
+                                return TimeFormat.time(t)
                             }()
                             
                             HStack(spacing: 4) {

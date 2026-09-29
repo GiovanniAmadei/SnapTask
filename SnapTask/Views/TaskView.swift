@@ -9,9 +9,7 @@ struct TaskView: View {
     @StateObject private var taskManager = TaskManager.shared
 
     private var taskTimeText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: task.startTime)
+        TimeFormat.time(task.startTime)
     }
 
     private var taskDayText: String {

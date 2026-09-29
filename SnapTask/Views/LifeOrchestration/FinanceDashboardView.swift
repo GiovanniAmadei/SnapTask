@@ -1140,7 +1140,6 @@ struct FinanceDashboardView: View {
         switch period {
         case .day:
             // Show hours of today
-            formatter.dateFormat = "HH"
             let startOfDay = calendar.startOfDay(for: now)
             let currentHour = calendar.component(.hour, from: now)
             for h in stride(from: 0, through: currentHour, by: 3) {
@@ -1149,7 +1148,7 @@ struct FinanceDashboardView: View {
                 let interval = DateInterval(start: hourStart, end: hourEnd)
                 items.append(TrendItem(
                     date: hourStart,
-                    label: formatter.string(from: hourStart),
+                    label: TimeFormat.hour(hourStart),
                     income: financeManager.totalIncome(for: interval),
                     expenses: financeManager.totalExpenses(for: interval)
                 ))

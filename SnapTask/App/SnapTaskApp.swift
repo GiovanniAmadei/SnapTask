@@ -48,6 +48,7 @@ struct SnapTaskApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .timeFormatLocale()
                 .overlay(
                     Group {
                         if confettiManager.triggerCounter > 0 {

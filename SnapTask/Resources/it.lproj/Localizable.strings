@@ -2028,3 +2028,8 @@
 "mandala_create_chart_subtitle" = "Scomponi una grande ambizione in 8 pilastri e 64 azioni concrete da portare nella tua routine quotidiana.";
 "mandala_create_custom_title" = "Crea da zero (Vuoto)";
 "mandala_create_custom_subtitle" = "Definisci il tuo obiettivo centrale e costruisci la tua griglia passo dopo passo.";
+
+/* Time format (12/24h) */
+"time_format" = "Formato orario";
+"time_format_12h" = "12 ore";
+"time_format_24h" = "24 ore";

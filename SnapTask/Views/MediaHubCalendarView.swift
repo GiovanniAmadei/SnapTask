@@ -718,9 +718,7 @@ struct MediaHubCalendarView: View {
     }
     
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        TimeFormat.time(date)
     }
     
     private func togglePlayback(_ memo: TaskVoiceMemo) {
@@ -2083,9 +2081,7 @@ private struct CalendarTaskCard: View {
     }
     
     private var timeString: String {
-        let f = DateFormatter()
-        f.timeStyle = .short
-        return f.string(from: task.startTime)
+        TimeFormat.time(task.startTime)
     }
     
     @ViewBuilder

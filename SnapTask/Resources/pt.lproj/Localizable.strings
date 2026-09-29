@@ -1994,3 +1994,8 @@
 "recurrence_desc_week" = "Configure a recorrência no nível da semana (sem dias específicos).";
 "recurrence_desc_month" = "Configure a recorrência no nível do mês.";
 "recurrence_desc_year" = "Configure a recorrência no nível do ano.";
+
+/* Time format (12/24h) */
+"time_format" = "Formato de hora";
+"time_format_12h" = "12 horas";
+"time_format_24h" = "24 horas";

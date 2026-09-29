@@ -317,9 +317,7 @@ struct PomodoroSessionView<Header: View>: View {
     }
     
     private func formatTimeOnly(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f.string(from: date)
+        TimeFormat.time(date)
     }
     
     private func formatMinutes(_ seconds: TimeInterval) -> String {

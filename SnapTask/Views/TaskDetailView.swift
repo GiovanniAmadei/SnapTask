@@ -2673,7 +2673,7 @@ private struct CompletionDetailRow: View {
                     .font(.subheadline.weight(.medium))
                     .themedPrimaryText()
                 
-                Text(completion.date.formatted(.dateTime.hour().minute()))
+                Text(TimeFormat.time(completion.date))
                     .font(.caption)
                     .themedSecondaryText()
             }

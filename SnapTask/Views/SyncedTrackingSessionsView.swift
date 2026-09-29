@@ -171,9 +171,7 @@ struct TrackingSessionRow: View {
     }
     
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        TimeFormat.time(date)
     }
 }
 

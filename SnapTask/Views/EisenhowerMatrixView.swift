@@ -173,7 +173,7 @@ private struct TaskRowCard: View {
 
                 HStack(spacing: 6) {
                     if task.hasSpecificTime {
-                        Text(DateFormatter.hourMinute.string(from: task.startTime))
+                        Text(TimeFormat.time(task.startTime))
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(theme.secondaryTextColor)
                             .padding(.horizontal, 4)
@@ -224,12 +224,4 @@ private struct TaskRowCard: View {
                 .presentationDragIndicator(.visible)
         }
     }
-}
-
-extension DateFormatter {
-    static let hourMinute: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f
-    }()
 }

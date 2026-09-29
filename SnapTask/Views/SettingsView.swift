@@ -17,6 +17,7 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
     @AppStorage("appearanceMode") private var appearanceMode = "system"
+    @AppStorage(TimeFormatPreference.storageKey, store: TimeFormatPreference.store) private var timeFormatPreference = TimeFormatPreference.system.rawValue
     @AppStorage("dailyQuoteNotificationsEnabled") private var dailyQuoteNotificationsEnabled = false
     @AppStorage("dailyQuoteNotificationTime") private var dailyQuoteNotificationTime = "09:00"
     @AppStorage("diaryNotificationsEnabled") private var diaryNotificationsEnabled = false
@@ -405,6 +406,27 @@ struct SettingsView: View {
                         .onChange(of: appearanceMode) { _, newValue in
                             handleAppearanceModeChange(newValue)
                         }
+                    }
+                    .contentShape(Rectangle())
+                    .listRowBackground(theme.surfaceColor)
+                    
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.orange)
+                            .frame(width: 24)
+                        
+                        Text("time_format".localized)
+                            .themedPrimaryText()
+                        
+                        Spacer()
+                        
+                        Picker("", selection: $timeFormatPreference) {
+                            ForEach(TimeFormatPreference.allCases) { option in
+                                Text(option.localizedName).tag(option.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(theme.accentColor)
                     }
                     .contentShape(Rectangle())
                     .listRowBackground(theme.surfaceColor)

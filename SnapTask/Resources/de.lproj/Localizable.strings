@@ -1922,3 +1922,8 @@
 "recurrence_desc_week" = "Wiederholung auf Wochenebene konfigurieren (ohne bestimmte Tage).";
 "recurrence_desc_month" = "Wiederholung auf Monatsebene konfigurieren.";
 "recurrence_desc_year" = "Wiederholung auf Jahresebene konfigurieren.";
+
+/* Time format (12/24h) */
+"time_format" = "Zeitformat";
+"time_format_12h" = "12 Stunden";
+"time_format_24h" = "24 Stunden";

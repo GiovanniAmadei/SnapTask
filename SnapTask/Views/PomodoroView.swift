@@ -498,9 +498,7 @@ struct PomodoroView: View {
     }
     
     private func formatTimeOnly(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        TimeFormat.time(date)
     }
     
     private func timeString(from timeInterval: TimeInterval) -> String {
