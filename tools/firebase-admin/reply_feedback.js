@@ -31,13 +31,29 @@ async function main() {
 
   const updates = [
     {
-      title: "Calendar Integration",
+      title: "Recurring tasks postponing",
       replyContent:
-        "Thanks a lot for the suggestion! We really appreciate it — we’ll work on this for the next update.",
+        "Thanks for your feedback! We really appreciate it. This improvement will be included in the next update.",
     },
     {
-      title: "Icons",
-      replyContent: "Thanks for the suggestion! We’ve added more icons in the latest 1.5 update.",
+      title: "Timeline management",
+      replyContent:
+        "Thanks for the suggestion! This is a highly requested feature, and we'll do our best to add it as soon as possible.",
+    },
+    {
+      title: "Button text display",
+      replyContent:
+        "Thanks for reporting this! We’ve noted the issue and it will be fixed in the next update.",
+    },
+    {
+      title: "Notification center handling",
+      replyContent:
+        "Thank you for the idea! It’s a great suggestion, and we’ll start working on it right away for the next update.",
+    },
+    {
+      title: "Calendar Integration",
+      replyContent:
+        "Thanks for the request! At the moment this isn't available, but it's something we'd like to work on and hopefully support in the future.",
     },
   ];
 
