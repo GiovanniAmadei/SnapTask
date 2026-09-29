@@ -16,6 +16,7 @@ import com.google.gson.JsonSerializer
 import com.snaptask.app.data.model.Category
 import com.snaptask.app.data.model.TodoTask
 import com.snaptask.app.data.repository.TaskRepository
+import com.snaptask.app.data.local.SnapTaskPreferences
 import com.snaptask.app.notifications.TaskNotificationScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -40,6 +41,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val taskNotificationScheduler: TaskNotificationScheduler,
+    private val snapTaskPreferences: SnapTaskPreferences,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -65,12 +67,14 @@ class SettingsViewModel @Inject constructor(
     // ---- Appearance ----
 
     /** "system", "light", or "dark" */
-    private val _appearanceMode = MutableStateFlow(prefs.getString("appearanceMode", "system") ?: "system")
-    val appearanceMode: StateFlow<String> = _appearanceMode.asStateFlow()
+    val appearanceMode: StateFlow<String> = snapTaskPreferences.appearanceMode.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "system",
+    )
 
     fun setAppearanceMode(mode: String) {
-        _appearanceMode.value = mode
-        prefs.edit().putString("appearanceMode", mode).apply()
+        viewModelScope.launch { snapTaskPreferences.setAppearanceMode(mode) }
     }
 
     // ---- Language ----

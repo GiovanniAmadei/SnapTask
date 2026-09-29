@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.Gson
+import com.snaptask.app.data.model.FinanceSettingsState
 import com.snaptask.app.data.model.TaskTimeScope
 import com.snaptask.app.ui.theme.AppTheme
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +19,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sn
 
 object PreferencesKeys {
     val THEME = stringPreferencesKey("app_theme")
+    val APPEARANCE_MODE = stringPreferencesKey("appearance_mode")
     val LANGUAGE = stringPreferencesKey("app_language")
     val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
     val POMODORO_WORK_DURATION = intPreferencesKey("pomodoro_work_duration")
@@ -29,13 +32,18 @@ object PreferencesKeys {
     val LAST_SYNC_DATE = longPreferencesKey("last_sync_date")
     val CALENDAR_SYNC_ENABLED = booleanPreferencesKey("calendar_sync_enabled")
     val HAPTIC_FEEDBACK_ENABLED = booleanPreferencesKey("haptic_feedback_enabled")
+    val FINANCE_SETTINGS = stringPreferencesKey("finance_settings")
 }
 
 class SnapTaskPreferences(private val context: Context) {
+    private val gson = Gson()
 
     val appTheme: Flow<AppTheme> = context.dataStore.data.map { prefs ->
-        val themeStr = prefs[PreferencesKeys.THEME] ?: AppTheme.DEFAULT.name
-        AppTheme.entries.find { it.name == themeStr } ?: AppTheme.DEFAULT
+        AppTheme.fromStorage(prefs[PreferencesKeys.THEME])
+    }
+
+    val appearanceMode: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[PreferencesKeys.APPEARANCE_MODE] ?: "system"
     }
 
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -55,9 +63,21 @@ class SnapTaskPreferences(private val context: Context) {
         TaskTimeScope.fromString(scopeStr)
     }
 
+    val financeSettings: Flow<FinanceSettingsState> = context.dataStore.data.map { prefs ->
+        prefs[PreferencesKeys.FINANCE_SETTINGS]
+            ?.let { json -> runCatching { gson.fromJson(json, FinanceSettingsState::class.java) }.getOrNull() }
+            ?: FinanceSettingsState()
+    }
+
     suspend fun setTheme(theme: AppTheme) {
         context.dataStore.edit { prefs ->
-            prefs[PreferencesKeys.THEME] = theme.name
+            prefs[PreferencesKeys.THEME] = theme.storageKey
+        }
+    }
+
+    suspend fun setAppearanceMode(mode: String) {
+        context.dataStore.edit { prefs ->
+            prefs[PreferencesKeys.APPEARANCE_MODE] = mode
         }
     }
 
@@ -89,6 +109,12 @@ class SnapTaskPreferences(private val context: Context) {
     suspend fun setSelectedScope(scope: TaskTimeScope) {
         context.dataStore.edit { prefs ->
             prefs[PreferencesKeys.SELECTED_SCOPE] = scope.value
+        }
+    }
+
+    suspend fun setFinanceSettings(settings: FinanceSettingsState) {
+        context.dataStore.edit { prefs ->
+            prefs[PreferencesKeys.FINANCE_SETTINGS] = gson.toJson(settings)
         }
     }
 }

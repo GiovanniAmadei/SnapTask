@@ -233,7 +233,7 @@ fun FinanceSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            viewModel.displayName(budget.category),
+                            viewModel.budgetDisplayName(budget),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
@@ -243,7 +243,7 @@ fun FinanceSettingsScreen(
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         )
-                        val usage = viewModel.budgetUsage(budget.category)
+                        val usage = viewModel.budgetUsage(budget)
                         if (usage > 0) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(

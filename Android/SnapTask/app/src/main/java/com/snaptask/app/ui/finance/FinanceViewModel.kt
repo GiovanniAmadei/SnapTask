@@ -22,37 +22,41 @@ class FinanceViewModel @Inject constructor(
     val entries: StateFlow<List<FinanceEntry>> = repository.entries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Recalculate immediately when an entry or any persisted finance setting changes.
+    private val calculationInput: Flow<List<FinanceEntry>> =
+        combine(entries, repository.settings) { list, _ -> list }
+
     // Derived data
-    val currentBalance: StateFlow<Double> = entries.map { repository.currentBalance(it) }
+    val currentBalance: StateFlow<Double> = calculationInput.map { repository.currentBalance(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val monthlyIncome: StateFlow<Double> = entries.map { repository.monthlyIncome(it) }
+    val monthlyIncome: StateFlow<Double> = calculationInput.map { repository.monthlyIncome(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val monthlyExpenses: StateFlow<Double> = entries.map { repository.monthlyExpenses(it) }
+    val monthlyExpenses: StateFlow<Double> = calculationInput.map { repository.monthlyExpenses(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val netFlow: StateFlow<Double> = entries.map {
+    val netFlow: StateFlow<Double> = calculationInput.map {
         repository.netFlow(it, repository.currentMonthPeriod())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val stressLevel: StateFlow<FinancialStressLevel> = entries.map {
+    val stressLevel: StateFlow<FinancialStressLevel> = calculationInput.map {
         repository.financialStressLevel(it)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FinancialStressLevel.BALANCED)
 
-    val monthlySavingsRate: StateFlow<Double> = entries.map {
+    val monthlySavingsRate: StateFlow<Double> = calculationInput.map {
         repository.monthlySavingsRate(it)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val activeSubscriptions: StateFlow<List<FinanceEntry>> = entries.map {
+    val activeSubscriptions: StateFlow<List<FinanceEntry>> = calculationInput.map {
         repository.activeSubscriptions(it)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val monthlySubscriptionCost: StateFlow<Double> = entries.map {
+    val monthlySubscriptionCost: StateFlow<Double> = calculationInput.map {
         repository.monthlySubscriptionCost(it)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val expenseBreakdown: StateFlow<List<Pair<FinanceCategory, Double>>> = entries.map {
+    val expenseBreakdown: StateFlow<List<Pair<FinanceCategory, Double>>> = calculationInput.map {
         repository.expenseBreakdown(it, repository.currentMonthPeriod())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -79,6 +83,9 @@ class FinanceViewModel @Inject constructor(
 
     fun budgetUsage(category: FinanceCategory): Double =
         repository.budgetUsage(entries.value, category)
+
+    fun budgetUsage(budget: FinanceBudget): Double = repository.budgetUsage(entries.value, budget)
+    fun spentAmount(budget: FinanceBudget): Double = repository.spentAmount(entries.value, budget)
 
     fun topExpenseCategory(): FinanceCategory? = repository.topExpenseCategory(entries.value)
 
@@ -133,6 +140,10 @@ class FinanceViewModel @Inject constructor(
     fun icon(category: FinanceCategory): String = repository.icon(category)
     fun categoryDisplayName(entry: FinanceEntry): String = repository.categoryDisplayName(entry)
     fun categoryIcon(entry: FinanceEntry): String = repository.categoryIcon(entry)
+    fun budgetDisplayName(budget: FinanceBudget): String =
+        repository.customCategory(budget.customCategoryId)?.name ?: repository.displayName(budget.category)
+    fun budgetColorHex(budget: FinanceBudget): String =
+        if (budget.customCategoryId != null) repository.colorHex(budget.customCategoryId) else repository.colorHex(budget.category)
 
     // ── Currency Formatting ──
 

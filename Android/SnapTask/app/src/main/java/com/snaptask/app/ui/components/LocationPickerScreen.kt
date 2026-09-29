@@ -1,5 +1,7 @@
 package com.snaptask.app.ui.components
 
+import android.content.Context
+import android.location.Geocoder
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,9 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import com.snaptask.app.R
 import com.snaptask.app.data.model.TaskLocation
 import com.snaptask.app.data.model.TaskPlacemark
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /**
  * Faithful port of iOS LocationPickerView.
@@ -38,14 +44,14 @@ fun LocationPickerScreen(
     var selectedLocation by remember { mutableStateOf(initialLocation) }
     var isSearching by remember { mutableStateOf(false) }
     var searchResults by remember { mutableStateOf<List<TaskLocation>>(emptyList()) }
+    val context = LocalContext.current
 
-    // Simulated search - in real implementation would use Google Places API
+    // Android's system geocoder provides a real, keyless place search. Calls run
+    // off the main thread because individual geocoder providers may use network IO.
     LaunchedEffect(searchText) {
         if (searchText.length >= 2) {
             isSearching = true
-            // Simulate network delay
-            kotlinx.coroutines.delay(500)
-            searchResults = simulateLocationSearch(searchText)
+            searchResults = searchLocations(context, searchText)
             isSearching = false
         } else {
             searchResults = emptyList()
@@ -311,34 +317,36 @@ private fun SelectedLocationCard(
     }
 }
 
-// Simulated search results - replace with real Places API
-private fun simulateLocationSearch(query: String): List<TaskLocation> {
-    val mockLocations = listOf(
-        TaskLocation(
-            name = "Central Park",
-            address = "New York, NY, USA",
-            latitude = 40.7829,
-            longitude = -73.9654,
-            placemark = TaskPlacemark(
-                name = "Central Park",
-                thoroughfare = "Central Park",
-                locality = "New York",
-                administrativeArea = "NY",
-            ),
-        ),
-        TaskLocation(
-            name = "Empire State Building",
-            address = "350 5th Ave, New York, NY",
-            latitude = 40.7484,
-            longitude = -73.9857,
-        ),
-        TaskLocation(
-            name = "Times Square",
-            address = "Times Square, New York, NY",
-            latitude = 40.7580,
-            longitude = -73.9855,
-        ),
-    )
-    return mockLocations.filter { it.name.contains(query, ignoreCase = true) ||
-        it.address?.contains(query, ignoreCase = true) == true }
-}
+private suspend fun searchLocations(context: Context, query: String): List<TaskLocation> =
+    withContext(Dispatchers.IO) {
+        if (!Geocoder.isPresent()) return@withContext emptyList()
+
+        runCatching {
+            @Suppress("DEPRECATION")
+            Geocoder(context, Locale.getDefault()).getFromLocationName(query, 10)
+                .orEmpty()
+                .map { address ->
+                    val name = address.featureName
+                        ?: address.getAddressLine(0)
+                        ?: query
+                    val formattedAddress = (0..address.maxAddressLineIndex)
+                        .mapNotNull(address::getAddressLine)
+                        .joinToString(", ")
+                        .takeIf { it.isNotBlank() }
+                    TaskLocation(
+                        name = name,
+                        address = formattedAddress,
+                        latitude = address.takeIf { it.hasLatitude() }?.latitude,
+                        longitude = address.takeIf { it.hasLongitude() }?.longitude,
+                        placemark = TaskPlacemark(
+                            name = name,
+                            thoroughfare = address.thoroughfare,
+                            locality = address.locality,
+                            administrativeArea = address.adminArea,
+                            country = address.countryName,
+                            postalCode = address.postalCode,
+                        ),
+                    )
+                }
+        }.getOrDefault(emptyList())
+    }

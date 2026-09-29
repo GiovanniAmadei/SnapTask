@@ -121,6 +121,7 @@ data class FinanceEntry(
 data class FinanceBudget(
     val id: UUID = UUID.randomUUID(),
     var category: FinanceCategory,
+    var customCategoryId: UUID? = null,
     var monthlyLimit: Double,
     var isActive: Boolean = true,
     val creationDate: Date = Date(),
@@ -200,6 +201,7 @@ data class CustomFinanceCategory(
     val id: UUID = UUID.randomUUID(),
     var name: String,
     var icon: String = "label",
+    var colorHex: String? = null,
     var isExpenseCategory: Boolean = true,
     val creationDate: Date = Date(),
 )
@@ -210,6 +212,27 @@ data class FinanceCategoryOverride(
     val categoryRawValue: String,
     var customName: String? = null,
     var customIcon: String? = null,
+    var customColorHex: String? = null,
+)
+
+/**
+ * The complete finance configuration stored in DataStore. Keeping it as one
+ * value makes budget/category/settings updates atomic and survives restarts,
+ * just like the iOS UserDefaults-backed FinanceManager.
+ */
+data class FinanceSettingsState(
+    val budgets: List<FinanceBudget> = emptyList(),
+    val financialGoals: List<FinancialGoal> = emptyList(),
+    val startingBalance: Double = 0.0,
+    val monthlyBudgetTarget: Double = 0.0,
+    val savingsGoalPercent: Double = 0.0,
+    val savingsGoalAmount: Double = 0.0,
+    val savingsGoalIsPercent: Boolean = true,
+    val monthlyIncomeGoal: Double = 0.0,
+    val customCategories: List<CustomFinanceCategory> = emptyList(),
+    val categoryOverrides: List<FinanceCategoryOverride> = emptyList(),
+    val hiddenBuiltInCategories: Set<String> = emptySet(),
+    val selectedCurrencyCode: String = SupportedCurrency.EUR.code,
 )
 
 // ── Supported Currencies ──

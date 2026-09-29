@@ -6,127 +6,136 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Enum of available app themes, matching the iOS ThemeManager themes.
+ * The same theme catalogue exposed by ThemeManager on iOS.
+ *
+ * iOS keeps Default, Forest and Sunset tied to the system appearance.  The
+ * other themes provide their own light or dark surfaces, so we do the same
+ * here instead of treating every accent colour as a dark Material theme.
  */
-enum class AppTheme(val displayName: String) {
-    DEFAULT("Default"),
-    DARK("Dark"),
-    MIDNIGHT("Midnight"),
-    OCEAN("Ocean"),
-    FOREST("Forest"),
-    SUNSET("Sunset"),
-    SYSTEM("System");
+enum class AppTheme(
+    val storageKey: String,
+    val displayName: String,
+    val isPremium: Boolean,
+    private val primary: Color,
+    private val secondary: Color,
+    private val forcedSurface: ThemeSurface? = null,
+) {
+    DEFAULT("default", "Default", false, Color(0xFF007AFF), Color(0xFF32ADE6)),
+    FOREST("forest", "Forest", false, Color(0xFF34C759), Color(0xFF00C7BE)),
+    SUNSET("sunset", "Sunset", false, Color(0xFFFF9F0A), Color(0xFFFF375F)),
+    MIDNIGHT(
+        "midnight", "Midnight", true, Color(0xFF8033CC), Color(0xFF4D3380),
+        ThemeSurface(Color(0xFF0D0D1A), Color(0xFF262633), Color.White, Color(0xFFE6E6F2)),
+    ),
+    ROSE_GOLD(
+        "rose_gold", "Rose Gold", true, Color(0xFFFF2D55), Color(0xFFE6B380),
+        ThemeSurface(Color(0xFFFAF2EB), Color(0xFFF2EBE0), Color.Black, Color(0xFF666666)),
+    ),
+    OCEAN(
+        "ocean", "Ocean", true, Color(0xFF007AFF), Color(0xFF00A6A6),
+        ThemeSurface(Color(0xFFE6F2FA), Color(0xFFD9EBF5), Color.Black, Color(0xFF336699)),
+    ),
+    EMERALD(
+        "emerald", "Emerald", true, Color(0xFF34C759), Color(0xFF33CC99),
+        ThemeSurface(Color(0xFFEBFAF2), Color(0xFFE0F2EB), Color.Black, Color(0xFF1A804D)),
+    ),
+    VOLCANIC(
+        "volcanic", "Volcanic", true, Color(0xFFFF3B30), Color(0xFFFF9F0A),
+        ThemeSurface(Color(0xFF261A1A), Color(0xFF332626), Color.White, Color(0xFFE6B3B3)),
+    ),
+    LAVENDER(
+        "lavender", "Lavender", true, Color(0xFFAF52DE), Color(0xFFCCB3E6),
+        ThemeSurface(Color(0xFFF5F0FA), Color(0xFFEBE0F5), Color.Black, Color(0xFF664D99)),
+    );
 
-    val isDark: Boolean
-        get() = this != DEFAULT
+    val accent: Color get() = primary
+    val gradientColors: List<Color> get() = listOf(primary, secondary)
+    val followsSystemAppearance: Boolean get() = forcedSurface == null
 
-    fun toColorScheme(): ColorScheme = when (this) {
-        DEFAULT -> lightColorScheme(
-            primary = DefaultPrimary,
-            onPrimary = DefaultOnPrimary,
-            primaryContainer = DefaultPrimaryContainer,
-            onPrimaryContainer = DefaultOnPrimaryContainer,
-            secondary = DefaultSecondary,
-            onSecondary = DefaultOnSecondary,
-            secondaryContainer = DefaultSecondaryContainer,
-            onSecondaryContainer = DefaultOnSecondaryContainer,
-            tertiary = DefaultTertiary,
-            onTertiary = DefaultOnTertiary,
-            tertiaryContainer = DefaultTertiaryContainer,
-            onTertiaryContainer = DefaultOnTertiaryContainer,
-            background = DefaultBackground,
-            onBackground = DefaultOnBackground,
-            surface = DefaultSurface,
-            onSurface = DefaultOnSurface,
-            surfaceVariant = DefaultSurfaceVariant,
-            onSurfaceVariant = DefaultOnSurfaceVariant,
-            outline = DefaultOutline,
-            error = DefaultError,
-            onError = DefaultOnError,
-        )
-        DARK -> darkColorScheme(
-            primary = DarkPrimary,
-            onPrimary = DarkOnPrimary,
-            primaryContainer = DarkPrimaryContainer,
-            onPrimaryContainer = DarkOnPrimaryContainer,
-            secondary = DarkSecondary,
-            onSecondary = DarkOnSecondary,
-            secondaryContainer = DarkSecondaryContainer,
-            onSecondaryContainer = DarkOnSecondaryContainer,
-            tertiary = DarkTertiary,
-            onTertiary = DarkOnTertiary,
-            tertiaryContainer = DarkTertiaryContainer,
-            onTertiaryContainer = DarkOnTertiaryContainer,
-            background = DarkBackground,
-            onBackground = DarkOnBackground,
-            surface = DarkSurface,
-            onSurface = DarkOnSurface,
-            surfaceVariant = DarkSurfaceVariant,
-            onSurfaceVariant = DarkOnSurfaceVariant,
-            outline = DarkOutline,
-            error = DarkError,
-            onError = DarkOnError,
-        )
-        MIDNIGHT -> darkColorScheme(
-            primary = MidnightPrimary,
-            onPrimary = Color.White,
-            primaryContainer = MidnightPrimary.copy(alpha = 0.3f),
-            onPrimaryContainer = Color.White,
-            secondary = DarkSecondary,
-            onSecondary = Color.White,
-            background = MidnightBackground,
-            onBackground = MidnightOnBackground,
-            surface = MidnightSurface,
-            onSurface = MidnightOnSurface,
-            surfaceVariant = MidnightSurfaceVariant,
-            onSurfaceVariant = DarkOnSurfaceVariant,
-            outline = DarkOutline,
-        )
-        OCEAN -> darkColorScheme(
-            primary = OceanPrimary,
-            onPrimary = Color.Black,
-            primaryContainer = OceanPrimary.copy(alpha = 0.3f),
-            onPrimaryContainer = OceanOnSurface,
-            secondary = OceanSecondary,
-            onSecondary = Color.Black,
-            background = OceanBackground,
-            onBackground = OceanOnBackground,
-            surface = OceanSurface,
-            onSurface = OceanOnSurface,
-            surfaceVariant = OceanSurfaceVariant,
-            onSurfaceVariant = DarkOnSurfaceVariant,
-            outline = DarkOutline,
-        )
-        FOREST -> darkColorScheme(
-            primary = ForestPrimary,
-            onPrimary = Color.Black,
-            primaryContainer = ForestPrimary.copy(alpha = 0.3f),
-            onPrimaryContainer = ForestOnSurface,
-            secondary = ForestSecondary,
-            onSecondary = Color.Black,
-            background = ForestBackground,
-            onBackground = ForestOnBackground,
-            surface = ForestSurface,
-            onSurface = ForestOnSurface,
-            surfaceVariant = ForestSurfaceVariant,
-            onSurfaceVariant = DarkOnSurfaceVariant,
-            outline = DarkOutline,
-        )
-        SUNSET -> darkColorScheme(
-            primary = SunsetPrimary,
-            onPrimary = Color.Black,
-            primaryContainer = SunsetPrimary.copy(alpha = 0.3f),
-            onPrimaryContainer = SunsetOnSurface,
-            secondary = SunsetSecondary,
-            onSecondary = Color.Black,
-            background = SunsetBackground,
-            onBackground = SunsetOnBackground,
-            surface = SunsetSurface,
-            onSurface = SunsetOnSurface,
-            surfaceVariant = SunsetSurfaceVariant,
-            onSurfaceVariant = DarkOnSurfaceVariant,
-            outline = DarkOutline,
-        )
-        SYSTEM -> lightColorScheme() // Handled dynamically in Theme.kt
+    fun colorScheme(systemIsDark: Boolean): ColorScheme {
+        val surface = forcedSurface ?: if (systemIsDark) IOSDarkSurface else IOSLightSurface
+        return if (surface.isDark) {
+            darkColorScheme(
+                primary = primary,
+                onPrimary = if (primary.luminance() < 0.5f) Color.White else Color.Black,
+                primaryContainer = primary.copy(alpha = 0.30f),
+                onPrimaryContainer = surface.onSurface,
+                secondary = secondary,
+                onSecondary = if (secondary.luminance() < 0.5f) Color.White else Color.Black,
+                secondaryContainer = secondary.copy(alpha = 0.28f),
+                onSecondaryContainer = surface.onSurface,
+                tertiary = secondary,
+                onTertiary = if (secondary.luminance() < 0.5f) Color.White else Color.Black,
+                background = surface.background,
+                onBackground = surface.onSurface,
+                surface = surface.surface,
+                onSurface = surface.onSurface,
+                surfaceVariant = surface.surface,
+                onSurfaceVariant = surface.secondaryText,
+                outline = primary.copy(alpha = 0.35f),
+                outlineVariant = primary.copy(alpha = 0.18f),
+                error = Color(0xFFFF453A),
+                onError = Color.Black,
+            )
+        } else {
+            lightColorScheme(
+                primary = primary,
+                onPrimary = if (primary.luminance() < 0.5f) Color.White else Color.Black,
+                primaryContainer = primary.copy(alpha = 0.16f),
+                onPrimaryContainer = primary,
+                secondary = secondary,
+                onSecondary = if (secondary.luminance() < 0.5f) Color.White else Color.Black,
+                secondaryContainer = secondary.copy(alpha = 0.16f),
+                onSecondaryContainer = secondary,
+                tertiary = secondary,
+                onTertiary = if (secondary.luminance() < 0.5f) Color.White else Color.Black,
+                background = surface.background,
+                onBackground = surface.onSurface,
+                surface = surface.surface,
+                onSurface = surface.onSurface,
+                surfaceVariant = surface.surface,
+                onSurfaceVariant = surface.secondaryText,
+                outline = primary.copy(alpha = 0.30f),
+                outlineVariant = primary.copy(alpha = 0.16f),
+                error = Color(0xFFFF3B30),
+                onError = Color.White,
+            )
+        }
+    }
+
+    companion object {
+        val defaultTheme = SUNSET
+        val freeThemes = entries.filterNot { it.isPremium }
+        val premiumThemes = entries.filter { it.isPremium }
+
+        fun fromStorage(value: String?): AppTheme = entries.firstOrNull {
+            it.name == value || it.storageKey == value
+        } ?: defaultTheme
     }
 }
+
+private data class ThemeSurface(
+    val background: Color,
+    val surface: Color,
+    val onSurface: Color,
+    val secondaryText: Color,
+) {
+    val isDark: Boolean get() = background.luminance() < 0.5f
+}
+
+private val IOSLightSurface = ThemeSurface(
+    background = Color(0xFFFFFFFF),
+    surface = Color(0xFFF2F2F7),
+    onSurface = Color(0xFF000000),
+    secondaryText = Color(0xFF6C6C70),
+)
+
+private val IOSDarkSurface = ThemeSurface(
+    background = Color(0xFF000000),
+    surface = Color(0xFF1C1C1E),
+    onSurface = Color(0xFFF2F2F7),
+    secondaryText = Color(0xFF98989D),
+)
+
+private fun Color.luminance(): Float =
+    0.2126f * red + 0.7152f * green + 0.0722f * blue

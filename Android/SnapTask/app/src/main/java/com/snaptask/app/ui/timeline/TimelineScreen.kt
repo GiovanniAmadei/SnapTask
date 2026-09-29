@@ -87,6 +87,16 @@ fun TimelineScreen(
             onOpenCalendar = onOpenCalendar,
         )
 
+        // The iOS header keeps the seven-day rail directly below the title.
+        // Keeping it above the view controls makes the date context visible
+        // before the user changes list/timeline organization.
+        if (selectedScope == TaskTimeScope.TODAY) {
+            DateSelectorView(
+                viewModel = viewModel,
+                selectedDate = selectedDate,
+            )
+        }
+
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
@@ -105,14 +115,6 @@ fun TimelineScreen(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
         )
-
-        // ---- Date strip (only for Today scope) ----
-        if (selectedScope == TaskTimeScope.TODAY) {
-            DateSelectorView(
-                viewModel = viewModel,
-                selectedDate = selectedDate,
-            )
-        }
 
         // ---- Content ----
         Box(
@@ -185,40 +187,19 @@ private fun TimelineHeaderView(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Settings button (matches iOS gear button, always visible)
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    .clickable { onSettingsClick() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(id = R.string.settings_title),
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            // Journal button (matches iOS - always available, opens diary for selected date)
-            IconButton(
-                onClick = onOpenJournal,
-                modifier = Modifier.size(32.dp),
-            ) {
+            // iOS only exposes the journal shortcut for the daily timeline.
+            if (selectedScope == TaskTimeScope.TODAY) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                            shape = RoundedCornerShape(8.dp),
+                        )
+                        .clickable { onOpenJournal() },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -228,9 +209,8 @@ private fun TimelineHeaderView(
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
 
             // Navigation arrows (for non-today scopes)
             if (selectedScope != TaskTimeScope.TODAY &&
@@ -308,6 +288,30 @@ private fun TimelineHeaderView(
                         )
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Settings is the trailing action, as in TimelineHeaderView on iOS.
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    .clickable { onSettingsClick() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = stringResource(id = R.string.settings_title),
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
@@ -1647,7 +1651,7 @@ private fun AddTaskButton(
                 brush = Brush.linearGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                        MaterialTheme.colorScheme.secondary,
                     ),
                 ),
             )

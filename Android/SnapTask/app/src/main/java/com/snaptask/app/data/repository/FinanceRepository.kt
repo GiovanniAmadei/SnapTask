@@ -5,7 +5,15 @@ import com.snaptask.app.data.local.dao.FinanceEntryDao
 import com.snaptask.app.data.local.entity.FinanceEntryEntity
 import com.snaptask.app.data.model.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Date
 import java.util.UUID
@@ -15,65 +23,70 @@ import javax.inject.Singleton
 /**
  * Faithful port of iOS FinanceManager.
  * Manages finance entries, budgets, goals, settings, and calculations.
- * In-memory for budgets/goals/settings (mirroring iOS UserDefaults approach).
- * Room persistence for entries.
+ * Room persistence for entries and DataStore persistence for the FinanceManager
+ * configuration (budgets, goals, preferences and custom categories).
  */
 @Singleton
 class FinanceRepository @Inject constructor(
     private val financeEntryDao: FinanceEntryDao,
     private val preferences: SnapTaskPreferences,
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _settings = MutableStateFlow(FinanceSettingsState())
+    val settings: StateFlow<FinanceSettingsState> = _settings.asStateFlow()
+
     // ── Observable data ──
     val entries: Flow<List<FinanceEntry>> = financeEntryDao.getAllEntries()
         .map { list -> list.map { it.toModel() } }
 
-    // In-memory state (mirroring iOS UserDefaults)
-    var budgets: List<FinanceBudget> = emptyList()
-        private set
-    var financialGoals: List<FinancialGoal> = emptyList()
-        private set
-    var startingBalance: Double = 0.0
-        private set
-    var monthlyBudgetTarget: Double = 0.0
-        private set
-    var savingsGoalPercent: Double = 0.0
-        private set
-    var savingsGoalAmount: Double = 0.0
-        private set
-    var savingsGoalIsPercent: Boolean = true
-        private set
-    var monthlyIncomeGoal: Double = 0.0
-        private set
-    var customCategories: List<CustomFinanceCategory> = emptyList()
-        private set
-    var categoryOverrides: List<FinanceCategoryOverride> = emptyList()
-        private set
-    var selectedCurrency: SupportedCurrency = SupportedCurrency.EUR
-        private set
+    val budgets: List<FinanceBudget> get() = settings.value.budgets
+    val financialGoals: List<FinancialGoal> get() = settings.value.financialGoals
+    val startingBalance: Double get() = settings.value.startingBalance
+    val monthlyBudgetTarget: Double get() = settings.value.monthlyBudgetTarget
+    val savingsGoalPercent: Double get() = settings.value.savingsGoalPercent
+    val savingsGoalAmount: Double get() = settings.value.savingsGoalAmount
+    val savingsGoalIsPercent: Boolean get() = settings.value.savingsGoalIsPercent
+    val monthlyIncomeGoal: Double get() = settings.value.monthlyIncomeGoal
+    val customCategories: List<CustomFinanceCategory> get() = settings.value.customCategories
+    val categoryOverrides: List<FinanceCategoryOverride> get() = settings.value.categoryOverrides
+    val hiddenBuiltInCategories: Set<String> get() = settings.value.hiddenBuiltInCategories
+    val selectedCurrency: SupportedCurrency get() = SupportedCurrency.fromCode(settings.value.selectedCurrencyCode)
+
+    init {
+        scope.launch {
+            preferences.financeSettings.collect { stored -> _settings.value = stored }
+        }
+    }
+
+    private fun updateSettings(transform: (FinanceSettingsState) -> FinanceSettingsState) {
+        val updated = transform(settings.value)
+        _settings.value = updated
+        scope.launch { preferences.setFinanceSettings(updated) }
+    }
 
     // ── Setters (mirroring iOS FinanceManager) ──
 
-    fun setStartingBalance(amount: Double) { startingBalance = amount }
-    fun setMonthlyBudgetTarget(amount: Double) { monthlyBudgetTarget = amount }
-    fun setSavingsGoalPercent(percent: Double) { savingsGoalPercent = percent.coerceIn(0.0, 100.0) }
-    fun setSavingsGoalAmount(amount: Double) { savingsGoalAmount = amount.coerceAtLeast(0.0) }
-    fun setSavingsGoalIsPercent(isPercent: Boolean) { savingsGoalIsPercent = isPercent }
-    fun setMonthlyIncomeGoal(amount: Double) { monthlyIncomeGoal = amount }
-    fun setSelectedCurrency(currency: SupportedCurrency) { selectedCurrency = currency }
+    fun setStartingBalance(amount: Double) = updateSettings { it.copy(startingBalance = amount) }
+    fun setMonthlyBudgetTarget(amount: Double) = updateSettings { it.copy(monthlyBudgetTarget = amount) }
+    fun setSavingsGoalPercent(percent: Double) = updateSettings { it.copy(savingsGoalPercent = percent.coerceIn(0.0, 100.0)) }
+    fun setSavingsGoalAmount(amount: Double) = updateSettings { it.copy(savingsGoalAmount = amount.coerceAtLeast(0.0)) }
+    fun setSavingsGoalIsPercent(isPercent: Boolean) = updateSettings { it.copy(savingsGoalIsPercent = isPercent) }
+    fun setMonthlyIncomeGoal(amount: Double) = updateSettings { it.copy(monthlyIncomeGoal = amount) }
+    fun setSelectedCurrency(currency: SupportedCurrency) = updateSettings { it.copy(selectedCurrencyCode = currency.code) }
 
     // ── Custom Category CRUD ──
 
     fun addCustomCategory(category: CustomFinanceCategory) {
         if (customCategories.any { it.id == category.id }) return
-        customCategories = customCategories + category
+        updateSettings { it.copy(customCategories = it.customCategories + category) }
     }
 
     fun updateCustomCategory(category: CustomFinanceCategory) {
-        customCategories = customCategories.map { if (it.id == category.id) category else it }
+        updateSettings { state -> state.copy(customCategories = state.customCategories.map { if (it.id == category.id) category else it }) }
     }
 
     fun removeCustomCategory(category: CustomFinanceCategory) {
-        customCategories = customCategories.filter { it.id != category.id }
+        updateSettings { state -> state.copy(customCategories = state.customCategories.filter { it.id != category.id }) }
     }
 
     fun customCategory(forId: UUID?): CustomFinanceCategory? {
@@ -83,12 +96,12 @@ class FinanceRepository @Inject constructor(
 
     // ── Category Override CRUD ──
 
-    fun setCategoryOverride(category: FinanceCategory, customName: String?, customIcon: String?) {
+    fun setCategoryOverride(category: FinanceCategory, customName: String?, customIcon: String?, customColorHex: String? = override(forCategory = category)?.customColorHex) {
         val list = categoryOverrides.filter { it.categoryRawValue != category.name }.toMutableList()
-        if (customName != null || customIcon != null) {
-            list.add(FinanceCategoryOverride(category.name, customName, customIcon))
+        if (customName != null || customIcon != null || customColorHex != null) {
+            list.add(FinanceCategoryOverride(category.name, customName, customIcon, customColorHex))
         }
-        categoryOverrides = list
+        updateSettings { it.copy(categoryOverrides = list) }
     }
 
     fun override(forCategory: FinanceCategory): FinanceCategoryOverride? {
@@ -101,6 +114,33 @@ class FinanceRepository @Inject constructor(
 
     fun icon(forCategory: FinanceCategory): String {
         return override(forCategory)?.customIcon ?: forCategory.icon
+    }
+
+    fun colorHex(forCategory: FinanceCategory): String =
+        override(forCategory)?.customColorHex ?: baseColorHex(forCategory)
+
+    fun colorHex(forCustomCategoryId: UUID?): String {
+        customCategory(forCustomCategoryId)?.colorHex?.let { return it }
+        val palette = listOf("#3B82F6", "#F97316", "#10B981", "#EF4444", "#8B5CF6", "#06B6D4", "#F59E0B", "#EC4899")
+        val value = forCustomCategoryId?.toString()?.fold(5381) { hash, char -> hash * 31 + char.code } ?: 0
+        return palette[kotlin.math.abs(value) % palette.size]
+    }
+
+    fun baseColorHex(category: FinanceCategory): String = when (category) {
+        FinanceCategory.HOUSING -> "#3B82F6"
+        FinanceCategory.FOOD -> "#F97316"
+        FinanceCategory.TRANSPORT -> "#10B981"
+        FinanceCategory.HEALTH -> "#EF4444"
+        FinanceCategory.ENTERTAINMENT -> "#8B5CF6"
+        FinanceCategory.EDUCATION -> "#06B6D4"
+        FinanceCategory.CLOTHING -> "#EC4899"
+        FinanceCategory.UTILITIES -> "#F59E0B"
+        FinanceCategory.INSURANCE -> "#6366F1"
+        FinanceCategory.SALARY -> "#22C55E"
+        FinanceCategory.FREELANCE -> "#14B8A6"
+        FinanceCategory.PASSIVE -> "#A855F7"
+        FinanceCategory.GIFTS -> "#F43F5E"
+        FinanceCategory.OTHER -> "#94A3B8"
     }
 
     fun categoryDisplayName(forEntry: FinanceEntry): String {
@@ -134,32 +174,32 @@ class FinanceRepository @Inject constructor(
 
     fun addBudget(budget: FinanceBudget) {
         if (budgets.any { it.id == budget.id }) return
-        budgets = budgets + budget
+        updateSettings { it.copy(budgets = it.budgets + budget) }
     }
 
     fun updateBudget(budget: FinanceBudget) {
-        budgets = budgets.map { if (it.id == budget.id) budget else it }
+        updateSettings { state -> state.copy(budgets = state.budgets.map { if (it.id == budget.id) budget else it }) }
     }
 
     fun removeBudget(budget: FinanceBudget) {
-        budgets = budgets.filter { it.id != budget.id }
+        updateSettings { state -> state.copy(budgets = state.budgets.filter { it.id != budget.id }) }
     }
 
     // ── Financial Goal CRUD ──
 
     fun addFinancialGoal(goal: FinancialGoal) {
         if (financialGoals.any { it.id == goal.id }) return
-        financialGoals = financialGoals + goal
+        updateSettings { it.copy(financialGoals = it.financialGoals + goal) }
     }
 
     fun updateFinancialGoal(goal: FinancialGoal) {
-        financialGoals = financialGoals.map {
+        updateSettings { state -> state.copy(financialGoals = state.financialGoals.map {
             if (it.id == goal.id) goal.copy(lastModifiedDate = Date()) else it
-        }
+        }) }
     }
 
     fun removeFinancialGoal(goal: FinancialGoal) {
-        financialGoals = financialGoals.filter { it.id != goal.id }
+        updateSettings { state -> state.copy(financialGoals = state.financialGoals.filter { it.id != goal.id }) }
     }
 
     // ── Calculations (operate on snapshot list) ──
@@ -208,7 +248,9 @@ class FinanceRepository @Inject constructor(
         val recurring = entriesList
             .filter { it.isRecurring && !it.type.isOutflow }
             .sumOf { it.monthlyEquivalent }
-        val oneTime = totalIncome(entriesList, currentMonthPeriod())
+        val oneTime = entriesList
+            .filter { it.date.time in currentMonthPeriod() && !it.type.isOutflow && !it.isRecurring }
+            .sumOf { it.amount }
         return recurring + oneTime
     }
 
@@ -216,7 +258,9 @@ class FinanceRepository @Inject constructor(
         val recurring = entriesList
             .filter { it.isRecurring && it.type.isOutflow }
             .sumOf { it.monthlyEquivalent }
-        val oneTime = totalExpenses(entriesList, currentMonthPeriod())
+        val oneTime = entriesList
+            .filter { it.date.time in currentMonthPeriod() && it.type.isOutflow && !it.isRecurring }
+            .sumOf { it.amount }
         return recurring + oneTime
     }
 
@@ -343,19 +387,32 @@ class FinanceRepository @Inject constructor(
 
     // ── Budget Tracking ──
 
-    fun budgetUsage(entriesList: List<FinanceEntry>, category: FinanceCategory): Double {
-        val budget = budgets.find { it.category == category && it.isActive } ?: return 0.0
-        val period = currentMonthPeriod()
-        val spent = entriesList
-            .filter { it.date.time in period && it.category == category && it.type.isOutflow }
+    fun spentAmount(entriesList: List<FinanceEntry>, budget: FinanceBudget, period: LongRange = currentMonthPeriod()): Double {
+        return entriesList
+            .filter { entry ->
+                entry.date.time in period && entry.type.isOutflow &&
+                    if (budget.customCategoryId != null) entry.customCategoryId == budget.customCategoryId
+                    else entry.customCategoryId == null && entry.category == budget.category
+            }
             .sumOf { it.amount }
+    }
+
+    fun budgetUsage(entriesList: List<FinanceEntry>, budget: FinanceBudget): Double {
+        if (!budget.isActive) return 0.0
+        val spent = spentAmount(entriesList, budget)
         return if (budget.monthlyLimit > 0) spent / budget.monthlyLimit else 0.0
     }
 
-    fun overBudgetCategories(entriesList: List<FinanceEntry>): List<Pair<FinanceCategory, Double>> {
+    /** Compatibility overload for callers that select a built-in category. */
+    fun budgetUsage(entriesList: List<FinanceEntry>, category: FinanceCategory): Double {
+        val budget = budgets.find { it.category == category && it.customCategoryId == null && it.isActive } ?: return 0.0
+        return budgetUsage(entriesList, budget)
+    }
+
+    fun overBudgetCategories(entriesList: List<FinanceEntry>): List<Pair<FinanceBudget, Double>> {
         return budgets.filter { it.isActive }.mapNotNull { budget ->
-            val usage = budgetUsage(entriesList, budget.category)
-            if (usage > 1.0) budget.category to usage else null
+            val usage = budgetUsage(entriesList, budget)
+            if (usage > 1.0) budget to usage else null
         }
     }
 
@@ -378,16 +435,7 @@ class FinanceRepository @Inject constructor(
     // ── Reset ──
 
     fun resetAll() {
-        budgets = emptyList()
-        financialGoals = emptyList()
-        startingBalance = 0.0
-        monthlyBudgetTarget = 0.0
-        savingsGoalPercent = 0.0
-        savingsGoalAmount = 0.0
-        savingsGoalIsPercent = true
-        monthlyIncomeGoal = 0.0
-        customCategories = emptyList()
-        categoryOverrides = emptyList()
+        updateSettings { FinanceSettingsState() }
     }
 
     // ── Currency Format Helper ──

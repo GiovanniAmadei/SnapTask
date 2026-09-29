@@ -164,8 +164,8 @@ fun FinanceScreen(
                     monthlyExpenses = monthlyExpenses,
                     budgetProgress = viewModel.budgetProgress() ?: 0.0,
                     formatCurrency = viewModel::formatCurrency,
-                    displayName = viewModel::displayName,
-                    icon = viewModel::icon,
+                    displayName = viewModel::budgetDisplayName,
+                    colorHex = viewModel::budgetColorHex,
                     budgetUsage = viewModel::budgetUsage,
                 )
             }
@@ -625,9 +625,9 @@ private fun BudgetManagementSection(
     monthlyExpenses: Double,
     budgetProgress: Double,
     formatCurrency: (Double) -> String,
-    displayName: (FinanceCategory) -> String,
-    icon: (FinanceCategory) -> String,
-    budgetUsage: (FinanceCategory) -> Double,
+    displayName: (FinanceBudget) -> String,
+    colorHex: (FinanceBudget) -> String,
+    budgetUsage: (FinanceBudget) -> Double,
 ) {
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -666,14 +666,14 @@ private fun BudgetManagementSection(
 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(budgets.filter { it.isActive }) { budget ->
-                        val usage = budgetUsage(budget.category)
+                        val usage = budgetUsage(budget)
                         val spent = budget.monthlyLimit * usage
                         BudgetCategoryCard(
-                            label = displayName(budget.category),
+                            label = displayName(budget),
                             limit = budget.monthlyLimit,
                             spent = spent,
                             daysLeft = daysLeft,
-                            categoryColor = getCategoryColor(budget.category),
+                            categoryColor = parseHexColor(colorHex(budget)),
                             formatCurrency = formatCurrency,
                         )
                     }
