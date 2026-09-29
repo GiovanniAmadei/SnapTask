@@ -46,7 +46,7 @@ struct FinanceSettingsView: View {
                         Text(currency.displayName).tag(currency)
                     }
                 }
-                .pickerStyle(.navigationLink)
+                .contentShape(Rectangle())
                 .listRowBackground(theme.surfaceColor)
             } header: {
                 Text("currency".localized)

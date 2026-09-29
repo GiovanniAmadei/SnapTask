@@ -56,10 +56,16 @@ struct FinanceEntryFormView: View {
             .padding(.top, 8)
         }
         .themedBackground()
-        .simultaneousGesture(
-            TapGesture().onEnded { _ in focusedField = nil }
+        #if os(iOS)
+        .scrollDismissesKeyboard(.interactively)
+        #endif
+        .background(
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    focusedField = nil
+                }
         )
-        .contentShape(Rectangle())
         .navigationTitle(editingEntry != nil ? "edit_entry".localized : "new_entry".localized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -377,7 +383,7 @@ struct FinanceEntryFormView: View {
                         Text("delete".localized)
                             .font(.subheadline.weight(.semibold))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(theme.buttonTextColor)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.red.opacity(0.85))
@@ -393,7 +399,7 @@ struct FinanceEntryFormView: View {
                     Text("save".localized)
                         .font(.subheadline.weight(.semibold))
                 }
-                .foregroundColor(.white)
+                .foregroundColor(theme.buttonTextColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(

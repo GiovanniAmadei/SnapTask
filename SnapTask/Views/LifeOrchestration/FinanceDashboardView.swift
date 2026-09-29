@@ -419,11 +419,9 @@ struct FinanceDashboardView: View {
         }
         
         for budget in financeManager.budgets where budget.isActive {
-            let spent = financeManager.entries(for: period)
-                .filter { $0.category == budget.category && $0.type.isOutflow }
-                .reduce(0) { $0 + $1.amount }
+            let spent = financeManager.spentAmount(for: budget, in: period)
             items.append((
-                label: financeManager.displayName(for: budget.category),
+                label: financeManager.budgetDisplayName(for: budget),
                 limit: budget.monthlyLimit,
                 spent: spent
             ))
@@ -435,15 +433,13 @@ struct FinanceDashboardView: View {
     private var budgetCategoryItems: [(label: String, icon: String, limit: Double, spent: Double, color: Color)] {
         let period = financeManager.currentMonthPeriod()
         return financeManager.budgets.filter { $0.isActive }.map { budget in
-            let spent = financeManager.entries(for: period)
-                .filter { $0.category == budget.category && $0.type.isOutflow }
-                .reduce(0) { $0 + $1.amount }
+            let spent = financeManager.spentAmount(for: budget, in: period)
             return (
-                label: financeManager.displayName(for: budget.category),
-                icon: financeManager.icon(for: budget.category),
+                label: financeManager.budgetDisplayName(for: budget),
+                icon: financeManager.budgetIcon(for: budget),
                 limit: budget.monthlyLimit,
                 spent: spent,
-                color: Color(hex: categoryColor(budget.category))
+                color: Color(hex: financeManager.budgetColorHex(for: budget))
             )
         }
     }
@@ -463,11 +459,11 @@ struct FinanceDashboardView: View {
             
             ForEach(financeManager.overBudgetCategories(), id: \.0.id) { budget, usage in
                 HStack {
-                    Image(systemName: financeManager.icon(for: budget.category))
+                    Image(systemName: financeManager.budgetIcon(for: budget))
                         .font(.caption)
                         .foregroundColor(.red)
                         .frame(width: 20)
-                    Text(financeManager.displayName(for: budget.category))
+                    Text(financeManager.budgetDisplayName(for: budget))
                         .font(.caption)
                         .themedPrimaryText()
                     Spacer()
@@ -757,7 +753,7 @@ struct FinanceDashboardView: View {
                 Text(period.displayName)
             }
             
-            let breakdown = financeManager.expenseBreakdown(for: periodInterval(for: breakdownPeriod))
+            let breakdown = financeManager.expenseBreakdownDetailed(for: periodInterval(for: breakdownPeriod))
             
             if breakdown.isEmpty {
                 Text("no_data_yet".localized)
@@ -766,16 +762,14 @@ struct FinanceDashboardView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
             } else {
-                let isSingleBar = breakdown.count == 1
-                
                 if breakdownStyle == .pie {
                     Chart(breakdown.prefix(6), id: \.0) { item in
                         SectorMark(
-                            angle: .value(financeManager.displayName(for: item.0), item.1),
+                            angle: .value(financeManager.expenseBreakdownDisplayName(for: item.0), item.1),
                             innerRadius: .ratio(0.55),
                             angularInset: 2
                         )
-                        .foregroundStyle(Color(hex: categoryColor(item.0)))
+                        .foregroundStyle(Color(hex: financeManager.expenseBreakdownColorHex(for: item.0)))
                         .cornerRadius(4)
                     }
                     .frame(height: 200)
@@ -785,10 +779,10 @@ struct FinanceDashboardView: View {
                     let isSingleBar = breakdown.count == 1
                     Chart(breakdown.prefix(6), id: \.0) { item in
                         BarMark(
-                            x: .value("category".localized, financeManager.displayName(for: item.0)),
+                            x: .value("category".localized, financeManager.expenseBreakdownDisplayName(for: item.0)),
                             y: .value("amount".localized, item.1)
                         )
-                        .foregroundStyle(Color(hex: categoryColor(item.0)))
+                        .foregroundStyle(Color(hex: financeManager.expenseBreakdownColorHex(for: item.0)))
                         .cornerRadius(4)
                     }
                     .frame(height: 200)
@@ -822,9 +816,9 @@ struct FinanceDashboardView: View {
                     ForEach(breakdown.prefix(6), id: \.0) { item in
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(Color(hex: categoryColor(item.0)))
+                                .fill(Color(hex: financeManager.expenseBreakdownColorHex(for: item.0)))
                                 .frame(width: 10, height: 10)
-                            Text(financeManager.displayName(for: item.0))
+                            Text(financeManager.expenseBreakdownDisplayName(for: item.0))
                                 .font(.caption)
                                 .themedPrimaryText()
                                 .lineLimit(1)
@@ -1127,22 +1121,7 @@ struct FinanceDashboardView: View {
     }
     
     private func categoryColor(_ cat: FinanceCategory) -> String {
-        switch cat {
-        case .housing: return "#3B82F6"
-        case .food: return "#F97316"
-        case .transport: return "#8B5CF6"
-        case .health: return "#EF4444"
-        case .entertainment: return "#EC4899"
-        case .education: return "#06B6D4"
-        case .clothing: return "#F59E0B"
-        case .utilities: return "#6366F1"
-        case .insurance: return "#14B8A6"
-        case .salary: return "#22C55E"
-        case .freelance: return "#10B981"
-        case .passive: return "#84CC16"
-        case .gifts: return "#A855F7"
-        case .other: return "#6B7280"
-        }
+        financeManager.colorHex(for: cat)
     }
     
     private struct TrendItem {

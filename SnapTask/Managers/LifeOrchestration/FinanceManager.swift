@@ -3,6 +3,20 @@ import Combine
 import UIKit
 import WidgetKit
 
+enum FinanceExpenseBreakdownKey: Hashable, Identifiable {
+    case builtIn(FinanceCategory)
+    case custom(UUID)
+
+    var id: String {
+        switch self {
+        case .builtIn(let category):
+            return "builtIn:\(category.rawValue)"
+        case .custom(let id):
+            return "custom:\(id.uuidString)"
+        }
+    }
+}
+
 @MainActor
 class FinanceManager: ObservableObject {
     static let shared = FinanceManager()
@@ -111,6 +125,22 @@ class FinanceManager: ObservableObject {
             UserDefaults.standard.set(currencyRaw, forKey: selectedCurrencyKey)
         }
 
+        // Apply category overrides
+        if let overridesJSON = settings["finance_categoryOverrides"] as? String,
+           let data = overridesJSON.data(using: .utf8),
+           let overrides = try? JSONDecoder().decode([FinanceCategoryOverride].self, from: data) {
+            self.categoryOverrides = overrides
+            if let encoded = try? JSONEncoder().encode(overrides) {
+                UserDefaults.standard.set(encoded, forKey: categoryOverridesKey)
+            }
+        }
+
+        // Apply hidden built-in categories
+        if let hidden = settings["finance_hiddenBuiltInCategories"] as? [String] {
+            self.hiddenBuiltInCategories = Set(hidden)
+            UserDefaults.standard.set(hidden, forKey: hiddenBuiltInCategoriesKey)
+        }
+
         notifyFinanceChanged()
     }
 
@@ -118,7 +148,7 @@ class FinanceManager: ObservableObject {
         guard !isApplyingCloudSettings else { return }
         guard CloudKitService.shared.isCloudKitEnabled else { return }
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "finance_startingBalance": startingBalance,
             "finance_monthlyBudgetTarget": monthlyBudgetTarget,
             "finance_savingsGoalPercent": savingsGoalPercent,
@@ -129,6 +159,16 @@ class FinanceManager: ObservableObject {
             "lastUpdated": Date().timeIntervalSince1970,
             "deviceId": UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
         ]
+
+        // Sync category overrides (built-in category customisations)
+        if let overridesData = try? JSONEncoder().encode(categoryOverrides),
+           let overridesJSON = String(data: overridesData, encoding: .utf8) {
+            payload["finance_categoryOverrides"] = overridesJSON
+        }
+
+        // Sync hidden built-in categories
+        payload["finance_hiddenBuiltInCategories"] = Array(hiddenBuiltInCategories)
+
         CloudKitService.shared.saveAppSettings(payload)
     }
     
@@ -215,18 +255,25 @@ class FinanceManager: ObservableObject {
     
     // MARK: - Built-in Category Overrides
     
-    func setCategoryOverride(_ category: FinanceCategory, customName: String?, customIcon: String?) {
+    func setCategoryOverride(_ category: FinanceCategory, customName: String?, customIcon: String?, customColorHex: String?) {
         var list = categoryOverrides.filter { $0.categoryRawValue != category.rawValue }
-        if customName != nil || customIcon != nil {
+        if customName != nil || customIcon != nil || customColorHex != nil {
             list.append(FinanceCategoryOverride(
                 categoryRawValue: category.rawValue,
                 customName: customName,
-                customIcon: customIcon
+                customIcon: customIcon,
+                customColorHex: customColorHex
             ))
         }
         categoryOverrides = list
         saveCategoryOverrides()
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
+    }
+
+    func setCategoryOverride(_ category: FinanceCategory, customName: String?, customIcon: String?) {
+        let existingColor = override(for: category)?.customColorHex
+        setCategoryOverride(category, customName: customName, customIcon: customIcon, customColorHex: existingColor)
     }
     
     // MARK: - Hidden Built-in Categories
@@ -235,12 +282,14 @@ class FinanceManager: ObservableObject {
         hiddenBuiltInCategories.insert(category.rawValue)
         saveHiddenBuiltInCategories()
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func restoreBuiltInCategory(_ category: FinanceCategory) {
         hiddenBuiltInCategories.remove(category.rawValue)
         saveHiddenBuiltInCategories()
         notifyFinanceChanged()
+        syncFinanceSettingsToCloud()
     }
     
     func isHidden(_ category: FinanceCategory) -> Bool {
@@ -271,6 +320,62 @@ class FinanceManager: ObservableObject {
     func icon(for category: FinanceCategory) -> String {
         override(for: category)?.customIcon ?? category.icon
     }
+
+    func colorHex(for category: FinanceCategory) -> String {
+        override(for: category)?.customColorHex ?? baseColorHex(for: category)
+    }
+
+    func colorHex(for customCategoryId: UUID?) -> String {
+        guard let id = customCategoryId else { return baseColorHex(for: .other) }
+        if let custom = customCategory(for: id), let hex = custom.colorHex {
+            return hex
+        }
+        // Fallback: deterministic stable hash (djb2) — Swift's hashValue is salted
+        // per-process and changes every launch, so we use a stable string hash.
+        let palette = [
+            "#3B82F6", "#F97316", "#10B981", "#EF4444", "#8B5CF6", "#06B6D4",
+            "#F59E0B", "#EC4899", "#84CC16", "#A855F7", "#14B8A6", "#6366F1"
+        ]
+        let stableHash = id.uuidString.unicodeScalars.reduce(5381) { (hash: UInt64, scalar) in
+            (hash &* 31) &+ UInt64(scalar.value)
+        }
+        return palette[Int(stableHash % UInt64(palette.count))]
+    }
+
+    func budgetColorHex(for budget: FinanceBudget) -> String {
+        if budget.customCategoryId != nil {
+            return colorHex(for: budget.customCategoryId)
+        }
+        return colorHex(for: budget.category)
+    }
+
+    func expenseBreakdownColorHex(for key: FinanceExpenseBreakdownKey) -> String {
+        switch key {
+        case .builtIn(let category):
+            return colorHex(for: category)
+        case .custom(let id):
+            return colorHex(for: id)
+        }
+    }
+
+    func baseColorHex(for category: FinanceCategory) -> String {
+        switch category {
+        case .housing: return "#3B82F6"
+        case .food: return "#F97316"
+        case .transport: return "#10B981"
+        case .health: return "#EF4444"
+        case .entertainment: return "#8B5CF6"
+        case .education: return "#06B6D4"
+        case .clothing: return "#EC4899"
+        case .utilities: return "#F59E0B"
+        case .insurance: return "#6366F1"
+        case .salary: return "#22C55E"
+        case .freelance: return "#14B8A6"
+        case .passive: return "#A855F7"
+        case .gifts: return "#F43F5E"
+        case .other: return "#94A3B8"
+        }
+    }
     
     func categoryDisplayName(for entry: FinanceEntry) -> String {
         if let customId = entry.customCategoryId,
@@ -286,6 +391,27 @@ class FinanceManager: ObservableObject {
             return custom.icon
         }
         return icon(for: entry.category)
+    }
+
+    func categoryColorHex(for entry: FinanceEntry) -> String {
+        if let customId = entry.customCategoryId {
+            return colorHex(for: customId)
+        }
+        return colorHex(for: entry.category)
+    }
+
+    func budgetDisplayName(for budget: FinanceBudget) -> String {
+        if let custom = customCategory(for: budget.customCategoryId) {
+            return custom.name
+        }
+        return displayName(for: budget.category)
+    }
+
+    func budgetIcon(for budget: FinanceBudget) -> String {
+        if let custom = customCategory(for: budget.customCategoryId) {
+            return custom.icon
+        }
+        return icon(for: budget.category)
     }
     
     var currentBalance: Double {
@@ -435,14 +561,18 @@ class FinanceManager: ObservableObject {
     var monthlyIncome: Double {
         let recurring = entries.filter { $0.isRecurring && !$0.type.isOutflow }
             .reduce(0) { $0 + $1.monthlyEquivalent }
-        let oneTime = totalIncome(for: currentMonthPeriod())
+        let oneTime = entries(for: currentMonthPeriod())
+            .filter { !$0.type.isOutflow && !$0.isRecurring }
+            .reduce(0) { $0 + $1.amount }
         return recurring + oneTime
     }
-    
+
     var monthlyExpenses: Double {
         let recurring = entries.filter { $0.isRecurring && $0.type.isOutflow }
             .reduce(0) { $0 + $1.monthlyEquivalent }
-        let oneTime = totalExpenses(for: currentMonthPeriod())
+        let oneTime = entries(for: currentMonthPeriod())
+            .filter { $0.type.isOutflow && !$0.isRecurring }
+            .reduce(0) { $0 + $1.amount }
         return recurring + oneTime
     }
     
@@ -650,33 +780,89 @@ class FinanceManager: ObservableObject {
     }
     
     // MARK: - Budget Tracking
-    
-    func budgetUsage(for category: FinanceCategory) -> Double {
-        guard let budget = budgets.first(where: { $0.category == category && $0.isActive }) else { return 0 }
-        let period = currentMonthPeriod()
-        let spent = entries(for: period)
-            .filter { $0.category == category && $0.type.isOutflow }
+
+    private func _spentAmount(for budget: FinanceBudget, in period: DateInterval) -> Double {
+        entries(for: period)
+            .filter {
+                guard $0.type.isOutflow else { return false }
+                if let customId = budget.customCategoryId {
+                    return $0.customCategoryId == customId
+                }
+                return $0.customCategoryId == nil && $0.category == budget.category
+            }
             .reduce(0) { $0 + $1.amount }
+    }
+
+    func spentAmount(for budget: FinanceBudget, in period: DateInterval) -> Double {
+        _spentAmount(for: budget, in: period)
+    }
+
+    func budgetUsage(for budget: FinanceBudget) -> Double {
+        guard budget.isActive else { return 0 }
+        let period = currentMonthPeriod()
+        let spent = _spentAmount(for: budget, in: period)
         return budget.monthlyLimit > 0 ? spent / budget.monthlyLimit : 0
     }
-    
-    func overBudgetCategories() -> [(FinanceCategory, Double)] {
+
+    func overBudgetCategories() -> [(FinanceBudget, Double)] {
         budgets.filter { $0.isActive }.compactMap { budget in
-            let usage = budgetUsage(for: budget.category)
-            return usage > 1.0 ? (budget.category, usage) : nil
+            let usage = budgetUsage(for: budget)
+            return usage > 1.0 ? (budget, usage) : nil
         }
     }
     
     // MARK: - Expense Breakdown
-    
+
+    func expenseBreakdownDetailed(for period: DateInterval) -> [(FinanceExpenseBreakdownKey, Double)] {
+        let expenseEntries = entries(for: period).filter { $0.type.isOutflow }
+        var breakdown: [FinanceExpenseBreakdownKey: Double] = [:]
+
+        for entry in expenseEntries {
+            if let customId = entry.customCategoryId {
+                breakdown[.custom(customId), default: 0] += entry.amount
+            } else {
+                breakdown[.builtIn(entry.category), default: 0] += entry.amount
+            }
+        }
+
+        return breakdown.sorted { $0.value > $1.value }
+    }
+
+    func expenseBreakdownDisplayName(for key: FinanceExpenseBreakdownKey) -> String {
+        switch key {
+        case .builtIn(let category):
+            return displayName(for: category)
+        case .custom(let id):
+            return customCategory(for: id)?.name ?? displayName(for: .other)
+        }
+    }
+
+    func expenseBreakdownIcon(for key: FinanceExpenseBreakdownKey) -> String {
+        switch key {
+        case .builtIn(let category):
+            return icon(for: category)
+        case .custom(let id):
+            return customCategory(for: id)?.icon ?? icon(for: .other)
+        }
+    }
+
+    func expenseBreakdownColorCategory(for key: FinanceExpenseBreakdownKey) -> FinanceCategory {
+        switch key {
+        case .builtIn(let category):
+            return category
+        case .custom:
+            return .other
+        }
+    }
+
     func expenseBreakdown(for period: DateInterval) -> [(FinanceCategory, Double)] {
         let expenseEntries = entries(for: period).filter { $0.type.isOutflow }
         var breakdown: [FinanceCategory: Double] = [:]
-        
+
         for entry in expenseEntries {
             breakdown[entry.category, default: 0] += entry.amount
         }
-        
+
         return breakdown.sorted { $0.value > $1.value }
     }
     
@@ -752,9 +938,6 @@ class FinanceManager: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: entriesKey) {
             entries = (try? JSONDecoder().decode([FinanceEntry].self, from: data)) ?? []
         }
-        if let data = UserDefaults.standard.data(forKey: budgetsKey) {
-            budgets = (try? JSONDecoder().decode([FinanceBudget].self, from: data)) ?? []
-        }
         if let data = UserDefaults.standard.data(forKey: financialGoalsKey) {
             financialGoals = (try? JSONDecoder().decode([FinancialGoal].self, from: data)) ?? []
         }
@@ -766,6 +949,9 @@ class FinanceManager: ObservableObject {
         monthlyIncomeGoal = UserDefaults.standard.double(forKey: monthlyIncomeGoalKey)
         if let data = UserDefaults.standard.data(forKey: customCategoriesKey) {
             customCategories = (try? JSONDecoder().decode([CustomFinanceCategory].self, from: data)) ?? []
+        }
+        if let data = UserDefaults.standard.data(forKey: budgetsKey) {
+            budgets = (try? JSONDecoder().decode([FinanceBudget].self, from: data)) ?? []
         }
         if let data = UserDefaults.standard.data(forKey: categoryOverridesKey) {
             categoryOverrides = (try? JSONDecoder().decode([FinanceCategoryOverride].self, from: data)) ?? []
@@ -804,6 +990,8 @@ class FinanceManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: customCategoriesKey)
         UserDefaults.standard.removeObject(forKey: categoryOverridesKey)
         UserDefaults.standard.removeObject(forKey: hiddenBuiltInCategoriesKey)
+        objectWillChange.send()
+        notifyFinanceChanged()
     }
     
     private func notifyFinanceChanged() {
@@ -824,13 +1012,12 @@ class FinanceManager: ObservableObject {
         // Write budget data as JSON array
         let budgetData = budgets.filter { $0.isActive }.map { budget -> [String: Any] in
             let period = currentMonthPeriod()
-            let spent = entries(for: period)
-                .filter { $0.category == budget.category && $0.type.isOutflow }
-                .reduce(0) { $0 + $1.amount }
+            let spent = spentAmount(for: budget, in: period)
             return [
                 "categoryRaw": budget.category.rawValue,
-                "categoryName": displayName(for: budget.category),
-                "categoryIcon": icon(for: budget.category),
+                "customCategoryId": budget.customCategoryId?.uuidString as Any,
+                "categoryName": budgetDisplayName(for: budget),
+                "categoryIcon": budgetIcon(for: budget),
                 "monthlyLimit": budget.monthlyLimit,
                 "spent": spent
             ]

@@ -218,27 +218,68 @@ struct FinanceEntry: Identifiable, Codable, Equatable {
 struct FinanceBudget: Identifiable, Codable, Equatable {
     let id: UUID
     var category: FinanceCategory
+    var customCategoryId: UUID?
     var monthlyLimit: Double
     var isActive: Bool
     var creationDate: Date
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case category
+        case customCategoryId
+        case monthlyLimit
+        case isActive
+        case creationDate
+    }
     
     init(
         id: UUID = UUID(),
         category: FinanceCategory,
+        customCategoryId: UUID? = nil,
         monthlyLimit: Double,
         isActive: Bool = true,
         creationDate: Date = Date()
     ) {
         self.id = id
         self.category = category
+        self.customCategoryId = customCategoryId
         self.monthlyLimit = monthlyLimit
         self.isActive = isActive
         self.creationDate = creationDate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        category = try container.decode(FinanceCategory.self, forKey: .category)
+
+        if let uuid = try? container.decodeIfPresent(UUID.self, forKey: .customCategoryId) {
+            customCategoryId = uuid
+        } else if let string = try? container.decodeIfPresent(String.self, forKey: .customCategoryId) {
+            customCategoryId = UUID(uuidString: string)
+        } else {
+            customCategoryId = nil
+        }
+
+        monthlyLimit = try container.decode(Double.self, forKey: .monthlyLimit)
+        isActive = try container.decode(Bool.self, forKey: .isActive)
+        creationDate = try container.decode(Date.self, forKey: .creationDate)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(category, forKey: .category)
+        try container.encodeIfPresent(customCategoryId, forKey: .customCategoryId)
+        try container.encode(monthlyLimit, forKey: .monthlyLimit)
+        try container.encode(isActive, forKey: .isActive)
+        try container.encode(creationDate, forKey: .creationDate)
     }
     
     static func == (lhs: FinanceBudget, rhs: FinanceBudget) -> Bool {
         lhs.id == rhs.id &&
         lhs.category == rhs.category &&
+        lhs.customCategoryId == rhs.customCategoryId &&
         lhs.monthlyLimit == rhs.monthlyLimit &&
         lhs.isActive == rhs.isActive
     }
@@ -338,6 +379,7 @@ struct FinanceCategoryOverride: Codable, Equatable {
     var categoryRawValue: String
     var customName: String?
     var customIcon: String?
+    var customColorHex: String?
 }
 
 // MARK: - Custom Finance Category
@@ -345,6 +387,7 @@ struct CustomFinanceCategory: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
     var icon: String
+    var colorHex: String?
     var isExpenseCategory: Bool
     var creationDate: Date
     
@@ -352,12 +395,14 @@ struct CustomFinanceCategory: Identifiable, Codable, Equatable {
         id: UUID = UUID(),
         name: String,
         icon: String = "tag.fill",
+        colorHex: String? = nil,
         isExpenseCategory: Bool = true,
         creationDate: Date = Date()
     ) {
         self.id = id
         self.name = name
         self.icon = icon
+        self.colorHex = colorHex
         self.isExpenseCategory = isExpenseCategory
         self.creationDate = creationDate
     }
