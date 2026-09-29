@@ -68,6 +68,17 @@ struct ContentView: View {
                 }
             }
         }
+        #if DEBUG
+        .task {
+            // Debug only: `-seedScenario fullYear|stress|standard` wipes and reseeds demo data at launch.
+            if let raw = UserDefaults.standard.string(forKey: "seedScenario"),
+               let scenario = DemoDataSeeder.Scenario(rawValue: raw) {
+                let started = Date()
+                await DemoDataSeeder.shared.seedDemoContent(replace: true, scenario: scenario)
+                print("🌱 Launch seed (\(raw)) took \(String(format: "%.1f", Date().timeIntervalSince(started)))s")
+            }
+        }
+        #endif
         .onAppear {
             print("ContentView onAppear - hasShownWelcome: \(hasShownWelcome)")
             if !hasShownWelcome {

@@ -82,6 +82,7 @@ struct SettingsView: View {
     @State private var isDeleting = false
     @State private var isSeeding = false
     @State private var isSeedingReplace = false
+    @State private var demoScenario: DemoDataSeeder.Scenario = .standard
     @State private var showingPremiumPaywall = false
 
     @State private var didInitialLoad = false
@@ -688,6 +689,14 @@ struct SettingsView: View {
                 // MARK: - Developer / Testing Section (debug builds only: the seeder activates Pro and can wipe data)
                 #if DEBUG
                 Section {
+                    Picker("Scenario dati", selection: $demoScenario) {
+                        ForEach(DemoDataSeeder.Scenario.allCases) { scenario in
+                            Text(scenario.title).tag(scenario)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .themedPrimaryText()
+
                     Button {
                         seedData(replace: false)
                     } label: {
@@ -1334,7 +1343,9 @@ struct SettingsView: View {
         isSeedingReplace = replace
         HapticManager.shared.impact(.light)
         Task {
-            await DemoDataSeeder.shared.seedDemoContent(replace: replace)
+            let started = Date()
+            await DemoDataSeeder.shared.seedDemoContent(replace: replace, scenario: demoScenario)
+            print("🌱 Demo seed (\(demoScenario.rawValue)) took \(String(format: "%.1f", Date().timeIntervalSince(started)))s")
             await MainActor.run {
                 isSeeding = false
                 isSeedingReplace = false

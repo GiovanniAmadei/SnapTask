@@ -6,6 +6,42 @@ final class DemoDataSeeder {
     static let shared = DemoDataSeeder()
     private init() {}
 
+    /// Debug data sets used to check how screens (statistics above all) behave with different amounts of history.
+    enum Scenario: String, CaseIterable, Identifiable {
+        case standard      // last 14 days of history
+        case fullYear      // 365 days with seasonality, a vacation gap, weekend patterns
+        case stress        // full year + many extra habits
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .standard: return "Standard (14 giorni)"
+            case .fullYear: return "Anno pieno"
+            case .stress: return "Stress test (anno + 25 abitudini)"
+            }
+        }
+
+        var historyDays: Int { self == .standard ? 14 : 365 }
+    }
+
+    private var scenario: Scenario = .standard
+
+    /// Completion-rate multiplier for a day: seasonal drift plus a 10-day vacation, only for long scenarios.
+    private func realismFactor(for date: Date) -> Double {
+        guard scenario != .standard else { return 1 }
+        let cal = Calendar.current
+        let daysAgo = cal.dateComponents([.day], from: cal.startOfDay(for: date), to: cal.startOfDay(for: Date())).day ?? 0
+        if (100...110).contains(daysAgo) { return 0.05 }
+        switch cal.component(.month, from: date) {
+        case 1: return 1.1
+        case 7: return 0.85
+        case 8: return 0.65
+        case 12: return 0.8
+        default: return 1
+        }
+    }
+
     struct SeededRefs {
         var categories: [String: Category] = [:]
         var tasks: [String: UUID] = [:]
@@ -13,7 +49,8 @@ final class DemoDataSeeder {
         var rewardsByName: [String: Reward] = [:]
     }
 
-    func seedDemoContent(replace: Bool) async {
+    func seedDemoContent(replace: Bool, scenario: Scenario = .standard) async {
+        self.scenario = scenario
         let cloudWasEnabled = CloudKitService.shared.isCloudKitEnabled
         CloudKitService.shared.disableCloudKitSync()
 
@@ -27,6 +64,9 @@ final class DemoDataSeeder {
         refs.categories = await seedCategories()
         refs.rewardsByName = await seedRewards(refs.categories)
         refs.tasks = await seedTasksAndSubtasks(refs.categories, &refs.taskSubtasks)
+        if scenario == .stress {
+            await seedStressHabits(refs.categories)
+        }
 
         let scopedIds = await seedScopedObjectives(refs.categories)
         for (k,v) in scopedIds { refs.tasks[k] = v }
@@ -544,7 +584,7 @@ final class DemoDataSeeder {
         let tm = TaskManager.shared
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        guard let start = cal.date(byAdding: .day, value: -14, to: today) else { return }
+        guard let start = cal.date(byAdding: .day, value: -scenario.historyDays, to: today) else { return }
 
         func rand(_ min: Int, _ max: Int) -> Int { Int.random(in: min...max) }
 
@@ -590,7 +630,7 @@ final class DemoDataSeeder {
                 adjustedRate *= 0.8 // Less likely on weekends
             }
             
-            return Double.random(in: 0...1) < adjustedRate
+            return Double.random(in: 0...1) < adjustedRate * realismFactor(for: date)
         }
 
         func completeTaskForDay(taskId: UUID, on date: Date, estimatedMinutes: Int, baseDifficulty: Int, baseQuality: Int) {
@@ -726,12 +766,74 @@ final class DemoDataSeeder {
         }
     }
 
+    // MARK: - Stress scenario: many extra habits with a year of history
+    private func seedStressHabits(_ categories: [String: Category]) async {
+        let tm = TaskManager.shared
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let start = cal.date(byAdding: .day, value: -scenario.historyDays, to: today) ?? today
+        let categoryNames = Array(categories.keys).sorted()
+
+        // name, icon, weekdays (nil = daily), completion rate
+        let habits: [(String, String, Set<Int>?, Double)] = [
+            ("Bere 2L d'acqua", "drop.fill", nil, 0.8), ("Meditazione", "brain.head.profile", nil, 0.55),
+            ("Stretching", "figure.flexibility", nil, 0.5), ("Diario gratitudine", "heart.text.square", nil, 0.4),
+            ("Niente social dopo le 22", "iphone.slash", nil, 0.35), ("10.000 passi", "figure.walk", nil, 0.6),
+            ("Vitamine", "pills.fill", nil, 0.9), ("Letto entro le 23", "bed.double.fill", nil, 0.45),
+            ("Inglese 15 min", "character.book.closed.fill", nil, 0.5), ("Pianificare domani", "checklist", nil, 0.65),
+            ("Corsa", "figure.run", [2, 4, 6], 0.6), ("Nuoto", "figure.pool.swim", [3, 5], 0.5),
+            ("Yoga", "figure.yoga", [1, 7], 0.55), ("Chiamare i genitori", "phone.fill", [1], 0.7),
+            ("Spesa", "cart.fill", [7], 0.85), ("Bucato", "washer.fill", [4], 0.8),
+            ("Innaffiare piante", "leaf.fill", [2, 5], 0.75), ("Pulizia scrivania", "sparkles", [6], 0.5),
+            ("Revisione spese", "banknote.fill", [1], 0.6), ("Lettura romanzo", "book.fill", [2, 3, 4, 5, 6], 0.45),
+            ("Chitarra", "guitars.fill", [3, 6], 0.4), ("Portare fuori il cane", "pawprint.fill", nil, 0.95),
+            ("Studio corso online", "graduationcap.fill", [2, 4], 0.5), ("Controllo posta", "envelope.fill", [2, 3, 4, 5, 6], 0.9),
+            ("Cucinare pranzo sano", "fork.knife", [2, 3, 4, 5, 6], 0.55)
+        ]
+
+        var seeded: [(UUID, Set<Int>?, Double)] = []
+        for (i, habit) in habits.enumerated() {
+            let (name, icon, weekdays, rate) = habit
+            let type: Recurrence.RecurrenceType = weekdays.map { .weekly(days: $0) } ?? .daily
+            let startAt = cal.date(bySettingHour: 6 + (i % 15), minute: (i % 4) * 15, second: 0, of: start) ?? start
+            let task = TodoTask(
+                name: name, description: nil, location: nil,
+                startTime: startAt, hasSpecificTime: true,
+                duration: TimeInterval((10 + (i % 5) * 10) * 60), hasDuration: true,
+                category: categories[categoryNames[i % max(1, categoryNames.count)]],
+                priority: [.low, .medium, .high][i % 3], icon: icon,
+                recurrence: Recurrence(type: type, startDate: start, endDate: nil, trackInStatistics: true),
+                pomodoroSettings: nil, subtasks: [],
+                hasRewardPoints: true, rewardPoints: 5,
+                hasNotification: false, notificationId: nil,
+                timeScope: .today, scopeStartDate: nil, scopeEndDate: nil
+            )
+            await tm.addTask(task)
+            seeded.append((task.id, weekdays, rate))
+        }
+
+        var day = start
+        while day <= today {
+            let weekday = cal.component(.weekday, from: day)
+            for (id, weekdays, rate) in seeded {
+                if let weekdays, !weekdays.contains(weekday) { continue }
+                guard Double.random(in: 0...1) < rate * realismFactor(for: day) else { continue }
+                tm.toggleTaskCompletion(id, on: day)
+                tm.updateTaskRating(taskId: id, actualDuration: Double(Int.random(in: 10...45) * 60),
+                                    difficultyRating: Int.random(in: 2...7), qualityRating: Int.random(in: 5...9),
+                                    notes: nil, for: day)
+            }
+            guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+    }
+
     // MARK: - Tracking Sessions (realistic distribution across year)
     private func seedTrackingSessionsForYear(_ tasks: [String: UUID], categories: [String: Category]) async {
         let tm = TaskManager.shared
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        guard let start = cal.date(byAdding: .day, value: -14, to: today) else { return }
+        guard let start = cal.date(byAdding: .day, value: -scenario.historyDays, to: today) else { return }
 
         func sessionDate(_ base: Date, hour: Int, minute: Int = 0) -> Date {
             var comps = cal.dateComponents([.year, .month, .day], from: base)
@@ -760,6 +862,14 @@ final class DemoDataSeeder {
         var day = start
         while day <= today {
             let weekday = cal.component(.weekday, from: day)
+            
+            // Long scenarios: fewer sessions in slow months, none during the vacation
+            let factor = realismFactor(for: day)
+            if factor < 1 && Double.random(in: 0...1) > factor {
+                guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
+                day = next
+                continue
+            }
             
             // Work sessions (Mon-Fri, 2-3 times per week)
             if (2...6).contains(weekday) && Double.random(in: 0...1) < 0.4 {
