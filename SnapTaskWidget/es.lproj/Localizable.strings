@@ -109,3 +109,27 @@
 "Bottom" = "Abajo";
 "L" = "I";
 "T" = "D";
+
+"Focus" = "Enfoque";
+"Break" = "Descanso";
+"Paused" = "En pausa";
+"Add Quick Task" = "Añadir tarea rápida";
+"Quick Add Task" = "Tarea rápida";
+"Quickly add a new task to your SnapTask timeline." = "Añade rápidamente una nueva tarea a tu línea de tiempo de SnapTask.";
+"Quickly add a new task without opening the app." = "Añade rápidamente una nueva tarea sin abrir la app.";
+"Add a task to SnapTask without opening the app." = "Añade una tarea a SnapTask sin abrir la app.";
+"Open Quick Add" = "Abrir añadido rápido";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "Abre SnapTask y muestra la hoja de nueva tarea para que puedas escribirla rápidamente.";
+"Task" = "Tarea";
+"What do you want to do?" = "¿Qué quieres hacer?";
+"Add \(_:) to SnapTask" = "Añadir %@ a SnapTask";
+"Please say what you want to do." = "Di qué quieres hacer.";
+"Could not access SnapTask data." = "No se pudo acceder a los datos de SnapTask.";
+"Could not save the task." = "No se pudo guardar la tarea.";
+"Add task to SnapTask" = "Añadir tarea a SnapTask";
+"Add task to \(_:)" = "Añadir tarea a %@";
+"Add a task in \(_:)" = "Añadir una tarea en %@";
+"Quick add in \(_:)" = "Añadido rápido en %@";
+"New task in \(_:)" = "Nueva tarea en %@";
+"Capture task in \(_:)" = "Capturar tarea en %@";
+"Added \"%@\" to SnapTask." = "Se añadió \"%@\" a SnapTask.";

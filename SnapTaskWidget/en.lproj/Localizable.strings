@@ -73,6 +73,28 @@
 
 "Hello" = "Hello";
 
+/* Pomodoro Live Activity */
+"Focus" = "Focus";
+"Break" = "Break";
+"Paused" = "Paused";
+
+/* Quick Add Task Intent */
+"Add Quick Task" = "Add Quick Task";
+"Quick Add Task" = "Quick Add Task";
+"Quickly add a new task to your SnapTask timeline." = "Quickly add a new task to your SnapTask timeline.";
+"Add a task to SnapTask without opening the app." = "Add a task to SnapTask without opening the app.";
+"Task" = "Task";
+"What do you want to do?" = "What do you want to do?";
+"Add \(_:) to SnapTask" = "Add %@ to SnapTask";
+"Please say what you want to do." = "Please say what you want to do.";
+"Could not access SnapTask data." = "Could not access SnapTask data.";
+"Could not save the task." = "Could not save the task.";
+"Add task to \(_:)" = "Add task to %@";
+"Add a task in \(_:)" = "Add a task in %@";
+"Quick add in \(_:)" = "Quick add in %@";
+"New task in \(_:)" = "New task in %@";
+"Capture task in \(_:)" = "Capture task in %@";
+
 /* Finance Widget */
 "Finance" = "Finance";
 "View your monthly balance, income and expenses." = "View your monthly balance, income and expenses.";
@@ -106,3 +128,9 @@
 "Bottom" = "Bottom";
 "L" = "L";
 "T" = "T";
+
+"Quickly add a new task without opening the app." = "Quickly add a new task without opening the app.";
+"Open Quick Add" = "Open Quick Add";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "Opens SnapTask and shows the new-task sheet so you can type a task quickly.";
+"Add task to SnapTask" = "Add task to SnapTask";
+"Added \"%@\" to SnapTask." = "Added \"%@\" to SnapTask.";

@@ -1,0 +1,18 @@
+// MARK: - Quick Add Task
+"Add task to ${applicationName}"       = "Aggiungi task su ${applicationName}";
+"Add a task in ${applicationName}"     = "Aggiungi un'attività in ${applicationName}";
+"Quick add in ${applicationName}"      = "Aggiunta rapida in ${applicationName}";
+"New task in ${applicationName}"       = "Nuova task su ${applicationName}";
+"Capture task in ${applicationName}"   = "Cattura task in ${applicationName}";
+
+// MARK: - Show Today's Tasks
+"Show today's tasks in ${applicationName}"   = "Mostra le task di oggi su ${applicationName}";
+"What do I have today in ${applicationName}" = "Cosa ho oggi su ${applicationName}";
+"Today's tasks from ${applicationName}"      = "Task di oggi da ${applicationName}";
+"What's on my ${applicationName} today"      = "Cosa c'è oggi su ${applicationName}";
+"List today's tasks in ${applicationName}"   = "Elenca le task di oggi in ${applicationName}";
+"What do I have to do today in ${applicationName}"   = "Cosa devo fare oggi su ${applicationName}";
+"What are my tasks for today in ${applicationName}"  = "Quali task ho oggi su ${applicationName}";
+"Read today's tasks from ${applicationName}"         = "Leggi le task di oggi da ${applicationName}";
+"My ${applicationName} tasks for today"              = "Le mie task su ${applicationName} per oggi";
+"${applicationName} tasks today"                     = "${applicationName} task di oggi";

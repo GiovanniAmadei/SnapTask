@@ -1,0 +1,22 @@
+/* Siri activation phrases for SnapTask App Shortcuts.
+   Keys MUST match the phrases declared in SnapTaskAppShortcuts.swift
+   with `\(.applicationName)` replaced by `${applicationName}`. */
+
+// MARK: - Quick Add Task
+"Add task to ${applicationName}"       = "Add task to ${applicationName}";
+"Add a task in ${applicationName}"     = "Add a task in ${applicationName}";
+"Quick add in ${applicationName}"      = "Quick add in ${applicationName}";
+"New task in ${applicationName}"       = "New task in ${applicationName}";
+"Capture task in ${applicationName}"   = "Capture task in ${applicationName}";
+
+// MARK: - Show Today's Tasks
+"Show today's tasks in ${applicationName}"  = "Show today's tasks in ${applicationName}";
+"What do I have today in ${applicationName}" = "What do I have today in ${applicationName}";
+"Today's tasks from ${applicationName}"     = "Today's tasks from ${applicationName}";
+"What's on my ${applicationName} today"     = "What's on my ${applicationName} today";
+"List today's tasks in ${applicationName}"  = "List today's tasks in ${applicationName}";
+"What do I have to do today in ${applicationName}"   = "What do I have to do today in ${applicationName}";
+"What are my tasks for today in ${applicationName}"  = "What are my tasks for today in ${applicationName}";
+"Read today's tasks from ${applicationName}"         = "Read today's tasks from ${applicationName}";
+"My ${applicationName} tasks for today"              = "My ${applicationName} tasks for today";
+"${applicationName} tasks today"                     = "${applicationName} tasks today";

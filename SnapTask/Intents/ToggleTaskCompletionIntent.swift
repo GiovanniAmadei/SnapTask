@@ -5,6 +5,7 @@ import WidgetKit
 struct ToggleTaskCompletionIntent: AppIntent {
     static var title: LocalizedStringResource = "Toggle Task Completion"
     static var description = IntentDescription(LocalizedStringResource("Complete or undo a task for today"))
+    static var isDiscoverable: Bool = false
 
     @Parameter(title: "Task ID")
     var taskIdString: String

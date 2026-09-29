@@ -2,7 +2,15 @@
 //  SnapTaskWidgetControl.swift
 //  SnapTaskWidget
 //
-//  Created by giovanni amadei on 27/11/25.
+//  Control Widget that exposes SnapTask's Quick Add Task action to:
+//  - Control Center (iOS 18+)
+//  - Lock Screen (via customization on iOS 18+)
+//  - Action Button (iPhone 15 Pro and later, iOS 17.2+)
+//
+//  Tapping the control runs `QuickAddTaskIntent` which prompts the
+//  user for a task name via the system's compact dialog (the same
+//  Siri-style UI used by the Action Button) and saves the task
+//  directly to the App Group – no app launch required.
 //
 
 import AppIntents
@@ -10,68 +18,16 @@ import SwiftUI
 import WidgetKit
 
 struct SnapTaskWidgetControl: ControlWidget {
-    static let kind: String = "com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget"
+    static let kind: String = "com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget.QuickAdd"
 
     var body: some ControlWidgetConfiguration {
-        AppIntentControlConfiguration(
-            kind: Self.kind,
-            provider: Provider()
-        ) { value in
-            ControlWidgetToggle(
-                String(localized: "Start Timer"),
-                isOn: value.isRunning,
-                action: StartTimerIntent(value.name)
-            ) { isRunning in
-                Label(isRunning ? String(localized: "On") : String(localized: "Off"), systemImage: "timer")
+        StaticControlConfiguration(kind: Self.kind) {
+            ControlWidgetButton(action: OpenQuickAddIntent()) {
+                Label("Quick Add Task", systemImage: "plus.circle.fill")
             }
         }
-        .displayName(LocalizedStringResource("Timer"))
-        .description(LocalizedStringResource("An example control that runs a timer."))
+        .displayName(LocalizedStringResource("Quick Add Task"))
+        .description(LocalizedStringResource("Quickly add a new task without opening the app."))
     }
 }
 
-extension SnapTaskWidgetControl {
-    struct Value {
-        var isRunning: Bool
-        var name: String
-    }
-
-    struct Provider: AppIntentControlValueProvider {
-        func previewValue(configuration: TimerConfiguration) -> Value {
-            SnapTaskWidgetControl.Value(isRunning: false, name: configuration.timerName)
-        }
-
-        func currentValue(configuration: TimerConfiguration) async throws -> Value {
-            let isRunning = true // Check if the timer is running
-            return SnapTaskWidgetControl.Value(isRunning: isRunning, name: configuration.timerName)
-        }
-    }
-}
-
-struct TimerConfiguration: ControlConfigurationIntent {
-    static let title: LocalizedStringResource = "Timer Name Configuration"
-
-    @Parameter(title: LocalizedStringResource("Timer Name"), default: "Timer")
-    var timerName: String
-}
-
-struct StartTimerIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Start a timer"
-
-    @Parameter(title: LocalizedStringResource("Timer Name"))
-    var name: String
-
-    @Parameter(title: LocalizedStringResource("Timer is running"))
-    var value: Bool
-
-    init() {}
-
-    init(_ name: String) {
-        self.name = name
-    }
-
-    func perform() async throws -> some IntentResult {
-        // Start the timer…
-        return .result()
-    }
-}

@@ -1,0 +1,18 @@
+// MARK: - Quick Add Task
+"Add task to ${applicationName}"       = "${applicationName}にタスクを追加";
+"Add a task in ${applicationName}"     = "${applicationName}でタスクを追加";
+"Quick add in ${applicationName}"      = "${applicationName}でクイック追加";
+"New task in ${applicationName}"       = "${applicationName}で新しいタスク";
+"Capture task in ${applicationName}"   = "${applicationName}でタスクをキャプチャ";
+
+// MARK: - Show Today's Tasks
+"Show today's tasks in ${applicationName}"   = "${applicationName}の今日のタスクを表示";
+"What do I have today in ${applicationName}" = "${applicationName}で今日は何がある";
+"Today's tasks from ${applicationName}"      = "${applicationName}の今日のタスク";
+"What's on my ${applicationName} today"      = "今日の${applicationName}の予定は";
+"List today's tasks in ${applicationName}"   = "${applicationName}の今日のタスク一覧";
+"What do I have to do today in ${applicationName}"   = "${applicationName}で今日やることは";
+"What are my tasks for today in ${applicationName}"  = "${applicationName}の今日のタスクは何";
+"Read today's tasks from ${applicationName}"         = "${applicationName}の今日のタスクを読み上げ";
+"My ${applicationName} tasks for today"              = "今日の私の${applicationName}のタスク";
+"${applicationName} tasks today"                     = "${applicationName}今日のタスク";

@@ -109,3 +109,27 @@
 "Bottom" = "下";
 "L" = "L";
 "T" = "R";
+
+"Focus" = "集中";
+"Break" = "休憩";
+"Paused" = "一時停止中";
+"Add Quick Task" = "クイックタスクを追加";
+"Quick Add Task" = "クイックタスク";
+"Quickly add a new task to your SnapTask timeline." = "SnapTaskのタイムラインに新しいタスクをすばやく追加します。";
+"Quickly add a new task without opening the app." = "アプリを開かずに新しいタスクをすばやく追加します。";
+"Add a task to SnapTask without opening the app." = "アプリを開かずにSnapTaskへタスクを追加します。";
+"Open Quick Add" = "クイック追加を開く";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "SnapTaskを開いて新規タスクシートを表示し、すばやく入力できるようにします。";
+"Task" = "タスク";
+"What do you want to do?" = "何をしますか？";
+"Add \(_:) to SnapTask" = "%@ を SnapTask に追加";
+"Please say what you want to do." = "やりたいことを入力してください。";
+"Could not access SnapTask data." = "SnapTaskのデータにアクセスできませんでした。";
+"Could not save the task." = "タスクを保存できませんでした。";
+"Add task to SnapTask" = "SnapTaskにタスクを追加";
+"Add task to \(_:)" = "%@ にタスクを追加";
+"Add a task in \(_:)" = "%@ でタスクを追加";
+"Quick add in \(_:)" = "%@ でクイック追加";
+"New task in \(_:)" = "%@ の新しいタスク";
+"Capture task in \(_:)" = "%@ でタスクを記録";
+"Added \"%@\" to SnapTask." = "「%@」をSnapTaskに追加しました。";
