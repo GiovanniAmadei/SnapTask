@@ -1780,35 +1780,45 @@ struct TimelineTaskCard: View {
 
     private var taskIcon: some View {
         Image(systemName: displayIcon)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.system(size: 17, weight: .semibold))
             .foregroundColor(categoryTint)
-            .frame(width: 32, height: 32)
+            .frame(width: 38, height: 38)
             .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(categoryTint.opacity(0.15))
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(categoryTint.opacity(0.16))
             )
-            .overlay(alignment: .bottomTrailing) {
+            .overlay(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .strokeBorder(categoryTint.opacity(0.25), lineWidth: 0.5)
+            )
+            .overlay(alignment: .bottom) {
                 if showsStreak {
                     streakBadge
-                        .offset(x: 8, y: 6)
+                        .offset(y: 9)
                 }
             }
     }
 
     /// Streak lives on the icon corner so the info row always fits on one line.
     private var streakBadge: some View {
-        HStack(spacing: 1) {
+        HStack(spacing: 2) {
             Image(systemName: "flame.fill")
-                .font(.system(size: 8, weight: .bold))
+                .font(.system(size: 9, weight: .bold))
             Text("\(currentStreak)")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: 11, weight: .heavy, design: .rounded))
                 .monospacedDigit()
         }
         .foregroundColor(.white)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 1.5)
-        .background(Capsule().fill(Color.orange))
-        .overlay(Capsule().strokeBorder(theme.surfaceColor, lineWidth: 1.5))
+        .padding(.horizontal, 5)
+        .frame(minWidth: 22, minHeight: 17)
+        .background(
+            Capsule().fill(
+                LinearGradient(colors: [Color(hex: "FF9F0A"), Color(hex: "FF6B00")],
+                               startPoint: .top, endPoint: .bottom)
+            )
+        )
+        .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 2))
+        .shadow(color: Color.orange.opacity(0.35), radius: 2, y: 1)
         .fixedSize()
     }
 
@@ -2004,29 +2014,17 @@ struct TimelineTaskCard: View {
             // Main task card content
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 8) {
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    task.category.map { Color(hex: $0.color) } ?? theme.secondaryTextColor,
-                                    task.category.map { Color(hex: $0.color).opacity(0.7) } ?? theme.secondaryTextColor.opacity(0.7)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 4)
-                        .cornerRadius(2)
-                        .padding(.vertical, 4)
-                    
-                    taskIcon
-                    
-                    // Fixed structure: title, optional description, info row (time · streak · subtasks).
-                    VStack(alignment: .leading, spacing: 5) {
-                        titleBlock
-                        metaRow
+                    // Icon (category-tinted) sits beside the first line of the title.
+                    HStack(alignment: .top, spacing: 12) {
+                        taskIcon
+                        
+                        // Fixed structure: title, optional description, info row (time · subtasks).
+                        VStack(alignment: .leading, spacing: 5) {
+                            titleBlock
+                            metaRow
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                     
                     Image(systemName: task.priority.icon)
                         .foregroundColor(Color(hex: task.priority.color))
