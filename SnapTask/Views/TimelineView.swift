@@ -1751,18 +1751,43 @@ struct TimelineTaskCard: View {
     private let maxSwipeDistance: CGFloat = -210
 
 
-    @ViewBuilder
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .center) {
-                Text(task.name)
-                    .font(.headline)
-                    .foregroundColor(theme.textColor)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .layoutPriority(1)
-                
-                if task.recurrence != nil && currentStreak > 0 {
+            Text(task.name)
+                .font(.headline)
+                .foregroundColor(theme.textColor)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let description = task.description {
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(theme.secondaryTextColor)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var hasScheduleBadge: Bool {
+        if viewModel.selectedTimeScope == .today { return true }
+        return (task.hasSpecificTime || task.hasSpecificDay) && dateBadgeText != nil
+    }
+
+    private var showsStreak: Bool {
+        task.recurrence != nil && currentStreak > 0
+    }
+
+    /// Fixed info row under the title: schedule · streak · subtasks chip.
+    @ViewBuilder
+    private var metaRow: some View {
+        if hasScheduleBadge || showsStreak || !task.subtasks.isEmpty {
+            HStack(spacing: 6) {
+                if hasScheduleBadge {
+                    scheduleBadge
+                }
+
+                if showsStreak {
                     HStack(spacing: 2) {
                         Image(systemName: "flame.fill")
                             .foregroundColor(.orange)
@@ -1772,50 +1797,48 @@ struct TimelineTaskCard: View {
                             .foregroundColor(.orange)
                     }
                     .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
+                    .padding(.vertical, 2)
                     .background(
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color.orange.opacity(0.15))
                     )
                 }
-                
-                Spacer()
-                
+
                 if !task.subtasks.isEmpty {
-                    Button(action: {
-                        withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
-                            isExpanded.toggle()
-                        }
-                    }) {
-                        VStack {
-                            if task.description != nil {
-                                Spacer()
-                            }
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 12))
-                                .foregroundColor(theme.secondaryTextColor)
-                                .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                                .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: isExpanded)
-                            if task.description != nil {
-                                Spacer()
-                            }
-                        }
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(BorderlessButtonStyle())
+                    subtasksChip
                 }
             }
-            .padding(.leading, 0)
-            
-            if let description = task.description {
-                Text(description)
-                    .font(.subheadline)
-                    .foregroundColor(theme.secondaryTextColor)
-                    .lineLimit(1)
-            }
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Shows subtask progress and toggles the subtask list.
+    private var subtasksChip: some View {
+        Button(action: {
+            withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
+                isExpanded.toggle()
+            }
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 11, weight: .medium))
+                Text("\(completedSubtasks.count)/\(task.subtasks.count)")
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .monospacedDigit()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: isExpanded)
+            }
+            .foregroundColor(theme.secondaryTextColor)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(theme.surfaceColor)
+            .cornerRadius(4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(BorderlessButtonStyle())
     }
 
     @ViewBuilder
@@ -1971,17 +1994,10 @@ struct TimelineTaskCard: View {
                         .cornerRadius(2)
                         .padding(.vertical, 4)
                     
-                    // Title and schedule badge share the row when they fit; otherwise the
-                    // badge drops below the title so long names never break mid-word.
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .center, spacing: 8) {
-                            titleBlock
-                            scheduleBadge
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            titleBlock
-                            scheduleBadge
-                        }
+                    // Fixed structure: title on top, info row (time · streak · subtasks) below.
+                    VStack(alignment: .leading, spacing: 5) {
+                        titleBlock
+                        metaRow
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     
