@@ -685,7 +685,8 @@ struct SettingsView: View {
                         .themedSecondaryText()
                 }
 
-                // MARK: - DEBUG_PRE_RELEASE_REMOVE: Developer / Testing Section
+                // MARK: - Developer / Testing Section (debug builds only: the seeder activates Pro and can wipe data)
+                #if DEBUG
                 Section {
                     Button {
                         seedData(replace: false)
@@ -763,6 +764,7 @@ struct SettingsView: View {
                         .themedSecondaryText()
                 }
                 .listRowBackground(theme.surfaceColor)
+                #endif
 
                 // Data Management Section
                 Section {
