@@ -1769,6 +1769,49 @@ struct TimelineTaskCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var categoryTint: Color {
+        task.category.map { Color(hex: $0.color) } ?? theme.accentColor
+    }
+
+    /// "circle" is the default when no icon was picked: it would read as a second checkbox.
+    private var displayIcon: String {
+        task.icon == "circle" || task.icon.isEmpty ? "list.bullet" : task.icon
+    }
+
+    private var taskIcon: some View {
+        Image(systemName: displayIcon)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(categoryTint)
+            .frame(width: 32, height: 32)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(categoryTint.opacity(0.15))
+            )
+            .overlay(alignment: .bottomTrailing) {
+                if showsStreak {
+                    streakBadge
+                        .offset(x: 8, y: 6)
+                }
+            }
+    }
+
+    /// Streak lives on the icon corner so the info row always fits on one line.
+    private var streakBadge: some View {
+        HStack(spacing: 1) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 8, weight: .bold))
+            Text("\(currentStreak)")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .monospacedDigit()
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 1.5)
+        .background(Capsule().fill(Color.orange))
+        .overlay(Capsule().strokeBorder(theme.surfaceColor, lineWidth: 1.5))
+        .fixedSize()
+    }
+
     private var hasScheduleBadge: Bool {
         if viewModel.selectedTimeScope == .today { return true }
         return (task.hasSpecificTime || task.hasSpecificDay) && dateBadgeText != nil
@@ -1778,38 +1821,18 @@ struct TimelineTaskCard: View {
         task.recurrence != nil && currentStreak > 0
     }
 
-    /// Fixed info row under the title: schedule · streak · subtasks chip.
+    /// Fixed info row under the title: schedule · subtasks chip (always one line).
     @ViewBuilder
     private var metaRow: some View {
-        if hasScheduleBadge || showsStreak || !task.subtasks.isEmpty {
+        if hasScheduleBadge || !task.subtasks.isEmpty {
             HStack(spacing: 6) {
                 if hasScheduleBadge {
                     scheduleBadge
                 }
-
-                if showsStreak {
-                    HStack(spacing: 2) {
-                        Image(systemName: "flame.fill")
-                            .foregroundColor(.orange)
-                            .font(.system(size: 12))
-                        Text("\(currentStreak)")
-                            .font(.system(.caption, design: .rounded).bold())
-                            .foregroundColor(.orange)
-                    }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.orange.opacity(0.15))
-                    )
-                }
-
                 if !task.subtasks.isEmpty {
                     subtasksChip
                 }
             }
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -1837,8 +1860,10 @@ struct TimelineTaskCard: View {
             .background(theme.surfaceColor)
             .cornerRadius(4)
             .contentShape(Rectangle())
+            .fixedSize()
         }
         .buttonStyle(BorderlessButtonStyle())
+        .layoutPriority(1)
     }
 
     @ViewBuilder
@@ -1860,12 +1885,12 @@ struct TimelineTaskCard: View {
                             .frame(width: 5, height: 5)
                     }
                     Text(timeText)
-                        .font(.system(.caption, design: .monospaced))
-                        .fontWeight(isCurrentlyActiveNow ? .bold : .medium)
+                        .font(.caption.monospacedDigit())
+                        .fontWeight(isCurrentlyActiveNow ? .semibold : .medium)
                         .foregroundColor(isCurrentlyActiveNow ? theme.primaryColor : theme.secondaryTextColor)
                 }
                 .lineLimit(1)
-                .fixedSize()
+                .minimumScaleFactor(0.8)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
                 .background(isCurrentlyActiveNow ? theme.primaryColor.opacity(0.12) : theme.surfaceColor)
@@ -1890,7 +1915,7 @@ struct TimelineTaskCard: View {
                     .cornerRadius(4)
                 if let timeText = timeBadgeText {
                     Text(timeText)
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.caption.monospacedDigit().weight(.medium))
                         .foregroundColor(theme.secondaryTextColor)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -1994,7 +2019,9 @@ struct TimelineTaskCard: View {
                         .cornerRadius(2)
                         .padding(.vertical, 4)
                     
-                    // Fixed structure: title on top, info row (time · streak · subtasks) below.
+                    taskIcon
+                    
+                    // Fixed structure: title, optional description, info row (time · streak · subtasks).
                     VStack(alignment: .leading, spacing: 5) {
                         titleBlock
                         metaRow

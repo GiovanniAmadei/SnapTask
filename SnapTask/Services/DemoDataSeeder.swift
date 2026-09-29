@@ -176,7 +176,8 @@ final class DemoDataSeeder {
                       points: Int,
                       recurrence: Recurrence,
                       startAt: Date,
-                      subtasks: [String] = []) async -> UUID {
+                      subtasks: [String] = [],
+                      description: String? = nil) async -> UUID {
             let cat: Category? = {
                 if let cname = categoryName {
                     return categories[cname] ?? CategoryManager.shared.categories.first(where: { $0.name == cname })
@@ -186,7 +187,7 @@ final class DemoDataSeeder {
 
             let task = TodoTask(
                 name: name,
-                description: nil,
+                description: description,
                 location: nil,
                 startTime: startAt,
                 hasSpecificTime: true,
@@ -253,7 +254,8 @@ final class DemoDataSeeder {
             points: 20,
             recurrence: dailyMorning,
             startAt: cal.date(bySettingHour: 7, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
-            subtasks: ["5min warm-up", "30min main workout", "10min cool-down"]
+            subtasks: ["5min warm-up", "30min main workout", "10min cool-down"],
+            description: "Corsa leggera al parco + stretching"
         )
 
         ids["Review Daily Goals"] = await makeTask(
@@ -276,7 +278,8 @@ final class DemoDataSeeder {
             minutes: 20,
             points: 10,
             recurrence: dailyMorning,
-            startAt: cal.date(bySettingHour: 9, minute: 0, second: 0, of: dailyStart) ?? dailyStart
+            startAt: cal.date(bySettingHour: 9, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            description: "Inbox zero prima delle riunioni del mattino, rispondere ai clienti"
         )
 
         ids["Pranzo & Relax"] = await makeTask(
