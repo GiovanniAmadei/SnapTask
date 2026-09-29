@@ -75,5 +75,15 @@ Carthage/Build/
 
 tmp/firebase/
 # Apple Watch App (work in progress - not ready for App Store)
-SnapTaskWatch/
-SnapTask.xcodeproj/xcshareddata/xcschemes/SnapTaskWatch.xcscheme
+# SnapTaskWatch/ and its shared scheme are now part of the repo
+
+# Secrets (APNs / App Store Connect keys)
+*.p8
+
+# Local dumps & build byproducts
+tmp/all_feedback.json
+test_intent
+
+# Editor / agent tooling
+.vscode/
+.kiro/
