@@ -5,7 +5,9 @@ struct MoodTrendCard: View {
     @ObservedObject private var moodManager = MoodManager.shared
     @Environment(\.theme) private var theme
     @State private var showingMoodSelector = false
-    @State private var selectedTimeRange: StatisticsViewModel.TimeRange = .week
+    /// Driven by the statistics screen's global period.
+    let timeRange: StatisticsViewModel.TimeRange
+    private var selectedTimeRange: StatisticsViewModel.TimeRange { timeRange == .today ? .week : timeRange }
 
     struct MoodPoint: Identifiable, Equatable {
         let id = UUID()
@@ -17,17 +19,17 @@ struct MoodTrendCard: View {
         let points = actualMoodPoints
         let changes = changePoints
 
-        return VStack(spacing: 16) {
+        return VStack(spacing: 14) {
             // Header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("mood_trend".localized)
-                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .font(.headline)
                         .themedPrimaryText()
                     
                     if let avg = averageScore {
                         Text("average".localized + ": \(String(format: "%.1f", avg)) \(averageEmoji)")
-                            .font(.system(.caption, design: .rounded, weight: .medium))
+                            .font(.caption)
                             .themedSecondaryText()
                     }
                 }
@@ -54,31 +56,13 @@ struct MoodTrendCard: View {
                 }
             }
             
-            // Time Range Selector
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    TimeRangeButton(title: "week".localized, isSelected: selectedTimeRange == .week) {
-                        selectedTimeRange = .week
-                    }
-                    TimeRangeButton(title: "month".localized, isSelected: selectedTimeRange == .month) {
-                        selectedTimeRange = .month
-                    }
-                    TimeRangeButton(title: "year".localized, isSelected: selectedTimeRange == .year) {
-                        selectedTimeRange = .year
-                    }
-                    TimeRangeButton(title: "all_time".localized, isSelected: selectedTimeRange == .allTime) {
-                        selectedTimeRange = .allTime
-                    }
-                }
-            }
-
             // Chart or empty state
             if points.count >= 1 {
                 VStack(spacing: 12) {
                     // Aumentiamo l'altezza del grafico per evitare il taglio delle emoji
                     MoodChart(points: points, changes: changes, timeRange: selectedTimeRange)
-                        .frame(height: 280)
-                        .padding(.top, 20)
+                        .frame(height: 200)
+                        .padding(.top, 12)
                     
                     // Info bar compatta
                     HStack {
@@ -120,23 +104,11 @@ struct MoodTrendCard: View {
                     
                     Spacer()
                 }
-                .frame(height: 160) // Altezza fissa per l'empty state
+                .frame(height: 120)
             }
         }
         .padding(16) // Ridotto da 18 a 16 per dare più spazio interno
         .background(cardBackground)
-        .onAppear {
-            // Debug info
-            print("🔍 MoodTrendCard Debug:")
-            print("   Selected range: \(selectedTimeRange.rawValue)")
-            print("   Mood range dates: \(moodRange.start) to \(moodRange.end)")
-            print("   Total entries in manager: \(moodManager.entries.count)")
-            print("   Entries in range: \(recordedDaysCount)")
-            print("   Actual points: \(points.count)")
-            for point in points {
-                print("     Point: \(point.date) - Score: \(point.score)")
-            }
-        }
     }
 
     private var range: (start: Date, end: Date) {
@@ -261,13 +233,8 @@ struct MoodTrendCard: View {
     }
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(theme.cardBackground)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(theme.borderColor, lineWidth: 1)
-            )
-            .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(theme.surfaceColor)
     }
 }
 

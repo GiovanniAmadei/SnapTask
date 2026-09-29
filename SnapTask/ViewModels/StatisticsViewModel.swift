@@ -157,39 +157,6 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
-    struct TaskStreak: Identifiable, Equatable {
-        let id = UUID()
-        let taskId: UUID
-        let taskName: String
-        let categoryName: String?
-        let categoryColor: String?
-        let currentStreak: Int
-        let bestStreak: Int
-        let totalOccurrences: Int
-        let completedOccurrences: Int
-        let completionRate: Double
-        let streakHistory: [StreakPoint]
-        
-        static func == (lhs: TaskStreak, rhs: TaskStreak) -> Bool {
-            return lhs.taskId == rhs.taskId &&
-                   lhs.currentStreak == rhs.currentStreak &&
-                   lhs.bestStreak == rhs.bestStreak
-        }
-    }
-    
-    struct StreakPoint: Identifiable, Equatable {
-        let id = UUID()
-        let date: Date
-        let streakValue: Int
-        let wasCompleted: Bool
-        
-        static func == (lhs: StreakPoint, rhs: StreakPoint) -> Bool {
-            return lhs.date == rhs.date &&
-                   lhs.streakValue == rhs.streakValue &&
-                   lhs.wasCompleted == rhs.wasCompleted
-        }
-    }
-    
     enum TimeRange: String, CaseIterable {
         case today = "Today"
         case week = "Week"
@@ -214,13 +181,14 @@ class StatisticsViewModel: ObservableObject {
             case .today:
                 return (calendar.startOfDay(for: now), now)
             case .week:
-                let weekStart = calendar.date(byAdding: .day, value: -7, to: now)!
+                let weekStart = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: now))!
                 return (weekStart, now)
             case .month:
-                let monthStart = calendar.date(byAdding: .month, value: -1, to: now)!
+                let monthStart = calendar.date(byAdding: .day, value: -29, to: calendar.startOfDay(for: now))!
                 return (monthStart, now)
             case .year:
-                let yearStart = calendar.date(byAdding: .year, value: -1, to: now)!
+                let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+                let yearStart = calendar.date(byAdding: .month, value: -11, to: thisMonth)!
                 return (yearStart, now)
             case .allTime:
                 // Ritorna una data molto lontana nel passato
@@ -230,26 +198,16 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
-    enum ConsistencyTimeRange: String, CaseIterable {
-        case week = "Week"
-        case month = "Month"
-        case year = "Year"
-        
-        var daysCount: Int {
-            switch self {
-            case .week: return 7
-            case .month: return 30
-            case .year: return 365
-            }
-        }
-    }
-    
     @Published private(set) var categoryStats: [CategoryStat] = []
     @Published private(set) var weeklyStats: [WeeklyStat] = []
     @Published private(set) var currentStreak: Int = 0
     @Published private(set) var bestStreak: Int = 0
-    @Published private(set) var taskStreaks: [TaskStreak] = []
-    @Published var selectedTimeRange: TimeRange = .today
+    @Published var selectedTimeRange: TimeRange = .week
+    @Published private(set) var habitSummaries: [HabitSummary] = []
+    @Published private(set) var overview = PeriodOverview()
+    @Published private(set) var completionBuckets: [CompletionBucket] = []
+    @Published private(set) var trendBuckets: [CompletionBucket] = []
+    @Published private(set) var weekdayRates: [WeekdayRate] = []
     @Published private(set) var recurringTasks: [TodoTask] = []
     @Published private(set) var taskPerformanceAnalytics: [TaskPerformanceAnalytics] = []
     @Published private(set) var topPerformingTasks: [TaskPerformanceAnalytics] = []
@@ -380,22 +338,26 @@ class StatisticsViewModel: ObservableObject {
         let oldWeeklyStats = weeklyStats
         let oldCurrentStreak = currentStreak
         let oldBestStreak = bestStreak
-        let oldTaskStreaks = taskStreaks
+        let oldHabits = habitSummaries
+        let oldOverview = overview
+        let oldBuckets = completionBuckets
         let oldTaskPerformanceAnalytics = taskPerformanceAnalytics
         
         refreshTaskPartitions()
         updateCategoryStats()
         updateWeeklyStats()
         updateStreakStats()
-        updateTaskStreaks()
         updateRecurringTasks()
         updateTaskPerformanceAnalytics()
+        updatePeriodStats()
         
         let dataChanged = categoryStats != oldCategoryStats ||
                          weeklyStats != oldWeeklyStats ||
                          currentStreak != oldCurrentStreak ||
                          bestStreak != oldBestStreak ||
-                         taskStreaks != oldTaskStreaks ||
+                         habitSummaries != oldHabits ||
+                         overview != oldOverview ||
+                         completionBuckets != oldBuckets ||
                          taskPerformanceAnalytics != oldTaskPerformanceAnalytics
 
         if dataChanged || forceUIRefreshOnNextUpdate {
@@ -585,17 +547,24 @@ class StatisticsViewModel: ObservableObject {
                 )
             }
         case .month:
-            return (0..<5).map { weekOffset in
-                let stats = getWeeklyStatsForWeekOffset(weekOffset)
+            return (0..<5).reversed().map { weeksAgo in
+                let weekEnd = calendar.date(byAdding: .day, value: -7 * weeksAgo, to: today)!
+                let weekStart = calendar.date(byAdding: .day, value: -6, to: weekEnd)!
+                var completed = 0, total = 0
+                for offset in 0...6 {
+                    let d = getWeeklyStatsForDay(date: calendar.date(byAdding: .day, value: offset, to: weekStart)!)
+                    completed += d.completed; total += d.total
+                }
                 return WeeklyStat(
-                    day: "W\(weekOffset + 1)",
-                    completedTasks: stats.completed,
-                    totalTasks: stats.total,
-                    completionRate: stats.rate
+                    day: weekStart.formatted(.dateTime.day().month(.defaultDigits)),
+                    completedTasks: completed,
+                    totalTasks: total,
+                    completionRate: total > 0 ? Double(completed) / Double(total) : 0
                 )
             }
         case .year, .allTime:
-            let startDate = calendar.date(byAdding: .day, value: -364, to: today)!
+            let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today))!
+            let startDate = calendar.date(byAdding: .month, value: -11, to: thisMonth)!
             return (0..<12).map { monthOffset in
                 let monthStart = calendar.date(byAdding: .month, value: monthOffset, to: startDate)!
                 let stats = getMonthlyStatsForMonth(monthStart)
@@ -609,139 +578,42 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
+    /// Days with at least one completed task ("giorni attivi").
+    private var activeDays: Set<Date> = []
+
     private func updateStreakStats() {
         let calendar = Calendar.current
+        var days = Set<Date>()
+        for task in taskManager.tasks {
+            for (date, completion) in task.completions where completion.isCompleted {
+                days.insert(calendar.startOfDay(for: date))
+            }
+        }
+        activeDays = days
+
         let today = calendar.startOfDay(for: Date())
-        guard let yearAgo = calendar.date(byAdding: .year, value: -1, to: today) else {
-            Logger.stats("Date calculation failed", level: .error)
-            return
-        }
-        
-        var currentDate = yearAgo
-        var dates: [Date] = []
-        while currentDate <= today {
-            dates.append(currentDate)
-            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
-            currentDate = nextDate
-        }
-        
-        var dayCompletionMap: [Date: Bool] = [:]
-        for date in dates {
-            let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
-            
-            let singleDayTasks = nonRecurringTasksByDay[startOfDay] ?? []
-            let recurringDayTasks = recurringTasksList.filter { task in
-                guard let recurrence = task.recurrence else { return false }
-                if task.startTime > endOfDay { return false }
-                if let endDate = recurrence.endDate, endDate < startOfDay { return false }
-                return shouldTaskOccurOnDate(task: task, date: startOfDay)
-            }
-            
-            let dayTasks = singleDayTasks + recurringDayTasks
-            let allCompleted = !dayTasks.isEmpty && dayTasks.allSatisfy { task in
-                task.completions[startOfDay]?.isCompleted == true
-            }
-            dayCompletionMap[startOfDay] = allCompleted
-        }
-        
-        var best = 0
-        var running = 0
-        for date in dates {
-            let startOfDay = calendar.startOfDay(for: date)
-            if dayCompletionMap[startOfDay] == true {
-                running += 1
-                best = max(best, running)
-            } else {
-                running = 0
-            }
-        }
-        
         var current = 0
-        let todayStart = calendar.startOfDay(for: today)
-        let todayCompleted = dayCompletionMap[todayStart] == true
-        var checkDate = todayCompleted ? todayStart : calendar.date(byAdding: .day, value: -1, to: todayStart)!
-        
-        while dayCompletionMap[checkDate] == true {
+        var check = days.contains(today) ? today : calendar.date(byAdding: .day, value: -1, to: today)!
+        while days.contains(check) {
             current += 1
-            guard let prevDate = calendar.date(byAdding: .day, value: -1, to: checkDate),
-                  prevDate >= yearAgo else { break }
-            checkDate = prevDate
+            check = calendar.date(byAdding: .day, value: -1, to: check)!
         }
-        
-        self.currentStreak = current
-        self.bestStreak = max(best, current)
-    }
-    
-    private func updateTaskStreaks() {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: today)!
-        
-        var dates: [Date] = []
-        var currentDate = thirtyDaysAgo
-        while currentDate <= today {
-            dates.append(currentDate)
-            guard let next = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
-            currentDate = next
-        }
-        
-        var taskStreaksList: [TaskStreak] = []
-        
-        for task in recurringTasks {
-            var streakHistory: [StreakPoint] = []
-            var currentStreak = 0
-            var bestStreak = 0
-            var tempStreak = 0
-            var totalOccurrences = 0
-            var completedOccurrences = 0
-            
-            for date in dates {
-                let startOfDay = calendar.startOfDay(for: date)
-                
-                if shouldTaskOccurOnDate(task: task, date: startOfDay) {
-                    totalOccurrences += 1
-                    let isCompleted = task.completions[startOfDay]?.isCompleted == true
-                    
-                    if isCompleted {
-                        tempStreak += 1
-                        completedOccurrences += 1
-                        bestStreak = max(bestStreak, tempStreak)
-                        currentStreak = tempStreak
-                    } else {
-                        if !calendar.isDate(date, inSameDayAs: today) {
-                            currentStreak = 0
-                        }
-                        tempStreak = 0
-                    }
-                    
-                    streakHistory.append(StreakPoint(
-                        date: startOfDay,
-                        streakValue: tempStreak,
-                        wasCompleted: isCompleted
-                    ))
-                }
+
+        var best = 0
+        var run = 0
+        var previous: Date?
+        for day in days.sorted() {
+            if let previous, calendar.dateComponents([.day], from: previous, to: day).day == 1 {
+                run += 1
+            } else {
+                run = 1
             }
-            
-            let completionRate = totalOccurrences > 0 ? Double(completedOccurrences) / Double(totalOccurrences) : 0.0
-            
-            let taskStreak = TaskStreak(
-                taskId: task.id,
-                taskName: task.name,
-                categoryName: task.category?.name,
-                categoryColor: task.category?.color,
-                currentStreak: currentStreak,
-                bestStreak: bestStreak,
-                totalOccurrences: totalOccurrences,
-                completedOccurrences: completedOccurrences,
-                completionRate: completionRate,
-                streakHistory: streakHistory
-            )
-            
-            taskStreaksList.append(taskStreak)
+            best = max(best, run)
+            previous = day
         }
-        
-        taskStreaks = taskStreaksList.sorted { $0.currentStreak > $1.currentStreak }
+
+        currentStreak = current
+        bestStreak = max(best, current)
     }
     
     private func updateRecurringTasks() {
@@ -750,43 +622,222 @@ class StatisticsViewModel: ObservableObject {
         }
     }
     
-    func consistencyPoints(for task: TodoTask, in timeRange: ConsistencyTimeRange) -> [(x: CGFloat, y: CGFloat)] {
-        guard let recurrence = task.recurrence else { return [] }
-        
+    // MARK: - Period statistics (one period drives the whole statistics screen)
+
+    struct PeriodOverview: Equatable {
+        var completed = 0
+        var total = 0
+        var trackedHours = 0.0
+        var activeDays = 0
+        var daysInPeriod = 0
+        var rate: Double { total > 0 ? Double(completed) / Double(total) : 0 }
+    }
+
+    struct CompletionBucket: Identifiable, Equatable {
+        var id: Date { start }
+        let start: Date
+        /// Start of the last day included in the bucket.
+        let end: Date
+        let completed: Int
+        let total: Int
+        var missed: Int { max(0, total - completed) }
+        var rate: Double { total > 0 ? Double(completed) / Double(total) : 0 }
+    }
+
+    struct WeekdayRate: Identifiable, Equatable {
+        var id: Int { weekday }
+        /// Calendar weekday (1 = Sunday).
+        let weekday: Int
+        let completed: Int
+        let total: Int
+        var rate: Double { total > 0 ? Double(completed) / Double(total) : 0 }
+    }
+
+    enum HabitDayState: Equatable {
+        case done, missed, pending, off
+    }
+
+    struct HabitDay: Equatable {
+        let date: Date
+        let state: HabitDayState
+    }
+
+    struct HabitSummary: Identifiable, Equatable {
+        var id: UUID { taskId }
+        let taskId: UUID
+        let name: String
+        let icon: String
+        let color: String
+        let categoryName: String?
+        let currentStreak: Int
+        let bestStreak: Int
+        let periodCompleted: Int
+        let periodTotal: Int
+        /// Every calendar day from the start of the history window to today (oldest first).
+        let days: [HabitDay]
+        var periodRate: Double { periodTotal > 0 ? Double(periodCompleted) / Double(periodTotal) : 0 }
+    }
+
+    enum BucketUnit {
+        case day, week, month
+    }
+
+    private var firstDataDay: Date?
+
+    /// Inclusive day range of the selected period: start of the first day ... start of today.
+    var periodDays: (start: Date, end: Date) {
         let calendar = Calendar.current
-        let today = Date()
-        var points: [(x: CGFloat, y: CGFloat)] = []
-        
-        let daysToAnalyze: Int
-        switch timeRange {
+        let today = calendar.startOfDay(for: Date())
+        if selectedTimeRange == .allTime {
+            return (firstDataDay ?? today, today)
+        }
+        return (calendar.startOfDay(for: selectedTimeRange.dateRange.start), today)
+    }
+
+    /// Bars use calendar months for long periods; trend lines use weeks for a year so the shape stays readable.
+    func bucketUnit(forTrend: Bool) -> BucketUnit {
+        switch selectedTimeRange {
+        case .today, .week, .month: return .day
+        case .year: return forTrend ? .week : .month
+        case .allTime: return .month
+        }
+    }
+
+    private func updatePeriodStats() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let threeYearsAgo = calendar.date(byAdding: .year, value: -3, to: today)!
+        firstDataDay = taskManager.tasks
+            .map { calendar.startOfDay(for: $0.startTime) }
+            .min()
+            .map { min(today, max($0, threeYearsAgo)) }
+        let (start, end) = periodDays
+
+        var daily: [Date: (completed: Int, total: Int)] = [:]
+        var day = start
+        while day <= end {
+            let stats = getWeeklyStatsForDay(date: day)
+            daily[day] = (stats.completed, stats.total)
+            day = calendar.date(byAdding: .day, value: 1, to: day)!
+        }
+
+        var summary = PeriodOverview()
+        for value in daily.values {
+            summary.completed += value.completed
+            summary.total += value.total
+        }
+        summary.daysInPeriod = daily.count
+        summary.activeDays = activeDays.filter { $0 >= start && $0 <= end }.count
+        summary.trackedHours = categoryStats.reduce(0) { $0 + $1.hours }
+        overview = summary
+
+        completionBuckets = makeBuckets(daily, from: start, to: end, unit: bucketUnit(forTrend: false))
+        trendBuckets = makeBuckets(daily, from: start, to: end, unit: bucketUnit(forTrend: true))
+
+        var byWeekday: [Int: (completed: Int, total: Int)] = [:]
+        for (date, value) in daily {
+            let weekday = calendar.component(.weekday, from: date)
+            byWeekday[weekday, default: (0, 0)].completed += value.completed
+            byWeekday[weekday, default: (0, 0)].total += value.total
+        }
+        weekdayRates = (0..<7).map { offset in
+            let weekday = (calendar.firstWeekday - 1 + offset) % 7 + 1
+            return WeekdayRate(weekday: weekday,
+                               completed: byWeekday[weekday]?.completed ?? 0,
+                               total: byWeekday[weekday]?.total ?? 0)
+        }
+
+        habitSummaries = trackedRecurringTasks
+            .map { habitSummary(for: $0, periodStart: start, periodEnd: end, today: today) }
+            .sorted { ($0.currentStreak, $0.bestStreak) > ($1.currentStreak, $1.bestStreak) }
+    }
+
+    private func makeBuckets(_ daily: [Date: (completed: Int, total: Int)], from start: Date, to end: Date, unit: BucketUnit) -> [CompletionBucket] {
+        let calendar = Calendar.current
+        let component: Calendar.Component
+        var cursor: Date
+        switch unit {
+        case .day:
+            component = .day
+            cursor = start
         case .week:
-            daysToAnalyze = 7
+            component = .weekOfYear
+            cursor = calendar.dateInterval(of: .weekOfYear, for: start)?.start ?? start
         case .month:
-            daysToAnalyze = 30
-        case .year:
-            daysToAnalyze = 365
+            component = .month
+            cursor = calendar.dateInterval(of: .month, for: start)?.start ?? start
         }
-        
-        var cumulativeProgress: Double = 0
-        
-        for dayOffset in (1-daysToAnalyze)...0 {
-            let date = calendar.date(byAdding: .day, value: dayOffset, to: today)!.startOfDay
-            
-            if shouldTaskOccurOnDate(task: task, date: date) {
-                let isCompleted = task.completions[date]?.isCompleted == true
-                
-                if isCompleted {
-                    cumulativeProgress += 1
-                } else {
-                    cumulativeProgress = max(0, cumulativeProgress - 0.5)
+
+        var result: [CompletionBucket] = []
+        while cursor <= end {
+            let next = calendar.date(byAdding: component, value: 1, to: cursor)!
+            let last = min(calendar.date(byAdding: .day, value: -1, to: next)!, end)
+            var completed = 0
+            var total = 0
+            var day = max(cursor, start)
+            while day <= last {
+                if let value = daily[day] {
+                    completed += value.completed
+                    total += value.total
                 }
-                
-                let xPosition = CGFloat(dayOffset + daysToAnalyze) / CGFloat(daysToAnalyze)
-                points.append((x: xPosition, y: CGFloat(cumulativeProgress)))
+                day = calendar.date(byAdding: .day, value: 1, to: day)!
             }
+            result.append(CompletionBucket(start: cursor, end: last, completed: completed, total: total))
+            cursor = next
         }
-        
-        return points
+        return result
+    }
+
+    /// Streaks are computed on the whole history (up to 2 years), period numbers only on the selected period.
+    private func habitSummary(for task: TodoTask, periodStart: Date, periodEnd: Date, today: Date) -> HabitSummary {
+        let calendar = Calendar.current
+        let twoYearsAgo = calendar.date(byAdding: .day, value: -730, to: today)!
+        var day = max(calendar.startOfDay(for: task.startTime), twoYearsAgo)
+
+        var days: [HabitDay] = []
+        var run = 0
+        var best = 0
+        var periodCompleted = 0
+        var periodTotal = 0
+
+        while day <= today {
+            let state: HabitDayState
+            if shouldTaskOccurOnDate(task: task, date: day) {
+                let done = task.completions[day]?.isCompleted == true
+                if done {
+                    state = .done
+                    run += 1
+                    best = max(best, run)
+                } else if day == today {
+                    state = .pending
+                } else {
+                    state = .missed
+                    run = 0
+                }
+                if day >= periodStart && day <= periodEnd && state != .pending {
+                    periodTotal += 1
+                    if done { periodCompleted += 1 }
+                }
+            } else {
+                state = .off
+            }
+            days.append(HabitDay(date: day, state: state))
+            day = calendar.date(byAdding: .day, value: 1, to: day)!
+        }
+
+        let icon = (task.icon.isEmpty || task.icon == "circle") ? (task.category?.icon ?? "repeat") : task.icon
+        return HabitSummary(
+            taskId: task.id,
+            name: task.name,
+            icon: icon,
+            color: task.category?.color ?? "#6366F1",
+            categoryName: task.category?.name,
+            currentStreak: run,
+            bestStreak: best,
+            periodCompleted: periodCompleted,
+            periodTotal: periodTotal,
+            days: days
+        )
     }
     
     private func shouldTaskOccurOnDate(task: TodoTask, date: Date) -> Bool {
