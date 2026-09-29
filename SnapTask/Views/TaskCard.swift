@@ -35,7 +35,14 @@ struct TaskCard: View {
             // Header della task
             HStack(alignment: .center) {
                 // Checkmark
-                Button(action: onToggleComplete) {
+                Button(action: {
+                    if isCompleted {
+                        HapticManager.shared.impact(.light)
+                    } else {
+                        HapticManager.shared.notification(.success)
+                    }
+                    onToggleComplete()
+                }) {
                     TaskCheckmark(isCompleted: isCompleted)
                 }
                 .buttonStyle(BorderlessButtonStyle())
@@ -177,7 +184,10 @@ struct SubtaskRow: View {
     
     var body: some View {
         HStack {
-            Button(action: onToggle) {
+            Button(action: {
+                HapticManager.shared.impact(.light)
+                onToggle()
+            }) {
                 SubtaskCheckmark(isCompleted: isCompleted)
             }
             .buttonStyle(BorderlessButtonStyle())

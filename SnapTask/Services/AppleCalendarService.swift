@@ -121,11 +121,18 @@ class AppleCalendarService: ObservableObject {
         }
         event.notes = notes.isEmpty ? nil : notes
         
-        event.startDate = task.startTime
-        if task.hasDuration && task.duration > 0 {
-            event.endDate = task.startTime.addingTimeInterval(task.duration)
+        if task.hasSpecificTime {
+            event.isAllDay = false
+            event.startDate = task.startTime
+            if task.hasDuration && task.duration > 0 {
+                event.endDate = task.startTime.addingTimeInterval(task.duration)
+            } else {
+                event.endDate = task.startTime.addingTimeInterval(3600)
+            }
         } else {
-            event.endDate = task.startTime.addingTimeInterval(3600) 
+            event.isAllDay = true
+            event.startDate = Calendar.current.startOfDay(for: task.startTime)
+            event.endDate = Calendar.current.startOfDay(for: task.startTime)
         }
         
         if let recurrence = task.recurrence {
@@ -133,7 +140,8 @@ class AppleCalendarService: ObservableObject {
         }
         
         do {
-            try eventStore.save(event, span: .thisEvent)
+            let span: EKSpan = task.recurrence != nil ? .futureEvents : .thisEvent
+            try eventStore.save(event, span: span)
             print("✅ Event created successfully with ID: \(event.eventIdentifier ?? "unknown")")
             return event.eventIdentifier
         } catch {
@@ -143,7 +151,7 @@ class AppleCalendarService: ObservableObject {
     }
     
     func updateEvent(eventId: String, with task: TodoTask) async throws {
-        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess else {
+        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess || authorizationStatus == .writeOnly else {
             throw CalendarError.notAuthorized
         }
         
@@ -161,22 +169,36 @@ class AppleCalendarService: ObservableObject {
         }
         event.notes = notes.isEmpty ? nil : notes
         
-        event.startDate = task.startTime
-        if task.hasDuration && task.duration > 0 {
-            event.endDate = task.startTime.addingTimeInterval(task.duration)
+        if task.hasSpecificTime {
+            event.isAllDay = false
+            event.startDate = task.startTime
+            if task.hasDuration && task.duration > 0 {
+                event.endDate = task.startTime.addingTimeInterval(task.duration)
+            } else {
+                event.endDate = task.startTime.addingTimeInterval(3600)
+            }
         } else {
-            event.endDate = task.startTime.addingTimeInterval(3600) 
+            event.isAllDay = true
+            event.startDate = Calendar.current.startOfDay(for: task.startTime)
+            event.endDate = Calendar.current.startOfDay(for: task.startTime)
+        }
+        
+        if let recurrence = task.recurrence {
+            event.recurrenceRules = [createRecurrenceRule(from: recurrence)]
+        } else {
+            event.recurrenceRules = nil
         }
         
         do {
-            try eventStore.save(event, span: .thisEvent)
+            let span: EKSpan = task.recurrence != nil ? .futureEvents : .thisEvent
+            try eventStore.save(event, span: span)
         } catch {
             throw CalendarError.failedToUpdateEvent(error.localizedDescription)
         }
     }
     
-    func deleteEvent(eventId: String) async throws {
-        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess else {
+    func deleteEvent(eventId: String, isRecurring: Bool = false) async throws {
+        guard authorizationStatus == .authorized || authorizationStatus == .fullAccess || authorizationStatus == .writeOnly else {
             throw CalendarError.notAuthorized
         }
         
@@ -185,7 +207,8 @@ class AppleCalendarService: ObservableObject {
         }
         
         do {
-            try eventStore.remove(event, span: .thisEvent)
+            let span: EKSpan = isRecurring ? .futureEvents : .thisEvent
+            try eventStore.remove(event, span: span)
             print("✅ Successfully deleted event: \(eventId)")
         } catch {
             print("❌ Failed to delete event \(eventId): \(error.localizedDescription)")
@@ -206,8 +229,14 @@ class AppleCalendarService: ObservableObject {
         switch recurrence.type {
         case .daily:
             frequency = .daily
+            if let dayInterval = recurrence.dayInterval, dayInterval > 1 {
+                interval = dayInterval
+            }
         case .weekly(let days):
             frequency = .weekly
+            if let weekInterval = recurrence.weekInterval, weekInterval > 1 {
+                interval = weekInterval
+            }
             if !days.isEmpty {
                 daysOfWeek = days.compactMap { weekday in
                     switch weekday {
@@ -224,13 +253,37 @@ class AppleCalendarService: ObservableObject {
             }
         case .monthly(let days):
             frequency = .monthly
+            if let monthInterval = recurrence.monthInterval, monthInterval > 1 {
+                interval = monthInterval
+            }
             if !days.isEmpty {
                 daysOfMonth = days.map { NSNumber(value: $0) }
             }
         case .monthlyOrdinal(let patterns):
             frequency = .monthly
+            if let monthInterval = recurrence.monthInterval, monthInterval > 1 {
+                interval = monthInterval
+            }
+            let sortedPatterns = patterns.sorted { $0.weekday < $1.weekday }
+            daysOfWeek = sortedPatterns.compactMap { pattern in
+                let ekWeekday: EKWeekday
+                switch pattern.weekday {
+                case 1: ekWeekday = .sunday
+                case 2: ekWeekday = .monday
+                case 3: ekWeekday = .tuesday
+                case 4: ekWeekday = .wednesday
+                case 5: ekWeekday = .thursday
+                case 6: ekWeekday = .friday
+                case 7: ekWeekday = .saturday
+                default: return nil
+                }
+                return EKRecurrenceDayOfWeek(ekWeekday, weekNumber: pattern.ordinal)
+            }
         case .yearly:
             frequency = .yearly
+            if let yearInterval = recurrence.yearInterval, yearInterval > 1 {
+                interval = yearInterval
+            }
         }
         
         var end: EKRecurrenceEnd?

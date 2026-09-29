@@ -8,6 +8,7 @@ struct TimeTrackingCompletionView: View {
     let onContinue: () -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @StateObject private var taskManager = TaskManager.shared
     @State private var selectedCategory: Category?
     @State private var trackAsTask = false
@@ -43,20 +44,25 @@ struct TimeTrackingCompletionView: View {
                     VStack(spacing: 16) {
                         ZStack {
                             Circle()
+                                .fill(theme.accentColor.opacity(0.15))
+                                .frame(width: 96, height: 96)
+                                .blur(radius: 8)
+                            
+                            Circle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [.green.opacity(0.2), .blue.opacity(0.2)],
+                                        colors: [theme.accentColor.opacity(0.2), Color.green.opacity(0.2)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .frame(width: 100, height: 100)
+                                .frame(width: 84, height: 84)
                             
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 50))
+                                .font(.system(size: 44, weight: .bold))
                                 .foregroundStyle(
                                     LinearGradient(
-                                        colors: [.green, .blue],
+                                        colors: [theme.accentColor, Color.green],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -64,160 +70,204 @@ struct TimeTrackingCompletionView: View {
                         }
                         .symbolEffect(.bounce, value: showingSuccess)
                         
-                        VStack(spacing: 8) {
+                        VStack(spacing: 6) {
                             Text("focus_session_complete".localized)
-                                .font(.title2.bold())
+                                .font(.system(.title2, design: .rounded).bold())
+                                .themedPrimaryText()
                             
                             Text("focused_for".localized + " \(formatDuration(editedFocusTime))")
-                                .font(.body)
-                                .foregroundColor(.secondary)
+                                .font(.system(.subheadline, design: .rounded))
+                                .themedSecondaryText()
                         }
                     }
-                    .padding(.top, 20)
+                    .padding(.top, 16)
                     
                     // Session Details Card - Editable
                     VStack(spacing: 16) {
                         HStack {
-                            Text("session_details".localized)
-                                .font(.headline)
+                            Label {
+                                Text("session_details".localized)
+                                    .font(.system(.headline, design: .rounded).weight(.semibold))
+                                    .themedPrimaryText()
+                            } icon: {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(theme.accentColor)
+                            }
+                            
                             Spacer()
+                            
                             Button(isEditingDetails ? "done".localized : "edit".localized) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     isEditingDetails.toggle()
                                 }
                             }
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.blue)
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundColor(theme.accentColor)
                         }
                         
-                        VStack(spacing: 12) {
+                        VStack(spacing: 14) {
                             // Task Name
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text("task_name".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .font(.system(.caption2, design: .rounded).weight(.medium))
+                                    .themedSecondaryText()
                                 
                                 if isEditingDetails {
                                     TextField("enter_task_name".localized, text: $editedTaskName)
-                                        .textFieldStyle(.roundedBorder)
+                                        .textFieldStyle(.plain)
+                                        .padding(10)
+                                        .background(theme.backgroundColor.opacity(0.6))
+                                        .cornerRadius(10)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(theme.borderColor.opacity(0.5), lineWidth: 1)
+                                        )
                                 } else {
-                                    HStack {
+                                    HStack(spacing: 8) {
                                         if let category = task?.category {
                                             Circle()
                                                 .fill(Color(hex: category.color))
-                                                .frame(width: 12, height: 12)
+                                                .frame(width: 10, height: 10)
                                         }
                                         Text(editedTaskName)
-                                            .font(.body)
+                                            .font(.system(.body, design: .rounded).weight(.medium))
+                                            .themedPrimaryText()
                                         Spacer()
                                     }
-                                    .padding(.vertical, 4)
+                                    .padding(.vertical, 2)
                                 }
                             }
                             
+                            Divider()
+                                .opacity(0.3)
+                            
                             // Focus Time with Wheel Picker
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text("focus_time".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .font(.system(.caption2, design: .rounded).weight(.medium))
+                                    .themedSecondaryText()
                                 
                                 if isEditingDetails {
                                     HStack {
                                         // Hours Picker
-                                        VStack {
+                                        VStack(spacing: 2) {
                                             Text("hours".localized)
                                                 .font(.caption2)
-                                                .foregroundColor(.secondary)
+                                                .themedSecondaryText()
                                             Picker("hours".localized, selection: $editedFocusHours) {
                                                 ForEach(0...23, id: \.self) { hour in
                                                     Text("\(hour)").tag(hour)
                                                 }
                                             }
                                             .pickerStyle(.wheel)
-                                            .frame(width: 80, height: 120)
+                                            .frame(width: 80, height: 110)
                                         }
                                         
                                         Text(":")
                                             .font(.title2.bold())
-                                            .padding(.top, 20)
+                                            .padding(.top, 16)
+                                            .themedPrimaryText()
                                         
                                         // Minutes Picker
-                                        VStack {
+                                        VStack(spacing: 2) {
                                             Text("minutes".localized)
                                                 .font(.caption2)
-                                                .foregroundColor(.secondary)
+                                                .themedSecondaryText()
                                             Picker("minutes".localized, selection: $editedFocusMinutes) {
                                                 ForEach(0...59, id: \.self) { minute in
                                                     Text(String(format: "%02d", minute)).tag(minute)
                                                 }
                                             }
                                             .pickerStyle(.wheel)
-                                            .frame(width: 80, height: 120)
+                                            .frame(width: 80, height: 110)
                                         }
                                         
                                         Spacer()
                                     }
+                                    .padding(8)
+                                    .background(theme.backgroundColor.opacity(0.5))
+                                    .cornerRadius(12)
                                 } else {
-                                    Text(formatDuration(editedFocusTime))
-                                        .font(.body)
-                                        .padding(.vertical, 4)
+                                    HStack {
+                                        Image(systemName: "clock")
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(theme.accentColor)
+                                        Text(formatDuration(editedFocusTime))
+                                            .font(.system(.body, design: .rounded).weight(.semibold))
+                                            .themedPrimaryText()
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 2)
                                 }
                             }
                             
                             // Mode
-                            VStack(alignment: .leading, spacing: 8) {
+                            Divider()
+                                .opacity(0.3)
+                            
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text("mode".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .font(.system(.caption2, design: .rounded).weight(.medium))
+                                    .themedSecondaryText()
                                 
-                                HStack {
+                                HStack(spacing: 8) {
                                     Image(systemName: session?.mode.icon ?? "timer")
-                                        .foregroundColor(.yellow)
-                                        .font(.system(size: 12))
+                                        .foregroundColor(.orange)
+                                        .font(.system(size: 13, weight: .semibold))
                                     Text(session?.mode.displayName ?? "simple_timer".localized)
-                                        .font(.body)
+                                        .font(.system(.body, design: .rounded).weight(.medium))
+                                        .themedPrimaryText()
                                     Spacer()
                                 }
-                                .padding(.vertical, 4)
+                                .padding(.vertical, 2)
                             }
                             
                             // Category
                             if let category = task?.category {
-                                VStack(alignment: .leading, spacing: 8) {
+                                Divider()
+                                    .opacity(0.3)
+                                
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text("original_category".localized)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .font(.system(.caption2, design: .rounded).weight(.medium))
+                                        .themedSecondaryText()
                                     
-                                    HStack {
+                                    HStack(spacing: 8) {
                                         Circle()
                                             .fill(Color(hex: category.color))
-                                            .frame(width: 12, height: 12)
+                                            .frame(width: 10, height: 10)
                                         Text(category.name)
-                                            .font(.body)
+                                            .font(.system(.body, design: .rounded).weight(.medium))
+                                            .themedPrimaryText()
                                         Spacer()
                                     }
-                                    .padding(.vertical, 4)
+                                    .padding(.vertical, 2)
                                 }
                             }
                         }
                     }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
+                    .padding(18)
+                    .background(theme.surfaceColor)
+                    .cornerRadius(18)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(theme.borderColor.opacity(0.4), lineWidth: 1)
                     )
-                    .padding(.horizontal)
+                    .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 3)
+                    .padding(.horizontal, 20)
                     
                     // Time Tracking Options
-                    VStack(spacing: 16) {
+                    VStack(spacing: 14) {
                         HStack {
                             Text("track_time_in".localized)
-                                .font(.headline)
+                                .font(.system(.headline, design: .rounded).weight(.semibold))
+                                .themedPrimaryText()
                             Spacer()
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
                         
-                        VStack(spacing: 12) {
+                        VStack(spacing: 10) {
                             // Task-specific option
                             TrackingOptionCard(
                                 title: "this_task_only".localized,
@@ -258,79 +308,92 @@ struct TimeTrackingCompletionView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
                     }
                     
-                    Spacer(minLength: 100)
+                    Spacer(minLength: 120)
                 }
             }
+            .themedBackground()
             
             // Bottom Action Buttons
             VStack(spacing: 12) {
                 Button {
                     Task { @MainActor in
+                        HapticManager.shared.notification(.success)
                         await saveTimeTracking()
                         onSave()
                     }
                 } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
                         Text("save_and_finish".localized)
+                            .font(.system(.body, design: .rounded).weight(.semibold))
                     }
-                    .font(.body.weight(.semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(
                         LinearGradient(
-                            colors: [.blue, .purple],
+                            colors: [theme.accentColor, theme.primaryColor],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .cornerRadius(16)
+                    .shadow(color: theme.accentColor.opacity(0.35), radius: 8, x: 0, y: 4)
                 }
-                // Allow saving without selecting an option; defaults will apply in logic
+                .disabled(editedFocusTime <= 0)
+                .opacity(editedFocusTime <= 0 ? 0.5 : 1.0)
                 
                 HStack(spacing: 12) {
                     // Continue button
                     Button {
+                        HapticManager.shared.impact(.light)
                         onContinue()
                     } label: {
-                        HStack {
-                            Image(systemName: "play.circle")
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 15, weight: .medium))
                             Text("continue".localized)
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         }
-                        .font(.body.weight(.medium))
-                        .foregroundColor(.blue)
+                        .foregroundColor(theme.accentColor)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(16)
+                        .padding(.vertical, 14)
+                        .background(theme.accentColor.opacity(0.12))
+                        .cornerRadius(14)
                     }
                     
                     // Skip button
                     Button {
+                        HapticManager.shared.impact(.medium)
                         onDiscard()
                     } label: {
-                        HStack {
+                        HStack(spacing: 6) {
                             Image(systemName: "xmark.circle")
+                                .font(.system(size: 15, weight: .medium))
                             Text("skip".localized)
+                                .font(.system(.subheadline, design: .rounded).weight(.medium))
                         }
-                        .font(.body.weight(.medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.secondaryTextColor)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(16)
+                        .padding(.vertical, 14)
+                        .background(theme.surfaceColor)
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(theme.borderColor.opacity(0.3), lineWidth: 1)
+                        )
                     }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 20)
             .padding(.bottom, 20)
             .background(
                 LinearGradient(
-                    colors: [Color(.systemBackground).opacity(0), Color(.systemBackground)],
+                    colors: [theme.backgroundColor.opacity(0), theme.backgroundColor.opacity(0.9), theme.backgroundColor],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -343,12 +406,14 @@ struct TimeTrackingCompletionView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("save".localized) {
                     Task { @MainActor in
+                        HapticManager.shared.notification(.success)
                         await saveTimeTracking()
                         onSave()
                     }
                 }
-                .font(.body.weight(.medium))
-                // Allow saving without selecting an option; defaults will apply in logic
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .foregroundColor(theme.accentColor)
+                .disabled(editedFocusTime <= 0)
             }
         }
         .onAppear {

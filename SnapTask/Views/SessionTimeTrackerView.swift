@@ -148,6 +148,7 @@ struct SessionTimeTrackerView: View {
                         dismiss()
                     },
                     onContinue: {
+                        viewModel.completedSession = nil
                         viewModel.showingCompletion = false
                     }
                 )
@@ -427,7 +428,7 @@ struct SessionTimeTrackerView: View {
                                 viewModel.pauseSession(id: sessionId)
                             }
                         },
-                        onStop: {
+                        onComplete: {
                             viewModel.stopSession(id: sessionId)
                         }
                     )

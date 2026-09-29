@@ -182,16 +182,21 @@ class TaskFormViewModel: ObservableObject {
     
     @Published private(set) var categories: [Category] = []
     var taskId: UUID?
+    var initialTask: TodoTask?
+    var isEditing: Bool { taskId != nil }
     
     private var cancellables = Set<AnyCancellable>()
     private let settingsViewModel = SettingsViewModel.shared
     
     private var isInitialized = false
+    let preserveTime: Bool
     
-    init(initialDate: Date) {
+    init(initialDate: Date, preserveTime: Bool = false) {
+        self.preserveTime = preserveTime
         let calendar = Calendar.current
-        let startDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: initialDate) ?? initialDate
+        let startDate = preserveTime ? initialDate : (calendar.date(bySettingHour: 9, minute: 0, second: 0, of: initialDate) ?? initialDate)
         self.startDate = startDate
+        self.hasSpecificTime = preserveTime
         self.yearlyDate = startDate
         self.yearlyTime = startDate
         categories = settingsViewModel.categories
@@ -296,8 +301,10 @@ class TaskFormViewModel: ObservableObject {
     }
     
     private func updateDefaultSpecificTime(for timeScope: TaskTimeScope) {
-        // Default: do not set a specific time automatically for any scope
-        hasSpecificTime = false
+        // Default: do not set a specific time automatically for any scope, unless preserveTime is true
+        if !preserveTime {
+            hasSpecificTime = false
+        }
         // Day selection is always applicable for "today"; optional for other scopes
         hasSpecificDay = (timeScope == .today)
 
@@ -414,43 +421,43 @@ class TaskFormViewModel: ObservableObject {
         case .week:
             switch weekRecurrenceMode {
             case .everyNWeeks:
-                return weekInterval == 1 ? "Ogni settimana" : "Ogni \(weekInterval) settimane"
+                return weekInterval == 1 ? "every_week".localized : "every_n_weeks_format".localized(weekInterval)
             case .specificWeeksOfMonth:
-                if weekSelectedOrdinals.isEmpty { return "Seleziona settimane del mese" }
+                if weekSelectedOrdinals.isEmpty { return "select_weeks_of_month".localized }
                 let ordinals = weekSelectedOrdinals
                     .sorted(by: { ordinalSortOrder($0) < ordinalSortOrder($1) })
                     .map { ordinalDisplay($0) }
                     .joined(separator: ", ")
-                return "Settimane del mese: \(ordinals)"
+                return "weeks_of_month_prefix".localized(ordinals)
             case .moduloPattern:
                 if weekModuloK == 2 {
-                    return weekModuloOffset == 0 ? "Settimane pari" : "Settimane dispari"
+                    return weekModuloOffset == 0 ? "even_weeks".localized : "odd_weeks".localized
                 } else {
-                    return "Ogni \(weekModuloK)-esima settimana (offset \(weekModuloOffset + 1))"
+                    return "every_kth_week_offset_format".localized(weekModuloK, weekModuloOffset + 1)
                 }
             }
         case .month:
             switch monthRecurrenceMode {
             case .everyNMonths:
-                return monthInterval == 1 ? "Ogni mese" : "Ogni \(monthInterval) mesi"
+                return monthInterval == 1 ? "every_month".localized : "every_n_months_format".localized(monthInterval)
             case .specificMonths:
-                if monthSelectedMonths.isEmpty { return "Seleziona mesi specifici" }
+                if monthSelectedMonths.isEmpty { return "select_specific_months".localized }
                 let months = monthSelectedMonths.sorted().map { Calendar.current.monthSymbols[$0 - 1].capitalized }
-                return "Mesi: \(months.joined(separator: ", "))"
+                return "months_prefix".localized(months.joined(separator: ", "))
             }
         case .year:
             switch yearRecurrenceMode {
             case .everyNYears:
-                return yearInterval == 1 ? "Ogni anno" : "Ogni \(yearInterval) anni"
+                return yearInterval == 1 ? "every_year".localized : "every_n_years_format".localized(yearInterval)
             case .moduloPattern:
                 if yearModuloK == 2 {
-                    return yearModuloOffset == 0 ? "Anni pari" : "Anni dispari"
+                    return yearModuloOffset == 0 ? "even_years".localized : "odd_years".localized
                 } else {
-                    return "Ogni \(yearModuloK) anni (offset \(yearModuloOffset + 1))"
+                    return "every_k_years_offset_format".localized(yearModuloK, yearModuloOffset + 1)
                 }
             }
         case .longTerm:
-            return "Nessuna ricorrenza"
+            return "no_recurrence".localized
         case .all:
             return "" // Non applicabile nel form
         }
@@ -466,6 +473,15 @@ class TaskFormViewModel: ObservableObject {
         return selectedTimeScope != .longTerm
     }
     
+    enum EditScopeMode: String, CaseIterable, Identifiable {
+        case entireSeries = "entire_series"
+        case singleInstance = "single_instance"
+        
+        var id: String { rawValue }
+    }
+    
+    @Published var editScopeMode: EditScopeMode = .entireSeries
+
     func createTask() -> TodoTask {
         let id = taskId ?? UUID()
         
@@ -513,25 +529,20 @@ class TaskFormViewModel: ObservableObject {
             let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart)!
             let monthEnd = calendar.date(byAdding: .day, value: -1, to: nextMonth)!
             if hasSpecificDay {
-                if hasSpecificTime {
-                // Build date inside selected month/year with chosen day/time, clamped to month range
                 let day = calendar.component(.day, from: startDate)
                 let range = calendar.range(of: .day, in: .month, for: monthStart) ?? (1..<29)
                 let clampedDay = max(range.lowerBound, min(range.upperBound - 1, day))
-                var comps = DateComponents()
-                comps.year = selectedYear
-                comps.month = selectedMonth
+                var comps = calendar.dateComponents([.year, .month], from: monthStart)
                 comps.day = clampedDay
-                comps.hour = calendar.component(.hour, from: startDate)
-                comps.minute = calendar.component(.minute, from: startDate)
-                comps.second = 0
-                let candidate = calendar.date(from: comps) ?? monthStart
-                // Ensure inside month bounds
-                taskStartTime = max(monthStart, min(monthEnd, candidate))
+                if hasSpecificTime {
+                    comps.hour = calendar.component(.hour, from: startDate)
+                    comps.minute = calendar.component(.minute, from: startDate)
+                    comps.second = 0
+                    let candidate = calendar.date(from: comps) ?? monthStart
+                    taskStartTime = max(monthStart, min(monthEnd, candidate))
                 } else {
-                    let chosenDay = calendar.startOfDay(for: startDate)
-                    let clampedDay = max(monthStart, min(monthEnd, chosenDay))
-                    taskStartTime = calendar.startOfDay(for: clampedDay)
+                    let candidate = calendar.date(from: comps) ?? monthStart
+                    taskStartTime = calendar.startOfDay(for: max(monthStart, min(monthEnd, candidate)))
                 }
             } else {
                 taskStartTime = monthStart
@@ -588,7 +599,11 @@ class TaskFormViewModel: ObservableObject {
         }
         
         let recurrence: Recurrence?
-        if isRecurring {
+        if isEditing && editScopeMode == .singleInstance, var existingRecurrence = initialTask?.recurrence {
+            let originalDate = initialTask?.startTime ?? Date()
+            existingRecurrence.postponeOccurrence(from: originalDate, to: taskStartTime)
+            recurrence = existingRecurrence
+        } else if isRecurring {
             if selectedTimeScope == .today {
                 recurrence = createEnhancedRecurrence(startDate: taskStartTime)
             } else {
@@ -598,12 +613,14 @@ class TaskFormViewModel: ObservableObject {
             recurrence = nil
         }
         
+        let finalStartTime = (isEditing && editScopeMode == .singleInstance) ? (initialTask?.startTime ?? taskStartTime) : taskStartTime
+        
         return TodoTask(
             id: id,
             name: name,
             description: description.isEmpty ? nil : description,
             location: location,
-            startTime: taskStartTime,
+            startTime: finalStartTime,
             hasSpecificDay: (selectedTimeScope == .today) ? true : hasSpecificDay,
             hasSpecificTime: hasSpecificTime,
             duration: duration,
@@ -890,15 +907,16 @@ class TaskFormViewModel: ObservableObject {
     static var shared: TaskFormViewModel?
     
     private func ordinalDisplay(_ value: Int) -> String {
-        switch value {
-        case 1: return "1ª"
-        case 2: return "2ª"
-        case 3: return "3ª"
-        case 4: return "4ª"
-        case 5: return "5ª"
-        case -1: return "ultima"
-        default: return "\(value)ª"
+        if value == -1 {
+            return "last_ordinal".localized.lowercased()
         }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .ordinal
+        formatter.locale = Locale(identifier: LanguageManager.shared.actualLanguageCode)
+        if let formatted = formatter.string(from: NSNumber(value: value)) {
+            return formatted
+        }
+        return "\(value)"
     }
     
     private func ordinalSortOrder(_ value: Int) -> Int {

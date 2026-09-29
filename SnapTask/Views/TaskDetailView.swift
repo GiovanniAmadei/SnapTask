@@ -772,6 +772,7 @@ struct TaskDetailView: View {
                             .foregroundColor(Color.orange)
                     }
                 }
+                
             }
         }
     }

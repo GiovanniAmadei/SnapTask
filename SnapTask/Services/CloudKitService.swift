@@ -251,10 +251,11 @@ class CloudKitService: ObservableObject {
         do {
             _ = try await privateDatabase.recordZone(for: zoneID)
             print(" Zone exists")
-        } catch let error as CKError where error.code == .zoneNotFound {
-            print(" Creating zone...")
+        } catch let error as CKError where error.code == .zoneNotFound || error.code == .userDeletedZone {
+            print(" Zone missing or purged by user (code \(error.code.rawValue)). Recreating zone...")
+            serverChangeToken = nil
             _ = try await privateDatabase.save(recordZone)
-            print(" Zone created")
+            print(" Zone created successfully")
         }
     }
     
@@ -593,7 +594,7 @@ class CloudKitService: ObservableObject {
                 let record: CKRecord
                 do {
                     record = try await privateDatabase.record(for: recordID)
-                } catch let ckError as CKError where ckError.code == .unknownItem || ckError.code == .zoneNotFound {
+                } catch let ckError as CKError where ckError.code == .unknownItem || ckError.code == .zoneNotFound || ckError.code == .userDeletedZone {
                     record = CKRecord(recordType: settingsRecordType, recordID: recordID)
                 }
                 
@@ -806,7 +807,7 @@ class CloudKitService: ObservableObject {
             let record: CKRecord
             do {
                 record = try await privateDatabase.record(for: recordID)
-            } catch let ckError as CKError where ckError.code == .unknownItem || ckError.code == .zoneNotFound {
+            } catch let ckError as CKError where ckError.code == .unknownItem || ckError.code == .zoneNotFound || ckError.code == .userDeletedZone {
                 record = CKRecord(recordType: settingsRecordType, recordID: recordID)
             }
             var mergedSettings: [String: Any] = createSettings(from: record) ?? [:]
@@ -1366,12 +1367,25 @@ class CloudKitService: ObservableObject {
                 
                 if remoteTask.lastModifiedDate > localTask.lastModifiedDate {
                     mergedTask = remoteTask
+                    // Preserva notifiche locali se il record remoto non ne ha (es. sincronizzato da client precedente)
+                    if localTask.hasNotification && !remoteTask.hasNotification {
+                        mergedTask.hasNotification = localTask.hasNotification
+                    }
+                    if mergedTask.notificationId == nil {
+                        mergedTask.notificationId = localTask.notificationId
+                    }
                     print(" Remote task is newer for \(remoteTask.name)")
                 } else if localTask.lastModifiedDate > remoteTask.lastModifiedDate {
                     mergedTask = localTask
                     print(" Local task is newer for \(localTask.name)")
                 } else {
                     mergedTask = remoteTask
+                    // Stesso timestamp: unisci impostazioni notifiche
+                    mergedTask.hasNotification = localTask.hasNotification || remoteTask.hasNotification
+                    if mergedTask.notificationId == nil {
+                        mergedTask.notificationId = localTask.notificationId
+                    }
+                    
                     var mergedCompletions = remoteTask.completions
                     
                     for (date, localCompletion) in localTask.completions {
@@ -1626,6 +1640,7 @@ class CloudKitService: ObservableObject {
         record["startTime"] = task.startTime
         record["hasSpecificDay"] = task.hasSpecificDay
         record["hasSpecificTime"] = task.hasSpecificTime
+        record["hasNotification"] = task.hasNotification
         record["notificationLeadTimeMinutes"] = task.notificationLeadTimeMinutes
         record["duration"] = max(0, task.duration) 
         record["hasDuration"] = task.hasDuration
@@ -1694,6 +1709,7 @@ class CloudKitService: ObservableObject {
         let startTime = record["startTime"] as? Date ?? Date()
         let hasSpecificDay = record["hasSpecificDay"] as? Bool ?? false
         let hasSpecificTime = record["hasSpecificTime"] as? Bool ?? true
+        let hasNotification = record["hasNotification"] as? Bool ?? false
         let notificationLeadTimeMinutes = record["notificationLeadTimeMinutes"] as? Int ?? 0
         let duration = record["duration"] as? TimeInterval ?? 0
         let hasDuration = record["hasDuration"] as? Bool ?? false
@@ -1736,7 +1752,7 @@ class CloudKitService: ObservableObject {
             subtasks: subtasks,
             hasRewardPoints: hasRewardPoints,
             rewardPoints: rewardPoints,
-            hasNotification: false,
+            hasNotification: hasNotification,
             notificationId: nil,
             timeScope: decodedTimeScope,
             scopeStartDate: decodedScopeStart,
@@ -2347,16 +2363,24 @@ class CloudKitService: ObservableObject {
         lastErrorTime = Date()
         
         if let ckError = error as? CKError {
+            let debugMessage = cloudKitDebugMessage(for: ckError)
             switch ckError.code {
             case .networkFailure, .networkUnavailable:
-                syncStatus = .error("sync_error".localized)
+                syncStatus = .error(debugMessage)
             case .quotaExceeded:
-                syncStatus = .error("sync_error".localized)
+                syncStatus = .error(debugMessage)
             case .notAuthenticated:
-                syncStatus = .error("sync_error".localized)
-            case .zoneNotFound:
+                syncStatus = .error(debugMessage)
+            case .zoneNotFound, .userDeletedZone:
                 syncStatus = .error("zone_missing_recreating".localized)
+                serverChangeToken = nil
                 try? await ensureZoneExists()
+                if syncRetryCount < maxSyncRetries {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                        await performFullSync()
+                    }
+                }
             case .changeTokenExpired:
                 print(" Change token expired - clearing token and retrying")
                 syncStatus = .error("sync_token_expired".localized)
@@ -2368,7 +2392,7 @@ class CloudKitService: ObservableObject {
                     }
                 }
             case .serverRecordChanged:
-                syncStatus = .error("sync_error".localized)
+                syncStatus = .error(debugMessage)
                 if syncRetryCount < maxSyncRetries {
                     Task {
                         try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
@@ -2387,26 +2411,27 @@ class CloudKitService: ObservableObject {
                         }
                     }
                 } else {
-                    syncStatus = .error("sync_error".localized)
+                    syncStatus = .error(debugMessage)
                 }
             }
         } else {
-            syncStatus = .error("sync_error".localized)
+            syncStatus = .error(String(describing: error))
         }
     }
     
     private func handleCloudKitError(_ error: CKError) async {
         print(" CloudKit error: \(error.localizedDescription)")
+        let debugMessage = cloudKitDebugMessage(for: error)
         
         switch error.code {
         case .networkFailure, .networkUnavailable:
-            syncStatus = .error("sync_error".localized)
+            syncStatus = .error(debugMessage)
         case .quotaExceeded:
-            syncStatus = .error("sync_error".localized)
+            syncStatus = .error(debugMessage)
         case .notAuthenticated:
-            syncStatus = .error("sync_error".localized)
+            syncStatus = .error(debugMessage)
         case .invalidArguments:
-            syncStatus = .error("sync_error".localized)
+            syncStatus = .error(debugMessage)
         case .serverRecordChanged:
             print(" Record conflict detected, will retry sync")
             if syncRetryCount < maxSyncRetries {
@@ -2418,9 +2443,10 @@ class CloudKitService: ObservableObject {
         case .unknownItem:
             print(" Item already deleted")
         case .constraintViolation:
-            syncStatus = .error("sync_error".localized)
-        case .zoneNotFound:
+            syncStatus = .error(debugMessage)
+        case .zoneNotFound, .userDeletedZone:
             syncStatus = .error("zone_missing_recreating".localized)
+            serverChangeToken = nil
             try? await ensureZoneExists()
             if syncRetryCount < maxSyncRetries {
                 Task {
@@ -2429,10 +2455,31 @@ class CloudKitService: ObservableObject {
                 }
             }
         case .limitExceeded:
-            syncStatus = .error("sync_error".localized)
+            syncStatus = .error(debugMessage)
         default:
-            syncStatus = .error("sync_error".localized)
+            syncStatus = .error(debugMessage)
         }
+    }
+
+    private func cloudKitDebugMessage(for error: CKError) -> String {
+        var parts: [String] = []
+        parts.append("CloudKit")
+        parts.append("\(error.code)")
+
+        if let retry = error.userInfo[CKErrorRetryAfterKey] as? NSNumber {
+            parts.append("retryAfter=\(retry)")
+        }
+
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? Error {
+            parts.append("underlying=\(String(describing: underlying))")
+        }
+
+        if let partial = error.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error], !partial.isEmpty {
+            parts.append("partialErrors=\(partial.count)")
+        }
+
+        let message = parts.joined(separator: " | ")
+        return message.isEmpty ? "sync_error".localized : message
     }
     
     private func resolveConflictAndRetry(task: TodoTask, retryCount: Int) async {
@@ -2480,6 +2527,7 @@ class CloudKitService: ObservableObject {
         existingRecord["taskDescription"] = task.description
         existingRecord["startTime"] = task.startTime
         existingRecord["hasSpecificTime"] = task.hasSpecificTime
+        existingRecord["hasNotification"] = task.hasNotification
         existingRecord["notificationLeadTimeMinutes"] = task.notificationLeadTimeMinutes
         existingRecord["duration"] = max(0, task.duration) 
         existingRecord["hasDuration"] = task.hasDuration
@@ -2533,6 +2581,11 @@ class CloudKitService: ObservableObject {
     
     private func mergeTaskConflict(local: TodoTask, remote: TodoTask) -> TodoTask {
         var merged = remote
+        
+        merged.hasNotification = local.hasNotification || remote.hasNotification
+        if merged.notificationId == nil {
+            merged.notificationId = local.notificationId
+        }
         
         var mergedCompletions = remote.completions
         
@@ -3006,6 +3059,7 @@ extension CloudKitService {
         
         record["budgetId"] = budget.id.uuidString
         record["category"] = budget.category.rawValue
+        record["customCategoryId"] = budget.customCategoryId?.uuidString
         record["monthlyLimit"] = budget.monthlyLimit
         record["isActive"] = budget.isActive
         record["createdAt"] = budget.creationDate
@@ -3037,6 +3091,7 @@ extension CloudKitService {
         record["categoryId"] = category.id.uuidString
         record["name"] = category.name
         record["icon"] = category.icon
+        record["colorHex"] = category.colorHex
         record["isExpenseCategory"] = category.isExpenseCategory
         record["createdAt"] = category.creationDate
         
@@ -3094,12 +3149,14 @@ extension CloudKitService {
               let isActive = record["isActive"] as? Bool else {
             return nil
         }
-        
+
+        let customCategoryId = (record["customCategoryId"] as? String).flatMap { UUID(uuidString: $0) }
         let creationDate = record["createdAt"] as? Date ?? record.creationDate ?? Date()
         
         return FinanceBudget(
             id: id,
             category: category,
+            customCategoryId: customCategoryId,
             monthlyLimit: monthlyLimit,
             isActive: isActive,
             creationDate: creationDate
@@ -3144,12 +3201,14 @@ extension CloudKitService {
             return nil
         }
         
+        let colorHex = record["colorHex"] as? String
         let creationDate = record["createdAt"] as? Date ?? record.creationDate ?? Date()
         
         return CustomFinanceCategory(
             id: id,
             name: name,
             icon: icon,
+            colorHex: colorHex,
             isExpenseCategory: isExpenseCategory,
             creationDate: creationDate
         )

@@ -6,6 +6,9 @@
 "delete" = "Excluir";
 "done" = "Concluído";
 "add" = "Adicionar";
+"copy" = "Copiar";
+"cut" = "Recortar";
+"paste" = "Colar";
 "continue" = "Continuar";
 "back" = "Voltar";
 "skip" = "Pular";
@@ -1082,7 +1085,7 @@
 "weekly_overview" = "Visão semanal";
 "week_pts" = "Semana: {points} pts";
 "focus_time" = "Tempo de foco";
-"mark_incomplete" = "Marcar como incompleta";
+"mark_incomplete" = "Incompleta";
 "mark_complete" = "Marcar como concluída";
 "recurring_task" = "Tarefa recorrente";
 "has_duration" = "Possui duração";
@@ -1121,7 +1124,7 @@
 "task_happens_this_month" = "Meta para este mês";
 "task_happens_this_year" = "Meta para este ano";
 "long_term_goal" = "Meta de longo prazo";
-"long_term_goals" = "Metas de longo prazo";
+"long_term_goals" = "Objetivos de longo prazo";
 "no_tasks" = "Sem tarefas";
 "no_tasks_this_week" = "Sem tarefas para esta semana";
 "no_tasks_this_month" = "Sem tarefas para este mês";
@@ -1579,7 +1582,9 @@
 "current_income" = "Renda Atual";
 "category_budgets" = "Orçamentos por Categoria";
 "category_budgets_footer" = "Defina limites de gastos para categorias individuais";
+"swipe_to_edit_delete" = "Deslize para editar ou excluir";
 "add_category_budget" = "Adicionar Orçamento de Categoria";
+"edit_budget" = "Editar Orçamento";
 "monthly_limit" = "Limite Mensal";
 "over_budget" = "Acima do Orçamento";
 "reset_finance_data" = "Redefinir Todos os Dados Financeiros";
@@ -1876,3 +1881,116 @@
 "widget_budget" = "Orçamento";
 "widget_no_data" = "Sem dados financeiros";
 "widget_this_month" = "Este mês";
+
+// MARK: - Quick Add App Intents
+"Add Quick Task" = "Adicionar tarefa rápida";
+"Quick Add Task" = "Tarefa rápida";
+"Quickly add a new task to your SnapTask timeline." = "Adicione rapidamente uma nova tarefa à sua linha do tempo do SnapTask.";
+"Open Quick Add" = "Abrir adição rápida";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "Abre o SnapTask e mostra a folha de nova tarefa para que você possa digitá-la rapidamente.";
+"Task" = "Tarefa";
+"What do you want to do?" = "O que você quer fazer?";
+"Could not access SnapTask data." = "Não foi possível acessar os dados do SnapTask.";
+"Could not save the task." = "Não foi possível salvar a tarefa.";
+"Add task to SnapTask" = "Adicionar tarefa ao SnapTask";
+"Add task to \(_:)" = "Adicionar tarefa a %@";
+"Add a task in \(_:)" = "Adicionar uma tarefa em %@";
+"Quick add in \(_:)" = "Adição rápida em %@";
+"New task in \(_:)" = "Nova tarefa em %@";
+"Capture task in \(_:)" = "Capturar tarefa em %@";
+"Added \"%@\" to SnapTask." = "\"%@\" foi adicionada ao SnapTask.";
+
+// Show Today's Tasks
+"Show Today's Tasks" = "Mostrar tarefas de hoje";
+"Today's Tasks" = "Tarefas de hoje";
+"Lists the tasks you have planned for today." = "Lista as tarefas que você planejou para hoje.";
+"Show today's tasks in SnapTask" = "Mostrar as tarefas de hoje no SnapTask";
+"You don't have any tasks yet in SnapTask." = "Você ainda não tem tarefas no SnapTask.";
+"Could not read your SnapTask tasks." = "Não foi possível ler suas tarefas do SnapTask.";
+"You have no tasks for today. Enjoy!" = "Você não tem tarefas para hoje. Aproveite!";
+"All your %lld tasks for today are done. Great job!" = "Você concluiu todas as %lld tarefas de hoje. Ótimo trabalho!";
+"You have %lld tasks left for today (%lld already done):" = "Ainda tem %lld tarefas para hoje (%lld já concluídas):";
+"You have %lld tasks for today:" = "Você tem %lld tarefas para hoje:";
+"…and %lld more." = "…e mais %lld.";
+
+// Session Conflict
+"session_conflict" = "Conflito de sessão";
+"active_session_running_desc" = "Você já tem uma sessão ativa em execução";
+"current_session" = "Atual";
+"new_session" = "Nova";
+"keep_both" = "Manter ambas";
+"save_and_replace" = "Salvar e substituir";
+"discard_and_replace" = "Descartar e substituir";
+"reorder" = "Reordenar";
+
+"view_all" = "Ver tudo";
+"all_sessions" = "Todas as sessões";
+"edit_session" = "Editar sessão";
+"timing" = "Tempo";
+"end_time" = "Hora fim";
+"add_notes_placeholder" = "Adicionar notas...";
+
+// Celebrations & Recurrence
+"app_icon" = "Ícone do app";
+"celebrations" = "Comemorações";
+"confetti_celebrations" = "Comemoração com confetes";
+"confetti_celebrations_description" = "Mostrar animação de confetes ao concluir tarefas";
+"hide_days_bar" = "Ocultar barra de dias";
+"hide_days_bar_description" = "Ocultar a barra de seleção de dias na visualização Hoje";
+"postpone_single_occurrence" = "Adiar apenas a ocorrência de hoje para amanhã";
+
+// Edit scope (recurring tasks)
+"edit_scope_title" = "Âmbito de edição";
+"edit_scope_description" = "Esta é uma tarefa recorrente. Escolha se as alterações se aplicam apenas a esta ocorrência ou a toda a série.";
+"edit_scope_entire_series" = "Toda a série";
+"edit_scope_single_instance" = "Apenas esta ocorrência";
+
+"expand" = "Expandir";
+"collapse" = "Recolher";
+
+
+// Contextual Recurrence & Notifications Actions (New)
+"repeats" = "Repete-se";
+"every_n_weeks" = "A cada N semanas";
+"weeks_of_month" = "Semanas do mês";
+"pattern_modulo" = "Padrão (módulo)";
+"every_n_months" = "A cada N meses";
+"specific_months" = "Meses específicos";
+"every_n_years" = "A cada N anos";
+"week_unit" = "semana";
+"weeks_unit" = "semanas";
+"month_unit" = "mês";
+"months_unit" = "meses";
+"year_unit" = "ano";
+"years_unit" = "anos";
+"anchored_start_week" = "Ancorado à semana de início da tarefa.";
+"anchored_start_month" = "Ancorado ao mês de início da tarefa.";
+"anchored_start_year" = "Ancorado ao ano de início da tarefa.";
+"select_weeks_of_month" = "Selecionar semanas do mês";
+"select_months" = "Selecionar meses";
+"select_specific_months" = "Selecionar meses específicos";
+"every_kth_week" = "A cada k-ésima semana (k ≥ 2)";
+"every_k_years" = "A cada k anos (k ≥ 2)";
+"offset" = "Deslocamento";
+"even_weeks" = "Semanas pares";
+"odd_weeks" = "Semanas ímpares";
+"even_years" = "Anos pares";
+"odd_years" = "Anos ímpares";
+"modulo_weeks_formula_desc" = "As semanas selecionadas satisfazem: (semana − âncora) % k = deslocamento";
+"modulo_years_formula_desc" = "Os anos selecionados satisfazem: (ano − âncora) % k = deslocamento";
+"long_term_tasks_no_recurrence" = "As tarefas de longo prazo não possuem configurações de recorrência.";
+"last_ordinal" = "Última";
+"every_n_weeks_format" = "A cada %d semanas";
+"weeks_of_month_prefix" = "Semanas do mês: %@";
+"every_kth_week_offset_format" = "A cada %dª semana (deslocamento %d)";
+"every_n_months_format" = "A cada %d meses";
+"months_prefix" = "Meses: %@";
+"every_n_years_format" = "A cada %d anos";
+"every_k_years_offset_format" = "A cada %d anos (deslocamento %d)";
+"no_recurrence" = "Sem recorrência";
+"mark_as_completed" = "Marcar como concluído";
+"remind_me_in_1_hour" = "Lembrar-me em 1 hora";
+"tomorrow_morning_9am" = "Amanhã de manhã (09:00)";
+"recurrence_desc_week" = "Configure a recorrência no nível da semana (sem dias específicos).";
+"recurrence_desc_month" = "Configure a recorrência no nível do mês.";
+"recurrence_desc_year" = "Configure a recorrência no nível do ano.";

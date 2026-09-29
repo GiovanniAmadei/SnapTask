@@ -5,6 +5,7 @@ struct ThemesAndCustomizationView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.theme) private var theme
     @StateObject private var appIconManager = AppIconManager.shared
+    @StateObject private var settingsManager = CloudKitSettingsManager.shared
     
     var body: some View {
         List {
@@ -36,7 +37,7 @@ struct ThemesAndCustomizationView: View {
                             .foregroundColor(.indigo)
                             .frame(width: 24)
                         
-                        Text("Icona app")
+                        Text("app_icon".localized)
                             .themedPrimaryText()
                         
                         Spacer()
@@ -79,7 +80,7 @@ struct ThemesAndCustomizationView: View {
                 .listRowBackground(theme.surfaceColor)
 
                 // Gradienti categorie
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "paintpalette.fill")
                         .foregroundColor(.cyan)
                         .frame(width: 24)
@@ -87,14 +88,61 @@ struct ThemesAndCustomizationView: View {
                     Text("category_gradients".localized)
                         .themedPrimaryText()
                     
-                    Spacer()
+                    Spacer(minLength: 8)
                     
                     Toggle("", isOn: $viewModel.showCategoryGradients)
+                        .labelsHidden()
+                        .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                }
+                .listRowBackground(theme.surfaceColor)
+                
+                // Coriandoli al completamento
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.yellow)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("confetti_celebrations".localized)
+                            .themedPrimaryText()
+                        Text("confetti_celebrations_description".localized)
+                            .font(.caption)
+                            .themedSecondaryText()
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Spacer(minLength: 8)
+                    
+                    Toggle("", isOn: $settingsManager.enableConfettiCelebration)
+                        .labelsHidden()
+                        .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                }
+                .listRowBackground(theme.surfaceColor)
+                
+                // Nascondi barra dei giorni
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar.badge.minus")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("hide_days_bar".localized)
+                            .themedPrimaryText()
+                        Text("hide_days_bar_description".localized)
+                            .font(.caption)
+                            .themedSecondaryText()
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Spacer(minLength: 8)
+                    
+                    Toggle("", isOn: $settingsManager.hideDaysBar)
+                        .labelsHidden()
                         .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
                 }
                 .listRowBackground(theme.surfaceColor)
             } header: {
-                Text("Personalizzazione")
+                Text("customization".localized)
                     .themedSecondaryText()
             }
             
@@ -174,22 +222,24 @@ struct ThemesAndCustomizationView: View {
                 }
                 .listRowBackground(theme.surfaceColor)
 
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "checklist")
                         .foregroundColor(.green)
                         .frame(width: 24)
                     
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("auto_complete_tasks".localized)
                             .themedPrimaryText()
                         Text("auto_complete_tasks_description".localized)
                             .themedSecondaryText()
                             .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     
-                    Spacer()
+                    Spacer(minLength: 8)
                     
                     Toggle("", isOn: $viewModel.autoCompleteTaskWithSubtasks)
+                        .labelsHidden()
                         .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
                 }
                 .listRowBackground(theme.surfaceColor)

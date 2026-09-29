@@ -81,19 +81,53 @@ struct TaskFormView: View {
         self.onSave = onSave
     }
     
-    init(initialDate: Date, initialTimeScope: TaskTimeScope, onSave: @escaping (TodoTask) -> Void) {
+    init(
+        initialDate: Date,
+        initialTimeScope: TaskTimeScope,
+        initialName: String? = nil,
+        scopeStartDate: Date? = nil,
+        scopeEndDate: Date? = nil,
+        preserveTime: Bool = false,
+        onSave: @escaping (TodoTask) -> Void
+    ) {
         self._viewModel = StateObject(wrappedValue: {
-            let vm = TaskFormViewModel(initialDate: initialDate)
+            let vm = TaskFormViewModel(initialDate: initialDate, preserveTime: preserveTime)
             vm.selectedTimeScope = initialTimeScope
+            if preserveTime {
+                vm.hasSpecificTime = true
+                vm.startDate = initialDate
+            }
+            if let initialName = initialName {
+                vm.name = initialName
+            }
+            if let scopeStart = scopeStartDate {
+                let calendar = Calendar.current
+                switch initialTimeScope {
+                case .week:
+                    vm.selectedWeekDate = scopeStart
+                case .month:
+                    vm.selectedMonth = calendar.component(.month, from: scopeStart)
+                    vm.selectedYear = calendar.component(.year, from: scopeStart)
+                    vm.selectedMonthDate = scopeStart
+                case .year:
+                    vm.selectedYear = calendar.component(.year, from: scopeStart)
+                    vm.selectedYearDate = scopeStart
+                default:
+                    break
+                }
+            }
             return vm
         }())
         self.onSave = onSave
     }
     
-    init(initialTask: TodoTask, onSave: @escaping (TodoTask) -> Void) {
+    init(initialTask: TodoTask, editScope: TaskFormViewModel.EditScopeMode = .entireSeries, preserveTime: Bool = false, onSave: @escaping (TodoTask) -> Void) {
         self._viewModel = StateObject(wrappedValue: {
-            let vm = TaskFormViewModel(initialDate: initialTask.startTime)
+            let shouldPreserve = preserveTime || initialTask.hasSpecificTime
+            let vm = TaskFormViewModel(initialDate: initialTask.startTime, preserveTime: shouldPreserve)
             vm.taskId = initialTask.id
+            vm.initialTask = initialTask
+            vm.editScopeMode = editScope
             vm.name = initialTask.name
             vm.description = initialTask.description ?? ""
             vm.location = initialTask.location
@@ -106,7 +140,7 @@ struct TaskFormView: View {
             vm.subtasks = initialTask.subtasks
             vm.hasNotification = initialTask.hasNotification
             vm.selectedTimeScope = initialTask.timeScope
-            vm.hasSpecificTime = initialTask.hasSpecificTime
+            vm.hasSpecificTime = shouldPreserve
             vm.notificationLeadTimeMinutes = initialTask.notificationLeadTimeMinutes
             vm.autoCarryOver = initialTask.autoCarryOver
             // Set specific period dates based on existing task
@@ -210,6 +244,22 @@ struct TaskFormView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Ambito di modifica — shown at top when editing a recurring task
+                    if viewModel.isEditing && (viewModel.isRecurring || viewModel.initialTask?.recurrence != nil) {
+                        ModernCard(title: "edit_scope_title".localized, icon: "arrow.triangle.branch") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("edit_scope_description".localized)
+                                    .font(.caption)
+                                    .themedSecondaryText()
+                                Picker("", selection: $viewModel.editScopeMode) {
+                                    Text("edit_scope_entire_series".localized).tag(TaskFormViewModel.EditScopeMode.entireSeries)
+                                    Text("edit_scope_single_instance".localized).tag(TaskFormViewModel.EditScopeMode.singleInstance)
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                            }
+                        }
+                    }
+
                     // Task Details Card
                     ModernCard(title: "task_details".localized, icon: "doc.text") {
                         VStack(spacing: 16) {
@@ -906,7 +956,7 @@ struct TaskFormView: View {
                         }
                     }
                     
-                    // Recurrence Card
+
                     if viewModel.shouldShowRecurrenceOption {
                         ModernCard(title: "recurrence".localized, icon: "repeat") {
                             VStack(spacing: 16) {

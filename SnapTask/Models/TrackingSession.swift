@@ -59,7 +59,7 @@ struct TrackingSession: Identifiable, Codable {
     let mode: TrackingMode
     var categoryId: UUID?
     var categoryName: String?
-    let startTime: Date
+    var startTime: Date
     let deviceType: DeviceType
     let deviceName: String
     let creationDate: Date

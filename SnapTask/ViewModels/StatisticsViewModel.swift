@@ -35,73 +35,83 @@ class StatisticsViewModel: ObservableObject {
 
     }
 
+    private static let isoFormatter = ISO8601DateFormatter()
+
     private func calculateCategoryStats(for range: TimeRange) -> [CategoryStat] {
         let categories = categoryManager.categories
         let allTasks = taskManager.tasks
         let (startDate, endDate) = range.dateRange
+        let calendar = Calendar.current
+        let startOfStartDate = calendar.startOfDay(for: startDate)
+        let endOfEndDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate))!
 
         let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
         let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
 
+        // Pre-aggregate time tracking within date range in ONE fast dictionary pass
+        var trackedHoursByCategory: [String: Double] = [:]
+        var uncategorizedHours = 0.0
+        var taskTracking: [String: Double] = [:]
+
+        for (dateKey, dayData) in timeTrackingData {
+            guard let date = Self.isoFormatter.date(from: dateKey),
+                  date >= startOfStartDate && date < endOfEndDate else {
+                continue
+            }
+            for (key, hours) in dayData {
+                if key == "uncategorized" {
+                    uncategorizedHours += hours
+                } else if key.hasPrefix("category_") {
+                    trackedHoursByCategory[key, default: 0] += hours
+                } else if key.hasPrefix("task_") {
+                    taskTracking[key, default: 0] += hours
+                }
+            }
+        }
+
+        // Pre-group tasks by category ID and lowercased name for fast matching
+        var tasksByCategoryId: [UUID: [TodoTask]] = [:]
+        var tasksByCategoryName: [String: [TodoTask]] = [:]
+        for task in allTasks {
+            if let cat = task.category {
+                tasksByCategoryId[cat.id, default: []].append(task)
+                tasksByCategoryName[cat.name.lowercased(), default: []].append(task)
+            }
+        }
+
         var categoryStatsList: [CategoryStat] = []
 
         for category in categories {
-            let categoryTasks = allTasks.filter { task in
-                if task.category?.id == category.id {
-                    return true
-                }
-                if let taskCategoryName = task.category?.name,
-                   taskCategoryName.lowercased() == category.name.lowercased() {
-                    return true
-                }
-                return false
+            var categoryTasks = tasksByCategoryId[category.id] ?? []
+            if categoryTasks.isEmpty {
+                categoryTasks = tasksByCategoryName[category.name.lowercased()] ?? []
             }
 
             let taskHours = categoryTasks.reduce(0.0) { total, task in
-                let completionHours = task.completions
-                    .compactMap { (date, completion) -> Double? in
-                        let startOfStartDate = Calendar.current.startOfDay(for: startDate)
-                        let endOfEndDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: endDate))!
-
-                        guard date >= startOfStartDate &&
-                              date < endOfEndDate &&
-                              completion.isCompleted else {
-                            return nil
-                        }
-
-                        var taskDuration: TimeInterval = 0
-
-                        if let actualDuration = completion.actualDuration, actualDuration > 0 {
-                            taskDuration = actualDuration
-                        } else if task.totalTrackedTime > 0 {
-                            taskDuration = task.totalTrackedTime
-                        } else if task.hasDuration && task.duration > 0 {
-                            taskDuration = task.duration
-                        }
-
-                        guard taskDuration > 0 else { return nil }
-                        return taskDuration / 3600.0
+                let completionHours = task.completions.reduce(0.0) { subtotal, entry in
+                    let (date, completion) = entry
+                    guard date >= startOfStartDate && date < endOfEndDate && completion.isCompleted else {
+                        return subtotal
                     }
-                    .reduce(0.0, +)
 
+                    var taskDuration: TimeInterval = 0
+                    if let actualDuration = completion.actualDuration, actualDuration > 0 {
+                        taskDuration = actualDuration
+                    } else if task.totalTrackedTime > 0 {
+                        taskDuration = task.totalTrackedTime
+                    } else if task.hasDuration && task.duration > 0 {
+                        taskDuration = task.duration
+                    }
+
+                    return taskDuration > 0 ? subtotal + (taskDuration / 3600.0) : subtotal
+                }
                 return total + completionHours
             }
 
-            let calendar = Calendar.current
-            var trackedHours = 0.0
             let categoryKey = "category_\(category.id.uuidString)"
-
-            var currentDate = startDate
-            while currentDate <= endDate {
-                let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
-                if let dayData = timeTrackingData[dateKey],
-                   let categoryHours = dayData[categoryKey] {
-                    trackedHours += categoryHours
-                }
-                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
-            }
-
+            let trackedHours = trackedHoursByCategory[categoryKey] ?? 0.0
             let totalHours = taskHours + trackedHours
+
             if totalHours > 0 {
                 categoryStatsList.append(CategoryStat(
                     name: category.name,
@@ -111,41 +121,12 @@ class StatisticsViewModel: ObservableObject {
             }
         }
 
-        let calendar = Calendar.current
-        var currentDate = startDate
-        var uncategorizedHours = 0.0
-
-        while currentDate <= endDate {
-            let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
-            if let dayData = timeTrackingData[dateKey],
-               let uncategorizedTime = dayData["uncategorized"] {
-                uncategorizedHours += uncategorizedTime
-            }
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
-        }
-
         if uncategorizedHours > 0 {
             categoryStatsList.append(CategoryStat(
                 name: "Uncategorized",
                 color: "#9CA3AF",
                 hours: uncategorizedHours
             ))
-        }
-
-        let calendar2 = Calendar.current
-        var currentDate2 = startDate
-        var taskTracking: [String: Double] = [:]
-
-        while currentDate2 <= endDate {
-            let dateKey = ISO8601DateFormatter().string(from: calendar2.startOfDay(for: currentDate2))
-            if let dayData = timeTrackingData[dateKey] {
-                for (key, hours) in dayData {
-                    if key.hasPrefix("task_") {
-                        taskTracking[key, default: 0] += hours
-                    }
-                }
-            }
-            currentDate2 = calendar2.date(byAdding: .day, value: 1, to: currentDate2) ?? endDate.addingTimeInterval(86400)
         }
 
         for (taskKey, hours) in taskTracking {
@@ -275,20 +256,20 @@ class StatisticsViewModel: ObservableObject {
     @Published private(set) var tasksNeedingImprovement: [TaskPerformanceAnalytics] = []
     
     private var updateTimer: Timer?
-    private var lastUpdateTime: Date = Date()
-    private let minUpdateInterval: TimeInterval = 2.0 
+    private var lastUpdateTime: Date = .distantPast
+    private let minUpdateInterval: TimeInterval = 1.0 
     private var pendingUpdate = false
 
     private var isGeneratingWidgetStats = false
-
     private var shouldSaveWidgetStatsOnNextUpdate = true
-
     private var forceUIRefreshOnNextUpdate = false
-
     private static let verboseStatsLogging = false
 
     private var isUpdating = false
     private var isObserving = false
+    
+    private var nonRecurringTasksByDay: [Date: [TodoTask]] = [:]
+    private var recurringTasksList: [TodoTask] = []
     
     var trackedRecurringTasks: [TodoTask] {
         recurringTasks.filter { task in
@@ -309,8 +290,24 @@ class StatisticsViewModel: ObservableObject {
     private let cloudKitService = CloudKitService.shared
     private let appGroupUserDefaults = UserDefaults(suiteName: "group.com.snapTask.shared")
     
-    init(taskManager: TaskManager = .shared) {
-        self.taskManager = taskManager
+    init(taskManager: TaskManager? = nil) {
+        self.taskManager = taskManager ?? .shared
+    }
+
+    private func refreshTaskPartitions() {
+        let calendar = Calendar.current
+        var nonRec: [Date: [TodoTask]] = [:]
+        var rec: [TodoTask] = []
+        for task in taskManager.tasks {
+            if task.recurrence != nil {
+                rec.append(task)
+            } else {
+                let day = calendar.startOfDay(for: task.startTime)
+                nonRec[day, default: []].append(task)
+            }
+        }
+        self.nonRecurringTasksByDay = nonRec
+        self.recurringTasksList = rec
     }
 
     func startObserving() {
@@ -386,6 +383,7 @@ class StatisticsViewModel: ObservableObject {
         let oldTaskStreaks = taskStreaks
         let oldTaskPerformanceAnalytics = taskPerformanceAnalytics
         
+        refreshTaskPartitions()
         updateCategoryStats()
         updateWeeklyStats()
         updateStreakStats()
@@ -404,7 +402,9 @@ class StatisticsViewModel: ObservableObject {
             print("📊 Data changed, updating UI")
             objectWillChange.send()
             if shouldSaveWidgetStatsOnNextUpdate {
-                saveStatsForWidget()
+                Task(priority: .utility) { [weak self] in
+                    self?.saveStatsForWidget()
+                }
             }
         } else {
             print("📊 No data changes detected, skipping UI update")
@@ -414,7 +414,9 @@ class StatisticsViewModel: ObservableObject {
     // MARK: - Widget Data Sharing
     
     private func saveStatsForWidget() {
+        guard !isGeneratingWidgetStats else { return }
         isGeneratingWidgetStats = true
+        defer { isGeneratingWidgetStats = false }
 
         let widgetTimeRanges: [TimeRange] = [.today, .week, .month, .year, .allTime]
         let encoder = JSONEncoder()
@@ -456,13 +458,11 @@ class StatisticsViewModel: ObservableObject {
 
         appGroupUserDefaults?.synchronize()
 
-        WidgetCenter.shared.reloadTimelines(ofKind: "PerformanceWidget")
-        WidgetCenter.shared.reloadTimelines(ofKind: "PerformanceWidgetLarge")
-        print("📊 Saved stats for widget time ranges and requested timeline reload")
-
-        DispatchQueue.main.async { [weak self] in
-            self?.isGeneratingWidgetStats = false
+        DispatchQueue.global(qos: .utility).async {
+            WidgetCenter.shared.reloadTimelines(ofKind: "PerformanceWidget")
+            WidgetCenter.shared.reloadTimelines(ofKind: "PerformanceWidgetLarge")
         }
+        print("📊 Saved stats for widget time ranges and requested timeline reload")
     }
     
     private func setupObservers() {
@@ -546,190 +546,9 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func updateCategoryStats() {
-        let categories = categoryManager.categories
-        let allTasks = taskManager.tasks
-        let (startDate, endDate) = selectedTimeRange.dateRange
-
-        if Self.verboseStatsLogging {
-            print("📊 Date range: \(startDate) to \(endDate)")
-            print("📊 Available categories: \(categories.map { "\($0.name) (ID: \($0.id.uuidString.prefix(8)))" })")
-        }
-        
-        let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
-        let categoryMetadata = UserDefaults.standard.dictionary(forKey: "categoryMetadata") as? [String: [String: String]] ?? [:]
-        let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:] // Per retrocompatibilità
-        
-        var categoryStatsList: [CategoryStat] = []
-        
-        for category in categories {
-            let categoryTasks = allTasks.filter { task in
-                if task.category?.id == category.id {
-                    return true
-                }
-                if let taskCategoryName = task.category?.name,
-                   taskCategoryName.lowercased() == category.name.lowercased() {
-                    print("📊 Found task '\(task.name)' with category name match: '\(taskCategoryName)' -> '\(category.name)'")
-                    return true
-                }
-                return false
-            }
-
-            if Self.verboseStatsLogging {
-                print("📊 Category '\(category.name)': found \(categoryTasks.count) tasks")
-            }
-            
-            // Calcola ore dalle durate dei task completati
-            let taskHours = categoryTasks.reduce(0.0) { total, task in
-                let completionHours = task.completions
-                    .compactMap { (date, completion) -> Double? in
-                        let startOfStartDate = Calendar.current.startOfDay(for: startDate)
-                        let endOfEndDate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: endDate))!
-
-                        if Self.verboseStatsLogging {
-                            print("📊 Checking task '\(task.name)': date=\(date), startRange=\(startOfStartDate), endRange=\(endOfEndDate), isCompleted=\(completion.isCompleted)")
-                        }
-                        
-                        guard date >= startOfStartDate &&
-                              date < endOfEndDate &&
-                              completion.isCompleted else {
-                            if Self.verboseStatsLogging {
-                                print("📊   -> Excluded: outside date range or not completed")
-                            }
-                            return nil
-                        }
-                        
-                        var taskDuration: TimeInterval = 0
-                        var durationSource = "no duration"
-                        
-                        if let actualDuration = completion.actualDuration, actualDuration > 0 {
-                            taskDuration = actualDuration
-                            durationSource = "completion actual duration"
-                        } else if task.totalTrackedTime > 0 {
-                            taskDuration = task.totalTrackedTime
-                            durationSource = "tracked time"
-                        } else if task.hasDuration && task.duration > 0 {
-                            taskDuration = task.duration
-                            durationSource = "estimated duration"
-                        }
-                        
-                        if taskDuration > 0 {
-                            if Self.verboseStatsLogging {
-                                print("📊   -> Included: Task '\(task.name)' completed on \(date) with \(String(format: "%.2f", taskDuration/3600.0))h (\(durationSource))")
-                            }
-                            return taskDuration / 3600.0
-                        } else {
-                            if Self.verboseStatsLogging {
-                                print("📊   -> Excluded: Task '\(task.name)' completed on \(date) but has NO duration data")
-                            }
-                            return nil
-                        }
-                    }
-                    .reduce(0.0, +)
-                
-                return total + completionHours
-            }
-            
-            // Calcola ore dalle sessioni di time tracking (nuovi category metadata)
-            let calendar = Calendar.current
-            var trackedHours = 0.0
-            let categoryKey = "category_\(category.id.uuidString)"
-            
-            var currentDate = startDate
-            while currentDate <= endDate {
-                let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
-                if let dayData = timeTrackingData[dateKey],
-                   let categoryHours = dayData[categoryKey] {
-                    trackedHours += categoryHours
-                    if Self.verboseStatsLogging {
-                        print("📊 Category \(category.name) on \(dateKey): \(categoryHours)h from time tracking")
-                    }
-                }
-                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
-            }
-            
-            let totalHours = taskHours + trackedHours
-            
-            if totalHours > 0 {
-                categoryStatsList.append(CategoryStat(
-                    name: category.name,
-                    color: category.color,
-                    hours: totalHours
-                ))
-                if Self.verboseStatsLogging {
-                    print("📊 Category \(category.name): \(String(format: "%.2f", taskHours))h from task durations + \(String(format: "%.2f", trackedHours))h from time tracking = \(String(format: "%.2f", totalHours))h total")
-                }
-            } else {
-                if Self.verboseStatsLogging {
-                    print("📊 Category \(category.name): 0 hours (no tasks with duration or time tracking sessions)")
-                }
-            }
-        }
-        
-        // Gestisci anche le vecchie entry "uncategorized" dal time tracking
-        let calendar = Calendar.current
-        var currentDate = startDate
-        var uncategorizedHours = 0.0
-        
-        while currentDate <= endDate {
-            let dateKey = ISO8601DateFormatter().string(from: calendar.startOfDay(for: currentDate))
-            if let dayData = timeTrackingData[dateKey],
-               let uncategorizedTime = dayData["uncategorized"] {
-                uncategorizedHours += uncategorizedTime
-            }
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? endDate.addingTimeInterval(86400)
-        }
-        
-        if uncategorizedHours > 0 {
-            categoryStatsList.append(CategoryStat(
-                name: "Uncategorized",
-                color: "#9CA3AF",
-                hours: uncategorizedHours
-            ))
-            if Self.verboseStatsLogging {
-                print("📊 Uncategorized: \(String(format: "%.2f", uncategorizedHours))h from time tracking")
-            }
-        }
-        
-        // Per retrocompatibilità: gestisci i vecchi task metadata (che verranno progressivamente rimossi)
-        let calendar2 = Calendar.current
-        var currentDate2 = startDate
-        var taskTracking: [String: Double] = [:]
-        
-        while currentDate2 <= endDate {
-            let dateKey = ISO8601DateFormatter().string(from: calendar2.startOfDay(for: currentDate2))
-            if let dayData = timeTrackingData[dateKey] {
-                for (key, hours) in dayData {
-                    if key.hasPrefix("task_") {
-                        taskTracking[key, default: 0] += hours
-                    }
-                }
-            }
-            currentDate2 = calendar2.date(byAdding: .day, value: 1, to: currentDate2) ?? endDate.addingTimeInterval(86400)
-        }
-        
-        // Aggiungi solo i task metadata che non sono stati già migrati alle categorie
-        for (taskKey, hours) in taskTracking {
-            if hours > 0, let metadata = taskMetadata[taskKey] {
-                categoryStatsList.append(CategoryStat(
-                    name: metadata["name"] ?? "Unknown Task",
-                    color: metadata["color"] ?? "#6366F1",
-                    hours: hours
-                ))
-                if Self.verboseStatsLogging {
-                    print("📊 Legacy task \(metadata["name"] ?? "Unknown"): \(String(format: "%.2f", hours))h from old time tracking format")
-                }
-            }
-        }
-
-        categoryStatsList.sort { $0.hours > $1.hours }
+        let list = calculateCategoryStats(for: selectedTimeRange)
         withAnimation(.smooth(duration: 0.35)) {
-            categoryStats = categoryStatsList
-        }
-
-        if Self.verboseStatsLogging {
-            print("📊 FINAL STATISTICS: \(categoryStatsList.count) categories with total hours: \(String(format: "%.2f", categoryStatsList.reduce(0) { $0 + $1.hours }))")
-            print("📊 All tasks in system: \(allTasks.count)")
-            print("📊 Tasks with duration set: \(allTasks.filter { $0.hasDuration && $0.duration > 0 }.count)")
+            categoryStats = list
         }
     }
 
@@ -800,72 +619,58 @@ class StatisticsViewModel: ObservableObject {
         
         var currentDate = yearAgo
         var dates: [Date] = []
-        
         while currentDate <= today {
-            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
             dates.append(currentDate)
+            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
             currentDate = nextDate
         }
         
-        var currentStreak = 0
-        var bestStreak = 0
-        var tempStreak = 0
-        
-        for date in dates.reversed() {
+        var dayCompletionMap: [Date: Bool] = [:]
+        for date in dates {
             let startOfDay = calendar.startOfDay(for: date)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
             
-            let dayTasks = taskManager.tasks.filter { task in
-                guard task.startTime <= startOfDay else { return false }
-                
-                if calendar.isDate(task.startTime, inSameDayAs: date) {
-                    return true
-                }
-                
-                if let recurrence = task.recurrence {
-                    if let endDate = recurrence.endDate, endDate < startOfDay { return false }
-                    
-                    switch recurrence.type {
-                    case .daily:
-                        return true
-                    case .weekly(let days):
-                        let weekday = calendar.component(.weekday, from: date)
-                        return days.contains(weekday)
-                    case .monthly(let days):
-                        let day = calendar.component(.day, from: date)
-                        return days.contains(day)
-                    case .monthlyOrdinal(let patterns):
-                        return recurrence.shouldOccurOn(date: date)
-                    case .yearly:
-                        return recurrence.shouldOccurOn(date: date)
-                    }
-                }
-                return false
+            let singleDayTasks = nonRecurringTasksByDay[startOfDay] ?? []
+            let recurringDayTasks = recurringTasksList.filter { task in
+                guard let recurrence = task.recurrence else { return false }
+                if task.startTime > endOfDay { return false }
+                if let endDate = recurrence.endDate, endDate < startOfDay { return false }
+                return shouldTaskOccurOnDate(task: task, date: startOfDay)
             }
             
-            let allCompletedForDay = !dayTasks.isEmpty && dayTasks.allSatisfy { task in
-                if let completion = task.completions[startOfDay] {
-                    return completion.isCompleted
-                }
-                return false
+            let dayTasks = singleDayTasks + recurringDayTasks
+            let allCompleted = !dayTasks.isEmpty && dayTasks.allSatisfy { task in
+                task.completions[startOfDay]?.isCompleted == true
             }
-            
-            if allCompletedForDay {
-                tempStreak += 1
-                bestStreak = max(bestStreak, tempStreak)
-                
-                if calendar.isDateInToday(date) {
-                    currentStreak = tempStreak
-                }
+            dayCompletionMap[startOfDay] = allCompleted
+        }
+        
+        var best = 0
+        var running = 0
+        for date in dates {
+            let startOfDay = calendar.startOfDay(for: date)
+            if dayCompletionMap[startOfDay] == true {
+                running += 1
+                best = max(best, running)
             } else {
-                if tempStreak > 0 && calendar.isDateInToday(date) {
-                    currentStreak = 0
-                }
-                tempStreak = 0
+                running = 0
             }
         }
         
-        self.currentStreak = currentStreak
-        self.bestStreak = bestStreak
+        var current = 0
+        let todayStart = calendar.startOfDay(for: today)
+        let todayCompleted = dayCompletionMap[todayStart] == true
+        var checkDate = todayCompleted ? todayStart : calendar.date(byAdding: .day, value: -1, to: todayStart)!
+        
+        while dayCompletionMap[checkDate] == true {
+            current += 1
+            guard let prevDate = calendar.date(byAdding: .day, value: -1, to: checkDate),
+                  prevDate >= yearAgo else { break }
+            checkDate = prevDate
+        }
+        
+        self.currentStreak = current
+        self.bestStreak = max(best, current)
     }
     
     private func updateTaskStreaks() {
@@ -873,24 +678,23 @@ class StatisticsViewModel: ObservableObject {
         let today = calendar.startOfDay(for: Date())
         let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: today)!
         
+        var dates: [Date] = []
+        var currentDate = thirtyDaysAgo
+        while currentDate <= today {
+            dates.append(currentDate)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
+            currentDate = next
+        }
+        
         var taskStreaksList: [TaskStreak] = []
         
         for task in recurringTasks {
-            guard let recurrence = task.recurrence else { continue }
-            
             var streakHistory: [StreakPoint] = []
             var currentStreak = 0
             var bestStreak = 0
             var tempStreak = 0
             var totalOccurrences = 0
             var completedOccurrences = 0
-            
-            var dates: [Date] = []
-            var currentDate = thirtyDaysAgo
-            while currentDate <= today {
-                dates.append(currentDate)
-                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-            }
             
             for date in dates {
                 let startOfDay = calendar.startOfDay(for: date)
@@ -903,12 +707,9 @@ class StatisticsViewModel: ObservableObject {
                         tempStreak += 1
                         completedOccurrences += 1
                         bestStreak = max(bestStreak, tempStreak)
-                        
-                        if calendar.isDate(date, inSameDayAs: today) {
-                            currentStreak = tempStreak
-                        }
+                        currentStreak = tempStreak
                     } else {
-                        if tempStreak > 0 && calendar.isDate(date, inSameDayAs: today) {
+                        if !calendar.isDate(date, inSameDayAs: today) {
                             currentStreak = 0
                         }
                         tempStreak = 0
@@ -1082,11 +883,14 @@ class StatisticsViewModel: ObservableObject {
     private func updateTaskPerformanceAnalytics() {
         let allTasks = taskManager.tasks
         let (startDate, endDate) = selectedTimeRange.dateRange
+        let allSessions = taskManager.trackingSessions
+        let sessionsByTaskId = Dictionary(grouping: allSessions, by: { $0.taskId })
         
         var analyticsArray: [TaskPerformanceAnalytics] = []
         
         for task in allTasks {
-            let completionAnalytics = getTaskCompletionAnalytics(for: task, startDate: startDate, endDate: endDate)
+            let taskSessions = sessionsByTaskId[task.id] ?? []
+            let completionAnalytics = getTaskCompletionAnalytics(for: task, startDate: startDate, endDate: endDate, sessions: taskSessions)
             
             guard !completionAnalytics.isEmpty else { continue }
             
@@ -1145,16 +949,15 @@ class StatisticsViewModel: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
         
-        let singleDayTasks = taskManager.tasks.filter { task in
-            task.recurrence == nil && calendar.isDate(task.startTime, inSameDayAs: date)
+        if nonRecurringTasksByDay.isEmpty && recurringTasksList.isEmpty && !taskManager.tasks.isEmpty {
+            refreshTaskPartitions()
         }
         
-        let recurringDayTasks = taskManager.tasks.filter { task in
+        let singleDayTasks = nonRecurringTasksByDay[startOfDay] ?? []
+        let recurringDayTasks = recurringTasksList.filter { task in
             guard let recurrence = task.recurrence else { return false }
-            
             if task.startTime > endOfDay { return false }
             if let endDate = recurrence.endDate, endDate < startOfDay { return false }
-            
             return shouldTaskOccurOnDate(task: task, date: startOfDay)
         }
         
@@ -1210,18 +1013,19 @@ class StatisticsViewModel: ObservableObject {
         return (completed: totalCompleted, total: totalTasks, rate: rate)
     }
     
-    private func getTaskCompletionAnalytics(for task: TodoTask, startDate: Date, endDate: Date) -> [TaskCompletionAnalytics] {
+    private func getTaskCompletionAnalytics(for task: TodoTask, startDate: Date, endDate: Date, sessions: [TrackingSession]) -> [TaskCompletionAnalytics] {
         var analytics: [TaskCompletionAnalytics] = []
+        let calendar = Calendar.current
+        let startOfStart = calendar.startOfDay(for: startDate)
+        let endOfEnd = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate))!
+        let sessionDates = Set(sessions.map { calendar.startOfDay(for: $0.startTime) })
         
         for (date, completion) in task.completions {
             guard completion.isCompleted &&
-                  date >= Calendar.current.startOfDay(for: startDate) &&
-                  date <= Calendar.current.startOfDay(for: endDate) else { continue }
+                  date >= startOfStart &&
+                  date < endOfEnd else { continue }
             
-            let trackingSessions = taskManager.getTrackingSessions(for: task.id)
-            let sessionForDate = trackingSessions.first { session in
-                Calendar.current.isDate(session.startTime, inSameDayAs: date)
-            }
+            let wasTracked = sessionDates.contains(calendar.startOfDay(for: date))
             
             let completionAnalytic = TaskCompletionAnalytics(
                 date: date,
@@ -1229,7 +1033,7 @@ class StatisticsViewModel: ObservableObject {
                 difficultyRating: completion.difficultyRating,
                 qualityRating: completion.qualityRating,
                 estimatedDuration: task.hasDuration ? task.duration : nil,
-                wasTracked: sessionForDate != nil
+                wasTracked: wasTracked
             )
             
             analytics.append(completionAnalytic)

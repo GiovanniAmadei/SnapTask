@@ -2,23 +2,35 @@ import SwiftUI
 
 struct TaskCreationOptionsView: View {
     @ObservedObject var viewModel: TimelineViewModel
+    var initialDate: Date? = nil
+    var hasSpecificTime: Bool = false
     @ObservedObject private var taskManager = TaskManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
     
     @State private var taskName: String = ""
     @State private var isExpanded: Bool = false
-    @State private var showingFullForm = false
-    @State private var formSource: FormSource = .new
+    @State private var activeFormSource: FormSource? = nil
     @FocusState private var isTextFieldFocused: Bool
     
-    private enum FormSource {
-        case new
+    private enum FormSource: Identifiable {
+        case new(name: String, date: Date, timeScope: TaskTimeScope, scopeStartDate: Date?, scopeEndDate: Date?)
         case template(TodoTask)
+        
+        var id: String {
+            switch self {
+            case .new(let name, let date, let scope, _, _):
+                return "new_\(name)_\(date.timeIntervalSince1970)_\(scope.rawValue)"
+            case .template(let task):
+                return "template_\(task.id.uuidString)"
+            }
+        }
     }
     
     private var baseDateForScope: Date {
-        let cal = Calendar.current
+        if let initial = initialDate {
+            return initial
+        }
         switch viewModel.selectedTimeScope {
         case .today:
             return viewModel.selectedDate
@@ -65,6 +77,20 @@ struct TaskCreationOptionsView: View {
                             .font(.title3.bold())
                             .themedPrimaryText()
                         Spacer()
+                        
+                        if hasSpecificTime || initialDate != nil {
+                            HStack(spacing: 5) {
+                                Image(systemName: "clock.fill")
+                                    .font(.system(size: 11))
+                                Text(DateFormatter.localizedString(from: baseDateForScope, dateStyle: .none, timeStyle: .short))
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                            }
+                            .foregroundColor(theme.primaryColor)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(theme.primaryColor.opacity(0.12))
+                            .clipShape(Capsule())
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
@@ -192,8 +218,7 @@ struct TaskCreationOptionsView: View {
                                 ForEach(uniqueRecentTemplates) { task in
                                     TaskTemplateCard(task: task) {
                                         let anchored = anchoredTask(from: task, in: viewModel.selectedTimeScope, baseDate: baseDateForScope)
-                                        formSource = .template(anchored)
-                                        showingFullForm = true
+                                        activeFormSource = .template(anchored)
                                     }
                                     .padding(.horizontal, 16)
                                 }
@@ -229,25 +254,32 @@ struct TaskCreationOptionsView: View {
                     isTextFieldFocused = true
                 }
             }
-            .sheet(isPresented: $showingFullForm) {
-                switch formSource {
-                case .new:
+            .sheet(item: $activeFormSource) { source in
+                switch source {
+                case .new(let name, let date, let timeScope, let scopeStartDate, let scopeEndDate):
                     TaskFormView(
-                        initialDate: baseDateForScope,
-                        initialTimeScope: viewModel.selectedTimeScope,
+                        initialDate: date,
+                        initialTimeScope: timeScope,
+                        initialName: name,
+                        scopeStartDate: scopeStartDate,
+                        scopeEndDate: scopeEndDate,
+                        preserveTime: hasSpecificTime || (initialDate != nil),
                         onSave: { task in
                             viewModel.addTask(task)
                             dismiss()
                         }
                     )
+                    .id(source.id)
                 case .template(let anchored):
                     TaskFormView(
                         initialTask: anchored,
+                        preserveTime: hasSpecificTime || (initialDate != nil) || anchored.hasSpecificTime,
                         onSave: { task in
                             viewModel.addTask(task)
                             dismiss()
                         }
                     )
+                    .id(source.id)
                 }
             }
         }
@@ -256,9 +288,12 @@ struct TaskCreationOptionsView: View {
     private func createQuickTask() {
         guard !taskName.isEmpty else { return }
         
+        let specificTime = hasSpecificTime || (initialDate != nil)
         var task = TodoTask(
             name: taskName,
             startTime: baseDateForScope,
+            hasSpecificDay: true,
+            hasSpecificTime: specificTime,
             timeScope: viewModel.selectedTimeScope
         )
         
@@ -292,39 +327,43 @@ struct TaskCreationOptionsView: View {
     }
     
     private func openFullFormWithName() {
-        var task = TodoTask(
-            name: taskName,
-            startTime: baseDateForScope,
-            timeScope: viewModel.selectedTimeScope
-        )
+        isTextFieldFocused = false
         
         // Set scope dates based on time scope
         let cal = Calendar.current
+        var scopeStartDate: Date? = nil
+        var scopeEndDate: Date? = nil
+        
         switch viewModel.selectedTimeScope {
         case .week:
             let weekStart = cal.startOfWeek(for: baseDateForScope)
-            task.scopeStartDate = weekStart
-            task.scopeEndDate = cal.date(byAdding: .day, value: 6, to: weekStart)
+            scopeStartDate = weekStart
+            scopeEndDate = cal.date(byAdding: .day, value: 6, to: weekStart)
         case .month:
             let monthStart = cal.startOfMonth(for: baseDateForScope)
-            task.scopeStartDate = monthStart
+            scopeStartDate = monthStart
             if let next = cal.date(byAdding: .month, value: 1, to: monthStart) {
-                task.scopeEndDate = cal.date(byAdding: .day, value: -1, to: next)
+                scopeEndDate = cal.date(byAdding: .day, value: -1, to: next)
             }
         case .year:
             let yearStart = cal.startOfYear(for: baseDateForScope)
-            task.scopeStartDate = yearStart
+            scopeStartDate = yearStart
             var endComps = DateComponents()
             endComps.year = cal.component(.year, from: yearStart)
             endComps.month = 12
             endComps.day = 31
-            task.scopeEndDate = cal.date(from: endComps)
+            scopeEndDate = cal.date(from: endComps)
         default:
             break
         }
         
-        formSource = .template(task)
-        showingFullForm = true
+        activeFormSource = .new(
+            name: taskName,
+            date: baseDateForScope,
+            timeScope: viewModel.selectedTimeScope,
+            scopeStartDate: scopeStartDate,
+            scopeEndDate: scopeEndDate
+        )
     }
     
     
@@ -367,7 +406,9 @@ struct TaskCreationOptionsView: View {
         
         switch scope {
         case .today:
-            if template.hasSpecificTime {
+            if hasSpecificTime || (initialDate != nil) {
+                startTime = baseDate
+            } else if template.hasSpecificTime {
                 var comps = cal.dateComponents([.year, .month, .day], from: baseDate)
                 comps.hour = timeComponents.hour
                 comps.minute = timeComponents.minute
@@ -444,13 +485,15 @@ struct TaskCreationOptionsView: View {
             }
         }
         
+        let specificTime = hasSpecificTime || (initialDate != nil) || template.hasSpecificTime
         var duplicated = TodoTask(
             id: UUID(),
             name: template.name,
             description: template.description,
             location: template.location,
             startTime: startTime,
-            hasSpecificTime: template.hasSpecificTime,
+            hasSpecificDay: (scope == .today) ? true : template.hasSpecificDay,
+            hasSpecificTime: specificTime,
             duration: template.duration,
             hasDuration: template.hasDuration,
             category: template.category,

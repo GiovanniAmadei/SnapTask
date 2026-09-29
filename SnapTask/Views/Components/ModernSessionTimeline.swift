@@ -17,6 +17,7 @@ struct ModernSessionTimeline: View {
                         session: session,
                         currentSession: viewModel.currentSession,
                         currentState: viewModel.state,
+                        effectivePhase: viewModel.effectivePhase,
                         currentProgress: viewModel.progress,
                         isWorkCompleted: viewModel.isSessionCompleted(session: session - 1, isWork: true),
                         isBreakCompleted: viewModel.isSessionCompleted(session: session - 1, isWork: false),
@@ -51,20 +52,20 @@ struct ModernSessionTimeline: View {
     }
     
     private func timelineCurrentSessionBar(width: CGFloat) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (viewModel.currentSession % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = viewModel.currentSession % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         
         var elapsedTime: TimeInterval = 0
+        let phase = viewModel.effectivePhase
         
-        if viewModel.state == .working {
-            elapsedTime = viewModel.settings.workDuration - viewModel.timeRemaining
-        } else if viewModel.state == .onBreak {
-            let breakDuration = viewModel.currentSession % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-                viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
-            elapsedTime = viewModel.settings.workDuration + (breakDuration - viewModel.timeRemaining)
+        if phase == .working {
+            elapsedTime = max(0, viewModel.settings.workDuration - viewModel.timeRemaining)
+        } else if phase == .onBreak {
+            elapsedTime = viewModel.settings.workDuration + max(0, breakDuration - viewModel.timeRemaining)
         }
         
         let workProgress = min(1.0, elapsedTime / viewModel.settings.workDuration)
@@ -76,8 +77,8 @@ struct ModernSessionTimeline: View {
                 .frame(width: width * workPortion * workProgress, height: 6)
             
             // Break portion (only during break)
-            if viewModel.state == .onBreak {
-                let breakProgress = (elapsedTime - viewModel.settings.workDuration) / (totalSessionTime - viewModel.settings.workDuration)
+            if phase == .onBreak {
+                let breakProgress = max(0, min(1.0, (elapsedTime - viewModel.settings.workDuration) / max(1, totalSessionTime - viewModel.settings.workDuration)))
                 let breakPortion = 1.0 - workPortion
                 
                 RoundedRectangle(cornerRadius: 3)
@@ -90,9 +91,10 @@ struct ModernSessionTimeline: View {
     }
     
     private func timelineSessionBackground(width: CGFloat, session: Int) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (session % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = session % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         let breakPortion = 1.0 - workPortion
         
@@ -110,9 +112,10 @@ struct ModernSessionTimeline: View {
     }
     
     private func timelineCompletedSessionBar(width: CGFloat, session: Int) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (session % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = session % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         let breakPortion = 1.0 - workPortion
         
@@ -134,6 +137,7 @@ struct SessionIndicator: View {
     let session: Int
     let currentSession: Int
     let currentState: PomodoroViewModel.PomodoroState
+    let effectivePhase: PomodoroViewModel.PomodoroState
     let currentProgress: Double
     let isWorkCompleted: Bool
     let isBreakCompleted: Bool
@@ -156,7 +160,7 @@ struct SessionIndicator: View {
                     .frame(width: 8, height: 8)
                 
                 // Break indicator (not shown for last session)
-                if session < currentSession || (session == currentSession && currentState == .onBreak) {
+                if session < currentSession || (session == currentSession && effectivePhase == .onBreak) {
                     Circle()
                         .fill(breakIndicatorColor)
                         .frame(width: 6, height: 6)
@@ -168,7 +172,7 @@ struct SessionIndicator: View {
     }
     
     private var workIndicatorColor: Color {
-        if session < currentSession || (session == currentSession && (currentState == .working || currentState == .onBreak)) {
+        if session < currentSession || (session == currentSession && (effectivePhase == .working || effectivePhase == .onBreak)) {
             return focusColor
         } else {
             return Color.gray.opacity(0.3)
@@ -176,7 +180,7 @@ struct SessionIndicator: View {
     }
     
     private var breakIndicatorColor: Color {
-        if session < currentSession || (session == currentSession && currentState == .onBreak) {
+        if session < currentSession || (session == currentSession && effectivePhase == .onBreak) {
             return breakColor
         } else {
             return Color.gray.opacity(0.3)
@@ -184,7 +188,7 @@ struct SessionIndicator: View {
     }
     
     private var breakIndicatorOpacity: Double {
-        if session == currentSession && currentState == .onBreak {
+        if session == currentSession && effectivePhase == .onBreak {
             return 0.3 + (0.7 * currentProgress) // Fade in as break progresses
         } else if session < currentSession {
             return 1.0

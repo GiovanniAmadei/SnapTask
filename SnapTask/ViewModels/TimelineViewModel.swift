@@ -663,6 +663,75 @@ class TimelineViewModel: ObservableObject {
         return nil
     }
 
+    func postponeTask(_ task: TodoTask, byHours hours: Int) {
+        var updated = task
+        let calendar = Calendar.current
+        if let newDate = calendar.date(byAdding: .hour, value: hours, to: task.startTime) {
+            updated.startTime = newDate
+            updated.hasSpecificTime = true
+            updated.lastModifiedDate = Date()
+            Task {
+                await TaskManager.shared.updateTask(updated)
+            }
+        }
+    }
+    
+    func moveTaskToTomorrow(_ task: TodoTask) {
+        var updated = task
+        let calendar = Calendar.current
+        if let newDate = calendar.date(byAdding: .day, value: 1, to: task.startTime) {
+            updated.startTime = newDate
+            updated.lastModifiedDate = Date()
+            Task {
+                await TaskManager.shared.updateTask(updated)
+            }
+        }
+    }
+    
+    func duplicateTask(_ task: TodoTask) {
+        let duplicate = TodoTask(
+            id: UUID(),
+            name: "\(task.name) (copia)",
+            description: task.description,
+            location: task.location,
+            startTime: task.startTime,
+            hasSpecificDay: task.hasSpecificDay,
+            hasSpecificTime: task.hasSpecificTime,
+            duration: task.duration,
+            hasDuration: task.hasDuration,
+            category: task.category,
+            priority: task.priority,
+            icon: task.icon,
+            recurrence: task.recurrence,
+            pomodoroSettings: task.pomodoroSettings,
+            subtasks: task.subtasks,
+            hasRewardPoints: task.hasRewardPoints,
+            rewardPoints: task.rewardPoints,
+            hasNotification: task.hasNotification,
+            notificationId: nil,
+            timeScope: task.timeScope,
+            scopeStartDate: task.scopeStartDate,
+            scopeEndDate: task.scopeEndDate,
+            photoPath: task.photoPath,
+            photoThumbnailPath: task.photoThumbnailPath,
+            photos: task.photos,
+            voiceMemos: task.voiceMemos,
+            notificationLeadTimeMinutes: task.notificationLeadTimeMinutes,
+            autoCarryOver: task.autoCarryOver,
+            domainId: task.domainId,
+            goalId: task.goalId
+        )
+        Task {
+            await TaskManager.shared.addTask(duplicate)
+        }
+    }
+    
+    func deleteTask(_ task: TodoTask) {
+        Task {
+            await TaskManager.shared.removeTask(task)
+        }
+    }
+
     private func completionTargetDate(for task: TodoTask) -> Date {
         let calendar = Calendar.current
         switch task.timeScope {
@@ -707,6 +776,23 @@ class TimelineViewModel: ObservableObject {
     
     var isToday: Bool {
         Calendar.current.isDateInToday(selectedDate)
+    }
+    
+    var isCurrentPeriod: Bool {
+        let calendar = Calendar.current
+        let today = Date()
+        switch selectedTimeScope {
+        case .today:
+            return calendar.isDateInToday(selectedDate)
+        case .week:
+            return calendar.isDate(currentWeek, equalTo: calendar.startOfWeek(for: today), toGranularity: .day)
+        case .month:
+            return calendar.isDate(currentMonth, equalTo: calendar.startOfMonth(for: today), toGranularity: .month)
+        case .year:
+            return calendar.isDate(currentYear, equalTo: calendar.startOfYear(for: today), toGranularity: .year)
+        case .longTerm, .all:
+            return true
+        }
     }
     
     func selectDate(_ offset: Int) {

@@ -142,7 +142,7 @@ struct RewardsView: View {
                             .themedSecondaryText()
                         
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("\(viewModel.dailyPoints + viewModel.weeklyPoints + viewModel.monthlyPoints)")
+                            Text("\(viewModel.totalAvailablePoints)")
                                 .font(.system(size: 32, weight: .bold))
                                 .themedPrimaryText()
 
@@ -181,7 +181,7 @@ struct RewardsView: View {
                 CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: theme.primaryColor)
                 CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: theme.secondaryColor)
                 CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: theme.accentColor)
-                CompactPointsChip(title: "year_short".localized, points: RewardManager.shared.availablePoints(for: .yearly), color: theme.primaryColor.opacity(0.8))
+                CompactPointsChip(title: "year_short".localized, points: viewModel.yearlyPoints, color: theme.primaryColor.opacity(0.8))
             }
         }
         .padding(.horizontal, 18)
@@ -306,8 +306,7 @@ struct RewardsView: View {
                                     currentPoints: viewModel.currentPoints(for: reward.frequency),
                                     onRedeemTapped: {
                                         if viewModel.canRedeemReward(reward) {
-                                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                                            impactFeedback.impactOccurred()
+                                            HapticManager.shared.impact(.medium)
                                             viewModel.redeemReward(reward)
                                         }
                                     },

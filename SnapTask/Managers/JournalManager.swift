@@ -371,6 +371,14 @@ final class JournalManager: ObservableObject {
             entriesByDay = [:]
         }
     }
+    
+    func resetAll() {
+        entriesByDay = [:]
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.synchronize()
+        objectWillChange.send()
+        NotificationCenter.default.post(name: .journalEntriesChanged, object: nil)
+    }
 }
 
 // MARK: - Notifications

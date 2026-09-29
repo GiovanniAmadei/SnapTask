@@ -29,6 +29,11 @@ class RewardManager: ObservableObject {
             UserDefaults.standard.set(true, forKey: "points_history_migration_v2")
         }
 
+        if !UserDefaults.standard.bool(forKey: "points_redemption_deduction_fix_v1") {
+            recalculateDailyPointsFromSources()
+            UserDefaults.standard.set(true, forKey: "points_redemption_deduction_fix_v1")
+        }
+
         if !UserDefaults.standard.bool(forKey: autoFixPointsHistoryKey) {
             autoFixPointsHistoryIfNeeded()
             UserDefaults.standard.set(true, forKey: autoFixPointsHistoryKey)
@@ -64,36 +69,30 @@ class RewardManager: ObservableObject {
     private func expectedYearlyPointsFromSources(year: Int) -> Int {
         let calendar = Calendar.current
 
-        // Build per-day points from task completions for the given year
-        var perDay: [Date: Int] = [:]
+        var yearlyEarned = 0
         for task in TaskManager.shared.tasks {
             guard task.hasRewardPoints, task.rewardPoints > 0 else { continue }
             for completionDate in task.completionDates {
                 guard calendar.component(.year, from: completionDate) == year else { continue }
-                let day = calendar.startOfDay(for: completionDate)
-                perDay[day, default: 0] += task.rewardPoints
+                yearlyEarned += task.rewardPoints
             }
         }
 
-        // Subtract general reward redemptions in the same year, clamping per-day to >= 0
+        var yearlySpent = 0
         for reward in rewards where reward.isGeneralReward {
             for redemptionDate in reward.redemptions {
                 guard calendar.component(.year, from: redemptionDate) == year else { continue }
-                let day = calendar.startOfDay(for: redemptionDate)
-                let current = perDay[day] ?? 0
-                perDay[day] = max(current - reward.pointsCost, 0)
+                yearlySpent += reward.pointsCost
             }
         }
 
-        return perDay.values.reduce(0) { $0 + max($1, 0) }
+        return max(yearlyEarned - yearlySpent, 0)
     }
 
     private func expectedAllTimePointsFromSources() -> Int {
-        let calendar = Calendar.current
         let now = Date()
 
-        // Build per-day points from task completions across all time
-        var perDay: [Date: Int] = [:]
+        var totalEarned = 0
         for task in TaskManager.shared.tasks {
             guard task.hasRewardPoints, task.rewardPoints > 0 else { continue }
             var seenCompletions: Set<Int64> = []
@@ -101,21 +100,16 @@ class RewardManager: ObservableObject {
                 guard completionDate <= now else { continue }
                 let completionKey = Int64(completionDate.timeIntervalSince1970.rounded())
                 guard seenCompletions.insert(completionKey).inserted else { continue }
-                let day = calendar.startOfDay(for: completionDate)
-                perDay[day, default: 0] += task.rewardPoints
+                totalEarned += task.rewardPoints
             }
         }
 
-        // Subtract general reward redemptions, clamping per-day to >= 0
+        var totalSpent = 0
         for reward in rewards where reward.isGeneralReward {
-            for redemptionDate in reward.redemptions {
-                let day = calendar.startOfDay(for: redemptionDate)
-                let current = perDay[day] ?? 0
-                perDay[day] = max(current - reward.pointsCost, 0)
-            }
+            totalSpent += reward.redemptions.count * reward.pointsCost
         }
 
-        return perDay.values.reduce(0) { $0 + max($1, 0) }
+        return max(totalEarned - totalSpent, 0)
     }
     
     // MARK: - Rewards Management
@@ -163,23 +157,113 @@ class RewardManager: ObservableObject {
         saveRewards()
     }
     
+    func eligibleDaysForDeduction(from date: Date, frequency: RewardFrequency, in calendar: Calendar = .current) -> [Date] {
+        let startOfRedemptionDay = calendar.startOfDay(for: date)
+        switch frequency {
+        case .daily:
+            return [startOfRedemptionDay]
+            
+        case .weekly:
+            guard let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)) else {
+                return [startOfRedemptionDay]
+            }
+            return (0..<7).compactMap { i in
+                calendar.date(byAdding: .day, value: i, to: weekStart).map { calendar.startOfDay(for: $0) }
+            }.filter { $0 <= startOfRedemptionDay }.sorted(by: >)
+            
+        case .monthly:
+            let components = calendar.dateComponents([.year, .month], from: date)
+            guard let monthStart = calendar.date(from: components),
+                  let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) else {
+                return [startOfRedemptionDay]
+            }
+            var days: [Date] = []
+            var curr = monthStart
+            while curr <= monthEnd && curr <= startOfRedemptionDay {
+                days.append(calendar.startOfDay(for: curr))
+                guard let next = calendar.date(byAdding: .day, value: 1, to: curr) else { break }
+                curr = next
+            }
+            return days.sorted(by: >)
+            
+        case .yearly:
+            let components = calendar.dateComponents([.year], from: date)
+            guard let yearStart = calendar.date(from: components),
+                  let yearEnd = calendar.date(byAdding: DateComponents(year: 1, day: -1), to: yearStart) else {
+                return [startOfRedemptionDay]
+            }
+            var days: [Date] = []
+            var curr = yearStart
+            while curr <= yearEnd && curr <= startOfRedemptionDay {
+                days.append(calendar.startOfDay(for: curr))
+                guard let next = calendar.date(byAdding: .day, value: 1, to: curr) else { break }
+                curr = next
+            }
+            return days.sorted(by: >)
+            
+        case .oneTime:
+            return []
+        }
+    }
+
+    func deductPoints(cost: Int, for frequency: RewardFrequency, categoryId: UUID?, on date: Date = Date()) {
+        guard cost > 0 else { return }
+        let calendar = Calendar.current
+        let startOfDate = calendar.startOfDay(for: date)
+        
+        let candidateDays: [Date]
+        if frequency == .oneTime {
+            candidateDays = dailyPointsHistory.keys.filter { $0 <= startOfDate }.sorted(by: >)
+        } else {
+            candidateDays = eligibleDaysForDeduction(from: date, frequency: frequency, in: calendar)
+        }
+        
+        // 1. If category-specific reward, deduct from category points first
+        if let categoryId = categoryId {
+            let catCandidateDays: [Date]
+            if frequency == .oneTime {
+                catCandidateDays = (categoryPointsHistory[categoryId]?.keys.filter { $0 <= startOfDate }.sorted(by: >)) ?? []
+            } else {
+                catCandidateDays = candidateDays
+            }
+            
+            var remainingCategoryCost = cost
+            for day in catCandidateDays {
+                guard remainingCategoryCost > 0 else { break }
+                let current = categoryPointsHistory[categoryId]?[day] ?? 0
+                guard current > 0 else { continue }
+                let deduct = min(current, remainingCategoryCost)
+                categoryPointsHistory[categoryId]?[day] = current - deduct
+                remainingCategoryCost -= deduct
+            }
+            saveCategoryPointsHistory()
+        }
+        
+        // 2. Deduct from general dailyPointsHistory
+        var remainingCost = cost
+        for day in candidateDays {
+            guard remainingCost > 0 else { break }
+            let current = dailyPointsHistory[day] ?? 0
+            guard current > 0 else { continue }
+            let deduct = min(current, remainingCost)
+            dailyPointsHistory[day] = current - deduct
+            remainingCost -= deduct
+        }
+        
+        saveDailyPointsHistory()
+        syncDailyPointsToCloudKit()
+        objectWillChange.send()
+        
+        print("🎯 Deducted \(cost) points for \(frequency.rawValue) reward on \(startOfDate). Remaining unallocated: \(remainingCost)")
+    }
+
     func redeemReward(_ reward: Reward, on date: Date = Date()) {
         let availablePoints = reward.isGeneralReward ?
             availablePoints(for: reward.frequency, on: date) :
             availablePointsForCategory(reward.categoryId!, frequency: reward.frequency, on: date)
             
         if reward.canRedeem(availablePoints: availablePoints) {
-            let points = -reward.pointsCost
-            
-            if reward.isGeneralReward {
-                if availablePoints >= reward.pointsCost {
-                    addPoints(points, on: date)
-                }
-            } else {
-                if availablePoints >= reward.pointsCost {
-                    addPointsToCategory(points, categoryId: reward.categoryId!, categoryName: reward.categoryName, on: date)
-                }
-            }
+            deductPoints(cost: reward.pointsCost, for: reward.frequency, categoryId: reward.categoryId, on: date)
             
             // Mark as redeemed
             var updatedReward = reward
@@ -674,7 +758,7 @@ class RewardManager: ObservableObject {
     }
 
     func recalculateDailyPointsFromSources() {
-        print("🧮 Recalculating daily points from tasks and general redemptions...")
+        print("🧮 Recalculating daily points from tasks and redemptions...")
         let calendar = Calendar.current
         
         // Base: punti guadagnati dai task
@@ -687,17 +771,7 @@ class RewardManager: ObservableObject {
             }
         }
         
-        // Sottrai riscatti delle reward generali nel giorno in cui sono stati riscattati
-        for reward in rewards where reward.isGeneralReward {
-            for redemptionDate in reward.redemptions {
-                let day = calendar.startOfDay(for: redemptionDate)
-                let current = newDaily[day] ?? 0
-                let updated = max(current - reward.pointsCost, 0)
-                newDaily[day] = updated
-            }
-        }
-        
-        // Ricalcola anche i punti per categoria dai task (coerente con recalculatePointsFromTasks)
+        // Base: punti per categoria dai task
         var newCategory: [UUID: [Date: Int]] = [:]
         for task in TaskManager.shared.tasks {
             guard task.hasRewardPoints, task.rewardPoints > 0, let categoryId = task.category?.id else { continue }
@@ -706,6 +780,57 @@ class RewardManager: ObservableObject {
                 var hist = newCategory[categoryId] ?? [:]
                 hist[day, default: 0] += task.rewardPoints
                 newCategory[categoryId] = hist
+            }
+        }
+        
+        // Raccogli tutte le redenzioni con la relativa reward, ordinate cronologicamente
+        var allRedemptions: [(reward: Reward, date: Date)] = []
+        for reward in rewards {
+            for redemptionDate in reward.redemptions {
+                allRedemptions.append((reward, redemptionDate))
+            }
+        }
+        allRedemptions.sort { $0.date < $1.date }
+        
+        // Sottrai riscatti applicando la logica di deduzione per periodo
+        for (reward, redemptionDate) in allRedemptions {
+            let startOfRedemption = calendar.startOfDay(for: redemptionDate)
+            
+            // 1. Se di categoria, scala anche da newCategory
+            if let categoryId = reward.categoryId {
+                let catDays: [Date]
+                if reward.frequency == .oneTime {
+                    catDays = (newCategory[categoryId]?.keys.filter { $0 <= startOfRedemption }.sorted(by: >)) ?? []
+                } else {
+                    catDays = eligibleDaysForDeduction(from: redemptionDate, frequency: reward.frequency, in: calendar)
+                }
+                var remCat = reward.pointsCost
+                for day in catDays {
+                    guard remCat > 0 else { break }
+                    let current = newCategory[categoryId]?[day] ?? 0
+                    guard current > 0 else { continue }
+                    let deduct = min(current, remCat)
+                    newCategory[categoryId]?[day] = current - deduct
+                    remCat -= deduct
+                }
+            }
+            
+            // 2. Scala da newDaily
+            let candidateDays: [Date]
+            if reward.frequency == .oneTime {
+                candidateDays = newDaily.keys.filter { $0 <= startOfRedemption }.sorted(by: >)
+            } else {
+                candidateDays = eligibleDaysForDeduction(from: redemptionDate, frequency: reward.frequency, in: calendar)
+            }
+            
+            var remaining = reward.pointsCost
+            for day in candidateDays {
+                guard remaining > 0 else { break }
+                let current = newDaily[day] ?? 0
+                guard current > 0 else { continue }
+                let deduct = min(current, remaining)
+                newDaily[day] = current - deduct
+                remaining -= deduct
             }
         }
         

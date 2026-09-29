@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 @MainActor
 final class DemoDataSeeder {
@@ -36,9 +37,20 @@ final class DemoDataSeeder {
         await seedTrackingSessionsForYear(refs.tasks, categories: refs.categories)
         await seedRewardRedemptions(refs.rewardsByName)
 
+        await seedFinances()
+
         RewardManager.shared.recalculateDailyPointsFromSources()
 
         activatePro()
+
+        TaskManager.shared.notifyTasksUpdated()
+        TaskManager.shared.objectWillChange.send()
+        CategoryManager.shared.objectWillChange.send()
+        RewardManager.shared.objectWillChange.send()
+        NotificationCenter.default.post(name: .tasksDidUpdate, object: nil)
+        NotificationCenter.default.post(name: .categoriesDidUpdate, object: nil)
+        NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
+        WidgetCenter.shared.reloadAllTimelines()
 
         if cloudWasEnabled {
             CloudKitService.shared.enableCloudKitSync()
@@ -48,10 +60,6 @@ final class DemoDataSeeder {
     // MARK: - Clear
     private func clearAllData() async {
         let tm = TaskManager.shared
-        let all = tm.tasks
-        for t in all {
-            await tm.removeTask(t)
-        }
         tm.resetUserDefaults()
 
         let rm = RewardManager.shared
@@ -59,17 +67,37 @@ final class DemoDataSeeder {
 
         CategoryManager.shared.performCompleteReset()
 
+        FinanceManager.shared.resetAll()
+        JournalManager.shared.resetAll()
+        MandalaManager.shared.resetAll()
+
+        TimeTrackerViewModel.shared.activeSessions.forEach { TimeTrackerViewModel.shared.removeSession(id: $0.id) }
+        PomodoroViewModel.shared.stop()
+
         let ud = UserDefaults.standard
         ud.removeObject(forKey: "timeTracking")
         ud.removeObject(forKey: "taskMetadata")
+        ud.removeObject(forKey: "pomodoro_background_timestamp")
+        ud.removeObject(forKey: "pomodoro_time_remaining")
+        ud.removeObject(forKey: "pomodoro_state")
+        ud.removeObject(forKey: "pomodoro_current_session")
+        ud.removeObject(forKey: "pomodoro_total_paused_time")
+        for key in ud.dictionaryRepresentation().keys where key.hasPrefix("timer_session_") {
+            ud.removeObject(forKey: key)
+        }
         ud.synchronize()
+
+        TaskNotificationManager.shared.cancelAllNotifications()
+        WidgetCenter.shared.reloadAllTimelines()
         NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
+        NotificationCenter.default.post(name: .tasksDidUpdate, object: nil)
+        NotificationCenter.default.post(name: .categoriesDidUpdate, object: nil)
     }
 
     // MARK: - Categories
     private func seedCategories() async -> [String: Category] {
-        // De-duplica per nome
-        var existingByName = Dictionary(uniqueKeysWithValues: CategoryManager.shared.categories.map { ($0.name.lowercased(), $0) })
+        // De-duplica per nome in modo sicuro
+        var existingByName = Dictionary(CategoryManager.shared.categories.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
 
         let desired: [(String, String)] = [
             ("Work", "#3B82F6"),         // Blue - Professional tasks
@@ -126,8 +154,8 @@ final class DemoDataSeeder {
             ensureReward(Reward(name: "Desk Upgrade", description: "Improve your workspace", pointsCost: 300, frequency: .monthly, icon: "desktopcomputer", categoryId: work.id, categoryName: work.name))
         }
 
-        // Build map by name
-        return Dictionary(uniqueKeysWithValues: RewardManager.shared.rewards.map { ($0.name, $0) })
+        // Build map by name in modo sicuro
+        return Dictionary(RewardManager.shared.rewards.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
     // MARK: - Tasks (+ subtasks)
@@ -249,6 +277,63 @@ final class DemoDataSeeder {
             points: 10,
             recurrence: dailyMorning,
             startAt: cal.date(bySettingHour: 9, minute: 0, second: 0, of: dailyStart) ?? dailyStart
+        )
+
+        ids["Pranzo & Relax"] = await makeTask(
+            name: "Pranzo & Pausa Relax",
+            icon: "fork.knife",
+            categoryName: "Health & Fitness",
+            priority: .medium,
+            minutes: 45,
+            points: 10,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 13, minute: 0, second: 0, of: dailyStart) ?? dailyStart
+        )
+
+        ids["Focus Time Pomeridiano"] = await makeTask(
+            name: "Focus Time Pomeridiano",
+            icon: "laptopcomputer",
+            categoryName: "Work",
+            priority: .high,
+            minutes: 90,
+            points: 25,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 14, minute: 30, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Revisione priorità", "Sviluppo feature", "Test e rifinitura"]
+        )
+
+        ids["Allineamento & Note"] = await makeTask(
+            name: "Allineamento & Note Operative",
+            icon: "bubble.left.and.bubble.right.fill",
+            categoryName: "Work",
+            priority: .medium,
+            minutes: 30,
+            points: 15,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 16, minute: 30, second: 0, of: dailyStart) ?? dailyStart
+        )
+
+        ids["Camminata Rigenerante"] = await makeTask(
+            name: "Camminata Rigenerante",
+            icon: "figure.walk",
+            categoryName: "Health & Fitness",
+            priority: .low,
+            minutes: 30,
+            points: 15,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 17, minute: 30, second: 0, of: dailyStart) ?? dailyStart
+        )
+
+        ids["Controllo Spese"] = await makeTask(
+            name: "Controllo Spese & Budget",
+            icon: "eurosign.circle.fill",
+            categoryName: "Finance",
+            priority: .medium,
+            minutes: 15,
+            points: 10,
+            recurrence: dailyMorning,
+            startAt: cal.date(bySettingHour: 19, minute: 0, second: 0, of: dailyStart) ?? dailyStart,
+            subtasks: ["Registra scontrini del giorno", "Verifica budget residuo"]
         )
 
         ids["Read 15 Minutes"] = await makeTask(
@@ -456,7 +541,7 @@ final class DemoDataSeeder {
         let tm = TaskManager.shared
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        guard let start = cal.date(byAdding: .day, value: -365, to: today) else { return }
+        guard let start = cal.date(byAdding: .day, value: -14, to: today) else { return }
 
         func rand(_ min: Int, _ max: Int) -> Int { Int.random(in: min...max) }
 
@@ -643,7 +728,7 @@ final class DemoDataSeeder {
         let tm = TaskManager.shared
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        guard let start = cal.date(byAdding: .day, value: -180, to: today) else { return }
+        guard let start = cal.date(byAdding: .day, value: -14, to: today) else { return }
 
         func sessionDate(_ base: Date, hour: Int, minute: Int = 0) -> Date {
             var comps = cal.dateComponents([.year, .month, .day], from: base)
@@ -1074,7 +1159,7 @@ final class DemoDataSeeder {
 
         // Weekly: last 26 weeks ~ 6 mesi
         if let weeklyPlanning = scoped["Weekly Planning"] {
-            var w = weekStart(today)
+            let w = weekStart(today)
             for i in 0..<26 {
                 if let past = cal.date(byAdding: .weekOfYear, value: -i, to: w) {
                     if Double.random(in: 0...1) < 0.8 {
@@ -1085,7 +1170,7 @@ final class DemoDataSeeder {
             }
         }
         if let grocery = scoped["Grocery Planning"] {
-            var w = weekStart(today)
+            let w = weekStart(today)
             for i in 0..<20 {
                 if let past = cal.date(byAdding: .weekOfYear, value: -i, to: w) {
                     if Double.random(in: 0...1) < 0.7 {
@@ -1098,7 +1183,7 @@ final class DemoDataSeeder {
 
         // Monthly: last 12 months
         if let budget = scoped["Monthly Budget Review"] {
-            var m = monthStart(today)
+            let m = monthStart(today)
             for i in 0..<12 {
                 if let past = cal.date(byAdding: .month, value: -i, to: m) {
                     if Double.random(in: 0...1) < 0.9 {
@@ -1109,7 +1194,7 @@ final class DemoDataSeeder {
             }
         }
         if let skill = scoped["Monthly Skill Focus"] {
-            var m = monthStart(today)
+            let m = monthStart(today)
             for i in 0..<12 {
                 if let past = cal.date(byAdding: .month, value: -i, to: m) {
                     if Double.random(in: 0...1) < 0.6 {
@@ -1122,7 +1207,7 @@ final class DemoDataSeeder {
 
         // Yearly: last 3 years
         if let vision = scoped["Yearly Vision Review"] {
-            var y = yearStart(today)
+            let y = yearStart(today)
             for i in 0..<3 {
                 if let past = cal.date(byAdding: .year, value: -i, to: y) {
                     if Double.random(in: 0...1) < 0.95 {
@@ -1139,6 +1224,167 @@ final class DemoDataSeeder {
             if Double.random(in: 0...1) < 0.7 {
                 TaskManager.shared.toggleTaskCompletion(career, on: anchor)
                 tm.updateTaskRating(taskId: career, actualDuration: 3*60*60, difficultyRating: 7, qualityRating: 8, notes: "Milestone achieved", for: anchor)
+            }
+        }
+    }
+
+    // MARK: - Finances
+    private func seedFinances() async {
+        let fm = FinanceManager.shared
+        
+        // Initial balance and targets
+        fm.setStartingBalance(3500.0)
+        fm.setMonthlyIncomeGoal(3200.0)
+        fm.setMonthlyBudgetTarget(1800.0)
+        fm.setSavingsGoalPercent(20.0)
+        
+        let cal = Calendar.current
+        let today = Date()
+        
+        // Budgets
+        let defaultBudgets: [(FinanceCategory, Double)] = [
+            (.food, 450.0),
+            (.transport, 160.0),
+            (.entertainment, 140.0),
+            (.utilities, 190.0),
+            (.clothing, 120.0)
+        ]
+        for (cat, limit) in defaultBudgets {
+            if !fm.budgets.contains(where: { $0.category == cat }) {
+                fm.addBudget(FinanceBudget(category: cat, monthlyLimit: limit))
+            }
+        }
+        
+        // Financial Goals
+        let defaultGoals: [FinancialGoal] = [
+            FinancialGoal(
+                name: "Fondo di Emergenza",
+                targetAmount: 6000.0,
+                currentAmount: 3800.0,
+                targetDate: cal.date(byAdding: .month, value: 6, to: today),
+                type: .emergency
+            ),
+            FinancialGoal(
+                name: "Vacanza Estiva Giappone",
+                targetAmount: 3000.0,
+                currentAmount: 1650.0,
+                targetDate: cal.date(byAdding: .month, value: 8, to: today),
+                type: .savings
+            ),
+            FinancialGoal(
+                name: "Nuovo MacBook Pro",
+                targetAmount: 2400.0,
+                currentAmount: 1100.0,
+                targetDate: cal.date(byAdding: .month, value: 5, to: today),
+                type: .purchase
+            ),
+            FinancialGoal(
+                name: "Portafoglio ETF & Investimenti",
+                targetAmount: 12000.0,
+                currentAmount: 5500.0,
+                targetDate: cal.date(byAdding: .year, value: 2, to: today),
+                type: .investment
+            )
+        ]
+        for goal in defaultGoals {
+            if !fm.financialGoals.contains(where: { $0.name == goal.name }) {
+                fm.addFinancialGoal(goal)
+            }
+        }
+        
+        // Recurring Entries (Salaries, Subscriptions, Rent)
+        let recurringEntries: [FinanceEntry] = [
+            FinanceEntry(
+                name: "Stipendio Mensile",
+                amount: 2750.0,
+                type: .income,
+                category: .salary,
+                date: cal.date(byAdding: .day, value: -12, to: today) ?? today,
+                notes: "Accredito stipendio principale",
+                isRecurring: true,
+                recurringFrequency: .monthly
+            ),
+            FinanceEntry(
+                name: "Affitto / Canone Casa",
+                amount: 800.0,
+                type: .expense,
+                category: .housing,
+                date: cal.date(byAdding: .day, value: -20, to: today) ?? today,
+                notes: "Bonifico mensile casa",
+                isRecurring: true,
+                recurringFrequency: .monthly
+            ),
+            FinanceEntry(
+                name: "Fibra Internet & WiFi",
+                amount: 29.90,
+                type: .expense,
+                category: .utilities,
+                date: cal.date(byAdding: .day, value: -8, to: today) ?? today,
+                isRecurring: true,
+                recurringFrequency: .monthly
+            ),
+            FinanceEntry(
+                name: "Abbonamento Palestra",
+                amount: 55.00,
+                type: .subscription,
+                category: .health,
+                date: cal.date(byAdding: .day, value: -14, to: today) ?? today,
+                isRecurring: true,
+                recurringFrequency: .monthly
+            ),
+            FinanceEntry(
+                name: "Spotify & Apple Music",
+                amount: 14.99,
+                type: .subscription,
+                category: .entertainment,
+                date: cal.date(byAdding: .day, value: -6, to: today) ?? today,
+                isRecurring: true,
+                recurringFrequency: .monthly
+            ),
+            FinanceEntry(
+                name: "iCloud+ Storage",
+                amount: 2.99,
+                type: .subscription,
+                category: .utilities,
+                date: cal.date(byAdding: .day, value: -3, to: today) ?? today,
+                isRecurring: true,
+                recurringFrequency: .monthly
+            )
+        ]
+        for entry in recurringEntries {
+            if !fm.entries.contains(where: { $0.name == entry.name }) {
+                fm.addEntry(entry)
+            }
+        }
+        
+        // Recent One-time Entries
+        let sampleEntries: [(String, Double, FinanceCategory, Int)] = [
+            ("Spesa Esselunga settimanale", 92.40, .food, -1),
+            ("Rifornimento Carburante", 68.00, .transport, -2),
+            ("Pranzo di lavoro con colleghi", 18.50, .food, -3),
+            ("Farmacia & Integratori", 26.50, .health, -4),
+            ("Cena Pizzeria amici", 38.00, .food, -5),
+            ("Abbigliamento invernale", 110.00, .clothing, -7),
+            ("Libro Tecnico Architettura Software", 36.00, .education, -9),
+            ("Cinema & Spettacolo", 19.50, .entertainment, -11),
+            ("Spesa mercato rionale", 42.00, .food, -13),
+            ("Biglietto Treno AV", 39.00, .transport, -15),
+            ("Consulenza Freelance Web App", 650.00, .freelance, -10),
+            ("Vendita usato tecnologico", 120.00, .passive, -16)
+        ]
+        for (name, amount, cat, daysOffset) in sampleEntries {
+            let entryDate = cal.date(byAdding: .day, value: daysOffset, to: today) ?? today
+            let isIncome = (cat == .freelance || cat == .salary || cat == .passive)
+            let entry = FinanceEntry(
+                name: name,
+                amount: amount,
+                type: isIncome ? .income : .expense,
+                category: cat,
+                date: entryDate,
+                isRecurring: false
+            )
+            if !fm.entries.contains(where: { $0.name == entry.name && $0.amount == entry.amount }) {
+                fm.addEntry(entry)
             }
         }
     }

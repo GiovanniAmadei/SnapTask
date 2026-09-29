@@ -6,6 +6,9 @@
 "delete" = "削除";
 "done" = "完了";
 "add" = "追加";
+"copy" = "コピー";
+"cut" = "切り取り";
+"paste" = "貼り付け";
 "continue" = "続ける";
 "back" = "戻る";
 "skip" = "スキップ";
@@ -1083,7 +1086,7 @@
 "weekly_overview" = "週次概要";
 "week_pts" = "週: {points} ポイント";
 "focus_time" = "フォーカス時間";
-"mark_incomplete" = "未完了にマーク";
+"mark_incomplete" = "未完了";
 "mark_complete" = "完了にマーク";
 "recurring_task" = "定期的なタスク";
 "has_duration" = "期間あり";
@@ -1284,9 +1287,9 @@
 "patterns_enum" = "パターン";
 "daily_recurrence" = "日次繰り返し";
 "task_repeat_every_day" = "タスクは毎日繰り返されます";
-"weekly_recurrence" = "週次繰り返し";
-"monthly_recurrence" = "月次繰り返し";
-"yearly_recurrence" = "年次繰り返し";
+"weekly_recurrence" = "週の繰り返し";
+"monthly_recurrence" = "月の繰り返し";
+"yearly_recurrence" = "年の繰り返し";
 "select_days_of_month" = "月の日を選択";
 "select_patterns_ordinal" = "パターンを選択（序数）";
 "monthly_patterns" = "月次パターン";
@@ -1580,7 +1583,9 @@
 "current_income" = "現在の収入";
 "category_budgets" = "カテゴリ別予算";
 "category_budgets_footer" = "個別カテゴリの支出制限を設定";
+"swipe_to_edit_delete" = "スワイプして編集または削除";
 "add_category_budget" = "カテゴリ予算を追加";
+"edit_budget" = "予算を編集";
 "monthly_limit" = "月間制限";
 "over_budget" = "予算超過";
 "reset_finance_data" = "すべての財務データをリセット";
@@ -1877,3 +1882,116 @@
 "widget_budget" = "予算";
 "widget_no_data" = "財務データなし";
 "widget_this_month" = "今月";
+
+// MARK: - Quick Add App Intents
+"Add Quick Task" = "クイックタスクを追加";
+"Quick Add Task" = "クイックタスク";
+"Quickly add a new task to your SnapTask timeline." = "SnapTaskのタイムラインに新しいタスクをすばやく追加します。";
+"Open Quick Add" = "クイック追加を開く";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "SnapTaskを開いて新規タスクシートを表示し、すばやく入力できるようにします。";
+"Task" = "タスク";
+"What do you want to do?" = "何をしますか？";
+"Could not access SnapTask data." = "SnapTaskのデータにアクセスできませんでした。";
+"Could not save the task." = "タスクを保存できませんでした。";
+"Add task to SnapTask" = "SnapTaskにタスクを追加";
+"Add task to \(_:)" = "%@ にタスクを追加";
+"Add a task in \(_:)" = "%@ でタスクを追加";
+"Quick add in \(_:)" = "%@ でクイック追加";
+"New task in \(_:)" = "%@ の新しいタスク";
+"Capture task in \(_:)" = "%@ でタスクを記録";
+"Added \"%@\" to SnapTask." = "「%@」をSnapTaskに追加しました。";
+
+// Show Today's Tasks
+"Show Today's Tasks" = "今日のタスクを表示";
+"Today's Tasks" = "今日のタスク";
+"Lists the tasks you have planned for today." = "今日予定しているタスクを一覧表示します。";
+"Show today's tasks in SnapTask" = "SnapTaskの今日のタスクを表示";
+"You don't have any tasks yet in SnapTask." = "SnapTaskにはまだタスクがありません。";
+"Could not read your SnapTask tasks." = "SnapTaskのタスクを読み込めませんでした。";
+"You have no tasks for today. Enjoy!" = "今日のタスクはありません。楽しんで！";
+"All your %lld tasks for today are done. Great job!" = "今日の%lld件のタスクをすべて完了しました。お疲れさま！";
+"You have %lld tasks left for today (%lld already done):" = "今日はあと%lld件のタスクがあります（%lld件完了済み）：";
+"You have %lld tasks for today:" = "今日は%lld件のタスクがあります：";
+"…and %lld more." = "…ほか%lld件。";
+
+// Session Conflict
+"session_conflict" = "セッションの競合";
+"active_session_running_desc" = "すでに実行中のアクティブなセッションがあります";
+"current_session" = "現在の";
+"new_session" = "新しい";
+"keep_both" = "両方保持する";
+"save_and_replace" = "保存して置き換える";
+"discard_and_replace" = "破棄して置き換える";
+"reorder" = "並べ替え";
+
+"view_all" = "すべて表示";
+"all_sessions" = "すべてのセッション";
+"edit_session" = "セッションを編集";
+"timing" = "タイミング";
+"end_time" = "終了時間";
+"add_notes_placeholder" = "メモを追加...";
+
+// Celebrations & Recurrence
+"app_icon" = "アプリアイコン";
+"celebrations" = "お祝い";
+"confetti_celebrations" = "紙吹雪のお祝い";
+"confetti_celebrations_description" = "タスク完了時に紙吹雪のアニメーションを表示します";
+"hide_days_bar" = "日付バーを非表示";
+"hide_days_bar_description" = "「今日」ビューの日付選択バーを非表示にします";
+"postpone_single_occurrence" = "今日の予定のみを明日に延期";
+
+// Edit scope (recurring tasks)
+"edit_scope_title" = "編集範囲";
+"edit_scope_description" = "これは繰り返しタスクです。変更をこの発生のみに適用するか、シリーズ全体に適用するかを選択してください。";
+"edit_scope_entire_series" = "シリーズ全体";
+"edit_scope_single_instance" = "この発生のみ";
+
+"expand" = "拡大";
+"collapse" = "縮小";
+
+
+// Contextual Recurrence & Notifications Actions (New)
+"repeats" = "繰り返し";
+"every_n_weeks" = "N週間ごと";
+"weeks_of_month" = "月の週";
+"pattern_modulo" = "パターン（剰余）";
+"every_n_months" = "Nヶ月ごと";
+"specific_months" = "指定月";
+"every_n_years" = "N年ごと";
+"week_unit" = "週";
+"weeks_unit" = "週";
+"month_unit" = "月";
+"months_unit" = "月";
+"year_unit" = "年";
+"years_unit" = "年";
+"anchored_start_week" = "タスク開始週を基準とします。";
+"anchored_start_month" = "タスク開始月を基準とします。";
+"anchored_start_year" = "タスク開始年を基準とします。";
+"select_weeks_of_month" = "月の週を選択";
+"select_months" = "月を選択";
+"select_specific_months" = "特定の月を選択";
+"every_kth_week" = "k週間ごと（k ≥ 2）";
+"every_k_years" = "k年ごと（k ≥ 2）";
+"offset" = "オフセット";
+"even_weeks" = "偶数週";
+"odd_weeks" = "奇数週";
+"even_years" = "偶数年";
+"odd_years" = "奇数年";
+"modulo_weeks_formula_desc" = "選択された週の条件: (週 − 基準) % k = オフセット";
+"modulo_years_formula_desc" = "選択された年の条件: (年 − 基準) % k = オフセット";
+"long_term_tasks_no_recurrence" = "長期タスクには繰り返し設定はありません。";
+"last_ordinal" = "最後";
+"every_n_weeks_format" = "%d週間ごと";
+"weeks_of_month_prefix" = "月の週: %@";
+"every_kth_week_offset_format" = "%d週ごと (オフセット %d)";
+"every_n_months_format" = "%dヶ月ごと";
+"months_prefix" = "月: %@";
+"every_n_years_format" = "%d年ごと";
+"every_k_years_offset_format" = "%d年ごと (オフセット %d)";
+"no_recurrence" = "繰り返しなし";
+"mark_as_completed" = "完了としてマーク";
+"remind_me_in_1_hour" = "1時間後に再通知";
+"tomorrow_morning_9am" = "明日の朝（09:00）";
+"recurrence_desc_week" = "週単位の繰り返しを設定します（特定日なし）。";
+"recurrence_desc_month" = "月単位の繰り返しを設定します。";
+"recurrence_desc_year" = "年単位の繰り返しを設定します。";

@@ -146,10 +146,18 @@ enum FeedbackStatus: String, CaseIterable, Codable {
     
     var displayName: String {
         switch self {
-        case .pending: return "Pending"
-        case .inProgress: return "In Progress"
-        case .completed: return "Completed"
-        case .rejected: return "Rejected"
+        case .pending:
+            let loc = "feedback_status_pending".localized
+            return (loc == "feedback_status_pending" || loc.isEmpty) ? "In revisione" : loc
+        case .inProgress:
+            let loc = "feedback_status_in_progress".localized
+            return (loc == "feedback_status_in_progress" || loc.isEmpty) ? "In corso" : loc
+        case .completed:
+            let loc = "feedback_status_completed".localized
+            return (loc == "feedback_status_completed" || loc.isEmpty) ? "Completato" : loc
+        case .rejected:
+            let loc = "feedback_status_rejected".localized
+            return (loc == "feedback_status_rejected" || loc.isEmpty) ? "Rifiutato" : loc
         }
     }
     

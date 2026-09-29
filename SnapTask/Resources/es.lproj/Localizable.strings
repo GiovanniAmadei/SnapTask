@@ -6,6 +6,9 @@
 "delete" = "Eliminar";
 "done" = "Hecho";
 "add" = "Añadir";
+"copy" = "Copiar";
+"cut" = "Cortar";
+"paste" = "Pegar";
 "continue" = "Continuar";
 "back" = "Atrás";
 "skip" = "Omitir";
@@ -1047,7 +1050,7 @@
 "weekly_overview" = "Resumen semanal";
 "week_pts" = "Semana: {points} pts";
 "focus_time" = "Tiempo de enfoque";
-"mark_incomplete" = "Marcar como incompleta";
+"mark_incomplete" = "Incompleta";
 "mark_complete" = "Marcar como completa";
 "recurring_task" = "Tarea recurrente";
 "has_duration" = "Tiene duración";
@@ -1507,7 +1510,7 @@
 "weekly_overview" = "Resumen semanal";
 "week_pts" = "Semana: {points} pts";
 "focus_time" = "Tiempo de enfoque";
-"mark_incomplete" = "Marcar como incompleta";
+"mark_incomplete" = "Incompleta";
 "mark_complete" = "Marcar como completa";
 "recurring_task" = "Tarea recurrente";
 "has_duration" = "Tiene duración";
@@ -1791,7 +1794,9 @@
 "current_income" = "Ingresos Actuales";
 "category_budgets" = "Presupuestos por Categoría";
 "category_budgets_footer" = "Establece límites de gasto para categorías individuales";
+"swipe_to_edit_delete" = "Desliza para editar o eliminar";
 "add_category_budget" = "Añadir Presupuesto de Categoría";
+"edit_budget" = "Editar Presupuesto";
 "monthly_limit" = "Límite Mensual";
 "over_budget" = "Sobre Presupuesto";
 "reset_finance_data" = "Restablecer Todos los Datos Financieros";
@@ -1935,6 +1940,37 @@
 "pattern_neglect_desc" = "Este dominio necesita atención";
 "pattern_neglect_no_tasks_desc" = "Sin tareas asignadas a este dominio";
 "pattern_inconsistency" = "Inconsistencia";
+
+// MARK: - Quick Add App Intents
+"Add Quick Task" = "Añadir tarea rápida";
+"Quick Add Task" = "Tarea rápida";
+"Quickly add a new task to your SnapTask timeline." = "Añade rápidamente una nueva tarea a tu línea de tiempo de SnapTask.";
+"Open Quick Add" = "Abrir añadido rápido";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "Abre SnapTask y muestra la hoja de nueva tarea para que puedas escribirla rápidamente.";
+"Task" = "Tarea";
+"What do you want to do?" = "¿Qué quieres hacer?";
+"Could not access SnapTask data." = "No se pudo acceder a los datos de SnapTask.";
+"Could not save the task." = "No se pudo guardar la tarea.";
+"Add task to SnapTask" = "Añadir tarea a SnapTask";
+"Add task to \(_:)" = "Añadir tarea a %@";
+"Add a task in \(_:)" = "Añadir una tarea en %@";
+"Quick add in \(_:)" = "Añadido rápido en %@";
+"New task in \(_:)" = "Nueva tarea en %@";
+"Capture task in \(_:)" = "Capturar tarea en %@";
+"Added \"%@\" to SnapTask." = "Se añadió \"%@\" a SnapTask.";
+
+// Show Today's Tasks
+"Show Today's Tasks" = "Mostrar tareas de hoy";
+"Today's Tasks" = "Tareas de hoy";
+"Lists the tasks you have planned for today." = "Lista las tareas que tienes planificadas para hoy.";
+"Show today's tasks in SnapTask" = "Mostrar las tareas de hoy en SnapTask";
+"You don't have any tasks yet in SnapTask." = "Aún no tienes tareas en SnapTask.";
+"Could not read your SnapTask tasks." = "No se pudieron leer tus tareas de SnapTask.";
+"You have no tasks for today. Enjoy!" = "No tienes tareas para hoy. ¡Disfruta!";
+"All your %lld tasks for today are done. Great job!" = "Has completado las %lld tareas de hoy. ¡Buen trabajo!";
+"You have %lld tasks left for today (%lld already done):" = "Te quedan %lld tareas para hoy (%lld ya completadas):";
+"You have %lld tasks for today:" = "Tienes %lld tareas para hoy:";
+"…and %lld more." = "…y %lld más.";
 "pattern_inconsistency_desc" = "Patrón de completado irregular";
 "pattern_financial_stress" = "Estrés Financiero";
 "pattern_financial_stress_desc" = "Los gastos superan los ingresos";
@@ -2088,3 +2124,84 @@
 "widget_budget" = "Presupuesto";
 "widget_no_data" = "Sin datos financieros";
 "widget_this_month" = "Este mes";
+// Session Conflict
+"session_conflict" = "Conflicto de sesión";
+"active_session_running_desc" = "Ya tienes una sesión activa en ejecución";
+"current_session" = "Actual";
+"new_session" = "Nueva";
+"keep_both" = "Mantener ambas";
+"save_and_replace" = "Guardar y reemplazar";
+"discard_and_replace" = "Descartar y reemplazar";
+"reorder" = "Reordenar";
+
+"view_all" = "Ver todo";
+"all_sessions" = "Todas las sesiones";
+"edit_session" = "Editar sesión";
+"timing" = "Tiempos";
+"end_time" = "Hora fin";
+"add_notes_placeholder" = "Añadir notas...";
+
+// Celebrations & Recurrence
+"app_icon" = "Icono de la app";
+"celebrations" = "Celebraciones";
+"confetti_celebrations" = "Celebración con confeti";
+"confetti_celebrations_description" = "Mostrar animación de confeti al completar tareas";
+"hide_days_bar" = "Ocultar barra de días";
+"hide_days_bar_description" = "Ocultar la barra de selección de días en la vista Hoy";
+"postpone_single_occurrence" = "Posponer solo la ocurrencia de hoy para mañana";
+
+// Edit scope (recurring tasks)
+"edit_scope_title" = "Ámbito de edición";
+"edit_scope_description" = "Esta es una tarea recurrente. Elige si aplicar los cambios solo a esta ocurrencia o a toda la serie.";
+"edit_scope_entire_series" = "Toda la serie";
+"edit_scope_single_instance" = "Solo esta ocurrencia";
+
+"expand" = "Expandir";
+"collapse" = "Contraer";
+
+
+// Contextual Recurrence & Notifications Actions (New)
+"repeats" = "Se repite";
+"every_n_weeks" = "Cada N semanas";
+"weeks_of_month" = "Semanas del mes";
+"pattern_modulo" = "Patrón (módulo)";
+"every_n_months" = "Cada N meses";
+"specific_months" = "Meses específicos";
+"every_n_years" = "Cada N años";
+"week_unit" = "semana";
+"weeks_unit" = "semanas";
+"month_unit" = "mes";
+"months_unit" = "meses";
+"year_unit" = "año";
+"years_unit" = "años";
+"anchored_start_week" = "Anclado a la semana de inicio de la tarea.";
+"anchored_start_month" = "Anclado al mes de inicio de la tarea.";
+"anchored_start_year" = "Anclado al año de inicio de la tarea.";
+"select_weeks_of_month" = "Seleccionar semanas del mes";
+"select_months" = "Seleccionar meses";
+"select_specific_months" = "Seleccionar meses específicos";
+"every_kth_week" = "Cada k-ésima semana (k ≥ 2)";
+"every_k_years" = "Cada k años (k ≥ 2)";
+"offset" = "Compensación";
+"even_weeks" = "Semanas pares";
+"odd_weeks" = "Semanas impares";
+"even_years" = "Años pares";
+"odd_years" = "Años impares";
+"modulo_weeks_formula_desc" = "Las semanas seleccionadas cumplen: (semana − anclaje) % k = compensación";
+"modulo_years_formula_desc" = "Los años seleccionados cumplen: (año − anclaje) % k = compensación";
+"long_term_tasks_no_recurrence" = "Las tareas a largo plazo no tienen opciones de repetición.";
+"last_ordinal" = "Última";
+"every_n_weeks_format" = "Cada %d semanas";
+"weeks_of_month_prefix" = "Semanas del mes: %@";
+"every_kth_week_offset_format" = "Cada %dª semana (desfase %d)";
+"every_n_months_format" = "Cada %d meses";
+"months_prefix" = "Meses: %@";
+"every_n_years_format" = "Cada %d años";
+"every_k_years_offset_format" = "Cada %d años (desfase %d)";
+"no_recurrence" = "Sin repetición";
+"mark_as_completed" = "Marcar como completado";
+"remind_me_in_1_hour" = "Recordarme en 1 hora";
+"tomorrow_morning_9am" = "Mañana por la mañana (09:00)";
+"recurrence_desc_week" = "Configura la repetición a nivel semanal (sin días específicos).";
+"recurrence_desc_month" = "Configura la repetición a nivel mensual.";
+"recurrence_desc_year" = "Configura la repetición a nivel anual.";

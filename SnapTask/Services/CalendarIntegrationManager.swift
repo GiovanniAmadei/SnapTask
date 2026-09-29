@@ -111,7 +111,7 @@ class CalendarIntegrationManager: ObservableObject {
         }
     }
     
-    func deleteTaskFromCalendar(_ taskId: UUID) async {
+    func deleteTaskFromCalendar(_ taskId: UUID, isRecurring: Bool = false) async {
         guard settings.isEnabled,
               let eventId = await getEventId(for: taskId) else {
             return
@@ -122,7 +122,7 @@ class CalendarIntegrationManager: ObservableObject {
         do {
             switch settings.provider {
             case .apple:
-                try await appleService.deleteEvent(eventId: eventId)
+                try await appleService.deleteEvent(eventId: eventId, isRecurring: isRecurring)
             case .google:
                 // Implement Google Calendar deletion
                 break
@@ -149,6 +149,12 @@ class CalendarIntegrationManager: ObservableObject {
         var errorCount = 0
         
         for task in tasks {
+            // Skip recurring tasks if setting is disabled
+            if task.recurrence != nil && !settings.syncRecurringTasks {
+                print("📅 Skipping recurring task \(task.name) (syncRecurringTasks disabled)")
+                continue
+            }
+            
             // Check if task already has an event ID (avoid duplicates)
             if await getEventId(for: task.id) != nil {
                 print("📅 Task \(task.name) already synced, skipping")
@@ -210,21 +216,18 @@ class CalendarIntegrationManager: ObservableObject {
         
         for eventKey in eventKeys {
             if let eventId = userDefaults.string(forKey: eventKey) {
-                // Check if event exists before trying to delete
                 switch settings.provider {
                 case .apple:
-                    if appleService.eventExists(eventId: eventId) {
-                        do {
-                            try await appleService.deleteEvent(eventId: eventId)
-                            successCount += 1
-                            print("✅ Deleted event: \(eventId)")
-                        } catch {
-                            print("❌ Failed to delete event \(eventId): \(error.localizedDescription)")
-                            errorCount += 1
-                        }
-                    } else {
+                    do {
+                        try await appleService.deleteEvent(eventId: eventId, isRecurring: true)
+                        successCount += 1
+                        print("✅ Deleted event: \(eventId)")
+                    } catch CalendarError.eventNotFound {
                         print("🧹 Event \(eventId) no longer exists, cleaning up stored ID")
                         cleanedCount += 1
+                    } catch {
+                        print("❌ Failed to delete event \(eventId): \(error.localizedDescription)")
+                        errorCount += 1
                     }
                 case .google:
                     // Implement Google Calendar deletion when available

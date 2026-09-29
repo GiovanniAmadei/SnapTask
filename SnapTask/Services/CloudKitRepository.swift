@@ -148,8 +148,8 @@ class CloudKitRepository: TaskRepository {
         privateDatabase.fetch(withRecordZoneID: zoneID) { [weak self] (zone, error) in
             guard let self = self else { return }
             
-            if let error = error as? CKError, error.code == .zoneNotFound {
-                Log("Zone 'SnapTaskZone' not found. Creating zone.", level: LogLevel.info, subsystem: "data")
+            if let error = error as? CKError, error.code == .zoneNotFound || error.code == .userDeletedZone {
+                Log("Zone 'SnapTaskZone' not found or purged by user. Creating zone.", level: LogLevel.info, subsystem: "data")
                 
                 self.privateDatabase.save(self.recordZone) { (_, error) in
                     if let error = error {
@@ -284,7 +284,7 @@ class CloudKitRepository: TaskRepository {
     }
     
     // MARK: - Record Conversion
-    private func taskToRecord(_ task: TodoTask) -> CKRecord {
+    func taskToRecord(_ task: TodoTask) -> CKRecord {
         let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
         let record = CKRecord(recordType: taskRecordType, recordID: recordID)
         
@@ -292,6 +292,10 @@ class CloudKitRepository: TaskRepository {
         record["appCreationDate"] = task.creationDate as CKRecordValue
         record["appLastModifiedDate"] = task.lastModifiedDate as CKRecordValue
         record["startTime"] = task.startTime as CKRecordValue
+        record["hasSpecificDay"] = task.hasSpecificDay as CKRecordValue
+        record["hasSpecificTime"] = task.hasSpecificTime as CKRecordValue
+        record["hasNotification"] = task.hasNotification as CKRecordValue
+        record["notificationLeadTimeMinutes"] = task.notificationLeadTimeMinutes as CKRecordValue
         record["duration"] = task.duration as CKRecordValue
         record["hasDuration"] = task.hasDuration as CKRecordValue
         record["icon"] = task.icon as CKRecordValue
@@ -318,7 +322,7 @@ class CloudKitRepository: TaskRepository {
         return record
     }
     
-    private func recordToTask(_ record: CKRecord) -> TodoTask? {
+    func recordToTask(_ record: CKRecord) -> TodoTask? {
         do {
             guard let name = record["name"] as? String,
                   let uuidString = record.recordID.recordName as String?,
@@ -361,11 +365,18 @@ class CloudKitRepository: TaskRepository {
             let decodedScopeStart = record["scopeStartDate"] as? Date
             let decodedScopeEnd = record["scopeEndDate"] as? Date
 
+            let hasSpecificDay = record["hasSpecificDay"] as? Bool ?? true
+            let hasSpecificTime = record["hasSpecificTime"] as? Bool ?? true
+            let hasNotification = record["hasNotification"] as? Bool ?? false
+            let notificationLeadTimeMinutes = record["notificationLeadTimeMinutes"] as? Int ?? 0
+
             var task = TodoTask(
                 id: uuid,
                 name: name,
                 description: description,
                 startTime: startTime,
+                hasSpecificDay: hasSpecificDay,
+                hasSpecificTime: hasSpecificTime,
                 duration: duration,
                 hasDuration: hasDuration,
                 category: category,
@@ -374,9 +385,11 @@ class CloudKitRepository: TaskRepository {
                 recurrence: recurrence,
                 pomodoroSettings: pomodoroSettings,
                 subtasks: subtasks,
+                hasNotification: hasNotification,
                 timeScope: decodedTimeScope,
                 scopeStartDate: decodedScopeStart,
-                scopeEndDate: decodedScopeEnd
+                scopeEndDate: decodedScopeEnd,
+                notificationLeadTimeMinutes: notificationLeadTimeMinutes
             )
 
             task.creationDate = creationDateToUse

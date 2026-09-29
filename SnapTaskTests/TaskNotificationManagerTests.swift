@@ -90,4 +90,32 @@ struct TaskNotificationManagerTests {
         )
         #expect(dates.count <= 3)
     }
+
+    @Test func testComputeRecurringNotificationDates_windowDays() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let startTime = now.addingTimeInterval(3600)
+        let recurrence = Recurrence(type: .daily, startDate: calendar.startOfDay(for: now), endDate: nil)
+
+        let task = TodoTask(
+            id: UUID(),
+            name: "Daily",
+            startTime: startTime,
+            hasSpecificTime: true,
+            recurrence: recurrence,
+            hasNotification: true,
+            notificationLeadTimeMinutes: 0
+        )
+
+        let dates = TaskNotificationManager.computeRecurringNotificationDates(
+            for: task,
+            now: now,
+            windowDays: 7,
+            maxCount: 30,
+            calendar: calendar
+        )
+        // In 7 days daily, max 7 dates
+        #expect(dates.count <= 8)
+        #expect(!dates.isEmpty)
+    }
 }

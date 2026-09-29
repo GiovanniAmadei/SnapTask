@@ -83,6 +83,15 @@ struct ContentView: View {
                 }
                 UserDefaults.standard.removeObject(forKey: "pendingJournalDateFromNotification")
             }
+            
+            checkPendingQuickAdd()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            checkPendingQuickAdd()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .checkPendingQuickAdd)) { _ in
+            // Deep link `snaptask://quickadd` was received by SnapTaskApp.
+            checkPendingQuickAdd()
         }
         .onReceive(NotificationCenter.default.publisher(for: .expandActiveTimer)) { _ in
             selectedTab = 1
@@ -195,4 +204,31 @@ struct ContentView: View {
         print("Tab bar and navigation bar theme updated successfully")
     }
     
+    /// Checks the App Group flag set by `OpenQuickAddIntent` (the Control
+    /// Center / Lock Screen / Action Button quick-add button). If present,
+    /// switches to the Timeline tab and posts `.openQuickAdd` so the
+    /// timeline can present its new-task sheet.
+    private func checkPendingQuickAdd() {
+        guard let suite = UserDefaults(suiteName: "group.com.snapTask.shared") else { return }
+        let key = "pendingQuickAddOpen"
+        let hasPersisted = suite.object(forKey: key) != nil
+        let hasInMemory = QuickAddTrigger.pending
+
+        guard hasPersisted || hasInMemory else { return }
+
+        // Clear both flags.
+        suite.removeObject(forKey: key)
+        suite.synchronize()
+        QuickAddTrigger.pending = true // keep in-memory flag for TimelineView.onAppear
+        
+        // Jump to Timeline tab so the sheet has somewhere to anchor.
+        selectedTab = 0
+        
+        // Defer by one runloop so the tab switch has landed before we
+        // present the sheet (SwiftUI otherwise drops the sheet on the
+        // disappearing tab).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            NotificationCenter.default.post(name: .openQuickAdd, object: nil)
+        }
+    }
 }

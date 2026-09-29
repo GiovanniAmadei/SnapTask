@@ -74,6 +74,7 @@ struct Recurrence: Codable, Equatable, Hashable {
         case monthDayTimeOverrides
         case monthOrdinalTimeOverrides
         case yearlyTimeOverride
+        case postponedOccurrences
     }
     
     let type: RecurrenceType
@@ -100,11 +101,26 @@ struct Recurrence: Codable, Equatable, Hashable {
     var yearModuloK: Int? = nil
     var yearModuloOffset: Int? = nil
     
+    var postponedOccurrences: [String: Date]? = nil
+    
     init(type: RecurrenceType, startDate: Date, endDate: Date?, trackInStatistics: Bool = true) {
         self.type = type
         self.startDate = startDate
         self.endDate = endDate
         self.trackInStatistics = trackInStatistics
+    }
+    
+    mutating func postponeOccurrence(from originalDate: Date, to targetDate: Date) {
+        let calendar = Calendar.current
+        let startOfDayOriginal = calendar.startOfDay(for: originalDate)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = calendar.timeZone
+        let key = formatter.string(from: startOfDayOriginal)
+        if postponedOccurrences == nil {
+            postponedOccurrences = [:]
+        }
+        postponedOccurrences?[key] = targetDate
     }
     
     // Custom decoder to handle missing trackInStatistics in older data
@@ -133,14 +149,34 @@ struct Recurrence: Codable, Equatable, Hashable {
         monthDayTimeOverrides = try container.decodeIfPresent([MonthDayTimeOverride].self, forKey: .monthDayTimeOverrides)
         monthOrdinalTimeOverrides = try container.decodeIfPresent([MonthOrdinalTimeOverride].self, forKey: .monthOrdinalTimeOverrides)
         yearlyTimeOverride = try container.decodeIfPresent(YearlyTimeOverride.self, forKey: .yearlyTimeOverride)
+        postponedOccurrences = try container.decodeIfPresent([String: Date].self, forKey: .postponedOccurrences)
     }
 }
 
 extension Recurrence {
     func shouldOccurOn(date: Date) -> Bool {
         let calendar = Calendar.current
-        
         let targetDay = calendar.startOfDay(for: date)
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = calendar.timeZone
+        let dateKey = formatter.string(from: targetDay)
+        
+        // If this original occurrence was postponed, it should NOT occur on its original date
+        if let postponed = postponedOccurrences, postponed.keys.contains(dateKey) {
+            return false
+        }
+        
+        // If an occurrence was postponed TO this date, it SHOULD occur on this target date
+        if let postponed = postponedOccurrences {
+            for (_, targetDate) in postponed {
+                if calendar.isDate(targetDate, inSameDayAs: date) {
+                    return true
+                }
+            }
+        }
+        
         let recurrenceStart = calendar.startOfDay(for: startDate)
         if targetDay < recurrenceStart {
             return false

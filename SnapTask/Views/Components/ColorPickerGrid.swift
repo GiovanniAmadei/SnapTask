@@ -2,44 +2,76 @@ import SwiftUI
 
 struct ColorPickerGrid: View {
     @Binding var selectedColor: String
-    
-    private let presetColors: [[Color]] = [
-        [.red, .orange, .yellow, .green],
-        [.mint, .teal, .cyan, .blue],
-        [.indigo, .purple, .pink, .brown],
-        [.gray, .black, .white, .clear]
+
+    private let presetColors: [String] = [
+        "#EF4444", "#F97316", "#F59E0B", "#EAB308",
+        "#22C55E", "#10B981", "#14B8A6", "#06B6D4",
+        "#3B82F6", "#6366F1", "#8B5CF6", "#A855F7",
+        "#EC4899", "#F43F5E", "#84CC16", "#94A3B8"
     ]
-    
+
+    private let columns = 8
+
     var body: some View {
         VStack(spacing: 12) {
-            ForEach(presetColors, id: \.self) { row in
-                HStack(spacing: 12) {
-                    ForEach(row, id: \.self) { color in
+            let rows = presetColors.chunked(into: columns)
+            ForEach(rows.indices, id: \.self) { rowIndex in
+                HStack(spacing: 10) {
+                    ForEach(rows[rowIndex], id: \.self) { hex in
                         Button {
-                            selectedColor = color.toHex()
+                            selectedColor = hex
                         } label: {
                             Circle()
-                                .fill(color)
+                                .fill(Color(hex: hex))
                                 .overlay(
                                     Circle()
-                                        .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                                        .strokeBorder(Color.primary.opacity(0.15), lineWidth: 1)
                                 )
                                 .overlay(
                                     Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .bold))
                                         .foregroundColor(.white)
-                                        .opacity(selectedColor == color.toHex() ? 1 : 0)
+                                        .shadow(radius: 1)
+                                        .opacity(selectedColor.uppercased() == hex.uppercased() ? 1 : 0)
                                 )
-                                .frame(width: 44, height: 44)
+                                .frame(width: 36, height: 36)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
-            
-            ColorPicker("Custom Color", selection: Binding(
+
+            // Native color picker as a standalone row
+            ColorPicker("custom_colors".localized, selection: Binding(
                 get: { Color(hex: selectedColor) },
-                set: { selectedColor = $0.toHex() }
-            ))
+                set: { newColor in
+                    if let hex = newColor.resolvedHex() {
+                        selectedColor = hex
+                    }
+                }
+            ), supportsOpacity: false)
         }
         .padding(.vertical, 8)
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [] }
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
+    }
+}
+
+private extension Color {
+    func resolvedHex() -> String? {
+        let uiColor = UIColor(self).resolvedColor(with: UITraitCollection.current)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard uiColor.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
+        return String(format: "#%02X%02X%02X",
+                      Int((r * 255).rounded()),
+                      Int((g * 255).rounded()),
+                      Int((b * 255).rounded()))
     }
 }

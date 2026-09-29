@@ -99,7 +99,14 @@ struct TaskView: View {
                     }
                 }
                 
-                Button(action: onToggleComplete) {
+                Button(action: {
+                    if isCompleted {
+                        HapticManager.shared.impact(.light)
+                    } else {
+                        HapticManager.shared.notification(.success)
+                    }
+                    onToggleComplete()
+                }) {
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                         .foregroundColor(isCompleted ? .green : .gray)
                         .font(.title2)
@@ -116,7 +123,10 @@ struct TaskView: View {
                 
                 ForEach(task.subtasks) { subtask in
                     HStack {
-                        Button(action: { onToggleSubtask(subtask.id) }) {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            onToggleSubtask(subtask.id)
+                        }) {
                             SubtaskCheckmark(isCompleted: subtask.isCompleted)
                         }
                         .buttonStyle(BorderlessButtonStyle())

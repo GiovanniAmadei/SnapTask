@@ -13,10 +13,8 @@ struct MotivationalQuoteView: View {
                 
                 // Refresh button
                 Button {
-                    // Add haptic feedback
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    
+                    HapticManager.shared.impact(.medium)
+
                     // Refresh the quote
                     Task {
                         await quoteManager.checkAndUpdateQuote()

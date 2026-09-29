@@ -4,15 +4,14 @@ struct FocusTabView: View {
     @StateObject private var timeTrackerViewModel = TimeTrackerViewModel.shared
     @StateObject private var pomodoroViewModel = PomodoroViewModel.shared
     @State private var showingTimeTracker = false
+    @State private var activeTrackingSessionId: UUID?
     @State private var selectedTrackingMode: TrackingMode = .simple
     @State private var showingPomodoro = false
-    @State private var showingTaskPomodoro = false
-    @State private var showingPomodoroFullScreen = false // used when reopening from widget in general mode
     @State private var showingSessionConflict = false
     @State private var pendingSessionType: SessionType?
-    @State private var showingWidgetTimer = false
-    // Removed dedicated widget sheet for Pomodoro; reuse existing sheets
-    @State private var selectedSessionId: UUID?
+    @State private var showingAllSessions = false
+    @State private var sessionToEdit: TrackingSession?
+    @ObservedObject private var taskManager = TaskManager.shared
 
     @Environment(\.theme) private var theme
 
@@ -45,56 +44,6 @@ struct FocusTabView: View {
                                     .foregroundColor(theme.textColor)
                                 Spacer()
                             }
-
-                            // Show timer widgets for all active sessions
-                            if !timeTrackerViewModel.activeSessions.isEmpty || pomodoroViewModel.hasActiveTask {
-                                HStack {
-                                    Spacer()
-
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 8) {
-                                            // FIXED: Show only sessions that have been actually started
-                                            ForEach(timeTrackerViewModel.activeSessions.filter { session in
-                                                session.isRunning || session.elapsedTime > 0 || session.isPaused
-                                            }) { session in
-                                                MiniTimerWidget(
-                                                    sessionId: session.id,
-                                                    viewModel: timeTrackerViewModel,
-                                                    onTap: {
-                                                        // FIXED: Verifica che la sessione esista prima di aprire la vista
-                                                        if timeTrackerViewModel.getSession(id: session.id) != nil {
-                                                            selectedSessionId = session.id
-                                                            showingWidgetTimer = true
-                                                        }
-                                                    }
-                                                )
-                                            }
-
-                                            // Show pomodoro if active
-                                            if pomodoroViewModel.hasActiveTask {
-                                                MiniPomodoroWidget(viewModel: pomodoroViewModel) {
-                                                    // Present on next run loop to stabilize sheet presentation
-                                                    DispatchQueue.main.async {
-                                                        if pomodoroViewModel.activeTask != nil {
-                                                            showingTaskPomodoro = true
-                                                        } else {
-                                                            // Ensure a general session is initialized before presenting
-                                                            if pomodoroViewModel.state == .notStarted {
-                                                                pomodoroViewModel.initializeGeneralSession()
-                                                            }
-                                                            // Use fullScreenCover to avoid sheet rendering glitches
-                                                            showingPomodoroFullScreen = true
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        .padding(.horizontal, 16)
-                                    }
-
-                                    Spacer()
-                                }
-                            }
                         }
                         .padding(.top)
 
@@ -107,8 +56,8 @@ struct FocusTabView: View {
                                 gradient: [.yellow, .orange]
                             ) {
                                 selectedTrackingMode = .simple
+                                activeTrackingSessionId = nil
                                 if timeTrackerViewModel.activeSessions.count >= 2 {
-                                    // Show alert or do nothing
                                     return
                                 }
                                 showingTimeTracker = true
@@ -145,20 +94,24 @@ struct FocusTabView: View {
                 .navigationBarHidden(true)
                 .sheet(isPresented: $showingTimeTracker) {
                     NavigationStack {
-                        TimeTrackerView(
-                            task: nil,
-                            mode: selectedTrackingMode,
-                            taskManager: TaskManager.shared,
-                            presentationStyle: .fullscreen
-                        )
+                        if let sessionId = activeTrackingSessionId, timeTrackerViewModel.getSession(id: sessionId) != nil {
+                            TimeTrackerView(
+                                sessionId: sessionId,
+                                presentationStyle: .fullscreen,
+                                allowExpand: false
+                            )
+                        } else {
+                            TimeTrackerView(
+                                task: nil,
+                                mode: selectedTrackingMode,
+                                taskManager: TaskManager.shared,
+                                presentationStyle: .fullscreen,
+                                allowExpand: false
+                            )
+                        }
                     }
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
-                }
-                .fullScreenCover(isPresented: $showingPomodoroFullScreen) {
-                    NavigationStack {
-                        PomodoroTabView()
-                    }
                 }
                 .sheet(isPresented: $showingPomodoro) {
                     NavigationStack {
@@ -167,26 +120,6 @@ struct FocusTabView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
-                .fullScreenCover(isPresented: $showingTaskPomodoro) {
-                    if pomodoroViewModel.activeTask != nil {
-                        NavigationStack {
-                            PomodoroTabView()
-                        }
-                    }
-                }
-                .sheet(isPresented: $showingWidgetTimer) {
-                    if let sessionId = selectedSessionId {
-                        NavigationStack {
-                            TimeTrackerView(
-                                sessionId: sessionId,
-                                presentationStyle: .sheet
-                            )
-                        }
-                        .presentationDetents([.medium])
-                        .presentationDragIndicator(.visible)
-                    }
-                }
-                // Removed separate widget sheet; handled by showingPomodoro/showingTaskPomodoro
                 .sheet(isPresented: $showingSessionConflict) {
                     SessionConflictView(
                         currentSession: getCurrentSessionName(),
@@ -207,26 +140,31 @@ struct FocusTabView: View {
                     )
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .openFocusTabTimeTracker)) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: .openFocusTabTimeTracker)) { notification in
+                if let sessionId = notification.object as? UUID {
+                    activeTrackingSessionId = sessionId
+                } else {
+                    activeTrackingSessionId = nil
+                }
                 showingTimeTracker = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .openFocusTabPomodoro)) { notification in
                 if let task = notification.object as? TodoTask {
                     pomodoroViewModel.setActiveTask(task)
-                    showingTaskPomodoro = true
-                } else {
-                    showingPomodoro = true
                 }
+                showingPomodoro = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .expandActiveTimer)) { notification in
-                // Non serve gestire questa notifica perché il MiniTimerWidget usa onTap diretto
+                if let sessionId = notification.object as? UUID {
+                    activeTrackingSessionId = sessionId
+                }
+                showingTimeTracker = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .expandActivePomodoro)) { notification in
                 if let task = notification.object as? TodoTask {
-                    showingTaskPomodoro = true
-                } else if pomodoroViewModel.hasActiveTask {
-                    showingTaskPomodoro = true
+                    pomodoroViewModel.setActiveTask(task)
                 }
+                showingPomodoro = true
             }
         }
     }
@@ -334,8 +272,8 @@ struct FocusTabView: View {
                     timeTracker: timeTrackerViewModel,
                     theme: theme
                 ) {
-                    selectedSessionId = session.id
-                    showingWidgetTimer = true
+                    activeTrackingSessionId = session.id
+                    showingTimeTracker = true
                 }
             }
 
@@ -345,17 +283,10 @@ struct FocusTabView: View {
                     viewModel: pomodoroViewModel,
                     theme: theme
                 ) {
-                    // Present on next run loop to stabilize presentation
-                    DispatchQueue.main.async {
-                        if pomodoroViewModel.activeTask != nil {
-                            showingTaskPomodoro = true
-                        } else {
-                            if pomodoroViewModel.state == .notStarted {
-                                pomodoroViewModel.initializeGeneralSession()
-                            }
-                            showingPomodoroFullScreen = true
-                        }
+                    if pomodoroViewModel.state == .notStarted {
+                        pomodoroViewModel.initializeGeneralSession()
                     }
+                    showingPomodoro = true
                 }
             }
         }
@@ -412,9 +343,23 @@ struct FocusTabView: View {
                     .font(.headline)
                     .foregroundColor(theme.textColor)
                 Spacer()
+                let totalCount = taskManager.trackingSessions.count
+                if totalCount > 3 {
+                    Button {
+                        showingAllSessions = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("view_all".localized + " (\(totalCount))")
+                                .font(.caption.weight(.medium))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(theme.accentColor)
+                    }
+                }
             }
 
-            let recentSessions = getRecentSessions()
+            let recentSessions = getRecentSessions().prefix(3)
 
             if recentSessions.isEmpty {
                 Text("no_sessions_yet".localized)
@@ -423,9 +368,16 @@ struct FocusTabView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                VStack(spacing: 12) {
-                    ForEach(recentSessions.prefix(5)) { session in
-                        SessionRow(session: session)
+                VStack(spacing: 0) {
+                    ForEach(Array(recentSessions)) { session in
+                        SessionRowWithActions(
+                            session: session,
+                            onEdit: { sessionToEdit = session },
+                            onDelete: { taskManager.deleteTrackingSession(session) }
+                        )
+                        if session.id != recentSessions.last?.id {
+                            Divider().padding(.leading, 12)
+                        }
                     }
                 }
             }
@@ -433,12 +385,15 @@ struct FocusTabView: View {
         .padding(20)
         .background(theme.surfaceColor)
         .cornerRadius(16)
-        .shadow(
-            color: theme.shadowColor,
-            radius: 8,
-            x: 0,
-            y: 2
-        )
+        .shadow(color: theme.shadowColor, radius: 8, x: 0, y: 2)
+        .sheet(isPresented: $showingAllSessions) {
+            AllSessionsView(
+                onEdit: { session in sessionToEdit = session }
+            )
+        }
+        .sheet(item: $sessionToEdit) { session in
+            SessionEditView(session: session)
+        }
     }
 
     private func getTodaysSessions() -> [TrackingSession] {
@@ -478,42 +433,60 @@ struct ActiveTimerSessionRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.15))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: "stopwatch.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.orange)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
                     Text("simple_timer".localized)
-                        .font(.subheadline.weight(.medium))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundColor(theme.textColor)
 
                     Text(session.taskName ?? "focus_session".localized)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundColor(theme.secondaryTextColor)
+                        .lineLimit(1)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: 3) {
                     Text(timeTracker.formattedElapsedTime(for: session.id))
-                        .font(.headline.weight(.bold))
-                        .foregroundColor(.yellow)
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .monospacedDigit()
+                        .foregroundColor(.orange)
 
-                    Text(session.isPaused ? "paused".localized : "running".localized)
-                        .font(.caption)
-                        .foregroundColor(session.isPaused ? .orange : .green)
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(session.isPaused ? Color.orange : Color.green)
+                            .frame(width: 6, height: 6)
+
+                        Text(session.isPaused ? "paused".localized : "running".localized)
+                            .font(.system(.caption2, design: .rounded).weight(.semibold))
+                            .foregroundColor(session.isPaused ? .orange : .green)
+                    }
                 }
             }
-            .padding()
-            .background(sessionBackground(.yellow))
+            .padding(14)
+            .background(sessionBackground(.orange))
         }
         .buttonStyle(PlainButtonStyle())
     }
 
     private func sessionBackground(_ color: Color) -> some View {
         let isDark = isDarkTheme
-        return RoundedRectangle(cornerRadius: 12)
-            .fill(color.opacity(isDark ? 0.15 : 0.1))
+        return RoundedRectangle(cornerRadius: 14)
+            .fill(color.opacity(isDark ? 0.15 : 0.08))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(color.opacity(isDark ? 0.4 : 0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(color.opacity(isDark ? 0.35 : 0.25), lineWidth: 1)
             )
     }
 
@@ -531,44 +504,92 @@ struct ActivePomodoroSessionRow: View {
     let theme: Theme
     let onTap: () -> Void
 
+    private var phaseColor: Color {
+        switch viewModel.effectivePhase {
+        case .working: return Color(hex: "#4F46E5")
+        case .onBreak: return Color(hex: "#059669")
+        default: return Color(hex: "#4F46E5")
+        }
+    }
+
+    private var phaseIcon: String {
+        switch viewModel.effectivePhase {
+        case .working: return "brain.head.profile"
+        case .onBreak: return "cup.and.saucer.fill"
+        default: return "timer"
+        }
+    }
+
+    private var statusLabel: String {
+        if viewModel.state == .paused {
+            return "paused".localized
+        }
+        return viewModel.effectivePhase == .working ? "focus".localized : "break".localized
+    }
+
+    private var statusColor: Color {
+        if viewModel.state == .paused {
+            return .orange
+        }
+        return viewModel.effectivePhase == .working ? .indigo : .green
+    }
+
     var body: some View {
         Button(action: onTap) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(phaseColor.opacity(0.15))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: phaseIcon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(phaseColor)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
                     Text("pomodoro_timer".localized)
-                        .font(.subheadline.weight(.medium))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundColor(theme.textColor)
 
                     Text(viewModel.activeTask?.name ?? "focus_session".localized)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundColor(theme.secondaryTextColor)
+                        .lineLimit(1)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: 3) {
                     Text(formatPomodoroTime(viewModel.timeRemaining))
-                        .font(.headline.weight(.bold))
-                        .foregroundColor(.red)
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .monospacedDigit()
+                        .foregroundColor(phaseColor)
 
-                    Text(viewModel.state == .working ? "focus".localized : "break".localized)
-                        .font(.caption)
-                        .foregroundColor(viewModel.state == .working ? .green : .blue)
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 6, height: 6)
+
+                        Text(statusLabel)
+                            .font(.system(.caption2, design: .rounded).weight(.semibold))
+                            .foregroundColor(statusColor)
+                    }
                 }
             }
-            .padding()
-            .background(sessionBackground(.red))
+            .padding(14)
+            .background(sessionBackground(phaseColor))
         }
         .buttonStyle(PlainButtonStyle())
     }
 
     private func sessionBackground(_ color: Color) -> some View {
         let isDark = isDarkTheme
-        return RoundedRectangle(cornerRadius: 12)
-            .fill(color.opacity(isDark ? 0.15 : 0.1))
+        return RoundedRectangle(cornerRadius: 14)
+            .fill(color.opacity(isDark ? 0.15 : 0.08))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(color.opacity(isDark ? 0.4 : 0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(color.opacity(isDark ? 0.35 : 0.25), lineWidth: 1)
             )
     }
 
@@ -674,6 +695,168 @@ struct SessionRow: View {
         }
 
         return nil
+    }
+}
+
+// MARK: - SessionRowWithActions
+
+struct SessionRowWithActions: View {
+    let session: TrackingSession
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    @Environment(\.theme) private var theme
+    @State private var dragOffset: CGFloat = 0
+    @State private var showActions = false
+    private let actionWidth: CGFloat = 140
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // Row content
+            SessionRow(session: session)
+                .padding(.vertical, 8)
+                .background(theme.surfaceColor)
+                .offset(x: dragOffset)
+                .gesture(
+                    DragGesture(minimumDistance: 15)
+                        .onChanged { v in
+                            let w = v.translation.width
+                            guard w < 0 else {
+                                if showActions { dragOffset = min(0, -actionWidth + w) }
+                                return
+                            }
+                            dragOffset = max(-actionWidth, w + (showActions ? -actionWidth : 0))
+                        }
+                        .onEnded { v in
+                            let revealed = -dragOffset > actionWidth / 2
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                if revealed {
+                                    dragOffset = -actionWidth
+                                    showActions = true
+                                } else {
+                                    dragOffset = 0
+                                    showActions = false
+                                }
+                            }
+                        }
+                )
+                .onTapGesture {
+                    if showActions {
+                        withAnimation(.spring(response: 0.3)) { dragOffset = 0; showActions = false }
+                    }
+                }
+
+            // Action buttons clipped to the vacated space
+            HStack(spacing: 0) {
+                Button {
+                    withAnimation(.spring(response: 0.3)) { dragOffset = 0; showActions = false }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { onEdit() }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("edit".localized)
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(width: 70, height: 56)
+                    .background(Color.orange)
+                }
+                Button {
+                    withAnimation(.spring(response: 0.3)) { dragOffset = 0; showActions = false }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { onDelete() }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("delete".localized)
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(width: 70, height: 56)
+                    .background(Color.red)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .frame(width: max(0, -dragOffset), alignment: .trailing)
+            .clipped()
+            .allowsHitTesting(dragOffset < -10)
+        }
+        .clipped()
+    }
+}
+
+// MARK: - AllSessionsView
+
+struct AllSessionsView: View {
+    let onEdit: (TrackingSession) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
+    @ObservedObject private var taskManager = TaskManager.shared
+    @State private var sessionToEdit: TrackingSession?
+
+    private var groupedSessions: [(String, [TrackingSession])] {
+        let sorted = taskManager.trackingSessions.sorted { $0.startTime > $1.startTime }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        var groups: [(String, [TrackingSession])] = []
+        var current: (String, [TrackingSession])? = nil
+        for session in sorted {
+            let key = formatter.string(from: session.startTime)
+            if current?.0 == key {
+                current!.1.append(session)
+            } else {
+                if let c = current { groups.append(c) }
+                current = (key, [session])
+            }
+        }
+        if let c = current { groups.append(c) }
+        return groups
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(groupedSessions, id: \.0) { day, sessions in
+                    Section(header:
+                        Text(day)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(theme.secondaryTextColor)
+                    ) {
+                        ForEach(sessions) { session in
+                            SessionRow(session: session)
+                                .listRowBackground(theme.surfaceColor)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        taskManager.deleteTrackingSession(session)
+                                    } label: {
+                                        Label("delete".localized, systemImage: "trash")
+                                    }
+                                    Button {
+                                        sessionToEdit = session
+                                    } label: {
+                                        Label("edit".localized, systemImage: "pencil")
+                                    }
+                                    .tint(.orange)
+                                }
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(theme.backgroundColor.ignoresSafeArea())
+            .navigationTitle("all_sessions".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("done".localized) { dismiss() }
+                        .foregroundColor(theme.accentColor)
+                }
+            }
+            .sheet(item: $sessionToEdit) { session in
+                SessionEditView(session: session)
+            }
+        }
     }
 }
 

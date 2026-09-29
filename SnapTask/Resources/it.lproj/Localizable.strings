@@ -6,6 +6,9 @@
 "delete" = "Elimina";
 "done" = "Fatto";
 "add" = "Aggiungi";
+"copy" = "Copia";
+"cut" = "Taglia";
+"paste" = "Incolla";
 "continue" = "Continua";
 "back" = "Indietro";
 "skip" = "Salta";
@@ -649,8 +652,22 @@
 "all_category_filter" = "Tutti";
 
 "feedback_filter_recent" = "Più recenti";
-"feedback_replies_title" = "Risposte";
+"feedback_tab_popular" = "Più votati";
+"feedback_tab_recent" = "Recenti";
+"feedback_tab_answered" = "Con risposte";
+"feedback_tab_completed" = "Completati";
+"feedback_developer_response" = "Risposta Dev";
+"feedback_read_dev_reply" = "Risposta Dev";
+"feedback_hide_dev_reply" = "Risposta Dev";
+"feedback_official_dev_response" = "Risposta ufficiale";
+"feedback_reply_single" = "1 risposta";
+"feedback_replies_count" = "%d risposte";
 "feedback_tap_to_read_more" = "Tocca per leggere";
+"feedback_show_less" = "Mostra meno";
+"feedback_status_pending" = "In revisione";
+"feedback_status_in_progress" = "In corso";
+"feedback_status_completed" = "Completato";
+"feedback_status_rejected" = "Rifiutato";
 "feedback_anonymous" = "Anonimo";
 "feedback_by_author_format" = "di %@";
 "feedback_you_indicator" = "(Tu)";
@@ -1084,7 +1101,7 @@
 "weekly_overview" = "Panoramica settimanale";
 "week_pts" = "Settimana: {points} pt";
 "focus_time" = "Tempo di focus";
-"mark_incomplete" = "Segna incompleta";
+"mark_incomplete" = "Incompleta";
 "mark_complete" = "Segna completa";
 "recurring_task" = "Attività ricorrente";
 "has_duration" = "Con durata";
@@ -1547,7 +1564,9 @@
 "current_income" = "Guadagno Attuale";
 "category_budgets" = "Budget per Categoria";
 "category_budgets_footer" = "Imposta limiti di spesa per le singole categorie";
+"swipe_to_edit_delete" = "Scorri per modificare o eliminare";
 "add_category_budget" = "Aggiungi Budget Categoria";
+"edit_budget" = "Modifica Budget";
 "monthly_limit" = "Limite Mensile";
 "over_budget" = "Oltre il Budget";
 "reset_finance_data" = "Resetta Tutti i Dati Finanziari";
@@ -1870,3 +1889,142 @@
 "widget_budget" = "Budget";
 "widget_no_data" = "Nessun dato finanziario";
 "widget_this_month" = "Questo mese";
+
+// MARK: - Quick Add App Intents
+"Add Quick Task" = "Aggiungi task veloce";
+"Quick Add Task" = "Aggiunta rapida task";
+"Quickly add a new task to your SnapTask timeline." = "Aggiungi rapidamente una nuova task alla timeline di SnapTask.";
+"Open Quick Add" = "Apri aggiunta rapida";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "Apre SnapTask e mostra la scheda nuova task così puoi scriverla rapidamente.";
+"Task" = "Attività";
+"What do you want to do?" = "Cosa vuoi fare?";
+"Could not access SnapTask data." = "Impossibile accedere ai dati di SnapTask.";
+"Could not save the task." = "Impossibile salvare la task.";
+"Add task to SnapTask" = "Aggiungi task a SnapTask";
+"Add task to \(_:)" = "Aggiungi task a %@";
+"Add a task in \(_:)" = "Aggiungi una task in %@";
+"Quick add in \(_:)" = "Aggiunta rapida in %@";
+"New task in \(_:)" = "Nuova task in %@";
+"Capture task in \(_:)" = "Cattura task in %@";
+"Added \"%@\" to SnapTask." = "Aggiunta \"%@\" a SnapTask.";
+
+// Show Today's Tasks
+"Show Today's Tasks" = "Mostra task di oggi";
+"Today's Tasks" = "Task di oggi";
+"Lists the tasks you have planned for today." = "Elenca le task che hai pianificato per oggi.";
+"Show today's tasks in SnapTask" = "Mostra le task di oggi su SnapTask";
+"You don't have any tasks yet in SnapTask." = "Non hai ancora task su SnapTask.";
+"Could not read your SnapTask tasks." = "Impossibile leggere le tue task di SnapTask.";
+"You have no tasks for today. Enjoy!" = "Non hai task per oggi. Goditi la giornata!";
+"All your %lld tasks for today are done. Great job!" = "Hai completato tutte le %lld task di oggi. Ottimo lavoro!";
+"You have %lld tasks left for today (%lld already done):" = "Hai %lld task ancora da fare oggi (%lld già completate):";
+"You have %lld tasks for today:" = "Hai %lld task per oggi:";
+"…and %lld more." = "…e altre %lld.";
+
+// Session Conflict
+"session_conflict" = "Conflitto sessioni";
+"active_session_running_desc" = "Hai già una sessione attiva in esecuzione";
+"current_session" = "Attuale";
+"new_session" = "Nuova";
+"keep_both" = "Mantieni entrambe";
+"save_and_replace" = "Salva e sostituisci";
+"discard_and_replace" = "Elimina e sostituisci";
+"reorder" = "Riordina";
+
+"view_all" = "Vedi tutte";
+"all_sessions" = "Tutte le sessioni";
+"edit_session" = "Modifica sessione";
+"timing" = "Orari";
+"end_time" = "Ora fine";
+"add_notes_placeholder" = "Aggiungi note...";
+
+// Celebrations & Recurrence
+"app_icon" = "Icona app";
+"celebrations" = "Festeggiamenti";
+"confetti_celebrations" = "Coriandoli al completamento";
+"confetti_celebrations_description" = "Mostra l'animazione di festeggiamento quando completi un task";
+"hide_days_bar" = "Nascondi barra dei giorni";
+"hide_days_bar_description" = "Nascondi la barra di selezione dei giorni nella vista Oggi";
+"postpone_single_occurrence" = "Sposta solo l'occorrenza di oggi a domani";
+
+// Edit scope (recurring tasks)
+"edit_scope_title" = "Ambito di modifica";
+"edit_scope_description" = "Questa è un'attività ricorrente. Scegli se applicare le modifiche solo a questa occorrenza o all'intera serie.";
+"edit_scope_entire_series" = "Tutta la serie";
+"edit_scope_single_instance" = "Solo questa istanza";
+
+"expand" = "Espandi";
+"collapse" = "Riduci";
+
+
+
+// Contextual Recurrence & Notifications Actions (New)
+"repeats" = "Si ripete";
+"every_n_weeks" = "Ogni N settimane";
+"weeks_of_month" = "Settimane del mese";
+"pattern_modulo" = "Pattern (modulo)";
+"every_n_months" = "Ogni N mesi";
+"specific_months" = "Mesi specifici";
+"every_n_years" = "Ogni N anni";
+"week_unit" = "settimana";
+"weeks_unit" = "settimane";
+"month_unit" = "mese";
+"months_unit" = "mesi";
+"year_unit" = "anno";
+"years_unit" = "anni";
+"anchored_start_week" = "Ancorato alla settimana di inizio attività.";
+"anchored_start_month" = "Ancorato al mese di inizio attività.";
+"anchored_start_year" = "Ancorato all'anno di inizio attività.";
+"select_weeks_of_month" = "Seleziona settimane del mese";
+"select_months" = "Seleziona mesi";
+"select_specific_months" = "Seleziona mesi specifici";
+"every_kth_week" = "Ogni k-esima settimana (k ≥ 2)";
+"every_k_years" = "Ogni k anni (k ≥ 2)";
+"offset" = "Offset";
+"even_weeks" = "Settimane pari";
+"odd_weeks" = "Settimane dispari";
+"even_years" = "Anni pari";
+"odd_years" = "Anni dispari";
+"modulo_weeks_formula_desc" = "Le settimane selezionate soddisfano: (settimana − ancoraggio) % k = offset";
+"modulo_years_formula_desc" = "Gli anni selezionati soddisfano: (anno − ancoraggio) % k = offset";
+"long_term_tasks_no_recurrence" = "Le attività a lungo termine non hanno impostazioni di ricorrenza.";
+"last_ordinal" = "Ultima";
+"every_n_weeks_format" = "Ogni %d settimane";
+"weeks_of_month_prefix" = "Settimane del mese: %@";
+"every_kth_week_offset_format" = "Ogni %dª settimana (offset %d)";
+"every_n_months_format" = "Ogni %d mesi";
+"months_prefix" = "Mesi: %@";
+"every_n_years_format" = "Ogni %d anni";
+"every_k_years_offset_format" = "Ogni %d anni (offset %d)";
+"no_recurrence" = "Nessuna ricorrenza";
+"mark_as_completed" = "Segna come completato";
+"remind_me_in_1_hour" = "Ricordamelo tra 1 ora";
+"tomorrow_morning_9am" = "Domani mattina (09:00)";
+"recurrence_desc_week" = "Configura una ricorrenza a livello di settimana (senza giorni specifici).";
+"recurrence_desc_month" = "Configura una ricorrenza a livello di mese.";
+"recurrence_desc_year" = "Configura una ricorrenza a livello di anno.";
+
+// Mandala Method
+"mandala_chart" = "Mandala Chart";
+"mandala_hub_title" = "Metodo Mandala";
+"mandala_type_habit" = "Abitudine";
+"mandala_type_task" = "Attività";
+"mandala_action_title" = "Titolo dell'Azione";
+"mandala_action_placeholder" = "es. Leggere 20 pagine al giorno";
+"mandala_action_note" = "Note & Dettagli";
+"mandala_note_placeholder" = "Aggiungi dettagli o strategie...";
+"mandala_action_type" = "Tipologia";
+"mandala_completed" = "Completata";
+"mandala_to_do" = "Da fare";
+"mandala_toggle_hint" = "Segna l'azione come completata per aggiornare il progresso.";
+"mandala_linked_to_snaptask" = "Collegata a SnapTask";
+"mandala_schedule_in_timeline_desc" = "Trasforma questa azione in un'attività programmata nella Timeline di SnapTask con punti ricompensa.";
+"mandala_add_to_timeline" = "Aggiungi a SnapTask";
+"mandala_task_created_success" = "Attività creata e sincronizzata nella Timeline!";
+"mandala_timeline_integration" = "Integrazione con SnapTask";
+"mandala_action_detail" = "Dettaglio Azione";
+"mandala_new_chart" = "Nuovo Mandala Chart";
+"mandala_create_chart_title" = "Scegli il tuo Punto di Partenza";
+"mandala_create_chart_subtitle" = "Scomponi una grande ambizione in 8 pilastri e 64 azioni concrete da portare nella tua routine quotidiana.";
+"mandala_create_custom_title" = "Crea da zero (Vuoto)";
+"mandala_create_custom_subtitle" = "Definisci il tuo obiettivo centrale e costruisci la tua griglia passo dopo passo.";

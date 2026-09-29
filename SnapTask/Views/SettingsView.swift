@@ -2,6 +2,7 @@ import SwiftUI
 import StoreKit
 import UserNotifications
 import MessageUI
+import WidgetKit
 
 struct SettingsView: View {
     @StateObject private var viewModel = SettingsViewModel.shared
@@ -11,6 +12,7 @@ struct SettingsView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var taskNotificationManager = TaskNotificationManager.shared
+    @StateObject private var settingsManager = CloudKitSettingsManager.shared
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
@@ -23,15 +25,63 @@ struct SettingsView: View {
     @State private var showingTimePicker = false
     @State private var selectedNotificationTime = Date()
     @State private var notificationPermissionStatus = UNAuthorizationStatus.notDetermined
-    @State private var showingPermissionAlert = false
+    private enum SettingsAlertItem: Identifiable {
+        case deleteConfirmation
+        case resetAndSeedConfirmation
+        case deleteSuccess
+        case seedSuccess
+        case permission
+        case taskPermission
+        case emailNotAvailable
+        case themeWarning
+
+        var id: String {
+            switch self {
+            case .deleteConfirmation: return "deleteConfirmation"
+            case .resetAndSeedConfirmation: return "resetAndSeedConfirmation"
+            case .deleteSuccess: return "deleteSuccess"
+            case .seedSuccess: return "seedSuccess"
+            case .permission: return "permission"
+            case .taskPermission: return "taskPermission"
+            case .emailNotAvailable: return "emailNotAvailable"
+            case .themeWarning: return "themeWarning"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .deleteConfirmation: return "delete_all_data_confirmation_title".localized
+            case .resetAndSeedConfirmation: return "Ripristina e Popola?"
+            case .deleteSuccess: return "Dati Eliminati"
+            case .seedSuccess: return "Dati di Esempio Caricati!"
+            case .permission: return "enable_notifications".localized
+            case .taskPermission: return "notification_permission_required".localized
+            case .emailNotAvailable: return "email_client_not_available".localized
+            case .themeWarning: return "dark_mode_theme_warning_title".localized
+            }
+        }
+
+        var message: String {
+            switch self {
+            case .deleteConfirmation: return "delete_all_data_confirmation_message".localized
+            case .resetAndSeedConfirmation: return "Verranno eliminati tutti i dati attuali e sostituiti con un set completo di dati di esempio."
+            case .deleteSuccess: return "Tutti i dati dell'applicazione sono stati cancellati con successo."
+            case .seedSuccess: return "Task con orari distribuiti, ricorrenze, premi, categorie, finanze e statistiche sono pronti!"
+            case .permission: return "notification_permission_message".localized
+            case .taskPermission: return "notification_permission_denied_message".localized
+            case .emailNotAvailable: return "email_client_not_available_message".localized
+            case .themeWarning: return "dark_mode_theme_warning_message".localized
+            }
+        }
+    }
+
+    @State private var activeAlert: SettingsAlertItem? = nil
     @State private var showingCalendarIntegrationView = false
     @State private var showingWelcome = false
-    @State private var showingDeleteConfirmation = false
     @State private var isDeleting = false
+    @State private var isSeeding = false
+    @State private var isSeedingReplace = false
     @State private var showingPremiumPaywall = false
-    @State private var showingThemeWarning = false
-    @State private var showingTaskNotificationPermissionAlert = false
-    @State private var showingEmailNotAvailableAlert = false
 
     @State private var didInitialLoad = false
 
@@ -187,7 +237,7 @@ struct SettingsView: View {
                         // Show notification permission status
                         if notificationPermissionStatus == .denied {
                             Button {
-                                showingPermissionAlert = true
+                                activeAlert = .permission
                             } label: {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -257,7 +307,7 @@ struct SettingsView: View {
 
                         if notificationPermissionStatus == .denied {
                             Button {
-                                showingPermissionAlert = true
+                                activeAlert = .permission
                             } label: {
                                 HStack {
                                     Image(systemName: "exclamationmark.triangle.fill")
@@ -307,7 +357,7 @@ struct SettingsView: View {
                     // Show iOS permission status only if master mute is ON and permissions denied
                     if taskNotificationManager.areTaskNotificationsEnabled && taskNotificationManager.authorizationStatus == .denied {
                         Button {
-                            showingTaskNotificationPermissionAlert = true
+                            activeAlert = .taskPermission
                         } label: {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
@@ -335,24 +385,28 @@ struct SettingsView: View {
                 
                 // Appearance Section
                 Section {
-                    Picker(selection: $appearanceMode) {
-                        Text("system".localized).tag("system")
-                        Text("light".localized).tag("light")
-                        Text("dark".localized).tag("dark")
-                    } label: {
-                        HStack {
-                            Image(systemName: "circle.lefthalf.filled")
-                                .foregroundColor(.indigo)
-                                .frame(width: 24)
-                            Text("appearance".localized)
-                                .themedPrimaryText()
+                    HStack {
+                        Image(systemName: "circle.lefthalf.filled")
+                            .foregroundColor(.indigo)
+                            .frame(width: 24)
+                        
+                        Text("appearance".localized)
+                            .themedPrimaryText()
+                        
+                        Spacer()
+                        
+                        Picker("", selection: $appearanceMode) {
+                            Text("system".localized).tag("system")
+                            Text("light".localized).tag("light")
+                            Text("dark".localized).tag("dark")
+                        }
+                        .pickerStyle(.menu)
+                        .tint(theme.accentColor)
+                        .onChange(of: appearanceMode) { _, newValue in
+                            handleAppearanceModeChange(newValue)
                         }
                     }
-                    .pickerStyle(.navigationLink)
-                    .tint(theme.accentColor)
-                    .onChange(of: appearanceMode) { _, newValue in
-                        handleAppearanceModeChange(newValue)
-                    }
+                    .contentShape(Rectangle())
                     .listRowBackground(theme.surfaceColor)
                     
                     NavigationLink {
@@ -609,11 +663,90 @@ struct SettingsView: View {
                         .themedSecondaryText()
                 }
 
+                // MARK: - DEBUG_PRE_RELEASE_REMOVE: Developer / Testing Section
+                Section {
+                    Button {
+                        seedData(replace: false)
+                    } label: {
+                        HStack {
+                            Image(systemName: "hammer.fill")
+                                .foregroundColor(.indigo)
+                                .frame(width: 24)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Popola Dati di Esempio (Aggiungi)")
+                                    .themedPrimaryText()
+                                    .font(.body)
+                                
+                                Text("Aggiunge task con orari, ricorrenze, premi, finanze e statistiche senza cancellare i dati attuali")
+                                    .font(.caption)
+                                    .themedSecondaryText()
+                                    .multilineTextAlignment(.leading)
+                            }
+                            
+                            Spacer()
+                            
+                            if isSeeding && !isSeedingReplace {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.indigo)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSeeding || isDeleting)
+                    
+                    Button {
+                        activeAlert = .resetAndSeedConfirmation
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .foregroundColor(.orange)
+                                .frame(width: 24)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Ripristina & Popola da Zero")
+                                    .themedPrimaryText()
+                                    .font(.body)
+                                
+                                Text("Cancella tutto e ricrea un set completo e pulito di dati di test")
+                                    .font(.caption)
+                                    .themedSecondaryText()
+                                    .multilineTextAlignment(.leading)
+                            }
+                            
+                            Spacer()
+                            
+                            if isSeeding && isSeedingReplace {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "sparkles")
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSeeding || isDeleting)
+                } header: {
+                    Text("Sviluppatore")
+                        .themedSecondaryText()
+                } footer: {
+                    Text("Permette di riempire rapidamente l'app con task distribuiti nella giornata, premi, categorie e finanze per testare ogni schermata.")
+                        .font(.caption)
+                        .themedSecondaryText()
+                }
+                .listRowBackground(theme.surfaceColor)
+
                 // Data Management Section
                 Section {
-                    Button(action: {
-                        showingDeleteConfirmation = true
-                    }) {
+                    Button {
+                        activeAlert = .deleteConfirmation
+                    } label: {
                         HStack {
                             Image(systemName: "trash.fill")
                                 .foregroundColor(.red)
@@ -637,8 +770,10 @@ struct SettingsView: View {
                                     .scaleEffect(0.8)
                             }
                         }
+                        .contentShape(Rectangle())
                     }
-                    .disabled(isDeleting)
+                    .buttonStyle(.plain)
+                    .disabled(isDeleting || isSeeding)
                     .listRowBackground(theme.surfaceColor)
                 } header: {
                     Text("data_management".localized)
@@ -650,8 +785,8 @@ struct SettingsView: View {
                 }
 
             }
-            .themedBackground()
             .scrollContentBackground(.hidden)
+            .background(theme.backgroundColor.ignoresSafeArea())
             .onAppear {
                 if !didInitialLoad {
                     didInitialLoad = true
@@ -693,54 +828,55 @@ struct SettingsView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
-            .alert("enable_notifications".localized, isPresented: $showingPermissionAlert) {
-                Button("settings".localized) {
-                    openAppSettings()
-                }
-                Button("cancel".localized, role: .cancel) { }
-            } message: {
-                Text("notification_permission_message".localized)
-            }
-            .alert("notification_permission_required".localized, isPresented: $showingTaskNotificationPermissionAlert) {
-                Button("open_settings".localized) {
-                    openAppSettings()
-                }
-                Button("cancel".localized, role: .cancel) { }
-            } message: {
-                Text("notification_permission_denied_message".localized)
-            }
-            .alert("email_client_not_available".localized, isPresented: $showingEmailNotAvailableAlert) {
-                Button("ok".localized, role: .cancel) { }
-            } message: {
-                Text("email_client_not_available_message".localized)
-            }
-            .alert("delete_all_data_confirmation_title".localized, isPresented: $showingDeleteConfirmation) {
-                Button("cancel".localized, role: .cancel) { }
-                Button("delete_all_data_button".localized, role: .destructive) {
-                    Task {
-                        await deleteAllData()
+            .alert(
+                activeAlert?.title ?? "",
+                isPresented: Binding(
+                    get: { activeAlert != nil },
+                    set: { if !$0 { activeAlert = nil } }
+                ),
+                presenting: activeAlert
+            ) { item in
+                switch item {
+                case .deleteConfirmation:
+                    Button("delete_all_data_button".localized, role: .destructive) {
+                        performDeleteAllData()
                     }
+                    Button("cancel".localized, role: .cancel) { }
+                case .resetAndSeedConfirmation:
+                    Button("Ripristina e Popola", role: .destructive) {
+                        seedData(replace: true)
+                    }
+                    Button("Annulla", role: .cancel) { }
+                case .permission:
+                    Button("settings".localized) {
+                        openAppSettings()
+                    }
+                    Button("cancel".localized, role: .cancel) { }
+                case .taskPermission:
+                    Button("open_settings".localized) {
+                        openAppSettings()
+                    }
+                    Button("cancel".localized, role: .cancel) { }
+                case .emailNotAvailable:
+                    Button("ok".localized, role: .cancel) { }
+                case .themeWarning:
+                    Button("switch_to_simple_theme".localized) {
+                        themeManager.setTheme(ThemeManager.defaultTheme)
+                    }
+                    Button("keep_current_theme".localized, role: .cancel) {
+                        appearanceMode = "system"
+                    }
+                case .seedSuccess, .deleteSuccess:
+                    Button("OK", role: .cancel) { }
                 }
-            } message: {
-                Text("delete_all_data_confirmation_message".localized)
-            }
-            .alert("dark_mode_theme_warning_title".localized, isPresented: $showingThemeWarning) {
-                Button("switch_to_simple_theme".localized) {
-                    // Switch to default theme and keep selected appearance mode
-                    themeManager.setTheme(ThemeManager.defaultTheme)
-                }
-                Button("keep_current_theme".localized, role: .cancel) {
-                    // Keep current theme and revert to system
-                    appearanceMode = "system"
-                }
-            } message: {
-                Text("dark_mode_theme_warning_message".localized)
+            } message: { item in
+                Text(item.message)
             }
             .fullScreenCover(isPresented: $showingWelcome) {
                 WelcomeView()
             }
-            .navigationBarTitle("settings".localized)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("settings".localized)
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(false)
         }
     }
@@ -779,7 +915,7 @@ struct SettingsView: View {
     private func handleAppearanceModeChange(_ newValue: String) {
         // Se l'utente sta provando ad attivare light/dark mode con un tema che sovrascrive i colori
         if newValue != "system" && themeManager.currentTheme.overridesSystemColors {
-            showingThemeWarning = true
+            activeAlert = .themeWarning
         }
     }
     
@@ -794,7 +930,7 @@ struct SettingsView: View {
                     } else {
                         // Se i permessi vengono negati, torna su OFF e mostra l'alert
                         taskNotificationManager.setTaskNotificationsEnabled(false)
-                        showingTaskNotificationPermissionAlert = true
+                        activeAlert = .taskPermission
                     }
                 }
             }
@@ -816,7 +952,7 @@ struct SettingsView: View {
                 scheduleDailyQuoteNotification()
             } else {
                 dailyQuoteNotificationsEnabled = false
-                showingPermissionAlert = true
+                activeAlert = .permission
             }
             
             checkNotificationPermissionStatus()
@@ -838,7 +974,7 @@ struct SettingsView: View {
                 scheduleDiaryNotification()
             } else {
                 diaryNotificationsEnabled = false
-                showingPermissionAlert = true
+                activeAlert = .permission
             }
 
             checkNotificationPermissionStatus()
@@ -1104,79 +1240,86 @@ struct SettingsView: View {
         }
     }
     
-    private func deleteAllData() async {
+    private func performDeleteAllData() {
         isDeleting = true
+        HapticManager.shared.impact(.heavy)
         
-        do {
-            // Wait a bit for UI feedback
-            try await Task.sleep(nanoseconds: 500_000_000)
+        Task {
+            // 1. Reset TaskManager (wipes standard UserDefaults and App Group shared UserDefaults, clears in-memory tasks and trackingSessions, cancels notifications)
+            TaskManager.shared.resetUserDefaults()
             
-            // Delete all tasks first (which also clears statistics and rewards)
-            let taskManager = TaskManager.shared
-            let allTasks = taskManager.tasks
+            // 2. Reset Rewards and Points
+            await RewardManager.shared.performCompleteReset()
             
-            // Remove each task individually to trigger proper cleanup
-            for task in allTasks {
-                await taskManager.removeTask(task)
+            // 3. Reset Categories
+            CategoryManager.shared.performCompleteReset()
+            
+            // 4. Reset Journal & Mandala
+            JournalManager.shared.resetAll()
+            MandalaManager.shared.resetAll()
+            
+            // 5. Reset Finances
+            FinanceManager.shared.resetAll()
+            
+            // 6. Stop active timers and Pomodoro
+            TimeTrackerViewModel.shared.activeSessions.forEach { TimeTrackerViewModel.shared.removeSession(id: $0.id) }
+            PomodoroViewModel.shared.stop()
+            
+            // 7. Clear all remaining statistics, metadata and timer keys from UserDefaults
+            let ud = UserDefaults.standard
+            ud.removeObject(forKey: "timeTracking")
+            ud.removeObject(forKey: "taskMetadata")
+            ud.removeObject(forKey: "pomodoro_background_timestamp")
+            ud.removeObject(forKey: "pomodoro_time_remaining")
+            ud.removeObject(forKey: "pomodoro_state")
+            ud.removeObject(forKey: "pomodoro_current_session")
+            ud.removeObject(forKey: "pomodoro_total_paused_time")
+            
+            for key in ud.dictionaryRepresentation().keys where key.hasPrefix("timer_session_") {
+                ud.removeObject(forKey: key)
             }
+            ud.synchronize()
             
-            // Clear any remaining data
-            taskManager.resetUserDefaults()
+            // 8. Cancel all notifications
+            TaskNotificationManager.shared.cancelAllNotifications()
             
-            // Reset rewards and points
-            let rewardManager = RewardManager.shared
-            await rewardManager.performCompleteReset()
+            // 9. Reload widgets
+            WidgetCenter.shared.reloadAllTimelines()
             
-            // Reset categories to defaults
-            let categoryManager = CategoryManager.shared
-            categoryManager.performCompleteReset()
-            
-            // Clear time tracking statistics
-            UserDefaults.standard.removeObject(forKey: "timeTracking")
-            UserDefaults.standard.removeObject(forKey: "taskMetadata")
-            
-            // Clear all focus session data (Timer sessions)
-            let userDefaults = UserDefaults.standard
-            let allKeys = userDefaults.dictionaryRepresentation().keys
-            let timerSessionKeys = allKeys.filter { $0.hasPrefix("timer_session_") }
-            for key in timerSessionKeys {
-                userDefaults.removeObject(forKey: key)
-                print(" Removed timer session: \(key)")
-            }
-            
-            // Clear Pomodoro background state
-            userDefaults.removeObject(forKey: "pomodoro_background_timestamp")
-            userDefaults.removeObject(forKey: "pomodoro_time_remaining")
-            userDefaults.removeObject(forKey: "pomodoro_state")
-            userDefaults.removeObject(forKey: "pomodoro_current_session")
-            userDefaults.removeObject(forKey: "pomodoro_total_paused_time")
-            
-            // Stop any active focus sessions
-            let timeTrackerViewModel = TimeTrackerViewModel.shared
-            let pomodoroViewModel = PomodoroViewModel.shared
-            
-            // Remove all active timer sessions
-            for session in timeTrackerViewModel.activeSessions {
-                timeTrackerViewModel.removeSession(id: session.id)
-            }
-            
-            // Stop any active Pomodoro session
-            pomodoroViewModel.stop()
-            
-            // Synchronize UserDefaults
-            UserDefaults.standard.synchronize()
-            
-            // Notify statistics to refresh
+            // 10. Notify all UI observers
             NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
+            NotificationCenter.default.post(name: .tasksDidUpdate, object: nil)
+            NotificationCenter.default.post(name: .categoriesDidUpdate, object: nil)
             
-            print(" All data successfully deleted and reset to defaults")
-            print(" Cleared timer sessions, Pomodoro state, and focus tracking data")
-            
-        } catch {
-            print(" Error during data deletion: \(error)")
+            await MainActor.run {
+                self.isDeleting = false
+                HapticManager.shared.notification(.success)
+                
+                // Present success confirmation after previous modal finishes dismissing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    self.activeAlert = .deleteSuccess
+                }
+            }
         }
-        
-        isDeleting = false
+    }
+
+    // MARK: - DEBUG_PRE_RELEASE_REMOVE
+    private func seedData(replace: Bool) {
+        guard !isSeeding else { return }
+        isSeeding = true
+        isSeedingReplace = replace
+        HapticManager.shared.impact(.light)
+        Task {
+            await DemoDataSeeder.shared.seedDemoContent(replace: replace)
+            await MainActor.run {
+                isSeeding = false
+                isSeedingReplace = false
+                HapticManager.shared.notification(.success)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    self.activeAlert = .seedSuccess
+                }
+            }
+        }
     }
     
     private func openEmailClient() {
@@ -1189,7 +1332,7 @@ struct SettingsView: View {
         
         // Encode the string for URL
         guard let mailtoURL = URL(string: mailtoString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "") else {
-            showingEmailNotAvailableAlert = true
+            activeAlert = .emailNotAvailable
             return
         }
         
@@ -1197,7 +1340,7 @@ struct SettingsView: View {
         if UIApplication.shared.canOpenURL(mailtoURL) {
             UIApplication.shared.open(mailtoURL)
         } else {
-            showingEmailNotAvailableAlert = true
+            activeAlert = .emailNotAvailable
         }
     }
 

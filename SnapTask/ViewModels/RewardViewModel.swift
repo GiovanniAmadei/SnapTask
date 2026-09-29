@@ -11,6 +11,8 @@ class RewardViewModel: ObservableObject {
     @Published var dailyPoints: Int = 0
     @Published var weeklyPoints: Int = 0
     @Published var monthlyPoints: Int = 0
+    @Published var yearlyPoints: Int = 0
+    @Published var totalAvailablePoints: Int = 0
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -37,6 +39,8 @@ class RewardViewModel: ObservableObject {
         dailyPoints = RewardManager.shared.availablePoints(for: .daily, on: Date())
         weeklyPoints = RewardManager.shared.availablePoints(for: .weekly, on: Date())
         monthlyPoints = RewardManager.shared.availablePoints(for: .monthly, on: Date())
+        yearlyPoints = RewardManager.shared.availablePoints(for: .yearly, on: Date())
+        totalAvailablePoints = RewardManager.shared.availablePoints(for: .oneTime, on: Date())
     }
     
     private func updateRewards(_ rewards: [Reward]) {

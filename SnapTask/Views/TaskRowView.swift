@@ -25,6 +25,13 @@ struct TaskRowView: View {
                 HStack {
                     // Task completion indicator
                     Button(action: {
+                        let completionDate = task.completionKey(for: date)
+                        let isCompleted = task.completions[completionDate]?.isCompleted == true
+                        if isCompleted {
+                            HapticManager.shared.impact(.light)
+                        } else {
+                            HapticManager.shared.notification(.success)
+                        }
                         viewModel.toggleCompletion(for: task, on: date)
                     }) {
                         let completionDate = task.completionKey(for: date)

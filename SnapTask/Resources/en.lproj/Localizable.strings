@@ -6,6 +6,9 @@
 "delete" = "Delete";
 "done" = "Done";
 "add" = "Add";
+"copy" = "Copy";
+"cut" = "Cut";
+"paste" = "Paste";
 "continue" = "Continue";
 "back" = "Back";
 "skip" = "Skip";
@@ -645,8 +648,22 @@
 "all_category_filter" = "All";
 
 "feedback_filter_recent" = "Most recent";
-"feedback_replies_title" = "Replies";
+"feedback_tab_popular" = "Top Voted";
+"feedback_tab_recent" = "Recent";
+"feedback_tab_answered" = "Answered";
+"feedback_tab_completed" = "Completed";
+"feedback_developer_response" = "Dev Reply";
+"feedback_read_dev_reply" = "Dev Reply";
+"feedback_hide_dev_reply" = "Dev Reply";
+"feedback_official_dev_response" = "Official response";
+"feedback_reply_single" = "1 reply";
+"feedback_replies_count" = "%d replies";
 "feedback_tap_to_read_more" = "Tap to read";
+"feedback_show_less" = "Show less";
+"feedback_status_pending" = "Pending";
+"feedback_status_in_progress" = "In Progress";
+"feedback_status_completed" = "Completed";
+"feedback_status_rejected" = "Rejected";
 "feedback_anonymous" = "Anonymous";
 "feedback_by_author_format" = "by %@";
 "feedback_you_indicator" = "(You)";
@@ -1083,7 +1100,7 @@
 "weekly_overview" = "Weekly Overview";
 "week_pts" = "Week: {points} pts";
 "focus_time" = "Focus Time";
-"mark_incomplete" = "Mark Incomplete";
+"mark_incomplete" = "Incomplete";
 "mark_complete" = "Mark Complete";
 "recurring_task" = "Recurring Task";
 "has_duration" = "Has Duration";
@@ -1122,7 +1139,7 @@
 "task_happens_this_month" = "Goal for this month";
 "task_happens_this_year" = "Goal for this year";
 "long_term_goal" = "Long-term goal";
-"long_term_goals" = "Long-Term Goals";
+"long_term_goals" = "Long-term goals";
 "no_tasks" = "No tasks";
 "no_tasks_this_week" = "No tasks for this week";
 "no_tasks_this_month" = "No tasks for this month";
@@ -1589,7 +1606,9 @@
 "current_income" = "Current Income";
 "category_budgets" = "Category Budgets";
 "category_budgets_footer" = "Set spending limits for individual categories";
+"swipe_to_edit_delete" = "Swipe to edit or delete";
 "add_category_budget" = "Add Category Budget";
+"edit_budget" = "Edit Budget";
 "monthly_limit" = "Monthly Limit";
 "over_budget" = "Over Budget";
 "reset_finance_data" = "Reset All Finance Data";
@@ -1911,3 +1930,142 @@
 "widget_budget" = "Budget";
 "widget_no_data" = "No finance data";
 "widget_this_month" = "This month";
+
+// MARK: - Quick Add App Intents
+"Add Quick Task" = "Add Quick Task";
+"Quick Add Task" = "Quick Add Task";
+"Quickly add a new task to your SnapTask timeline." = "Quickly add a new task to your SnapTask timeline.";
+"Open Quick Add" = "Open Quick Add";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "Opens SnapTask and shows the new-task sheet so you can type a task quickly.";
+"Task" = "Task";
+"What do you want to do?" = "What do you want to do?";
+"Could not access SnapTask data." = "Could not access SnapTask data.";
+"Could not save the task." = "Could not save the task.";
+"Add task to SnapTask" = "Add task to SnapTask";
+"Add task to \(_:)" = "Add task to %@";
+"Add a task in \(_:)" = "Add a task in %@";
+"Quick add in \(_:)" = "Quick add in %@";
+"New task in \(_:)" = "New task in %@";
+"Capture task in \(_:)" = "Capture task in %@";
+"Added \"%@\" to SnapTask." = "Added \"%@\" to SnapTask.";
+
+// Show Today's Tasks
+"Show Today's Tasks" = "Show Today's Tasks";
+"Today's Tasks" = "Today's Tasks";
+"Lists the tasks you have planned for today." = "Lists the tasks you have planned for today.";
+"Show today's tasks in SnapTask" = "Show today's tasks in SnapTask";
+"You don't have any tasks yet in SnapTask." = "You don't have any tasks yet in SnapTask.";
+"Could not read your SnapTask tasks." = "Could not read your SnapTask tasks.";
+"You have no tasks for today. Enjoy!" = "You have no tasks for today. Enjoy!";
+"All your %lld tasks for today are done. Great job!" = "All your %lld tasks for today are done. Great job!";
+"You have %lld tasks left for today (%lld already done):" = "You have %lld tasks left for today (%lld already done):";
+"You have %lld tasks for today:" = "You have %lld tasks for today:";
+"…and %lld more." = "…and %lld more.";
+
+// Session Conflict
+"session_conflict" = "Session Conflict";
+"active_session_running_desc" = "You already have an active session running";
+"current_session" = "Current";
+"new_session" = "New";
+"keep_both" = "Keep Both";
+"save_and_replace" = "Save & Replace";
+"discard_and_replace" = "Discard & Replace";
+"reorder" = "Reorder";
+
+"view_all" = "View All";
+"all_sessions" = "All Sessions";
+"edit_session" = "Edit Session";
+"timing" = "Timing";
+"end_time" = "End Time";
+"add_notes_placeholder" = "Add notes...";
+
+// Celebrations & Recurrence
+"app_icon" = "App Icon";
+"celebrations" = "Celebrations";
+"confetti_celebrations" = "Confetti Celebrations";
+"confetti_celebrations_description" = "Show particle celebration when completing tasks";
+"hide_days_bar" = "Hide Days Bar";
+"hide_days_bar_description" = "Hide the day selection bar in the Today view";
+"postpone_single_occurrence" = "Postpone today's occurrence to tomorrow";
+
+// Edit scope (recurring tasks)
+"edit_scope_title" = "Edit scope";
+"edit_scope_description" = "This is a recurring task. Choose whether to apply changes to this occurrence only or to the entire series.";
+"edit_scope_entire_series" = "Entire series";
+"edit_scope_single_instance" = "This occurrence only";
+
+"expand" = "Expand";
+"collapse" = "Collapse";
+
+
+
+// Contextual Recurrence & Notifications Actions (New)
+"repeats" = "Repeats";
+"every_n_weeks" = "Every N weeks";
+"weeks_of_month" = "Weeks of month";
+"pattern_modulo" = "Pattern (modulo)";
+"every_n_months" = "Every N months";
+"specific_months" = "Specific months";
+"every_n_years" = "Every N years";
+"week_unit" = "week";
+"weeks_unit" = "weeks";
+"month_unit" = "month";
+"months_unit" = "months";
+"year_unit" = "year";
+"years_unit" = "years";
+"anchored_start_week" = "Anchored to the task start week.";
+"anchored_start_month" = "Anchored to the task start month.";
+"anchored_start_year" = "Anchored to the task start year.";
+"select_weeks_of_month" = "Select weeks of the month";
+"select_months" = "Select months";
+"select_specific_months" = "Select specific months";
+"every_kth_week" = "Every k-th week (k ≥ 2)";
+"every_k_years" = "Every k years (k ≥ 2)";
+"offset" = "Offset";
+"even_weeks" = "Even weeks";
+"odd_weeks" = "Odd weeks";
+"even_years" = "Even years";
+"odd_years" = "Odd years";
+"modulo_weeks_formula_desc" = "Selected weeks satisfy: (week − anchor) % k = offset";
+"modulo_years_formula_desc" = "Selected years satisfy: (year − anchor) % k = offset";
+"long_term_tasks_no_recurrence" = "Long-term tasks do not have recurrence settings.";
+"last_ordinal" = "Last";
+"every_n_weeks_format" = "Every %d weeks";
+"weeks_of_month_prefix" = "Weeks of the month: %@";
+"every_kth_week_offset_format" = "Every %d-th week (offset %d)";
+"every_n_months_format" = "Every %d months";
+"months_prefix" = "Months: %@";
+"every_n_years_format" = "Every %d years";
+"every_k_years_offset_format" = "Every %d years (offset %d)";
+"no_recurrence" = "No recurrence";
+"mark_as_completed" = "Mark as Completed";
+"remind_me_in_1_hour" = "Remind me in 1 hour";
+"tomorrow_morning_9am" = "Tomorrow morning (09:00)";
+"recurrence_desc_week" = "Configure recurrence at the week level (without specific days).";
+"recurrence_desc_month" = "Configure recurrence at the month level.";
+"recurrence_desc_year" = "Configure recurrence at the year level.";
+
+// Mandala Method
+"mandala_chart" = "Mandala Chart";
+"mandala_hub_title" = "Mandala Goal Method";
+"mandala_type_habit" = "Habit";
+"mandala_type_task" = "Task";
+"mandala_action_title" = "Action Title";
+"mandala_action_placeholder" = "e.g. Read 20 pages per day";
+"mandala_action_note" = "Notes & Details";
+"mandala_note_placeholder" = "Add extra context or strategy...";
+"mandala_action_type" = "Type";
+"mandala_completed" = "Completed";
+"mandala_to_do" = "To do";
+"mandala_toggle_hint" = "Mark as completed to update your overall progress.";
+"mandala_linked_to_snaptask" = "Linked to SnapTask";
+"mandala_schedule_in_timeline_desc" = "Turn this action into a scheduled task on your SnapTask Timeline with reward points.";
+"mandala_add_to_timeline" = "Add to SnapTask";
+"mandala_task_created_success" = "Task created and synced to your Timeline!";
+"mandala_timeline_integration" = "SnapTask Integration";
+"mandala_action_detail" = "Action Details";
+"mandala_new_chart" = "New Mandala Chart";
+"mandala_create_chart_title" = "Choose Your Starting Point";
+"mandala_create_chart_subtitle" = "Break down a big ambition into 8 pillars and 64 daily actions scheduled on your agenda.";
+"mandala_create_custom_title" = "Create from Scratch (Blank)";
+"mandala_create_custom_subtitle" = "Define your core goal and customize all 8 pillars step by step.";

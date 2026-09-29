@@ -17,6 +17,7 @@ struct MediaHubCalendarView: View {
     @State private var playingMemoId: UUID? = nil
     @StateObject private var audioPlayer = CalendarAudioPlayer()
     @State private var showingJournalEntry: JournalEntry? = nil
+    @State private var isDetailExpanded: Bool = false
     
     // Multi-scope support
     @State private var calendarViewScope: TaskTimeScope = .today
@@ -37,14 +38,19 @@ struct MediaHubCalendarView: View {
                 adaptiveHeader
                 
                 GeometryReader { geometry in
-                    let calendarHeight = min(geometry.size.height * 0.46, 380)
+                    let defaultHeight = min(geometry.size.height * 0.42, 330)
+                    let calendarHeight: CGFloat = isDetailExpanded ? 0 : defaultHeight
+                    
                     VStack(spacing: 0) {
                         adaptiveCalendarView
                             .frame(height: calendarHeight)
                             .clipped()
+                            .opacity(isDetailExpanded ? 0 : 1)
                         
-                        Divider()
-                            .padding(.vertical, 4)
+                        if !isDetailExpanded {
+                            Divider()
+                                .padding(.vertical, 4)
+                        }
                         
                         adaptiveDetailView
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -140,15 +146,19 @@ struct MediaHubCalendarView: View {
 
     @ViewBuilder
     private var adaptiveHeader: some View {
-        switch calendarViewScope {
-        case .today, .week:
-            monthHeader
-        case .month:
-            yearHeader
-        case .year:
-            decadeHeader
-        case .longTerm, .all:
-            EmptyView()
+        if isDetailExpanded && calendarViewScope == .today {
+            expandedDayNavigator
+        } else {
+            switch calendarViewScope {
+            case .today, .week:
+                monthHeader
+            case .month:
+                yearHeader
+            case .year:
+                decadeHeader
+            case .longTerm, .all:
+                EmptyView()
+            }
         }
     }
     
@@ -317,6 +327,82 @@ struct MediaHubCalendarView: View {
         .padding(.vertical, 12)
     }
     
+    // MARK: - Expanded Day Navigator
+    
+    private var expandedDayNavigator: some View {
+        HStack {
+            Button {
+                if let current = selectedDayForDetail,
+                   let prevDay = calendar.date(byAdding: .day, value: -1, to: current) {
+                    HapticManager.shared.impact(.light)
+                    withAnimation {
+                        selectedDayForDetail = prevDay
+                        displayedMonth = prevDay
+                    }
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .themedPrimary()
+                    .frame(width: 32, height: 32)
+            }
+            
+            Spacer()
+            
+            if let day = selectedDayForDetail {
+                Text(fullDateString(from: day))
+                    .font(.headline)
+                    .themedPrimaryText()
+            }
+            
+            Spacer()
+            
+            Button {
+                if let current = selectedDayForDetail,
+                   let nextDay = calendar.date(byAdding: .day, value: 1, to: current) {
+                    HapticManager.shared.impact(.light)
+                    withAnimation {
+                        selectedDayForDetail = nextDay
+                        displayedMonth = nextDay
+                    }
+                }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .themedPrimary()
+                    .frame(width: 32, height: 32)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+    }
+    
+    // MARK: - Expand / Collapse Button
+    
+    private var expandCollapseButton: some View {
+        Button {
+            HapticManager.shared.impact(.light)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                isDetailExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: isDetailExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 10, weight: .bold))
+                Text(isDetailExpanded ? "collapse".localized : "expand".localized)
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundColor(theme.primaryColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(theme.primaryColor.opacity(0.12))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
     // MARK: - Weekday Header
     
     private var weekdayHeader: some View {
@@ -463,6 +549,8 @@ struct MediaHubCalendarView: View {
                         mediaBadge(icon: "book.closed.fill", count: 1, color: .purple)
                     }
                 }
+                
+                expandCollapseButton
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -605,232 +693,13 @@ struct MediaHubCalendarView: View {
     }
     
     private func taskMediaCard(task: TodoTask, date: Date) -> some View {
-        let completionKey = task.completionKey(for: date)
-        let completion = task.completions[completionKey]
-        
-        // Filter media by creation date - only show media created on this specific date
-        let photosForDate = task.photos.filter { calendar.isDate($0.createdAt, inSameDayAs: date) }
-        let memosForDate = task.voiceMemos.filter { calendar.isDate($0.createdAt, inSameDayAs: date) }
-        let hasNotes = completion?.notes != nil && !(completion?.notes?.isEmpty ?? true)
-        let hasMediaForDate = !photosForDate.isEmpty || !memosForDate.isEmpty || hasNotes
-        
-        return VStack(alignment: .leading, spacing: 12) {
-            // Task header with category
-            HStack(spacing: 8) {
-                Image(systemName: task.icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(categoryColor(for: task))
-                
-                Text(task.name)
-                    .font(.subheadline.weight(.medium))
-                    .themedPrimaryText()
-                    .lineLimit(1)
-                
-                // Category badge next to title
-                if let category = task.category {
-                    Text(category.name)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(Color(hex: category.color))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(Color(hex: category.color).opacity(0.15))
-                        )
-                }
-                
-                Spacer()
-                
-                // Always show completion status
-                Image(systemName: completion?.isCompleted == true ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(completion?.isCompleted == true ? .green : .gray.opacity(0.4))
-                    .font(.system(size: 16))
-            }
-            
-            // Quick Info Section
-            quickInfoSection(task: task, completion: completion, date: date)
-            
-            // Media Section - only show media created on this date
-            if hasMediaForDate {
-                VStack(alignment: .leading, spacing: 10) {
-                    // Photos created on this date
-                    if !photosForDate.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("photos".localized, systemImage: "photo")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.blue)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(photosForDate) { photo in
-                                        if let image = AttachmentService.loadImage(from: photo.thumbnailPath) {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: 60, height: 60)
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                .onTapGesture {
-                                                    selectedPhoto = photo
-                                                }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Voice memos created on this date
-                    if !memosForDate.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("voice_memos".localized, systemImage: "waveform")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.pink)
-                            
-                            ForEach(memosForDate) { memo in
-                                VoiceMemoPlayerRow(
-                                    memo: memo,
-                                    isPlaying: playingMemoId == memo.id && audioPlayer.isPlaying,
-                                    currentTime: playingMemoId == memo.id ? audioPlayer.currentTime : 0,
-                                    onTap: { togglePlayback(memo) }
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Notes for this date's completion
-                    if let notes = completion?.notes, !notes.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("notes".localized, systemImage: "note.text")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.orange)
-                            
-                            Text(notes)
-                                .font(.caption)
-                                .themedSecondaryText()
-                                .lineLimit(3)
-                                .padding(8)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.orange.opacity(0.1))
-                                )
-                        }
-                    }
-                    
-                    // Performance ratings for this date's completion
-                    if let difficulty = completion?.difficultyRating, let quality = completion?.qualityRating {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("performance".localized, systemImage: "chart.bar.fill")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.purple)
-                            
-                            HStack(spacing: 16) {
-                                // Difficulty rating
-                                HStack(spacing: 4) {
-                                    Image(systemName: "flame")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.red)
-                                    Text("difficulty".localized)
-                                        .font(.system(size: 10))
-                                        .themedSecondaryText()
-                                    Text("\(difficulty)/10")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(.red)
-                                }
-                                
-                                // Quality rating
-                                HStack(spacing: 4) {
-                                    Image(systemName: "star.fill")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.green)
-                                    Text("quality".localized)
-                                        .font(.system(size: 10))
-                                        .themedSecondaryText()
-                                    Text("\(quality)/10")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(.green)
-                                }
-                            }
-                            .padding(8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.purple.opacity(0.1))
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(theme.surfaceColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(theme.borderColor, lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
-    }
-    
-    // MARK: - Quick Info Section
-    
-    @ViewBuilder
-    private func quickInfoSection(task: TodoTask, completion: TaskCompletion?, date: Date) -> some View {
-        // Compact grid layout
-        let columns = [
-            GridItem(.flexible(), spacing: 8),
-            GridItem(.flexible(), spacing: 8),
-            GridItem(.flexible(), spacing: 8)
-        ]
-        
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-            // Time
-            compactInfoChip(icon: "clock", value: formatTime(task.startTime), color: .purple)
-            
-            // Duration - prefer actual tracked time, fallback to estimated
-            if let actualDuration = completion?.actualDuration, actualDuration > 0 {
-                // Show actual tracked duration
-                compactInfoChip(icon: "hourglass", value: formatDurationFromSeconds(actualDuration), color: .green)
-            } else if task.totalTrackedTime > 0 {
-                // Show total tracked time
-                compactInfoChip(icon: "hourglass", value: formatDurationFromSeconds(task.totalTrackedTime), color: .green)
-            } else if task.hasDuration && task.duration > 0 {
-                // Show estimated duration
-                compactInfoChip(icon: "hourglass", value: formatDurationFromSeconds(task.duration), color: .blue)
-            }
-            
-            // Priority
-            compactInfoChip(icon: "flag.fill", value: task.priority.displayName, color: Color(hex: task.priority.color))
-            
-            // Points (if set)
-            if task.hasRewardPoints && task.rewardPoints > 0 {
-                compactInfoChip(icon: "star.fill", value: "\(task.rewardPoints)pt", color: .yellow)
-            }
-            
-            // Streak (for recurring tasks)
-            if task.recurrence != nil && task.currentStreak > 0 {
-                compactInfoChip(icon: "flame.fill", value: "\(task.currentStreak)", color: .orange)
-            }
-        }
-    }
-    
-    private func compactInfoChip(icon: String, value: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10))
-                .foregroundColor(color)
-            
-            Text(value)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(color)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            Capsule()
-                .fill(color.opacity(0.12))
+        CalendarTaskCard(
+            task: task,
+            date: date,
+            selectedPhoto: $selectedPhoto,
+            playingMemoId: playingMemoId,
+            audioPlayer: audioPlayer,
+            onTogglePlayback: { memo in togglePlayback(memo) }
         )
     }
     
@@ -1286,6 +1155,8 @@ struct MediaHubCalendarView: View {
                         mediaBadge(icon: "note.text", count: stats.notesCount, color: .orange)
                     }
                 }
+                
+                expandCollapseButton
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -1356,6 +1227,8 @@ struct MediaHubCalendarView: View {
                         mediaBadge(icon: "note.text", count: stats.notesCount, color: .orange)
                     }
                 }
+                
+                expandCollapseButton
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -1423,6 +1296,8 @@ struct MediaHubCalendarView: View {
                         mediaBadge(icon: "note.text", count: stats.notesCount, color: .orange)
                     }
                 }
+                
+                expandCollapseButton
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -1488,6 +1363,8 @@ struct MediaHubCalendarView: View {
                         mediaBadge(icon: "note.text", count: stats.notesCount, color: .orange)
                     }
                 }
+                
+                expandCollapseButton
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -1526,179 +1403,16 @@ struct MediaHubCalendarView: View {
     // MARK: - Scope Task Media Card
     
     private func scopeTaskMediaCard(task: TodoTask, scope: TaskTimeScope, rangeStart: Date?, rangeEnd: Date?) -> some View {
-        let photos: [TaskPhoto]
-        let memos: [TaskVoiceMemo]
-        
-        if let rangeStart, let rangeEnd {
-            let start = calendar.startOfDay(for: rangeStart)
-            let endExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: rangeEnd)) ?? rangeEnd
-            photos = task.photos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }
-            memos = task.voiceMemos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }
-        } else {
-            photos = task.photos
-            memos = task.voiceMemos
-        }
-        
-        // Completion info should respect the selected range when available
-        let isCompleted: Bool
-        let latestCompletion: TaskCompletion?
-        if let rangeStart, let rangeEnd {
-            let start = calendar.startOfDay(for: rangeStart)
-            let endExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: rangeEnd)) ?? rangeEnd
-            let completionsInRange = task.completions
-                .filter { $0.key >= start && $0.key < endExclusive }
-                .map { $0.value }
-            isCompleted = completionsInRange.contains { $0.isCompleted }
-            latestCompletion = completionsInRange.sorted(by: { ($0.completionDate ?? Date.distantPast) > ($1.completionDate ?? Date.distantPast) }).first
-        } else {
-            isCompleted = !task.completions.isEmpty && task.completions.values.contains { $0.isCompleted }
-            latestCompletion = task.completions.values.sorted(by: { ($0.completionDate ?? Date.distantPast) > ($1.completionDate ?? Date.distantPast) }).first
-        }
-        
-        return VStack(alignment: .leading, spacing: 12) {
-            // Task header with category
-            HStack(spacing: 8) {
-                Image(systemName: task.icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(categoryColor(for: task))
-                
-                Text(task.name)
-                    .font(.subheadline.weight(.medium))
-                    .themedPrimaryText()
-                    .lineLimit(1)
-                
-                if let category = task.category {
-                    Text(category.name)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(Color(hex: category.color))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(Color(hex: category.color).opacity(0.15))
-                        )
-                }
-                
-                Spacer()
-                
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isCompleted ? .green : .gray.opacity(0.4))
-                    .font(.system(size: 16))
-            }
-            
-            // Scope-specific info
-            HStack(spacing: 12) {
-                // Priority
-                HStack(spacing: 4) {
-                    Image(systemName: "flag.fill")
-                        .font(.system(size: 10))
-                    Text(task.priority.displayName)
-                        .font(.system(size: 11))
-                }
-                .foregroundColor(Color(hex: task.priority.color))
-                
-                // Points
-                if task.hasRewardPoints && task.rewardPoints > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 10))
-                        Text("\(task.rewardPoints)pt")
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.yellow)
-                }
-                
-                // Tracked time
-                if task.totalTrackedTime > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "hourglass")
-                            .font(.system(size: 10))
-                        Text(formatDurationFromSeconds(task.totalTrackedTime))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.green)
-                }
-            }
-            
-            // Media Section
-            if !photos.isEmpty || !memos.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    // Photos
-                    if !photos.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("\(photos.count) " + "photos".localized.lowercased(), systemImage: "photo")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.blue)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(photos) { photo in
-                                        if let image = AttachmentService.loadImage(from: photo.thumbnailPath) {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: 60, height: 60)
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                .onTapGesture {
-                                                    selectedPhoto = photo
-                                                }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Voice memos
-                    if !memos.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("\(memos.count) " + "voice_memos".localized.lowercased(), systemImage: "waveform")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.pink)
-                            
-                            ForEach(memos) { memo in
-                                VoiceMemoPlayerRow(
-                                    memo: memo,
-                                    isPlaying: playingMemoId == memo.id && audioPlayer.isPlaying,
-                                    currentTime: playingMemoId == memo.id ? audioPlayer.currentTime : 0,
-                                    onTap: { togglePlayback(memo) }
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Notes from latest completion
-                    if let notes = latestCompletion?.notes, !notes.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Label("notes".localized, systemImage: "note.text")
-                                .font(.caption.weight(.medium))
-                                .foregroundColor(.orange)
-                            
-                            Text(notes)
-                                .font(.caption)
-                                .themedSecondaryText()
-                                .lineLimit(3)
-                                .padding(8)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.orange.opacity(0.1))
-                                )
-                        }
-                    }
-                }
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(theme.surfaceColor)
+        CalendarScopeTaskCard(
+            task: task,
+            scope: scope,
+            rangeStart: rangeStart,
+            rangeEnd: rangeEnd,
+            selectedPhoto: $selectedPhoto,
+            playingMemoId: playingMemoId,
+            audioPlayer: audioPlayer,
+            onTogglePlayback: { memo in togglePlayback(memo) }
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(theme.borderColor, lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
     }
     
     // MARK: - Helper Methods
@@ -2230,6 +1944,707 @@ private struct WeekSelectionShape: InsettableShape {
     }
 }
 
+// MARK: - Calendar Task Card
+
+private struct CalendarTaskCard: View {
+    let task: TodoTask
+    let date: Date
+    @Binding var selectedPhoto: TaskPhoto?
+    let playingMemoId: UUID?
+    @ObservedObject var audioPlayer: CalendarAudioPlayer
+    let onTogglePlayback: (TaskVoiceMemo) -> Void
+    
+    @ObservedObject private var taskManager = TaskManager.shared
+    @Environment(\.theme) private var theme
+    
+    private var categoryColor: Color {
+        if let hex = task.category?.color {
+            return Color(hex: hex)
+        }
+        return theme.primaryColor
+    }
+    
+    private var completion: TaskCompletion? {
+        let completionKey = task.completionKey(for: date)
+        return task.completions[completionKey]
+    }
+    
+    private var isCompleted: Bool {
+        completion?.isCompleted == true
+    }
+    
+    private var photosForDate: [TaskPhoto] {
+        task.photos.filter { Calendar.current.isDate($0.createdAt, inSameDayAs: date) }
+    }
+    
+    private var memosForDate: [TaskVoiceMemo] {
+        task.voiceMemos.filter { Calendar.current.isDate($0.createdAt, inSameDayAs: date) }
+    }
+    
+    private var notes: String? {
+        if let n = completion?.notes, !n.isEmpty { return n }
+        return nil
+    }
+    
+    private var hasMedia: Bool {
+        !photosForDate.isEmpty || !memosForDate.isEmpty || notes != nil || (completion?.difficultyRating != nil && completion?.qualityRating != nil)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Row 1: Left colored bar + Task Name (full width) + Checkbox
+            HStack(alignment: .center, spacing: 8) {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [categoryColor, categoryColor.opacity(0.7)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 4, height: 18)
+                    .cornerRadius(2)
+                
+                Text(task.name)
+                    .font(.headline)
+                    .themedPrimaryText()
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Button(action: {
+                    if isCompleted {
+                        HapticManager.shared.impact(.light)
+                    } else {
+                        HapticManager.shared.notification(.success)
+                    }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        taskManager.toggleTaskCompletion(task.id, on: date)
+                    }
+                }) {
+                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isCompleted ? .green : theme.secondaryTextColor.opacity(0.5))
+                        .font(.title2)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            // Row 2: Badges in horizontal scroll / flow
+            badgesRow
+                .padding(.leading, 12)
+            
+            // Row 3: Description if present
+            if let description = task.description, !description.isEmpty {
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(theme.secondaryTextColor)
+                    .lineLimit(2)
+                    .padding(.leading, 12)
+            }
+            
+            // Row 4: Media section
+            if hasMedia {
+                mediaSection
+                    .padding(.leading, 12)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(theme.surfaceColor)
+                
+                if let category = task.category {
+                    let baseColor = Color(hex: category.color)
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    baseColor.opacity(0.12),
+                                    baseColor.opacity(0.05),
+                                    baseColor.opacity(0.01),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(
+                    task.category.map { Color(hex: $0.color).opacity(0.22) } ?? theme.borderColor.opacity(0.6),
+                    lineWidth: 1
+                )
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    private var timeString: String {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f.string(from: task.startTime)
+    }
+    
+    @ViewBuilder
+    private var badgesRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                // Category
+                if let category = task.category {
+                    Text(category.name)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(hex: category.color))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color(hex: category.color).opacity(0.14))
+                        )
+                }
+                
+                // Time
+                if task.hasSpecificTime {
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 9))
+                        Text(timeString)
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    }
+                    .foregroundColor(theme.secondaryTextColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(theme.surfaceColor)
+                    .cornerRadius(4)
+                } else {
+                    Text("all_day".localized)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.12))
+                        .cornerRadius(4)
+                }
+                
+                // Priority
+                HStack(spacing: 3) {
+                    Image(systemName: task.priority.icon)
+                        .font(.system(size: 9))
+                    Text(task.priority.displayName)
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundColor(Color(hex: task.priority.color))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color(hex: task.priority.color).opacity(0.12))
+                .cornerRadius(4)
+                
+                // Reward Points
+                if task.hasRewardPoints && task.rewardPoints > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(.yellow)
+                        Text("\(task.rewardPoints)pt")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(theme.textColor)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.yellow.opacity(0.14))
+                    .cornerRadius(4)
+                }
+                
+                // Duration / Tracked Time
+                if let actualDuration = completion?.actualDuration, actualDuration > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 9))
+                        Text(formatDuration(actualDuration))
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.12))
+                    .cornerRadius(4)
+                } else if task.totalTrackedTime > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 9))
+                        Text(formatDuration(task.totalTrackedTime))
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.12))
+                    .cornerRadius(4)
+                } else if task.hasDuration && task.duration > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 9))
+                        Text(formatDuration(task.duration))
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(theme.secondaryTextColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(theme.surfaceColor)
+                    .cornerRadius(4)
+                }
+                
+                // Streak
+                if task.recurrence != nil && task.currentStreak > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(.orange)
+                        Text("\(task.currentStreak)")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.14))
+                    .cornerRadius(4)
+                }
+                
+                // Subtasks
+                if !task.subtasks.isEmpty {
+                    let count = completion?.completedSubtasks.count ?? 0
+                    HStack(spacing: 3) {
+                        Image(systemName: "checklist")
+                            .font(.system(size: 9))
+                        Text("\(count)/\(task.subtasks.count)")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(theme.secondaryTextColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(theme.surfaceColor)
+                    .cornerRadius(4)
+                }
+            }
+        }
+    }
+    
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds)
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        if h > 0 {
+            return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+        }
+        return "\(m)m"
+    }
+    
+    @ViewBuilder
+    private var mediaSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider()
+                .padding(.vertical, 2)
+            
+            if !photosForDate.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("photos".localized, systemImage: "photo")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.blue)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(photosForDate) { photo in
+                                if let img = AttachmentService.loadImage(from: photo.thumbnailPath) {
+                                    Image(uiImage: img)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 56, height: 56)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(theme.borderColor.opacity(0.4), lineWidth: 1)
+                                        )
+                                        .onTapGesture {
+                                            selectedPhoto = photo
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if !memosForDate.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("voice_memos".localized, systemImage: "waveform")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.pink)
+                    
+                    ForEach(memosForDate) { memo in
+                        VoiceMemoPlayerRow(
+                            memo: memo,
+                            isPlaying: playingMemoId == memo.id && audioPlayer.isPlaying,
+                            currentTime: playingMemoId == memo.id ? audioPlayer.currentTime : 0,
+                            onTap: { onTogglePlayback(memo) }
+                        )
+                    }
+                }
+            }
+            
+            if let notes = notes {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("notes".localized, systemImage: "note.text")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.orange)
+                    
+                    Text(notes)
+                        .font(.caption)
+                        .themedSecondaryText()
+                        .lineLimit(3)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.orange.opacity(0.08))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(Color.orange.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                }
+            }
+            
+            if let diff = completion?.difficultyRating, let qual = completion?.qualityRating {
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame")
+                            .font(.system(size: 11))
+                            .foregroundColor(.red)
+                        Text("difficulty".localized)
+                            .font(.system(size: 10))
+                            .themedSecondaryText()
+                        Text("\(diff)/10")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.red)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.red.opacity(0.08)))
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.green)
+                        Text("quality".localized)
+                            .font(.system(size: 10))
+                            .themedSecondaryText()
+                        Text("\(qual)/10")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.green.opacity(0.08)))
+                    
+                    Spacer()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Calendar Scope Task Card
+
+private struct CalendarScopeTaskCard: View {
+    let task: TodoTask
+    let scope: TaskTimeScope
+    let rangeStart: Date?
+    let rangeEnd: Date?
+    @Binding var selectedPhoto: TaskPhoto?
+    let playingMemoId: UUID?
+    @ObservedObject var audioPlayer: CalendarAudioPlayer
+    let onTogglePlayback: (TaskVoiceMemo) -> Void
+    
+    @ObservedObject private var taskManager = TaskManager.shared
+    @Environment(\.theme) private var theme
+    
+    private var categoryColor: Color {
+        if let hex = task.category?.color {
+            return Color(hex: hex)
+        }
+        return theme.primaryColor
+    }
+    
+    private var photos: [TaskPhoto] {
+        if let rangeStart, let rangeEnd {
+            let start = Calendar.current.startOfDay(for: rangeStart)
+            let endExclusive = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: rangeEnd)) ?? rangeEnd
+            return task.photos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }
+        }
+        return task.photos
+    }
+    
+    private var memos: [TaskVoiceMemo] {
+        if let rangeStart, let rangeEnd {
+            let start = Calendar.current.startOfDay(for: rangeStart)
+            let endExclusive = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: rangeEnd)) ?? rangeEnd
+            return task.voiceMemos.filter { $0.createdAt >= start && $0.createdAt < endExclusive }
+        }
+        return task.voiceMemos
+    }
+    
+    private var isCompleted: Bool {
+        if let rangeStart, let rangeEnd {
+            let start = Calendar.current.startOfDay(for: rangeStart)
+            let endExclusive = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: rangeEnd)) ?? rangeEnd
+            return task.completions.filter { $0.key >= start && $0.key < endExclusive }.values.contains { $0.isCompleted }
+        }
+        return !task.completions.isEmpty && task.completions.values.contains { $0.isCompleted }
+    }
+    
+    private var latestCompletion: TaskCompletion? {
+        if let rangeStart, let rangeEnd {
+            let start = Calendar.current.startOfDay(for: rangeStart)
+            let endExclusive = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: rangeEnd)) ?? rangeEnd
+            return task.completions.filter { $0.key >= start && $0.key < endExclusive }.values.sorted(by: { ($0.completionDate ?? Date.distantPast) > ($1.completionDate ?? Date.distantPast) }).first
+        }
+        return task.completions.values.sorted(by: { ($0.completionDate ?? Date.distantPast) > ($1.completionDate ?? Date.distantPast) }).first
+    }
+    
+    private var hasMedia: Bool {
+        !photos.isEmpty || !memos.isEmpty || (latestCompletion?.notes != nil && !(latestCompletion?.notes?.isEmpty ?? true))
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Row 1: Left accent bar + Title (full width) + Checkbox
+            HStack(alignment: .center, spacing: 8) {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [categoryColor, categoryColor.opacity(0.7)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 4, height: 18)
+                    .cornerRadius(2)
+                
+                Text(task.name)
+                    .font(.headline)
+                    .themedPrimaryText()
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isCompleted ? .green : theme.secondaryTextColor.opacity(0.5))
+                    .font(.title2)
+            }
+            
+            // Row 2: Badges
+            badgesRow
+                .padding(.leading, 12)
+            
+            // Row 3: Description if present
+            if let description = task.description, !description.isEmpty {
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(theme.secondaryTextColor)
+                    .lineLimit(2)
+                    .padding(.leading, 12)
+            }
+            
+            // Row 4: Media section
+            if hasMedia {
+                mediaSection
+                    .padding(.leading, 12)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(theme.surfaceColor)
+                
+                if let category = task.category {
+                    let baseColor = Color(hex: category.color)
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    baseColor.opacity(0.12),
+                                    baseColor.opacity(0.05),
+                                    baseColor.opacity(0.01),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(
+                    task.category.map { Color(hex: $0.color).opacity(0.22) } ?? theme.borderColor.opacity(0.6),
+                    lineWidth: 1
+                )
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    @ViewBuilder
+    private var badgesRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                if let category = task.category {
+                    Text(category.name)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(hex: category.color))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color(hex: category.color).opacity(0.14))
+                        )
+                }
+                
+                HStack(spacing: 3) {
+                    Image(systemName: task.priority.icon)
+                        .font(.system(size: 9))
+                    Text(task.priority.displayName)
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundColor(Color(hex: task.priority.color))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color(hex: task.priority.color).opacity(0.12))
+                .cornerRadius(4)
+                
+                if task.hasRewardPoints && task.rewardPoints > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(.yellow)
+                        Text("\(task.rewardPoints)pt")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(theme.textColor)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.yellow.opacity(0.14))
+                    .cornerRadius(4)
+                }
+                
+                if task.totalTrackedTime > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 9))
+                        Text(formatDuration(task.totalTrackedTime))
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.12))
+                    .cornerRadius(4)
+                }
+            }
+        }
+    }
+    
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds)
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        if h > 0 {
+            return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+        }
+        return "\(m)m"
+    }
+    
+    @ViewBuilder
+    private var mediaSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider()
+                .padding(.vertical, 2)
+            
+            if !photos.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("\(photos.count) " + "photos".localized.lowercased(), systemImage: "photo")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.blue)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(photos) { photo in
+                                if let img = AttachmentService.loadImage(from: photo.thumbnailPath) {
+                                    Image(uiImage: img)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 56, height: 56)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(theme.borderColor.opacity(0.4), lineWidth: 1)
+                                        )
+                                        .onTapGesture {
+                                            selectedPhoto = photo
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if !memos.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("\(memos.count) " + "voice_memos".localized.lowercased(), systemImage: "waveform")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.pink)
+                    
+                    ForEach(memos) { memo in
+                        VoiceMemoPlayerRow(
+                            memo: memo,
+                            isPlaying: playingMemoId == memo.id && audioPlayer.isPlaying,
+                            currentTime: playingMemoId == memo.id ? audioPlayer.currentTime : 0,
+                            onTap: { onTogglePlayback(memo) }
+                        )
+                    }
+                }
+            }
+            
+            if let notes = latestCompletion?.notes, !notes.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("notes".localized, systemImage: "note.text")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(.orange)
+                    
+                    Text(notes)
+                        .font(.caption)
+                        .themedSecondaryText()
+                        .lineLimit(3)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.orange.opacity(0.08))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(Color.orange.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                }
+            }
+        }
+    }
+}
+
 #Preview {
     MediaHubCalendarView(
         selectedDate: .constant(Date()),
@@ -2238,3 +2653,4 @@ private struct WeekSelectionShape: InsettableShape {
         scrollProxy: nil
     )
 }
+

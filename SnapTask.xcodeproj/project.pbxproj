@@ -29,7 +29,6 @@
 		AC8F53382ED859DE009561B2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 42E919B783BB4EB99F43A4C3 /* WidgetKit.framework */; };
 		AC8F53392ED859DE009561B2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A5D885DF271547BCAB71EBED /* SwiftUI.framework */; };
 		AC8F534A2ED859DE009561B2 /* SnapTaskWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC8F53372ED859DE009561B2 /* SnapTaskWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B1C2D3E4F5061728394A5B6C /* SnapTaskWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DF3E8C8915BC225849BFE4B9 /* SnapTaskWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BD83171E0885A8E6CFCAC523 /* WatchRewardsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F8F53D077C291019B59AB9 /* WatchRewardsListView.swift */; };
 		BF646021570935DCC0892B91 /* WatchPomodoroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372E76F9143F217AB12B7B79 /* WatchPomodoroView.swift */; };
 		C651E61C661542ADE4C52AD9 /* WatchRewardFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B1415D6FBEC7923F3E0BC2 /* WatchRewardFormView.swift */; };
@@ -38,6 +37,14 @@
 		FABA10E5BBDAA44A54071E3E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5182B0FD251DC3FA3D34E8D /* ContentView.swift */; };
 		FC72B493C5286B3D9EEF947E /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E71CF387CCA9E67533C88AAA /* WatchConnectivityManager.swift */; };
 		STRLOCWATCHBUILD12345AB /* String+Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = STRLOCWATCH123456789ABC /* String+Localization.swift */; };
+		WATCHAPPDELEGATEBUILD1234567890AB /* WatchAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHAPPDELEGATE12345678901234ABCD /* WatchAppDelegate.swift */; };
+		WATCHCATEGORIESLISTBUILD1234567890AB /* WatchCategoriesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHCATEGORIESLIST12345678901234ABCD /* WatchCategoriesListView.swift */; };
+		WATCHCATEGORYFORMBUILD1234567890AB /* WatchCategoryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHCATEGORYFORM12345678901234ABCD /* WatchCategoryFormView.swift */; };
+		WATCHHAPTICBUILD1234567890AB /* HapticService.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHHAPTIC12345678901234ABCD /* HapticService.swift */; };
+		WATCHMENUBUILD1234567890AB /* WatchMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHMENU12345678901234ABCD /* WatchMenuView.swift */; };
+		WATCHNOTIFBUILD1234567890AB /* WatchTaskNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHNOTIF12345678901234ABCD /* WatchTaskNotificationManager.swift */; };
+		WATCHPREFSBUILD1234567890AB /* WatchPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHPREFS12345678901234ABCD /* WatchPreferences.swift */; };
+		WATCHTIMERENGINEBUILD1234567890AB /* WatchTimerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHTIMERENGINE12345678901234ABCD /* WatchTimerEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,13 +61,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = AC8F53362ED859DE009561B2;
 			remoteInfo = SnapTaskWidgetExtension;
-		};
-		C1D2E3F405162738495A6B7C /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = FD3DCF475E4A4C8CABD44701 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = EAC44CD682917A8C442E5B7A;
-			remoteInfo = SnapTaskWatch;
 		};
 		CB092F97BB274760BEF0ADAC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -88,17 +88,6 @@
 				AC8F534A2ED859DE009561B2 /* SnapTaskWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A1B2C3D4E5F60718293A4B5C /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				B1C2D3E4F5061728394A5B6C /* SnapTaskWatch.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		FC2AE96E2E605FAC0039612E /* Embed Foundation Extensions */ = {
@@ -149,6 +138,14 @@
 		FCB0379349C5AE87C2D4CE66 /* WatchSyncManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchSyncManager.swift; path = SnapTaskWatch/Sync/WatchSyncManager.swift; sourceTree = "<group>"; };
 		FF5CA577AB43145313B0F7CD /* WatchStatisticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchStatisticsView.swift; path = SnapTaskWatch/Views/Statistics/WatchStatisticsView.swift; sourceTree = "<group>"; };
 		STRLOCWATCH123456789ABC /* String+Localization.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "String+Localization.swift"; path = "SnapTaskWatch/Extensions/String+Localization.swift"; sourceTree = "<group>"; };
+		WATCHAPPDELEGATE12345678901234ABCD /* WatchAppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchAppDelegate.swift; path = SnapTaskWatch/WatchAppDelegate.swift; sourceTree = "<group>"; };
+		WATCHCATEGORIESLIST12345678901234ABCD /* WatchCategoriesListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchCategoriesListView.swift; path = SnapTaskWatch/Views/Categories/WatchCategoriesListView.swift; sourceTree = "<group>"; };
+		WATCHCATEGORYFORM12345678901234ABCD /* WatchCategoryFormView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchCategoryFormView.swift; path = SnapTaskWatch/Views/Categories/WatchCategoryFormView.swift; sourceTree = "<group>"; };
+		WATCHHAPTIC12345678901234ABCD /* HapticService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HapticService.swift; path = SnapTaskWatch/Managers/HapticService.swift; sourceTree = "<group>"; };
+		WATCHMENU12345678901234ABCD /* WatchMenuView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchMenuView.swift; path = SnapTaskWatch/Views/WatchMenuView.swift; sourceTree = "<group>"; };
+		WATCHNOTIF12345678901234ABCD /* WatchTaskNotificationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTaskNotificationManager.swift; path = SnapTaskWatch/Managers/WatchTaskNotificationManager.swift; sourceTree = "<group>"; };
+		WATCHPREFS12345678901234ABCD /* WatchPreferences.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchPreferences.swift; path = SnapTaskWatch/Managers/WatchPreferences.swift; sourceTree = "<group>"; };
+		WATCHTIMERENGINE12345678901234ABCD /* WatchTimerEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchTimerEngine.swift; path = SnapTaskWatch/Managers/WatchTimerEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -164,7 +161,13 @@
 			membershipExceptions = (
 				"Extensions/Color+Hex.swift",
 				"Extensions/String+Localization.swift",
+				Intents/AppIntent.swift,
+				Intents/OpenQuickAddIntent.swift,
+				Intents/QuickAddTaskIntent.swift,
+				Intents/ScopeIntents.swift,
+				Intents/ToggleTaskCompletionIntent.swift,
 				Models/Category.swift,
+				Models/PomodoroActivityAttributes.swift,
 				Models/PomodoroSettings.swift,
 				Models/Priority.swift,
 				Models/Recurrence.swift,
@@ -188,6 +191,13 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"Extensions/Color+Hex.swift",
+				Intents/AppIntent.swift,
+				Intents/OpenQuickAddIntent.swift,
+				Intents/QuickAddTaskIntent.swift,
+				Intents/ScopeIntents.swift,
+				Intents/ShowTodayTasksIntent.swift,
+				Intents/SnapTaskAppShortcuts.swift,
+				Intents/ToggleTaskCompletionIntent.swift,
 				Models/Category.swift,
 				Models/PomodoroSettings.swift,
 				Models/Priority.swift,
@@ -349,10 +359,14 @@
 			isa = PBXGroup;
 			children = (
 				31AB39FA0D2F119FAA1869BE /* SnapTaskWatchApp.swift */,
+				WATCHAPPDELEGATE12345678901234ABCD /* WatchAppDelegate.swift */,
 				A5182B0FD251DC3FA3D34E8D /* ContentView.swift */,
 				FCB0379349C5AE87C2D4CE66 /* WatchSyncManager.swift */,
 				E71CF387CCA9E67533C88AAA /* WatchConnectivityManager.swift */,
 				75176AF43B4BF342B079DCAE /* WatchCloudKitManager.swift */,
+				WATCHTIMERENGINE12345678901234ABCD /* WatchTimerEngine.swift */,
+				WATCHNOTIF12345678901234ABCD /* WatchTaskNotificationManager.swift */,
+				WATCHPREFS12345678901234ABCD /* WatchPreferences.swift */,
 				7E274607ABBB3F46643D988D /* SharedModels.swift */,
 				4E78922BF27964F44DCC75D3 /* WatchTaskListView.swift */,
 				AEFF3F759E2AE22E47AB58B2 /* WatchTaskRowView.swift */,
@@ -367,10 +381,14 @@
 				71B1415D6FBEC7923F3E0BC2 /* WatchRewardFormView.swift */,
 				FF5CA577AB43145313B0F7CD /* WatchStatisticsView.swift */,
 				8B8AFBC3F3EB1A56D3BBCCAE /* WatchSettingsView.swift */,
+				WATCHCATEGORIESLIST12345678901234ABCD /* WatchCategoriesListView.swift */,
+				WATCHCATEGORYFORM12345678901234ABCD /* WatchCategoryFormView.swift */,
 				68C68D08855F877493338040 /* SnapTaskComplication.swift */,
 				CALEXT12345678901234ABCD /* Calendar+Extensions.swift */,
 				STRLOCWATCH123456789ABC /* String+Localization.swift */,
 				B9BF716A783B22D15350C77C /* Assets.xcassets */,
+				WATCHHAPTIC12345678901234ABCD /* HapticService.swift */,
+				WATCHMENU12345678901234ABCD /* WatchMenuView.swift */,
 			);
 			name = SnapTaskWatch;
 			sourceTree = "<group>";
@@ -404,13 +422,11 @@
 				20933D2559A0439FAC4E551F /* Frameworks */,
 				02B5105D61A843DC8E5D1709 /* Resources */,
 				153710D2849F4F38ADE66640 /* Embed Foundation Extensions */,
-				A1B2C3D4E5F60718293A4B5C /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				AC8F53492ED859DE009561B2 /* PBXTargetDependency */,
-				D1E2F3041526374895A6B7C8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				836D3975FC0642468BE2CA9B /* SnapTask */,
@@ -705,10 +721,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				042E7BB3F32B6BFE3ED059BB /* SnapTaskWatchApp.swift in Sources */,
+				WATCHAPPDELEGATEBUILD1234567890AB /* WatchAppDelegate.swift in Sources */,
 				FABA10E5BBDAA44A54071E3E /* ContentView.swift in Sources */,
 				4E752C2EBDBA59E9229ADC37 /* WatchSyncManager.swift in Sources */,
 				FC72B493C5286B3D9EEF947E /* WatchConnectivityManager.swift in Sources */,
 				33B45E6634C1D5C6A33E0A88 /* WatchCloudKitManager.swift in Sources */,
+				WATCHTIMERENGINEBUILD1234567890AB /* WatchTimerEngine.swift in Sources */,
+				WATCHNOTIFBUILD1234567890AB /* WatchTaskNotificationManager.swift in Sources */,
+				WATCHPREFSBUILD1234567890AB /* WatchPreferences.swift in Sources */,
 				25D62C7DAC0213E37C3B25BF /* SharedModels.swift in Sources */,
 				CALEXTBUILD1234567890AB /* Calendar+Extensions.swift in Sources */,
 				STRLOCWATCHBUILD12345AB /* String+Localization.swift in Sources */,
@@ -725,6 +745,10 @@
 				C651E61C661542ADE4C52AD9 /* WatchRewardFormView.swift in Sources */,
 				37EE927FAEF015DAF18EDBBF /* WatchStatisticsView.swift in Sources */,
 				21394810EF463A349897E145 /* WatchSettingsView.swift in Sources */,
+				WATCHCATEGORIESLISTBUILD1234567890AB /* WatchCategoriesListView.swift in Sources */,
+				WATCHCATEGORYFORMBUILD1234567890AB /* WatchCategoryFormView.swift in Sources */,
+				WATCHHAPTICBUILD1234567890AB /* HapticService.swift in Sources */,
+				WATCHMENUBUILD1234567890AB /* WatchMenuView.swift in Sources */,
 				F55E06C1508B621E08DECF79 /* SnapTaskComplication.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -752,11 +776,6 @@
 			target = 077E0902895D492899F3A510 /* SnapTask */;
 			targetProxy = CF3FBA583CBA4F8FB83F26AC /* PBXContainerItemProxy */;
 		};
-		D1E2F3041526374895A6B7C8 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = EAC44CD682917A8C442E5B7A /* SnapTaskWatch */;
-			targetProxy = C1D2E3F405162738495A6B7C /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -768,7 +787,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = SnapTask/SnapTask.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"SnapTask/Preview Content\"";
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
@@ -794,7 +813,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.3;
+				MARKETING_VERSION = 1.7.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha;
 				PRODUCT_NAME = "SnapTask Pro";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1101,7 +1120,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = SnapTaskWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = Y997848SS8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SnapTaskWidget/Info.plist;
@@ -1113,7 +1132,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.5.3;
+				MARKETING_VERSION = 1.7.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1130,7 +1149,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = SnapTaskWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = Y997848SS8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SnapTaskWidget/Info.plist;
@@ -1142,7 +1161,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.5.3;
+				MARKETING_VERSION = 1.7.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha.SnapTaskWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1160,7 +1179,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = SnapTask/SnapTask.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"SnapTask/Preview Content\"";
 				DEVELOPMENT_TEAM = Y997848SS8;
 				ENABLE_PREVIEWS = YES;
@@ -1186,7 +1205,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.3;
+				MARKETING_VERSION = 1.7.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.giovanniamadei.SnapTaskProAlpha;
 				PRODUCT_NAME = "SnapTask Pro";
 				SWIFT_EMIT_LOC_STRINGS = YES;

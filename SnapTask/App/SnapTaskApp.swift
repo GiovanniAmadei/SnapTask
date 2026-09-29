@@ -4,6 +4,7 @@ import UserNotifications
 import Firebase
 import BackgroundTasks
 import WatchConnectivity
+import AppIntents
 
 @main
 struct SnapTaskApp: App {
@@ -15,6 +16,7 @@ struct SnapTaskApp: App {
     @StateObject private var settingsManager = CloudKitSettingsManager.shared
     @StateObject private var moodManager = MoodManager.shared // Add mood manager initialization
     @StateObject private var watchConnectivityHandler = WatchConnectivityHandler.shared
+    @StateObject private var confettiManager = ConfettiManager.shared
     @Environment(\.scenePhase) var scenePhase
     @AppStorage("appearanceMode") private var appearanceMode = "system"
     
@@ -35,6 +37,8 @@ struct SnapTaskApp: App {
             FirebaseApp.configure()
             print("🔥 Firebase configured in app init")
         }
+
+        SnapTaskAppShortcuts.updateAppShortcutParameters()
         
         // Initialize Watch Connectivity
         _ = WatchConnectivityHandler.shared
@@ -44,6 +48,14 @@ struct SnapTaskApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .overlay(
+                    Group {
+                        if confettiManager.triggerCounter > 0 {
+                            ConfettiView()
+                                .id(confettiManager.triggerCounter)
+                        }
+                    }
+                )
                 .preferredColorScheme(
                     // Solo i temi premium sovrascrivono la dark mode
                     ThemeManager.shared.currentTheme.overridesSystemColors ? 
@@ -60,8 +72,15 @@ struct SnapTaskApp: App {
                     
                     initializeAppData()
                 }
+                .onOpenURL { url in
+                    // Deep links used by the Control Center / Action Button
+                    // "Quick Add Task" control (`OpenQuickAddIntent`).
+                    // URL format: snaptask://quickadd
+                    handleDeepLink(url)
+                }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
+                        SnapTaskAppShortcuts.updateAppShortcutParameters()
                         Task {
                             await quoteManager.checkAndUpdateQuote()
                         }
@@ -80,6 +99,9 @@ struct SnapTaskApp: App {
 
                         Task {
                             taskNotificationManager.checkAuthorizationStatus()
+                            await taskNotificationManager.cleanupOrphanedTaskNotifications(
+                                validTaskIds: Set(taskManager.tasks.map { $0.id })
+                            )
                             await taskNotificationManager.rescheduleRecurringNotificationsRollingWindow(tasks: taskManager.tasks)
                         }
                         
@@ -99,6 +121,32 @@ struct SnapTaskApp: App {
                         )
                     }
                 }
+        }
+    }
+    
+    /// Handles `snaptask://` deep links. Currently supports:
+    /// - `snaptask://quickadd` → switch to Timeline + show new-task sheet.
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "snaptask" else { return }
+        switch url.host {
+        case "quickadd":
+            // Persist the flag so it survives across cold/warm start.
+            if let suite = UserDefaults(suiteName: "group.com.snapTask.shared") {
+                suite.set(Date().timeIntervalSince1970, forKey: "pendingQuickAddOpen")
+                suite.synchronize()
+            }
+            // Also set the in-memory flag so TimelineView.onAppear can
+            // pick it up even if the notification fires too early.
+            Task { @MainActor in
+                QuickAddTrigger.pending = true
+            }
+            // Give the view hierarchy time to mount on cold start before
+            // posting the notification.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                NotificationCenter.default.post(name: .checkPendingQuickAdd, object: nil)
+            }
+        default:
+            break
         }
     }
     
@@ -223,34 +271,82 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // Handle notification tap
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let identifier = response.notification.request.identifier
+        let actionIdentifier = response.actionIdentifier
         
         if identifier == "dailyQuote" || identifier.hasPrefix("dailyQuote_") {
-            // User tapped daily quote notification
             Task {
                 await QuoteManager.shared.forceUpdateQuote()
             }
         } else if identifier.hasPrefix("pomodoro-") {
-            // User tapped Pomodoro notification - open the app to the Focus tab
             print("📱 Pomodoro notification tapped: \(identifier)")
-            // You could implement navigation to Focus tab here
         } else if identifier.hasPrefix("task_") {
-            // User tapped task notification - extract task ID and open task details
-            let components = identifier.components(separatedBy: "_")
-            if components.count >= 2,
-               let taskId = UUID(uuidString: components[1]) {
-                
-                print("📱 Task notification tapped for task: \(taskId)")
-                
-                // Post notification to open task details
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: .openTaskFromNotification,
-                        object: taskId
-                    )
+            // Extract UUID: identifier is "task_<36-char-UUID>" or "task_<36-char-UUID>_<timestamp>"
+            let withoutPrefix = String(identifier.dropFirst("task_".count))
+            let uuidString = String(withoutPrefix.prefix(36))
+            
+            if let taskId = UUID(uuidString: uuidString) {
+                switch actionIdentifier {
+                case TaskNotificationManager.actionMarkCompletedIdentifier:
+                    Task { @MainActor in
+                        _ = TaskManager.shared.toggleTaskCompletion(taskId, on: Date())
+                        NotificationCenter.default.post(name: Notification.Name("tasksDidUpdate"), object: nil)
+                        print("✅ Task marked completed via notification: \(taskId)")
+                    }
+                    
+                case TaskNotificationManager.actionSnooze1HIdentifier:
+                    Task { @MainActor in
+                        let taskMgr = TaskManager.shared
+                        // Load tasks if not yet loaded
+                        if taskMgr.tasks.isEmpty {
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                        }
+                        if var task = taskMgr.tasks.first(where: { $0.id == taskId }) {
+                            let snoozeDate = Date().addingTimeInterval(3600)
+                            if var recurrence = task.recurrence {
+                                recurrence.postponeOccurrence(from: Date(), to: snoozeDate)
+                                task.recurrence = recurrence
+                            } else {
+                                task.startTime = snoozeDate
+                            }
+                            await taskMgr.updateTask(task)
+                            await TaskNotificationManager.shared.scheduleNotification(for: task)
+                            NotificationCenter.default.post(name: Notification.Name("tasksDidUpdate"), object: nil)
+                            print("⏰ Task snoozed 1h via notification: \(task.name)")
+                        }
+                    }
+                    
+                case TaskNotificationManager.actionSnoozeTomorrowIdentifier:
+                    Task { @MainActor in
+                        let taskMgr = TaskManager.shared
+                        if taskMgr.tasks.isEmpty {
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                        }
+                        if var task = taskMgr.tasks.first(where: { $0.id == taskId }) {
+                            let calendar = Calendar.current
+                            if let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date()),
+                               let tomorrow9AM = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) {
+                                if var recurrence = task.recurrence {
+                                    recurrence.postponeOccurrence(from: Date(), to: tomorrow9AM)
+                                    task.recurrence = recurrence
+                                } else {
+                                    task.startTime = tomorrow9AM
+                                }
+                                await taskMgr.updateTask(task)
+                                await TaskNotificationManager.shared.scheduleNotification(for: task)
+                                NotificationCenter.default.post(name: Notification.Name("tasksDidUpdate"), object: nil)
+                                print("☀️ Task postponed to tomorrow 9AM via notification: \(task.name)")
+                            }
+                        }
+                    }
+                    
+                default:
+                    // Default tap: open task details
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(name: .openTaskFromNotification, object: taskId)
+                    }
                 }
             }
         } else if identifier.hasPrefix("diary_") {
-            // User tapped diary notification - open journal for that day
             let components = identifier.components(separatedBy: "_")
             if components.count >= 2 {
                 let dateString = components[1]
@@ -261,10 +357,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                         UserDefaults.standard.set(dateString, forKey: Self.pendingJournalDateKey)
                     }
                     DispatchQueue.main.async {
-                        NotificationCenter.default.post(
-                            name: .openJournalFromNotification,
-                            object: date
-                        )
+                        NotificationCenter.default.post(name: .openJournalFromNotification, object: date)
                     }
                 }
             }
@@ -301,8 +394,24 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
+// MARK: - Quick Add Trigger
+
+/// In-memory flag consumed by `TimelineView` to present the new-task sheet.
+/// This survives the cold-start race where notifications might fire before
+/// subscriber views have mounted.
+enum QuickAddTrigger {
+    @MainActor static var pending = false
+}
+
 // MARK: - Notification Names
 
 extension Notification.Name {
     static let openTaskDetail = Notification.Name("openTaskDetail")
+    /// Posted when the app is opened via the Control Center / Action Button
+    /// "Quick Add Task" control and should immediately present the new-task sheet.
+    static let openQuickAdd = Notification.Name("openQuickAdd")
+    /// Posted from `SnapTaskApp.onOpenURL` to ask `ContentView` to re-run
+    /// `checkPendingQuickAdd()` when the app receives a `snaptask://quickadd`
+    /// deep link while it's already in foreground.
+    static let checkPendingQuickAdd = Notification.Name("checkPendingQuickAdd")
 }

@@ -24,6 +24,7 @@ struct FocusModeCard: View {
     var body: some View {
         Button(action: {
             if !isDisabled {
+                HapticManager.shared.impact(.light)
                 action()
             }
         }) {
@@ -33,26 +34,26 @@ struct FocusModeCard: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: isDisabled ? [Color.gray.opacity(0.3)] : gradient.map { $0.opacity(0.2) },
+                                colors: isDisabled ? [Color.gray.opacity(0.3)] : gradient.map { $0.opacity(0.18) },
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 60, height: 60)
+                        .frame(width: 56, height: 56)
                     
                     Image(systemName: icon)
-                        .font(.system(size: 24, weight: .medium))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundColor(isDisabled ? .gray : color)
                 }
                 
                 // Content
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded).weight(.semibold))
                         .foregroundColor(isDisabled ? theme.secondaryTextColor : theme.textColor)
                     
                     Text(description)
-                        .font(.subheadline)
+                        .font(.system(.subheadline, design: .rounded))
                         .foregroundColor(theme.secondaryTextColor)
                         .multilineTextAlignment(.leading)
                 }
@@ -62,36 +63,36 @@ struct FocusModeCard: View {
                 // Arrow or disabled indicator
                 if isDisabled {
                     Image(systemName: "lock.fill")
-                        .font(.subheadline)
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.gray)
                 } else {
                     Image(systemName: "chevron.right")
-                        .font(.subheadline)
-                        .foregroundColor(theme.secondaryTextColor)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(theme.secondaryTextColor.opacity(0.7))
                 }
             }
-            .padding(20)
+            .padding(18)
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 18)
                     .fill(theme.surfaceColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: 18)
                             .strokeBorder(
                                 isDisabled ? 
                                     AnyShapeStyle(Color.gray.opacity(0.2)) : 
                                     AnyShapeStyle(LinearGradient(
-                                        colors: gradient.map { $0.opacity(0.3) },
+                                        colors: gradient.map { $0.opacity(0.35) },
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )),
-                                lineWidth: 1.5
+                                lineWidth: 1.2
                             )
                     )
                     .shadow(
                         color: theme.shadowColor,
                         radius: 8,
                         x: 0,
-                        y: 2
+                        y: 3
                     )
             )
         }

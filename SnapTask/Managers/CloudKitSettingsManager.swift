@@ -40,6 +40,14 @@ class CloudKitSettingsManager: ObservableObject {
         didSet { saveSettings() }
     }
     
+    @Published var enableConfettiCelebration: Bool = false {
+        didSet { saveSettings() }
+    }
+    
+    @Published var hideDaysBar: Bool = false {
+        didSet { saveSettings() }
+    }
+    
     @Published var autoSyncEnabled: Bool = true {
         didSet { saveSettings() }
     }
@@ -68,6 +76,8 @@ class CloudKitSettingsManager: ObservableObject {
         "pomodoroLongBreak",
         "defaultTaskDuration",
         "enableHapticFeedback",
+        "enableConfettiCelebration",
+        "hideDaysBar",
         "autoSyncEnabled",
         "showCompletedTasks",
         "weekStartsOnMonday"
@@ -146,6 +156,10 @@ class CloudKitSettingsManager: ObservableObject {
                 settings[key] = defaultTaskDuration
             case "enableHapticFeedback":
                 settings[key] = enableHapticFeedback
+            case "enableConfettiCelebration":
+                settings[key] = enableConfettiCelebration
+            case "hideDaysBar":
+                settings[key] = hideDaysBar
             case "autoSyncEnabled":
                 settings[key] = autoSyncEnabled
             case "showCompletedTasks":
@@ -206,6 +220,14 @@ class CloudKitSettingsManager: ObservableObject {
             case "enableHapticFeedback":
                 if let boolValue = value as? Bool {
                     enableHapticFeedback = boolValue
+                }
+            case "enableConfettiCelebration":
+                if let boolValue = value as? Bool {
+                    enableConfettiCelebration = boolValue
+                }
+            case "hideDaysBar":
+                if let boolValue = value as? Bool {
+                    hideDaysBar = boolValue
                 }
             case "autoSyncEnabled":
                 if let boolValue = value as? Bool {
@@ -334,6 +356,8 @@ class CloudKitSettingsManager: ObservableObject {
         pomodoroLongBreak = UserDefaults.standard.object(forKey: "pomodoroLongBreak") as? Int ?? 15
         defaultTaskDuration = UserDefaults.standard.object(forKey: "defaultTaskDuration") as? Int ?? 60
         enableHapticFeedback = UserDefaults.standard.object(forKey: "enableHapticFeedback") as? Bool ?? true
+        enableConfettiCelebration = UserDefaults.standard.object(forKey: "enableConfettiCelebration") as? Bool ?? false
+        hideDaysBar = UserDefaults.standard.object(forKey: "hideDaysBar") as? Bool ?? false
         autoSyncEnabled = UserDefaults.standard.object(forKey: "autoSyncEnabled") as? Bool ?? true
         showCompletedTasks = UserDefaults.standard.object(forKey: "showCompletedTasks") as? Bool ?? true
         weekStartsOnMonday = UserDefaults.standard.object(forKey: "weekStartsOnMonday") as? Bool ?? true
@@ -365,6 +389,10 @@ class CloudKitSettingsManager: ObservableObject {
                 defaultTaskDuration = value.intValue ?? 60
             case "enableHapticFeedback":
                 enableHapticFeedback = value.boolValue ?? true
+            case "enableConfettiCelebration":
+                enableConfettiCelebration = value.boolValue ?? false
+            case "hideDaysBar":
+                hideDaysBar = value.boolValue ?? false
             case "autoSyncEnabled":
                 autoSyncEnabled = value.boolValue ?? true
             case "showCompletedTasks":
@@ -391,6 +419,8 @@ class CloudKitSettingsManager: ObservableObject {
         pomodoroLongBreak = 15
         defaultTaskDuration = 60
         enableHapticFeedback = true
+        enableConfettiCelebration = false
+        hideDaysBar = false
         autoSyncEnabled = true
         showCompletedTasks = true
         weekStartsOnMonday = true

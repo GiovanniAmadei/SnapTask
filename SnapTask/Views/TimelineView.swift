@@ -1,10 +1,11 @@
 import SwiftUI
 import Combine
-import UniformTypeIdentifiers
 
 struct TimelineView: View {
     @StateObject var viewModel: TimelineViewModel
     @State private var showingNewTask = false
+    @State private var showingBrainDump = false
+    @State private var newTaskInitialDate: Date? = nil
     @State private var selectedDayOffset = 0
     @State private var showingCalendarPicker = false
     @State private var scrollProxy: ScrollViewProxy?
@@ -12,8 +13,7 @@ struct TimelineView: View {
     
     var body: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
+            VStack(spacing: 0) {
                     // Header con mese e selettore data
                     TimelineHeaderView(
                         viewModel: viewModel,
@@ -41,23 +41,36 @@ struct TimelineView: View {
                     if viewModel.viewMode == .timeline && viewModel.selectedTimeScope == .today {
                         TimelineContentView(
                             viewModel: viewModel,
-                            showingNewTask: $showingNewTask
+                            showingNewTask: $showingNewTask,
+                            showingBrainDump: $showingBrainDump,
+                            newTaskInitialDate: $newTaskInitialDate
                         )
                         .frame(maxHeight: .infinity)
                     } else {
                         TaskListView(
                             viewModel: viewModel,
-                            showingNewTask: $showingNewTask
+                            showingNewTask: $showingNewTask,
+                            showingBrainDump: $showingBrainDump
                         )
                         .frame(maxHeight: .infinity)
                     }
                 }
-            }
             .themedBackground()
             .navigationBarHidden(true)
-            .sheet(isPresented: $showingNewTask) {
-                TaskCreationOptionsView(viewModel: viewModel)
+            .sheet(isPresented: $showingNewTask, onDismiss: { newTaskInitialDate = nil }) {
+                TaskCreationOptionsView(
+                    viewModel: viewModel,
+                    initialDate: newTaskInitialDate,
+                    hasSpecificTime: newTaskInitialDate != nil
+                )
+                .id(newTaskInitialDate?.timeIntervalSince1970 ?? 0)
             }
+            // Sheet Brain Dump IA disabilitato
+            /*
+            .sheet(isPresented: $showingBrainDump) {
+                AIBrainDumpView(viewModel: viewModel)
+            }
+            */
             .sheet(isPresented: $showingCalendarPicker) {
                 MediaHubCalendarView(
                     selectedDate: $viewModel.selectedDate,
@@ -261,84 +274,100 @@ struct ViewControlBarView: View {
 struct TimelineContentView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var showingNewTask: Bool
+    @Binding var showingBrainDump: Bool
+    @Binding var newTaskInitialDate: Date?
     @StateObject private var cloudKitService = CloudKitService.shared
     @State private var scrollProxy: ScrollViewProxy?
     @State private var isRefreshing = false
+    @State private var isAllDayExpanded: Bool = true
+    @State private var currentTime = Date()
     @Environment(\.theme) private var theme
     
-    private let hourHeight: CGFloat = 80
+    private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
     private var allDayTasks: [TodoTask] {
         return viewModel.tasksForSelectedDate().filter { !$0.hasSpecificTime }
     }
     
     private var currentHour: Int {
-        Calendar.current.component(.hour, from: Date())
+        Calendar.current.component(.hour, from: currentTime)
     }
     
     private var currentMinute: Int {
-        Calendar.current.component(.minute, from: Date())
+        Calendar.current.component(.minute, from: currentTime)
     }
     
+    // Continuous 24-hour timeline range to avoid layout jumps
     private var timelineRange: ClosedRange<Int> {
-        let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
-        
-        if tasks.isEmpty {
-            // If no tasks, show around current time or reasonable default
-            if viewModel.isToday {
-                return max(0, currentHour - 2)...min(23, currentHour + 8)
-            } else {
-                return 8...20 // Default business hours
-            }
-        }
-        
-        let taskHours = tasks.map { task in
-            let date = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
-            return Calendar.current.component(.hour, from: date)
-        }
-        let minHour = taskHours.min() ?? 8
-        let maxHour = taskHours.max() ?? 20
-        
-        // Expand range slightly for context
-        let startHour = max(0, minHour - 1)
-        let endHour = min(23, maxHour + 2)
-        
-        // If viewing today, include current hour in range
-        if viewModel.isToday {
-            let expandedStart = min(startHour, max(0, currentHour - 1))
-            let expandedEnd = max(endHour, min(23, currentHour + 2))
-            return expandedStart...expandedEnd
-        }
-        
-        return startHour...endHour
+        return 0...23
     }
     
     var body: some View {
-        ZStack {
-            ScrollViewReader { proxy in
+        ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+                // Top daily stats and quick-jump bar
+                dailyStatsBar
+                
+                Divider()
+                    .foregroundColor(theme.borderColor.opacity(0.4))
+                
                 ScrollView {
                     LazyVStack(spacing: 0) {
+                        // Collapsible All-Day Tasks Section
                         if !allDayTasks.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("all_day".localized)
-                                        .font(.headline)
-                                        .foregroundColor(theme.textColor)
-                                    Spacer()
+                            VStack(alignment: .leading, spacing: 6) {
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        isAllDayExpanded.toggle()
+                                    }
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "sun.max.fill")
+                                            .foregroundColor(.orange)
+                                            .font(.system(size: 13))
+                                        
+                                        Text("all_day".localized)
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(theme.textColor)
+                                        
+                                        Text("\(allDayTasks.count)")
+                                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                                            .padding(.horizontal, 7)
+                                            .padding(.vertical, 2)
+                                            .background(theme.primaryColor.opacity(0.12))
+                                            .foregroundColor(theme.primaryColor)
+                                            .clipShape(Capsule())
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: isAllDayExpanded ? "chevron.up" : "chevron.down")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(theme.secondaryTextColor)
+                                    }
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(.plain)
                                 
-                                ForEach(allDayTasks, id: \.id) { task in
-                                    CompactTimelineTaskView(task: task, viewModel: viewModel)
+                                if isAllDayExpanded {
+                                    VStack(spacing: 6) {
+                                        ForEach(allDayTasks, id: \.id) { task in
+                                            CompactTimelineTaskView(task: task, viewModel: viewModel)
+                                        }
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.bottom, 8)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
                                 }
                             }
-                            .padding(.vertical, 12)
-                            .background(theme.primaryColor.opacity(0.05))
+                            .background(theme.surfaceColor.opacity(0.5))
                             
                             Divider()
-                                .padding(.horizontal)
-                                .foregroundColor(theme.borderColor)
+                                .foregroundColor(theme.borderColor.opacity(0.5))
                         }
                         
+                        // Continuous 24-Hour Timeline Rows
                         ForEach(Array(timelineRange), id: \.self) { hour in
                             EnhancedTimelineHourRow(
                                 hour: hour,
@@ -346,62 +375,227 @@ struct TimelineContentView: View {
                                 viewModel: viewModel,
                                 isCurrentHour: viewModel.isToday && currentHour == hour,
                                 currentMinute: viewModel.isToday && currentHour == hour ? currentMinute : nil,
-                                nextTaskHour: nextTaskHour(after: hour),
-                                isLastHour: hour == timelineRange.upperBound
+                                freeHoursCount: isStartOfFreeBlock(hour: hour) ? freeHoursStarting(at: hour) : nil,
+                                onScheduleAtHour: { selectedHour in
+                                    scheduleTask(at: selectedHour)
+                                }
                             )
                             .id(hour)
                         }
+                        
+                        // Closing divider after last hour
+                        Rectangle()
+                            .fill(theme.borderColor.opacity(0.3))
+                            .frame(height: 1)
+                            .padding(.leading, 56)
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 100)
+                    .padding(.top, 10)
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 160)
                 }
                 .refreshable {
                     await performCloudKitSync()
                 }
-                .onAppear {
-                    scrollProxy = proxy
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        withAnimation {
-                            proxy.scrollTo(currentHour, anchor: .center)
-                        }
+            }
+            .onReceive(timer) { newTime in
+                currentTime = newTime
+            }
+            .onAppear {
+                scrollProxy = proxy
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    scrollToRelevantTime(proxy)
+                }
+            }
+            .onChange(of: viewModel.selectedDate) { _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    if let proxy = scrollProxy {
+                        scrollToRelevantTime(proxy)
                     }
                 }
             }
-            
-            // Add Task Button - positioned at bottom center
-            VStack {
-                Spacer()
-                AddTaskButton(
-                    isShowingTaskForm: $showingNewTask,
-                    timeScope: viewModel.selectedTimeScope
-                )
+            .overlay(alignment: .bottom) {
+                ZStack(alignment: .bottom) {
+                    HStack {
+                        Spacer()
+                    }
+                    
+                    AddTaskButton(
+                        isShowingTaskForm: $showingNewTask,
+                        timeScope: viewModel.selectedTimeScope
+                    )
+                }
                 .padding(.bottom, 16)
+                .allowsHitTesting(true)
             }
         }
     }
     
-    private func nextTaskHour(after hour: Int) -> Int? {
-        let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
-        let futureTaskHours = tasks
-            .map { task in
-                let date = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
-                return Calendar.current.component(.hour, from: date)
-            }
-            .filter { $0 > hour }
-            .sorted()
+    // MARK: - Daily Snapshot Bar
+    private var dailyStatsBar: some View {
+        let tasksForDay = viewModel.tasksForSelectedDate()
+        let completedCount = tasksForDay.filter { task in
+            let completionDate = task.completionKey(for: viewModel.selectedDate)
+            return task.completions[completionDate]?.isCompleted == true
+        }.count
+        let totalCount = tasksForDay.count
+        let percent = totalCount > 0 ? Int(Double(completedCount) / Double(totalCount) * 100) : 0
         
-        return futureTaskHours.first
+        let totalDurationSeconds = tasksForDay.reduce(0.0) { sum, task in
+            task.hasDuration ? sum + task.duration : sum
+        }
+        let totalHours = Int(totalDurationSeconds) / 3600
+        let totalMinutes = (Int(totalDurationSeconds) % 3600) / 60
+        
+        return HStack(spacing: 8) {
+            // Progress badge
+            HStack(spacing: 5) {
+                Image(systemName: completedCount == totalCount && totalCount > 0 ? "checkmark.circle.fill" : "circle.dashed")
+                    .foregroundColor(theme.primaryColor)
+                    .font(.system(size: 12, weight: .bold))
+                
+                Text("\(completedCount)/\(totalCount)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.textColor)
+                
+                if totalCount > 0 {
+                    Text("• \(percent)%")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(theme.secondaryTextColor)
+                }
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                Capsule()
+                    .fill(theme.surfaceColor)
+                    .overlay(Capsule().stroke(theme.borderColor.opacity(0.6), lineWidth: 1))
+            )
+            
+            // Duration badge (if any tasks have duration)
+            if totalDurationSeconds > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(theme.secondaryTextColor)
+                    Text(totalHours > 0 ? "\(totalHours)h \(totalMinutes)m" : "\(totalMinutes)m")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(theme.secondaryTextColor)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule()
+                        .fill(theme.surfaceColor)
+                        .overlay(Capsule().stroke(theme.borderColor.opacity(0.6), lineWidth: 1))
+                )
+            }
+            
+            Spacer()
+            
+            // Jump to Now button (only if viewing today)
+            if viewModel.isToday {
+                Button(action: {
+                    HapticManager.shared.selection()
+                    if let proxy = scrollProxy {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            proxy.scrollTo(max(0, currentHour - 1), anchor: .top)
+                        }
+                    }
+                }) {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 6, height: 6)
+                        Text("Adesso")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(theme.primaryColor)
+                    )
+                    .shadow(color: theme.primaryColor.opacity(0.35), radius: 3, y: 1)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(theme.backgroundColor)
+    }
+    
+    // MARK: - Navigation & Interaction Helpers
+    private func scrollToRelevantTime(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            if viewModel.isToday {
+                let target = max(0, currentHour - 1)
+                proxy.scrollTo(target, anchor: .top)
+            } else {
+                let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
+                let cal = Calendar.current
+                let earliestHour = tasks.map { task -> Int in
+                    let date = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
+                    return cal.component(.hour, from: date)
+                }.min() ?? 8
+                let target = max(0, earliestHour - 1)
+                proxy.scrollTo(target, anchor: .top)
+            }
+        }
+    }
+    
+    private func scheduleTask(at hour: Int) {
+        let calendar = Calendar.current
+        if let targetDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: viewModel.selectedDate) {
+            newTaskInitialDate = targetDate
+            showingNewTask = true
+            HapticManager.shared.selection()
+        }
     }
     
     private func tasksForHour(_ hour: Int) -> [TodoTask] {
         let calendar = Calendar.current
         return viewModel.tasksForSelectedDate().filter { task in
-            // Only include tasks with specific time for timeline view
             guard task.hasSpecificTime else { return false }
             let date = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
             let taskHour = calendar.component(.hour, from: date)
             return taskHour == hour
         }
+    }
+    
+    private func freeHoursStarting(at hour: Int) -> Int {
+        let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
+        let calendar = Calendar.current
+        let busyHours = Set(tasks.map { task -> Int in
+            let date = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
+            return calendar.component(.hour, from: date)
+        })
+        
+        guard !busyHours.contains(hour) else { return 0 }
+        
+        var count = 0
+        for h in hour...23 {
+            if !busyHours.contains(h) {
+                count += 1
+            } else {
+                break
+            }
+        }
+        return count
+    }
+    
+    private func isStartOfFreeBlock(hour: Int) -> Bool {
+        let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
+        let calendar = Calendar.current
+        let busyHours = Set(tasks.map { task -> Int in
+            let date = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
+            return calendar.component(.hour, from: date)
+        })
+        
+        guard !busyHours.contains(hour) else { return false }
+        if hour == 0 { return true }
+        return busyHours.contains(hour - 1)
     }
     
     private func performCloudKitSync() async {
@@ -411,15 +605,13 @@ struct TimelineContentView: View {
             isRefreshing = true
         }
         
-        // Trigger CloudKit sync
         cloudKitService.syncNow()
         
-        // Wait for sync to complete
-        for _ in 0..<10 { // Max 5 seconds wait
+        for _ in 0..<10 {
             if cloudKitService.syncStatus == .success || cloudKitService.syncStatus.description.contains("error") {
                 break
             }
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000)
         }
         
         await MainActor.run {
@@ -428,6 +620,7 @@ struct TimelineContentView: View {
     }
 }
 
+// MARK: - Enhanced Timeline Hour Row
 struct EnhancedTimelineHourRow: View {
     let hour: Int
     let tasks: [TodoTask]
@@ -437,155 +630,8 @@ struct EnhancedTimelineHourRow: View {
     
     let isCurrentHour: Bool
     let currentMinute: Int?
-    let nextTaskHour: Int?
-    let isLastHour: Bool
-    
-    private var hasCurrentTask: Bool {
-        !tasks.isEmpty
-    }
-    
-    private var timeToNextTask: String? {
-        guard let nextHour = nextTaskHour, !hasCurrentTask else { return nil }
-        let hoursDiff = nextHour - hour
-        
-        if hoursDiff == 1 {
-            return "next_task_in_1_hour".localized
-        } else if hoursDiff > 1 {
-            return String(format: "next_task_in_hours".localized, hoursDiff)
-        }
-        return nil
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                // Time column with enhanced current time indicator
-                VStack(spacing: 4) {
-                    Text(hourString)
-                        .font(.system(.caption, design: .monospaced))
-                        .fontWeight(isCurrentHour ? .bold : .medium)
-                        .foregroundColor(isCurrentHour ? theme.primaryColor : theme.secondaryTextColor)
-                    
-                    if isCurrentHour {
-                        VStack(spacing: 2) {
-                            Circle()
-                                .fill(theme.primaryColor)
-                                .frame(width: 10, height: 10)
-                            
-                            if let minute = currentMinute {
-                                Text(String(format: "%02d", minute))
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundColor(theme.primaryColor)
-                                    .fontWeight(.bold)
-                            }
-                            
-                            Text("NOW")
-                                .font(.system(.caption2, design: .rounded))
-                                .fontWeight(.bold)
-                                .foregroundColor(theme.primaryColor)
-                        }
-                        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isCurrentHour)
-                    }
-                }
-                .frame(width: 60)
-                
-                // Task content area with smart layout
-                VStack(alignment: .leading, spacing: 8) {
-                    if hasCurrentTask {
-                        // Show tasks for this hour
-                        ForEach(tasks, id: \.id) { task in
-                            EnhancedTimelineTaskView(task: task, viewModel: viewModel)
-                        }
-                    } else {
-                        // Show empty state with next task info
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(isCurrentHour ? theme.primaryColor.opacity(0.08) : theme.surfaceColor)
-                            .frame(height: 50)
-                            .overlay(
-                                VStack(spacing: 4) {
-                                    if isCurrentHour && currentMinute != nil {
-                                        // Current time indicator line
-                                        HStack {
-                                            Circle()
-                                                .fill(theme.primaryColor)
-                                                .frame(width: 6, height: 6)
-                                            Rectangle()
-                                                .fill(theme.primaryColor.opacity(0.6))
-                                                .frame(height: 2)
-                                            Spacer()
-                                        }
-                                    } else if let nextTaskInfo = timeToNextTask {
-                                        Text(nextTaskInfo)
-                                            .font(.system(.caption, design: .rounded))
-                                            .foregroundColor(theme.secondaryTextColor)
-                                            .fontWeight(.medium)
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                            )
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    // Enhanced background for current hour
-                    isCurrentHour ?
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(theme.primaryColor.opacity(0.05))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(theme.primaryColor.opacity(0.2), lineWidth: 1.5)
-                        )
-                        .shadow(color: theme.shadowColor, radius: 4)
-                    : nil
-                )
-            }
-            .padding(.vertical, 6)
-            
-            // Connection line to next hour
-            if !isLastHour {
-                HStack {
-                    Spacer()
-                        .frame(width: 30)
-                    
-                    VStack(spacing: 0) {
-                        if hasCurrentTask || nextTaskHour != nil {
-                            // Animated connection line
-                            Rectangle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            isCurrentHour ? theme.primaryColor.opacity(0.6) : theme.borderColor,
-                                            theme.borderColor.opacity(0.1)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .frame(width: 2, height: 20)
-                        } else {
-                            // Dotted line for empty periods
-                            VStack(spacing: 2) {
-                                ForEach(0..<4, id: \.self) { _ in
-                                    Circle()
-                                        .fill(theme.borderColor)
-                                        .frame(width: 2, height: 2)
-                                }
-                            }
-                        }
-                        
-                        Divider()
-                            .background(
-                                isCurrentHour ?
-                                theme.primaryColor.opacity(0.4) :
-                                theme.borderColor
-                            )
-                    }
-                    
-                    Spacer()
-                }
-            }
-        }
-    }
+    let freeHoursCount: Int?
+    let onScheduleAtHour: (Int) -> Void
     
     private var hourString: String {
         let formatter = DateFormatter()
@@ -598,220 +644,110 @@ struct EnhancedTimelineHourRow: View {
         ) ?? Date()
         return formatter.string(from: date)
     }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            // Left Time Axis Column
+            VStack(alignment: .trailing, spacing: 0) {
+                HStack(spacing: 3) {
+                    if isCurrentHour {
+                        Circle()
+                            .fill(theme.primaryColor)
+                            .frame(width: 5, height: 5)
+                    }
+                    Text(hourString)
+                        .font(.system(size: 12, weight: isCurrentHour ? .bold : .medium, design: .monospaced))
+                        .foregroundColor(isCurrentHour ? theme.primaryColor : theme.secondaryTextColor)
+                }
+                .offset(y: -7) // Vertically aligned with the top grid line
+                
+                Spacer(minLength: 0)
+            }
+            .frame(width: 48, alignment: .topTrailing)
+            
+            // Schedule & Content Area (Right Column Canvas)
+            VStack(alignment: .leading, spacing: 0) {
+                // Top hairline grid divider
+                Rectangle()
+                    .fill(theme.borderColor.opacity(0.3))
+                    .frame(height: 1)
+                
+                if tasks.isEmpty {
+                    // Clean, serene empty hour slot - tap anywhere to schedule
+                    ZStack(alignment: .topLeading) {
+                        Button {
+                            HapticManager.shared.selection()
+                            onScheduleAtHour(hour)
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(isCurrentHour ? theme.primaryColor.opacity(0.04) : Color.clear)
+                                
+                                // Faint 30-min guideline
+                                VStack {
+                                    Spacer()
+                                    Rectangle()
+                                        .fill(theme.borderColor.opacity(0.12))
+                                        .frame(height: 0.5)
+                                    Spacer()
+                                }
+                            }
+                            .frame(height: 52)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(EmptyHourSlotButtonStyle())
+                        
+                        // Live Current Time Indicator ONLY when the hour is empty (never slices across cards!)
+                        if isCurrentHour, let minute = currentMinute {
+                            GeometryReader { geo in
+                                let minuteRatio = CGFloat(minute) / 60.0
+                                let yPos = max(2, min(geo.size.height - 2, geo.size.height * minuteRatio))
+                                
+                                ZStack(alignment: .leading) {
+                                    Rectangle()
+                                        .fill(theme.primaryColor)
+                                        .frame(height: 1.5)
+                                    
+                                    Circle()
+                                        .fill(theme.primaryColor)
+                                        .frame(width: 7, height: 7)
+                                        .offset(x: -3.5)
+                                        .shadow(color: theme.primaryColor.opacity(0.4), radius: 2)
+                                }
+                                .offset(y: yPos - 1)
+                            }
+                            .allowsHitTesting(false)
+                        }
+                    }
+                } else {
+                    // Scheduled Tasks for this Hour (using the exact list view TimelineTaskCard design!)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(tasks, id: \.id) { task in
+                            TimelineTaskCard(
+                                task: task,
+                                onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
+                                onToggleSubtask: { subtaskId in
+                                    viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
+                                },
+                                viewModel: viewModel
+                            )
+                        }
+                    }
+                    .padding(.top, 6)
+                    .padding(.bottom, 6)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 0)
+    }
 }
 
-struct EnhancedTimelineTaskView: View {
-    let task: TodoTask
-    @ObservedObject var viewModel: TimelineViewModel
-    @State private var showingPomodoro = false
-    @State private var showingDetailView = false
-    @Environment(\.theme) private var theme
-    @Environment(\.colorScheme) private var colorScheme
-    @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
-
-    private var occurrenceStartTimeToday: Date {
-        guard viewModel.selectedTimeScope == .today else { return task.startTime }
-        guard task.recurrence != nil else { return task.startTime }
-        return task.occurrenceDate(on: viewModel.selectedDate)
-    }
-
-    private var isCompleted: Bool {
-        
-        let completionDate = task.completionKey(for: viewModel.selectedDate)
-        if let completion = task.completions[completionDate] {
-            return completion.isCompleted
-        }
-        return false
-    }
-
-    private var taskTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: occurrenceStartTimeToday)
-    }
-
-    private var timeUntilTask: String? {
-        guard viewModel.isToday else { return nil }
-        
-        let now = Date()
-        let timeInterval = occurrenceStartTimeToday.timeIntervalSince(now)
-        
-        if timeInterval > 0 {
-            let minutes = Int(timeInterval / 60)
-            if minutes < 60 {
-                return "in \(minutes)m"
-            } else {
-                let hours = minutes / 60
-                return "in \(hours)h"
-            }
-        } else if timeInterval > -3600 { // Within last hour
-            return "now"
-        }
-        
-        return nil
-    }
-
-    private var categoryGradient: LinearGradient {
-        if gradientEnabled, let category = task.category {
-            let baseColor = Color(hex: category.color)
-            return LinearGradient(
-                colors: [
-                    baseColor.opacity(0.12),
-                    baseColor.opacity(0.06),
-                    baseColor.opacity(0.02),
-                    Color.clear
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else {
-            return LinearGradient(
-                colors: [Color.clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Completion button
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    viewModel.toggleTaskCompletion(task.id)
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(isCompleted ? theme.primaryColor.opacity(0.2) : theme.surfaceColor)
-                        .frame(width: 28, height: 28)
-                    
-                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isCompleted ? theme.primaryColor : theme.secondaryTextColor)
-                        .font(.system(size: 20, weight: .medium))
-                }
-            }
-            .buttonStyle(BorderlessButtonStyle())
-
-            // Task content with shared leading column for category dot
-            HStack(alignment: .top, spacing: 8) {
-                // Leading dot column (fixed width)
-                Group {
-                    if let category = task.category {
-                        Circle()
-                            .fill(Color(hex: category.color))
-                            .frame(width: 8, height: 8)
-                    } else {
-                        Color.clear.frame(width: 8, height: 8)
-                    }
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(task.name)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(isCompleted ? theme.secondaryTextColor : theme.textColor)
-
-                    if let description = task.description, !description.isEmpty {
-                        Text(description)
-                            .font(.caption)
-                            .foregroundColor(theme.secondaryTextColor)
-                            .lineLimit(2)
-                    }
-                    
-                    // Priority and Pomodoro indicators
-                    HStack(spacing: 8) {
-                        Image(systemName: task.priority.icon)
-                            .foregroundColor(Color(hex: task.priority.color))
-                            .font(.system(size: 12))
-                        
-                        if task.pomodoroSettings != nil {
-                            Button(action: {
-                                PomodoroViewModel.shared.setActiveTask(task)
-                                showingPomodoro = true
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "timer")
-                                        .font(.system(size: 10))
-                                    Text("Focus")
-                                        .font(.system(.caption2, design: .rounded))
-                                }
-                                .foregroundColor(theme.primaryColor)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(theme.primaryColor.opacity(0.15))
-                                .cornerRadius(8)
-                            }
-                            .buttonStyle(BorderlessButtonStyle())
-                        }
-                        
-                        Spacer()
-                    }
-                }
-            }
-            // Trailing time info overlay on the whole content row
-            .overlay(
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(taskTime)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(theme.secondaryTextColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(theme.surfaceColor)
-                        .cornerRadius(4)
-                    
-                    if let timeInfo = timeUntilTask {
-                        Text(timeInfo)
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(timeInfo == "now" ? .orange : theme.secondaryTextColor)
-                            .fontWeight(.medium)
-                    }
-                }, alignment: .topTrailing
-            )
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(theme.surfaceColor)
-                
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(categoryGradient)
-                
-                if gradientEnabled, let category = task.category {
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    Color(hex: category.color).opacity(0.3),
-                                    Color(hex: category.color).opacity(0.1)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5
-                        )
-                }
-            }
-            .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
-        )
-        .opacity(isCompleted ? 0.7 : 1.0)
-        .fullScreenCover(isPresented: $showingPomodoro) {
-            NavigationStack {
-                PomodoroTabView()
-            }
-        }
-        .sheet(isPresented: $showingDetailView) {
-            NavigationStack {
-                TaskDetailView(taskId: task.id, targetDate: viewModel.selectedDate)
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .onTapGesture {
-            showingDetailView = true
-        }
+// Subtle press feedback for empty hour slot
+private struct EmptyHourSlotButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.65 : 1.0)
     }
 }
 
@@ -823,18 +759,44 @@ struct TimelineHeaderView: View {
     @Environment(\.theme) private var theme
     @State private var showingJournal = false
     @State private var showingSettings = false
+    @State private var showingMandala = false
     @ObservedObject private var journalManager = JournalManager.shared
+    @ObservedObject private var settingsManager = CloudKitSettingsManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
-                HStack(alignment: .center) {
-                    Text(viewModel.currentPeriodString)
-                        .font(.title2.bold())
-                        .themedPrimaryText()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .center, spacing: 8) {
+                    Button(action: {
+                        if !viewModel.isCurrentPeriod {
+                            HapticManager.shared.selection()
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                selectedDayOffset = 0
+                                viewModel.navigateToToday()
+                            }
+                        }
+                    }) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(viewModel.currentPeriodString)
+                                .font(.title2.bold())
+                                .themedPrimaryText()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                            
+                            if !viewModel.isCurrentPeriod {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "arrow.uturn.backward")
+                                        .font(.system(size: 9, weight: .bold))
+                                    Text("today".localized)
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundColor(theme.primaryColor)
+                                .transition(.opacity)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                     
                     if viewModel.selectedTimeScope == .today {
                         Button(action: { showingJournal = true }) {
@@ -867,13 +829,40 @@ struct TimelineHeaderView: View {
                         }
                     }
                     
+                    // Mandala Chart button
+                    Button(action: { showingMandala = true }) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(theme.primaryColor.opacity(0.12))
+                                .frame(width: 34, height: 34)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
+                                )
+                                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+
+                            Image(systemName: "square.grid.3x3.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.primaryColor)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showingMandala) {
+                        MandalaHubView()
+                    }
+                    
                     Spacer(minLength: 8)
                     
                     HStack(spacing: 8) {
-                        if viewModel.selectedTimeScope != .today && viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .all {
+                        if (viewModel.selectedTimeScope != .today || settingsManager.hideDaysBar) && viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .all {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     viewModel.navigateToPrevious()
+                                    if viewModel.selectedTimeScope == .today {
+                                        if let daysDiff = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: viewModel.selectedDate)).day {
+                                            selectedDayOffset = daysDiff
+                                        }
+                                    }
                                 }
                             }) {
                                 Image(systemName: "chevron.left")
@@ -890,6 +879,11 @@ struct TimelineHeaderView: View {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     viewModel.navigateToNext()
+                                    if viewModel.selectedTimeScope == .today {
+                                        if let daysDiff = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: viewModel.selectedDate)).day {
+                                            selectedDayOffset = daysDiff
+                                        }
+                                    }
                                 }
                             }) {
                                 Image(systemName: "chevron.right")
@@ -991,9 +985,7 @@ struct TimelineHeaderView: View {
                         }
                         .buttonStyle(.plain)
                         .sheet(isPresented: $showingSettings) {
-                            NavigationStack {
-                                SettingsView()
-                            }
+                            SettingsView()
                         }
                     }
                 }
@@ -1001,7 +993,7 @@ struct TimelineHeaderView: View {
             }
             .frame(height: 60)
             
-            if viewModel.selectedTimeScope == .today {
+            if viewModel.selectedTimeScope == .today && !settingsManager.hideDaysBar {
                 DateSelectorView(
                     viewModel: viewModel,
                     selectedDayOffset: $selectedDayOffset,
@@ -1022,66 +1014,76 @@ struct DateSelectorView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var selectedDayOffset: Int
     @Binding var scrollProxy: ScrollViewProxy?
+    @Environment(\.theme) private var theme
     @State private var isDragging = false
     @State private var dragOffset: CGFloat = 0
     
     var body: some View {
-        ZStack {
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(-365...365, id: \.self) { offset in
-                            DayCell(
-                                date: Calendar.current.date(
-                                    byAdding: .day,
-                                    value: offset,
-                                    to: Date()
-                                ) ?? Date(),
-                                isSelected: offset == selectedDayOffset,
-                                offset: offset
-                            ) { _ in
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedDayOffset = offset
-                                    viewModel.selectDate(offset)
-                                    HapticManager.shared.selection()
-                                    
-                                    proxy.scrollTo(offset, anchor: .center)
-                                }
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(-365...365, id: \.self) { offset in
+                        DayCell(
+                            date: Calendar.current.date(
+                                byAdding: .day,
+                                value: offset,
+                                to: Date()
+                            ) ?? Date(),
+                            isSelected: offset == selectedDayOffset,
+                            offset: offset
+                        ) { _ in
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedDayOffset = offset
+                                viewModel.selectDate(offset)
+                                HapticManager.shared.selection()
+                                proxy.scrollTo(offset, anchor: .center)
                             }
-                            .id(offset)
-                            .scaleEffect(offset == selectedDayOffset ? 1.08 : 1.0)
                         }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 6)
-                }
-                .onAppear {
-                    scrollProxy = proxy
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            proxy.scrollTo(selectedDayOffset, anchor: .center)
-                        }
+                        .id(offset)
+                        .scaleEffect(offset == selectedDayOffset ? 1.08 : 1.0)
                     }
                 }
-                .onChange(of: selectedDayOffset) { _, newValue in
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+            }
+            .onAppear {
+                scrollProxy = proxy
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        proxy.scrollTo(newValue, anchor: .center)
+                        proxy.scrollTo(selectedDayOffset, anchor: .center)
                     }
                 }
-                .simultaneousGesture(
-                    DragGesture()
-                        .onChanged { value in
-                            isDragging = true
-                            dragOffset = value.translation.width
-                        }
-                        .onEnded { value in
-                            isDragging = false
-                            let velocity = value.predictedEndLocation.x - value.location.x
-                            
-                            if abs(velocity) > 50 {
-                                let direction = velocity > 0 ? -1 : 1
-                                let newOffset = selectedDayOffset + direction
-                                
+            }
+            .onChange(of: selectedDayOffset) { _, newValue in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { value in
+                        isDragging = true
+                        dragOffset = value.translation.width
+                    }
+                    .onEnded { value in
+                        isDragging = false
+                        let velocity = value.predictedEndLocation.x - value.location.x
+
+                        if abs(velocity) > 50 {
+                            let direction = velocity > 0 ? -1 : 1
+                            let newOffset = selectedDayOffset + direction
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedDayOffset = newOffset
+                                viewModel.selectDate(newOffset)
+                                proxy.scrollTo(newOffset, anchor: .center)
+                                HapticManager.shared.selection()
+                            }
+                        } else {
+                            let cellWidth: CGFloat = 62
+                            let estimatedOffset = Int(round(dragOffset / cellWidth))
+                            let newOffset = selectedDayOffset - estimatedOffset
+
+                            if newOffset != selectedDayOffset {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedDayOffset = newOffset
                                     viewModel.selectDate(newOffset)
@@ -1089,33 +1091,22 @@ struct DateSelectorView: View {
                                     HapticManager.shared.selection()
                                 }
                             } else {
-                                let cellWidth: CGFloat = 62
-                                let estimatedOffset = Int(round(dragOffset / cellWidth))
-                                let newOffset = selectedDayOffset - estimatedOffset
-                                
-                                if newOffset != selectedDayOffset {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        selectedDayOffset = newOffset
-                                        viewModel.selectDate(newOffset)
-                                        proxy.scrollTo(newOffset, anchor: .center)
-                                        HapticManager.shared.selection()
-                                    }
-                                } else {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        proxy.scrollTo(selectedDayOffset, anchor: .center)
-                                    }
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                     proxy.scrollTo(selectedDayOffset, anchor: .center)
                                 }
                             }
                         }
-                )
-            }
+                    }
+            )
         }
     }
 }
 
+
 struct TaskListView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Binding var showingNewTask: Bool
+    @Binding var showingBrainDump: Bool
     @StateObject private var pomodoroViewModel = PomodoroViewModel.shared
     @StateObject private var timeTrackerViewModel = TimeTrackerViewModel.shared
     @StateObject private var cloudKitService = CloudKitService.shared
@@ -1124,13 +1115,19 @@ struct TaskListView: View {
     @State private var showingActiveTimeTrackerSession = false
     @State private var selectedSessionId: UUID?
     @State private var isRefreshing = false
+    @State private var showingMandalaSheet = false
     @Environment(\.theme) private var theme
     
     var body: some View {
-        ZStack {
+        Group {
             if viewModel.tasks.isEmpty {
                 // Empty state
                 VStack(spacing: 20) {
+                    if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
+                        mandalaBannerCard
+                            .padding(.top, 8)
+                    }
+                    
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 64))
                         .foregroundColor(theme.secondaryTextColor.opacity(0.6))
@@ -1149,6 +1146,13 @@ struct TaskListView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
+                .overlay(alignment: .bottom) {
+                    bottomBarOverlay
+                        .padding(.bottom, 16)
+                }
+                .sheet(isPresented: $showingMandalaSheet) {
+                    MandalaHubView()
+                }
             } else {
                 if viewModel.organization == .eisenhower {
                     EisenhowerMatrixView(viewModel: viewModel)
@@ -1156,25 +1160,21 @@ struct TaskListView: View {
                         .padding(.horizontal, 8)
                         .padding(.top, 8)
                         .padding(.bottom, 100)
+                        .overlay(alignment: .bottom) {
+                            bottomBarOverlay
+                                .padding(.bottom, 16)
+                        }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 12) {
+                            if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
+                                mandalaBannerCard
+                            }
+                            
                             switch viewModel.organizedTasksForSelectedDate() {
                             case .single(let tasks):
                                 ForEach(tasks, id: \.id) { task in
-                                    TimelineTaskCard(
-                                        task: task,
-                                        onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
-                                        onToggleSubtask: { subtaskId in
-                                            viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
-                                        },
-                                        viewModel: viewModel
-                                    )
-                                    .onDrag {
-                                        viewModel.draggedTask = task
-                                        return NSItemProvider(object: task.id.uuidString as NSString)
-                                    }
-                                    .onDrop(of: [UTType.text], delegate: TaskDropDelegate(item: task, viewModel: viewModel))
+                                    taskCardRow(for: task)
                                 }
                             
                             case .sections(let sections):
@@ -1186,69 +1186,28 @@ struct TaskListView: View {
                                 }
                             }
                         }
+                        .sheet(isPresented: $showingMandalaSheet) {
+                            MandalaHubView()
+                        }
                         .padding(.horizontal, 4)
                         .padding(.bottom, 100)
                         .padding(.top, 8)
                         .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
+                        .onTapGesture {
+                            if viewModel.openSwipeTaskId != nil {
+                                viewModel.closeAllSwipeMenus()
+                            }
+                        }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .refreshable {
                         await performCloudKitSync()
                     }
-                    .onTapGesture {
-                        viewModel.closeAllSwipeMenus()
+                    .overlay(alignment: .bottom) {
+                        bottomBarOverlay
+                            .padding(.bottom, 16)
                     }
                 }
-            }
-            
-            VStack {
-                Spacer()
-                
-                VStack(spacing: 0) {
-                    HStack {
-                        Spacer()
-                        
-                        HStack(spacing: 8) {
-                            ForEach(timeTrackerViewModel.activeSessions) { session in
-                                MiniTimerWidget(
-                                    sessionId: session.id,
-                                    viewModel: timeTrackerViewModel,
-                                    onTap: {
-                                        selectedSessionId = session.id
-                                        showingActiveTimeTrackerSession = true
-                                    }
-                                )
-                            }
-                            
-                            if pomodoroViewModel.hasActiveTask {
-                                MiniPomodoroWidget(viewModel: pomodoroViewModel) {
-                                    // Present on next run loop to stabilize presentation
-                                    DispatchQueue.main.async {
-                                        if pomodoroViewModel.activeTask != nil {
-                                            showingActivePomodoroSession = true
-                                        } else {
-                                            if pomodoroViewModel.state == .notStarted {
-                                                pomodoroViewModel.initializeGeneralSession()
-                                            }
-                                            showingGeneralPomodoroFullScreen = true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, timeTrackerViewModel.hasActiveSession || pomodoroViewModel.hasActiveTask ? 10 : 0)
-                    .zIndex(1)
-                    
-                    AddTaskButton(
-                        isShowingTaskForm: $showingNewTask,
-                        timeScope: viewModel.selectedTimeScope
-                    )
-                }
-                .padding(.bottom, 16)
             }
         }
         .fullScreenCover(isPresented: $showingActivePomodoroSession) {
@@ -1263,20 +1222,131 @@ struct TaskListView: View {
                 PomodoroTabView()
             }
         }
-        .sheet(isPresented: $showingActiveTimeTrackerSession) {
+        .sheet(isPresented: Binding(
+            get: { selectedSessionId != nil },
+            set: { if !$0 { selectedSessionId = nil } }
+        )) {
             if let sessionId = selectedSessionId {
                 NavigationStack {
                     TimeTrackerView(
                         sessionId: sessionId,
-                        presentationStyle: .sheet
+                        presentationStyle: .sheet,
+                        allowExpand: true
                     )
                 }
-                .presentationDetents([.medium])
+                .presentationDetents(timeTrackerViewModel.showingCompletion ? [.large] : [.height(410), .medium, .large])
                 .presentationDragIndicator(.visible)
             }
         }
     }
     
+    private var mandalaBannerCard: some View {
+        Button(action: {
+            showingMandalaSheet = true
+            HapticManager.shared.impact(.light)
+        }) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(theme.primaryColor.opacity(0.15))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "square.grid.3x3.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(theme.primaryColor)
+                }
+                
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("Mandala Goal Method")
+                            .font(.subheadline.bold())
+                            .themedPrimaryText()
+                        
+                        Text("81 Caselle")
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(theme.primaryColor.opacity(0.15))
+                            .foregroundColor(theme.primaryColor)
+                            .clipShape(Capsule())
+                    }
+                    
+                    Text("Pianifica i grandi obiettivi e trasformali in azioni quotidiane.")
+                        .font(.caption)
+                        .themedSecondaryText()
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(theme.secondaryTextColor)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(theme.surfaceColor)
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(theme.primaryColor.opacity(0.3), lineWidth: 1)
+            )
+            .padding(.horizontal, 8)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var bottomBarOverlay: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                
+                HStack(spacing: 8) {
+                    ForEach(timeTrackerViewModel.activeSessions) { session in
+                        MiniTimerWidget(
+                            sessionId: session.id,
+                            viewModel: timeTrackerViewModel,
+                            onTap: {
+                                selectedSessionId = session.id
+                            }
+                        )
+                    }
+                    
+                    if pomodoroViewModel.hasActiveTask {
+                        MiniPomodoroWidget(viewModel: pomodoroViewModel) {
+                            DispatchQueue.main.async {
+                                if pomodoroViewModel.activeTask != nil {
+                                    showingActivePomodoroSession = true
+                                } else {
+                                    if pomodoroViewModel.state == .notStarted {
+                                        pomodoroViewModel.initializeGeneralSession()
+                                    }
+                                    showingGeneralPomodoroFullScreen = true
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, timeTrackerViewModel.hasActiveSession || pomodoroViewModel.hasActiveTask ? 10 : 0)
+            
+            ZStack(alignment: .bottom) {
+                HStack {
+                    // BrainDumpButton disabilitato per il rilascio
+                    Spacer()
+                }
+                
+                AddTaskButton(
+                    isShowingTaskForm: $showingNewTask,
+                    timeScope: viewModel.selectedTimeScope
+                )
+            }
+            .padding(.bottom, 16)
+        }
+    }
     private func performCloudKitSync() async {
         guard cloudKitService.isCloudKitEnabled else { return }
         
@@ -1298,6 +1368,18 @@ struct TaskListView: View {
         await MainActor.run {
             isRefreshing = false
         }
+    }
+    
+    @ViewBuilder
+    private func taskCardRow(for task: TodoTask) -> some View {
+        TimelineTaskCard(
+            task: task,
+            onToggleComplete: { viewModel.toggleTaskCompletion(task.id) },
+            onToggleSubtask: { subtaskId in
+                viewModel.toggleSubtask(taskId: task.id, subtaskId: subtaskId)
+            },
+            viewModel: viewModel
+        )
     }
 }
 
@@ -1463,7 +1545,7 @@ private struct DayCell: View {
     }
 }
 
-private struct TimelineTaskCard: View {
+struct TimelineTaskCard: View {
     let task: TodoTask
     let onToggleComplete: () -> Void
     let onToggleSubtask: (UUID) -> Void
@@ -1555,6 +1637,15 @@ private struct TimelineTaskCard: View {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
         return f.string(from: occurrenceDateForBadges)
+    }
+
+    private var isCurrentlyActiveNow: Bool {
+        guard viewModel.isToday && task.hasSpecificTime else { return false }
+        let now = Date()
+        let t = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
+        let duration = task.hasDuration && task.duration > 0 ? task.duration : 1800
+        let end = t.addingTimeInterval(duration)
+        return now >= t && now <= end
     }
 
     // Get the correct target date based on the current scope
@@ -1823,13 +1914,31 @@ private struct TimelineTaskCard: View {
                             let t = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
                             let hour = calendar.component(.hour, from: t)
                             let minute = calendar.component(.minute, from: t)
-                            Text(String(format: "%02d:%02d", hour, minute))
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(theme.secondaryTextColor)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(theme.surfaceColor)
-                                .cornerRadius(4)
+                            let timeText: String = {
+                                if task.hasDuration && task.duration > 0 {
+                                    let end = t.addingTimeInterval(task.duration)
+                                    let endH = calendar.component(.hour, from: end)
+                                    let endM = calendar.component(.minute, from: end)
+                                    return String(format: "%02d:%02d - %02d:%02d", hour, minute, endH, endM)
+                                }
+                                return String(format: "%02d:%02d", hour, minute)
+                            }()
+                            
+                            HStack(spacing: 4) {
+                                if isCurrentlyActiveNow {
+                                    Circle()
+                                        .fill(theme.primaryColor)
+                                        .frame(width: 5, height: 5)
+                                }
+                                Text(timeText)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .fontWeight(isCurrentlyActiveNow ? .bold : .medium)
+                                    .foregroundColor(isCurrentlyActiveNow ? theme.primaryColor : theme.secondaryTextColor)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(isCurrentlyActiveNow ? theme.primaryColor.opacity(0.12) : theme.surfaceColor)
+                            .cornerRadius(4)
                         } else {
                             Text("all_day".localized)
                                 .font(.system(.caption2, design: .rounded))
@@ -1943,7 +2052,10 @@ private struct TimelineTaskCard: View {
                     RoundedRectangle(cornerRadius: 14)
                         .fill(categoryGradient)
                     
-                    if gradientEnabled, let category = task.category {
+                    if isCurrentlyActiveNow {
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(theme.primaryColor.opacity(0.85), lineWidth: 1.5)
+                    } else if gradientEnabled, let category = task.category {
                         RoundedRectangle(cornerRadius: 14)
                             .strokeBorder(
                                 LinearGradient(
@@ -1956,9 +2068,17 @@ private struct TimelineTaskCard: View {
                                 ),
                                 lineWidth: 1
                             )
+                    } else {
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(theme.borderColor.opacity(0.4), lineWidth: 1)
                     }
                 }
-                .shadow(color: theme.shadowColor, radius: 5, x: 0, y: 2)
+                .shadow(
+                    color: isCurrentlyActiveNow ? theme.primaryColor.opacity(0.25) : theme.shadowColor,
+                    radius: isCurrentlyActiveNow ? 6 : 5,
+                    x: 0,
+                    y: 2
+                )
             )
             .offset(x: dragOffset)
             .scaleEffect(deleteScale)
@@ -1968,10 +2088,12 @@ private struct TimelineTaskCard: View {
         .contentShape(Rectangle())
 
         .simultaneousGesture(
-            DragGesture(minimumDistance: 10)
+            DragGesture(minimumDistance: 20)
                 .onChanged { value in
                     if !isHorizontalSwipe {
-                        isHorizontalSwipe = abs(value.translation.width) > abs(value.translation.height) && abs(value.translation.width) > 8
+                        let isDefinitelyHorizontal = abs(value.translation.width) > abs(value.translation.height) * 1.5
+                            && abs(value.translation.width) > 12
+                        isHorizontalSwipe = isDefinitelyHorizontal
                     }
                     guard isHorizontalSwipe else { return }
                     let translation = value.translation.width
@@ -2000,16 +2122,6 @@ private struct TimelineTaskCard: View {
                 resetSwipe()
             }
         }
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.6)
-                .onEnded { _ in
-                    if dragOffset != 0 {
-                        resetSwipe()
-                    } else {
-                        showingDetailView = true
-                    }
-                }
-        )
         .onTapGesture {
             if dragOffset != 0 {
                 resetSwipe()
@@ -2057,7 +2169,7 @@ private struct TimelineTaskCard: View {
                     allowExpand: false
                 )
             }
-            .presentationDetents([.medium])
+            .presentationDetents(TimeTrackerViewModel.shared.showingCompletion ? [.large] : [.height(410), .medium, .large])
             .presentationDragIndicator(.visible)
         }
         .onReceive(NotificationCenter.default.publisher(for: .startPomodoroFromTracking)) { notification in
@@ -2097,28 +2209,46 @@ private struct TimelineTaskCard: View {
     }
 }
 
-struct TaskDropDelegate: DropDelegate {
-    let item: TodoTask
-    let viewModel: TimelineViewModel
+private struct BrainDumpButton: View {
+    @Binding var isShowingBrainDump: Bool
+    @Environment(\.theme) private var theme
+    @State private var isPressed = false
     
-    func performDrop(info: DropInfo) -> Bool {
-        viewModel.draggedTask = nil
-        return true
-    }
-    
-    func dropEntered(info: DropInfo) {
-        guard let draggedItem = viewModel.draggedTask,
-              draggedItem.id != item.id,
-              viewModel.organization == .none,
-              viewModel.viewMode == .list else {
-            return
+    var body: some View {
+        Button(action: {
+            withAnimation(.interpolatingSpring(stiffness: 600, damping: 25)) {
+                isPressed = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                withAnimation(.interpolatingSpring(stiffness: 600, damping: 25)) {
+                    isPressed = false
+                }
+                isShowingBrainDump = true
+            }
+        }) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(theme.primaryColor)
+                .frame(width: 52, height: 52)
+                .background(
+                    ZStack {
+                        Circle()
+                            .fill(theme.surfaceColor)
+                        Circle()
+                            .strokeBorder(theme.primaryColor.opacity(0.4), lineWidth: 1.5)
+                    }
+                    .shadow(
+                        color: theme.shadowColor,
+                        radius: 6,
+                        x: 0,
+                        y: 3
+                    )
+                )
+                .scaleEffect(isPressed ? 0.95 : 1.0)
+                .animation(.interpolatingSpring(stiffness: 600, damping: 25), value: isPressed)
         }
-        
-        viewModel.moveTask(draggedItem, toTarget: item)
-    }
-    
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        return DropProposal(operation: viewModel.organization == .none ? .move : .forbidden)
+        .buttonStyle(BorderlessButtonStyle())
     }
 }
 
@@ -2203,12 +2333,11 @@ private struct TimelineSubtaskRow: View {
 struct CompactTimelineTaskView: View {
     let task: TodoTask
     @ObservedObject var viewModel: TimelineViewModel
-    @State private var showingPomodoro = false
+    @State private var showingDetailView = false
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     
     private var isCompleted: Bool {
-        
         let completionDate = task.completionKey(for: viewModel.selectedDate)
         if let completion = task.completions[completionDate] {
             return completion.isCompleted
@@ -2216,24 +2345,20 @@ struct CompactTimelineTaskView: View {
         return false
     }
     
-    private var taskTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let t = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
-        return formatter.string(from: t)
-    }
-
-    private var taskDay: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .none
-        let d = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
-        return formatter.string(from: d)
+    private var subtaskProgress: (completed: Int, total: Int)? {
+        guard !task.subtasks.isEmpty else { return nil }
+        let completed = task.subtasks.filter { $0.isCompleted }.count
+        return (completed, task.subtasks.count)
     }
     
     var body: some View {
         HStack(spacing: 10) {
             Button(action: {
+                if !isCompleted {
+                    HapticManager.shared.notification(.success)
+                } else {
+                    HapticManager.shared.selection()
+                }
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     viewModel.toggleTaskCompletion(task.id)
                 }
@@ -2241,27 +2366,27 @@ struct CompactTimelineTaskView: View {
                 ZStack {
                     Circle()
                         .fill(isCompleted ? theme.primaryColor.opacity(0.2) : theme.surfaceColor)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 26, height: 26)
                     
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                         .foregroundColor(isCompleted ? theme.primaryColor : theme.secondaryTextColor)
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(size: 19, weight: .medium))
                 }
             }
             .buttonStyle(BorderlessButtonStyle())
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     if let category = task.category {
                         Circle()
                             .fill(Color(hex: category.color))
-                            .frame(width: 6, height: 6)
+                            .frame(width: 7, height: 7)
                     }
                     
                     Text(task.name)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(isCompleted ? theme.secondaryTextColor : theme.textColor)
+                        .strikethrough(isCompleted, color: theme.secondaryTextColor)
                         .lineLimit(1)
                 }
                 
@@ -2275,36 +2400,83 @@ struct CompactTimelineTaskView: View {
             
             Spacer()
             
-            HStack(spacing: 8) {
-                if task.hasSpecificTime {
-                    Text(taskTime)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(theme.secondaryTextColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(theme.surfaceColor)
-                        .cornerRadius(4)
-                } else if task.hasSpecificDay {
-                    Text(taskDay)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(theme.secondaryTextColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(theme.surfaceColor)
-                        .cornerRadius(4)
+            HStack(spacing: 6) {
+                if let subtasks = subtaskProgress {
+                    HStack(spacing: 2) {
+                        Image(systemName: "checklist")
+                            .font(.system(size: 9))
+                        Text("\(subtasks.completed)/\(subtasks.total)")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(theme.secondaryTextColor)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(theme.surfaceColor)
+                    )
                 }
                 
-                Image(systemName: task.priority.icon)
-                    .foregroundColor(Color(hex: task.priority.color))
-                    .font(.system(size: 12))
+                if task.priority == .high {
+                    Image(systemName: task.priority.icon)
+                        .foregroundColor(Color(hex: task.priority.color))
+                        .font(.system(size: 11))
+                }
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.vertical, 9)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(theme.surfaceColor)
-                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(theme.borderColor.opacity(0.6), lineWidth: 1)
+                )
+                .shadow(color: theme.shadowColor, radius: 1, x: 0, y: 1)
         )
+        .opacity(isCompleted ? 0.65 : 1.0)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showingDetailView = true
+        }
+        .contextMenu {
+            Button {
+                HapticManager.shared.selection()
+                viewModel.toggleTaskCompletion(task.id)
+            } label: {
+                Label(isCompleted ? "Segna da completare" : "Segna come completata", systemImage: isCompleted ? "circle" : "checkmark.circle")
+            }
+
+            Button {
+                HapticManager.shared.selection()
+                viewModel.moveTaskToTomorrow(task)
+            } label: {
+                Label("Sposta a domani", systemImage: "arrow.right.circle")
+            }
+
+            Button {
+                HapticManager.shared.selection()
+                viewModel.duplicateTask(task)
+            } label: {
+                Label("Duplica", systemImage: "plus.square.on.square")
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                HapticManager.shared.impact(.medium)
+                viewModel.deleteTask(task)
+            } label: {
+                Label("Elimina", systemImage: "trash")
+            }
+        }
+        .sheet(isPresented: $showingDetailView) {
+            NavigationStack {
+                TaskDetailView(taskId: task.id, targetDate: viewModel.selectedDate)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
     }
 }

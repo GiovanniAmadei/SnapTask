@@ -74,10 +74,11 @@ class TaskManager: ObservableObject {
         var updatedTask = task
         updatedTask.lastModifiedDate = Date()
         
+        tasks.append(updatedTask)
+        
         // Handle notifications if enabled
         await handleTaskNotification(updatedTask, isNew: true)
         
-        tasks.append(updatedTask)
         saveTasks()
         notifyTasksUpdated()
         objectWillChange.send()
@@ -108,6 +109,9 @@ class TaskManager: ObservableObject {
             
             // Handle notification changes
             await handleTaskNotificationUpdate(oldTask: oldTask, newTask: task)
+            if let scheduledId = tasks[index].notificationId {
+                task.notificationId = scheduledId
+            }
 
             let calendar = Calendar.current
             let todayStart = calendar.startOfDay(for: Date())
@@ -161,7 +165,11 @@ class TaskManager: ObservableObject {
         print("📱 Upsert incoming task: \(incoming.name), category: \(incoming.category?.name ?? "none"), lastModified: \(incoming.lastModifiedDate ?? Date.distantPast)")
 
         if let index = tasks.firstIndex(where: { $0.id == incoming.id }) {
-            tasks[index] = incoming
+            var taskToStore = incoming
+            if taskToStore.notificationId == nil {
+                taskToStore.notificationId = tasks[index].notificationId
+            }
+            tasks[index] = taskToStore
             print("🔁 Upsert remote: replaced task \(incoming.name)")
         } else {
             tasks.append(incoming)
@@ -187,12 +195,18 @@ class TaskManager: ObservableObject {
         isUpdatingFromSync = false
         
         print(" Updated \(newTasks.count) tasks from sync")
+
+        Task {
+            await TaskNotificationManager.shared.rescheduleRecurringNotificationsRollingWindow(tasks: newTasks)
+        }
     }
     
     func removeTask(_ task: TodoTask) async {
         guard !isUpdatingFromSync else { return }
         
         print("TaskManager iOS: Removing task with ID: \(task.id.uuidString)")
+
+        await notificationManager.cancelAllNotificationsForTask(task.id)
         
         // Rimuovi i punti reward associati alla task se presente
         if task.hasRewardPoints {
@@ -215,13 +229,17 @@ class TaskManager: ObservableObject {
         // Delete from CloudKit
         CloudKitService.shared.deleteTask(task)
         
-        await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
+        await calendarIntegrationManager.deleteTaskFromCalendar(task.id, isRecurring: task.recurrence != nil)
         
         print(" Task removed: \(task.name)")
     }
     
     func removeTaskFromRemoteSync(_ task: TodoTask) {
         print("TaskManager iOS: Removing task from remote sync with ID: \(task.id.uuidString)")
+
+        Task {
+            await self.notificationManager.cancelAllNotificationsForTask(task.id)
+        }
         
         // Rimuovi i punti reward associati alla task se presente
         if task.hasRewardPoints {
@@ -245,7 +263,7 @@ class TaskManager: ObservableObject {
         
         // Rimuovi dal calendario se configurato
         Task {
-            await calendarIntegrationManager.deleteTaskFromCalendar(task.id)
+            await calendarIntegrationManager.deleteTaskFromCalendar(task.id, isRecurring: task.recurrence != nil)
         }
         
         print("✅ Task removed from remote sync: \(task.name)")
@@ -289,7 +307,24 @@ class TaskManager: ObservableObject {
         // Delete from CloudKit
         CloudKitService.shared.deleteTrackingSession(session)
         
-        print(" Tracking session deleted: \(session.deviceDisplayInfo)")
+        print("🗑 Tracking session deleted: \(session.deviceDisplayInfo)")
+    }
+    
+    func updateTrackingSession(_ session: TrackingSession) {
+        guard !isUpdatingFromSync else { return }
+        
+        var updated = session
+        updated.lastModifiedDate = Date()
+        
+        guard let index = trackingSessions.firstIndex(where: { $0.id == session.id }) else { return }
+        trackingSessions[index] = updated
+        saveTrackingSessions()
+        
+        // CloudKit save with same recordName = upsert (update)
+        CloudKitService.shared.saveTrackingSession(updated)
+        CloudKitService.shared.syncNow()
+        
+        print("✏️ Tracking session updated: \(updated.deviceDisplayInfo)")
     }
     
     func getTrackingSessionsFromDevice(_ deviceType: DeviceType) -> [TrackingSession] {
@@ -600,6 +635,7 @@ class TaskManager: ObservableObject {
             task.completions[completionDate] = completion
             
             if completion.isCompleted {
+                ConfettiManager.shared.trigger()
                 if !task.completionDates.contains(completionDate) {
                     task.completionDates.append(completionDate)
                     print("📅 Added completion date: \(completionDate)")
@@ -911,7 +947,7 @@ class TaskManager: ObservableObject {
         print(" Task performance data migration completed")
     }
     
-    private func notifyTasksUpdated() {
+    func notifyTasksUpdated() {
         NotificationCenter.default.post(name: Notification.Name("tasksDidUpdate"), object: nil)
     }
     
@@ -948,19 +984,27 @@ class TaskManager: ObservableObject {
     }
     
     func resetUserDefaults() {
-        // Remove persisted data
+        // Remove persisted data from standard UserDefaults
         UserDefaults.standard.removeObject(forKey: tasksKey)
         UserDefaults.standard.removeObject(forKey: trackingSessionsKey)
+        
+        // Remove persisted data from shared App Group UserDefaults
+        appGroupUserDefaults?.removeObject(forKey: tasksKey)
+        appGroupUserDefaults?.removeObject(forKey: trackingSessionsKey)
+        appGroupUserDefaults?.synchronize()
         
         // Also clear in-memory state to ensure UI updates immediately
         tasks = []
         trackingSessions = []
         
+        // Cancel notifications
+        notificationManager.cancelAllNotifications()
+        
         notifyTasksUpdated()
         objectWillChange.send()
         
-        // Trigger a sync to propagate deletions
-        CloudKitService.shared.syncNow()
+        // Reload widgets
+        WidgetCenter.shared.reloadAllTimelines()
     }
     
     private func removeTaskFromStatistics(_ taskId: UUID) {

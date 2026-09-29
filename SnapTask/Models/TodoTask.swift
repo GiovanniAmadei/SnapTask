@@ -83,13 +83,11 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var scopeEndDate: Date? = nil
     var notificationLeadTimeMinutes: Int = 0
     var autoCarryOver: Bool = false
+    var orderIndex: Double? = nil
     
     // Life Orchestration properties
     var domainId: UUID? = nil
     var goalId: UUID? = nil
-    
-    // UI Custom Order
-    var orderIndex: Double? = nil
 
     init(
         id: UUID = UUID(),
@@ -121,8 +119,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         notificationLeadTimeMinutes: Int = 0,
         autoCarryOver: Bool = false,
         domainId: UUID? = nil,
-        goalId: UUID? = nil,
-        orderIndex: Double? = nil
+        goalId: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -156,7 +153,6 @@ struct TodoTask: Identifiable, Codable, Equatable {
         self.autoCarryOver = autoCarryOver
         self.domainId = domainId
         self.goalId = goalId
-        self.orderIndex = orderIndex
     }
     
     var displayPeriod: String {
@@ -397,8 +393,7 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.notificationLeadTimeMinutes == rhs.notificationLeadTimeMinutes &&
         lhs.autoCarryOver == rhs.autoCarryOver &&
         lhs.domainId == rhs.domainId &&
-        lhs.goalId == rhs.goalId &&
-        lhs.orderIndex == rhs.orderIndex
+        lhs.goalId == rhs.goalId
     }
     
     // MARK: - Completion Key Helper
@@ -684,7 +679,6 @@ extension TodoTask {
         case autoCarryOver
         case domainId
         case goalId
-        case orderIndex
     }
     
     init(from decoder: Decoder) throws {
@@ -725,6 +719,5 @@ extension TodoTask {
         autoCarryOver = try c.decodeIfPresent(Bool.self, forKey: .autoCarryOver) ?? false
         domainId = try c.decodeIfPresent(UUID.self, forKey: .domainId)
         goalId = try c.decodeIfPresent(UUID.self, forKey: .goalId)
-        orderIndex = try c.decodeIfPresent(Double.self, forKey: .orderIndex)
     }
 }

@@ -34,6 +34,9 @@ extension String {
     static var delete: String { "delete".localized }
     static var done: String { "done".localized }
     static var add: String { "add".localized }
+    static var copy: String { "copy".localized }
+    static var cut: String { "cut".localized }
+    static var paste: String { "paste".localized }
     
     // Main tabs - computed properties that update automatically
     static var timeline: String { "timeline".localized }

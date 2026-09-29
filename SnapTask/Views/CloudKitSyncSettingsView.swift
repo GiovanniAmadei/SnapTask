@@ -337,7 +337,7 @@ struct SyncDetailsView: View {
                         .themedSecondaryText()
                 }
                 
-                if cloudKitService.syncStatus == .error("") {
+                if case .error = cloudKitService.syncStatus {
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("common_solutions".localized)
@@ -409,7 +409,7 @@ extension CloudKitService.SyncStatus {
         case .success:
             return "sync_success".localized
         case .error(let error):
-            return "sync_error".localized
+            return error.isEmpty ? "sync_error".localized : error
         case .disabled:
             return "sync_disabled".localized
         }

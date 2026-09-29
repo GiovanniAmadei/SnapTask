@@ -6,6 +6,9 @@
 "delete" = "Löschen";
 "done" = "Fertig";
 "add" = "Hinzufügen";
+"copy" = "Kopieren";
+"cut" = "Ausschneiden";
+"paste" = "Einfügen";
 "continue" = "Weiter";
 "back" = "Zurück";
 "skip" = "Überspringen";
@@ -1067,7 +1070,7 @@
 "weekly_overview" = "Wochenübersicht";
 "week_pts" = "Woche: {points} Pkt";
 "focus_time" = "Fokuszeit";
-"mark_incomplete" = "Als unvollständig markieren";
+"mark_incomplete" = "Unvollständig";
 "mark_complete" = "Als vollständig markieren";
 "recurring_task" = "Wiederkehrende Aufgabe";
 "has_duration" = "Hat Dauer";
@@ -1507,7 +1510,9 @@
 "current_income" = "Aktuelles Einkommen";
 "category_budgets" = "Kategorie-Budgets";
 "category_budgets_footer" = "Setze Ausgabenlimits für einzelne Kategorien";
+"swipe_to_edit_delete" = "Zum Bearbeiten oder Löschen wischen";
 "add_category_budget" = "Kategorie-Budget hinzufügen";
+"edit_budget" = "Budget bearbeiten";
 "monthly_limit" = "Monatliches Limit";
 "over_budget" = "Über Budget";
 "reset_finance_data" = "Alle Finanzdaten zurücksetzen";
@@ -1804,3 +1809,116 @@
 "widget_budget" = "Budget";
 "widget_no_data" = "Keine Finanzdaten";
 "widget_this_month" = "Diesen Monat";
+
+// MARK: - Quick Add App Intents
+"Add Quick Task" = "Schnelle Aufgabe hinzufügen";
+"Quick Add Task" = "Schnellaufgabe";
+"Quickly add a new task to your SnapTask timeline." = "Füge schnell eine neue Aufgabe zu deiner SnapTask-Zeitleiste hinzu.";
+"Open Quick Add" = "Schnellerfassung öffnen";
+"Opens SnapTask and shows the new-task sheet so you can type a task quickly." = "Öffnet SnapTask und zeigt das Blatt für eine neue Aufgabe, damit du sie schnell eingeben kannst.";
+"Task" = "Aufgabe";
+"What do you want to do?" = "Was möchtest du tun?";
+"Could not access SnapTask data." = "Es konnte nicht auf die SnapTask-Daten zugegriffen werden.";
+"Could not save the task." = "Die Aufgabe konnte nicht gespeichert werden.";
+"Add task to SnapTask" = "Aufgabe zu SnapTask hinzufügen";
+"Add task to \(_:)" = "Aufgabe zu %@ hinzufügen";
+"Add a task in \(_:)" = "Eine Aufgabe in %@ hinzufügen";
+"Quick add in \(_:)" = "Schnellerfassung in %@";
+"New task in \(_:)" = "Neue Aufgabe in %@";
+"Capture task in \(_:)" = "Aufgabe in %@ erfassen";
+"Added \"%@\" to SnapTask." = "\"%@\" wurde zu SnapTask hinzugefügt.";
+
+// Show Today's Tasks
+"Show Today's Tasks" = "Heutige Aufgaben anzeigen";
+"Today's Tasks" = "Heutige Aufgaben";
+"Lists the tasks you have planned for today." = "Listet die Aufgaben auf, die du für heute geplant hast.";
+"Show today's tasks in SnapTask" = "Heutige Aufgaben in SnapTask anzeigen";
+"You don't have any tasks yet in SnapTask." = "Du hast noch keine Aufgaben in SnapTask.";
+"Could not read your SnapTask tasks." = "Deine SnapTask-Aufgaben konnten nicht gelesen werden.";
+"You have no tasks for today. Enjoy!" = "Du hast heute keine Aufgaben. Genieß den Tag!";
+"All your %lld tasks for today are done. Great job!" = "Alle %lld Aufgaben von heute sind erledigt. Super gemacht!";
+"You have %lld tasks left for today (%lld already done):" = "Du hast heute noch %lld Aufgaben (%lld bereits erledigt):";
+"You have %lld tasks for today:" = "Du hast heute %lld Aufgaben:";
+"…and %lld more." = "…und %lld weitere.";
+
+// Session Conflict
+"session_conflict" = "Sitzungskonflikt";
+"active_session_running_desc" = "Sie haben bereits eine aktive Sitzung laufen";
+"current_session" = "Aktuell";
+"new_session" = "Neu";
+"keep_both" = "Beide behalten";
+"save_and_replace" = "Speichern & Ersetzen";
+"discard_and_replace" = "Verwerfen & Ersetzen";
+"reorder" = "Neuordnen";
+
+"view_all" = "Alle anzeigen";
+"all_sessions" = "Alle Sitzungen";
+"edit_session" = "Sitzung bearbeiten";
+"timing" = "Zeiten";
+"end_time" = "Endzeit";
+"add_notes_placeholder" = "Notizen hinzufügen...";
+
+// Celebrations & Recurrence
+"app_icon" = "App-Symbol";
+"celebrations" = "Feiern";
+"confetti_celebrations" = "Konfetti-Feiern";
+"confetti_celebrations_description" = "Partikelfeier beim Abschließen von Aufgaben anzeigen";
+"hide_days_bar" = "Tagesleiste ausblenden";
+"hide_days_bar_description" = "Die Tagesauswahlleiste in der Heute-Ansicht ausblenden";
+"postpone_single_occurrence" = "Nur das heutige Vorkommen auf morgen verschieben";
+
+// Edit scope (recurring tasks)
+"edit_scope_title" = "Bearbeitungsbereich";
+"edit_scope_description" = "Dies ist eine wiederkehrende Aufgabe. Wähle, ob die Änderungen nur für dieses Vorkommen oder die gesamte Serie gelten sollen.";
+"edit_scope_entire_series" = "Gesamte Serie";
+"edit_scope_single_instance" = "Nur dieses Vorkommen";
+
+"expand" = "Erweitern";
+"collapse" = "Reduzieren";
+
+
+// Contextual Recurrence & Notifications Actions (New)
+"repeats" = "Wiederholt sich";
+"every_n_weeks" = "Alle N Wochen";
+"weeks_of_month" = "Wochen des Monats";
+"pattern_modulo" = "Muster (Modulo)";
+"every_n_months" = "Alle N Monate";
+"specific_months" = "Bestimmte Monate";
+"every_n_years" = "Alle N Jahre";
+"week_unit" = "Woche";
+"weeks_unit" = "Wochen";
+"month_unit" = "Monat";
+"months_unit" = "Monate";
+"year_unit" = "Jahr";
+"years_unit" = "Jahre";
+"anchored_start_week" = "Verankert in der Startwoche der Aufgabe.";
+"anchored_start_month" = "Verankert im Startmonat der Aufgabe.";
+"anchored_start_year" = "Verankert im Startjahr der Aufgabe.";
+"select_weeks_of_month" = "Wochen des Monats auswählen";
+"select_months" = "Monate auswählen";
+"select_specific_months" = "Bestimmte Monate auswählen";
+"every_kth_week" = "Jede k-te Woche (k ≥ 2)";
+"every_k_years" = "Alle k Jahre (k ≥ 2)";
+"offset" = "Versatz";
+"even_weeks" = "Gerade Wochen";
+"odd_weeks" = "Ungerade Wochen";
+"even_years" = "Gerade Jahre";
+"odd_years" = "Ungerade Jahre";
+"modulo_weeks_formula_desc" = "Ausgewählte Wochen erfüllen: (Woche − Anker) % k = Versatz";
+"modulo_years_formula_desc" = "Ausgewählte Jahre erfüllen: (Jahr − Anker) % k = Versatz";
+"long_term_tasks_no_recurrence" = "Langfristige Aufgaben haben keine Wiederholungseinstellungen.";
+"last_ordinal" = "Letzte";
+"every_n_weeks_format" = "Alle %d Wochen";
+"weeks_of_month_prefix" = "Wochen des Monats: %@";
+"every_kth_week_offset_format" = "Jede %d.-Woche (Versatz %d)";
+"every_n_months_format" = "Alle %d Monate";
+"months_prefix" = "Monate: %@";
+"every_n_years_format" = "Alle %d Jahre";
+"every_k_years_offset_format" = "Alle %d Jahre (Versatz %d)";
+"no_recurrence" = "Keine Wiederholung";
+"mark_as_completed" = "Als erledigt markieren";
+"remind_me_in_1_hour" = "In 1 Stunde erinnern";
+"tomorrow_morning_9am" = "Morgen früh (09:00)";
+"recurrence_desc_week" = "Wiederholung auf Wochenebene konfigurieren (ohne bestimmte Tage).";
+"recurrence_desc_month" = "Wiederholung auf Monatsebene konfigurieren.";
+"recurrence_desc_year" = "Wiederholung auf Jahresebene konfigurieren.";

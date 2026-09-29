@@ -84,11 +84,11 @@ struct ContextualRecurrenceSettingsView: View {
         case .today:
             return "choose_how_often_daily_task".localized
         case .week:
-            return "Configura una ricorrenza a livello di settimana (senza giorni specifici)."
+            return "recurrence_desc_week".localized
         case .month:
-            return "Configura una ricorrenza a livello di mese."
+            return "recurrence_desc_month".localized
         case .year:
-            return "Configura una ricorrenza a livello di anno."
+            return "recurrence_desc_year".localized
         case .longTerm:
             return "long_term_goals_no_recurrence".localized
         case .all:
@@ -103,7 +103,7 @@ struct RecurrenceSummaryCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Si ripete")
+            Text("repeats".localized)
                 .font(.headline)
                 .themedPrimaryText()
             Text(viewModel.contextualRecurrenceSummary)
@@ -189,22 +189,22 @@ struct WeekRecurrenceSettingsCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Ricorrenza settimanale")
+            Text("weekly_recurrence".localized)
                 .font(.headline)
                 .themedPrimaryText()
                 .padding(.horizontal)
             
             HStack(spacing: 4) {
                 SegmentPill(
-                    title: "Ogni N settimane",
+                    title: "every_n_weeks".localized,
                     selected: viewModel.weekRecurrenceMode == .everyNWeeks
                 ) { viewModel.weekRecurrenceMode = .everyNWeeks }
                 SegmentPill(
-                    title: "Settimane del mese",
+                    title: "weeks_of_month".localized,
                     selected: viewModel.weekRecurrenceMode == .specificWeeksOfMonth
                 ) { viewModel.weekRecurrenceMode = .specificWeeksOfMonth }
                 SegmentPill(
-                    title: "Pattern (modulo)",
+                    title: "pattern_modulo".localized,
                     selected: viewModel.weekRecurrenceMode == .moduloPattern
                 ) { viewModel.weekRecurrenceMode = .moduloPattern }
             }
@@ -223,18 +223,18 @@ struct WeekRecurrenceSettingsCard: View {
             case .everyNWeeks:
                 VStack(spacing: 12) {
                     HStack {
-                        Text("Ripeti ogni")
+                        Text("repeat_every".localized)
                             .themedPrimaryText()
                         Spacer()
                         Stepper(value: $viewModel.weekInterval, in: 1...12) {
-                            Text("\(viewModel.weekInterval) \(viewModel.weekInterval == 1 ? "settimana" : "settimane")")
+                            Text("\(viewModel.weekInterval) \(viewModel.weekInterval == 1 ? "week_unit".localized : "weeks_unit".localized)")
                                 .foregroundColor(theme.primaryColor)
                         }
                         .frame(width: 200)
                     }
                     .padding(.horizontal)
                     
-                    Text("Ancorato alla settimana di inizio attività.")
+                    Text("anchored_start_week".localized)
                         .font(.caption)
                         .themedSecondaryText()
                         .padding(.horizontal)
@@ -242,7 +242,7 @@ struct WeekRecurrenceSettingsCard: View {
                 
             case .specificWeeksOfMonth:
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Seleziona settimane del mese")
+                    Text("select_weeks_of_month".localized)
                         .font(.subheadline)
                         .themedSecondaryText()
                         .padding(.horizontal)
@@ -257,7 +257,7 @@ struct WeekRecurrenceSettingsCard: View {
             case .moduloPattern:
                 VStack(spacing: 12) {
                     HStack {
-                        Text("Ogni k-esima settimana (k ≥ 2)")
+                        Text("every_kth_week".localized)
                             .themedPrimaryText()
                         Spacer()
                         Stepper(value: $viewModel.weekModuloK, in: 2...12) {
@@ -269,7 +269,7 @@ struct WeekRecurrenceSettingsCard: View {
                     .padding(.horizontal)
                     
                     HStack {
-                        Text("Offset")
+                        Text("offset".localized)
                             .themedPrimaryText()
                         Spacer()
                         Stepper(value: $viewModel.weekModuloOffset, in: 0...(max(0, viewModel.weekModuloK - 1))) {
@@ -281,12 +281,12 @@ struct WeekRecurrenceSettingsCard: View {
                     .padding(.horizontal)
                     
                     if viewModel.weekModuloK == 2 {
-                        Text(viewModel.weekModuloOffset == 0 ? "Settimane pari" : "Settimane dispari")
+                        Text(viewModel.weekModuloOffset == 0 ? "even_weeks".localized : "odd_weeks".localized)
                             .font(.caption)
                             .foregroundColor(theme.primaryColor)
                             .padding(.horizontal)
                     } else {
-                        Text("Le settimane selezionate soddisfano: (settimana − ancoraggio) % k = offset")
+                        Text("modulo_weeks_formula_desc".localized)
                             .font(.caption)
                             .themedSecondaryText()
                             .padding(.horizontal)
@@ -320,18 +320,18 @@ struct MonthRecurrenceSettingsCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Ricorrenza mensile")
+            Text("monthly_recurrence".localized)
                 .font(.headline)
                 .themedPrimaryText()
                 .padding(.horizontal)
             
             HStack(spacing: 4) {
                 SegmentPill(
-                    title: "Ogni N mesi",
+                    title: "every_n_months".localized,
                     selected: viewModel.monthRecurrenceMode == .everyNMonths
                 ) { viewModel.monthRecurrenceMode = .everyNMonths }
                 SegmentPill(
-                    title: "Mesi specifici",
+                    title: "specific_months".localized,
                     selected: viewModel.monthRecurrenceMode == .specificMonths
                 ) { viewModel.monthRecurrenceMode = .specificMonths }
             }
@@ -350,18 +350,18 @@ struct MonthRecurrenceSettingsCard: View {
             case .everyNMonths:
                 VStack(spacing: 12) {
                     HStack {
-                        Text("Ripeti ogni")
+                        Text("repeat_every".localized)
                             .themedPrimaryText()
                         Spacer()
                         Stepper(value: $viewModel.monthInterval, in: 1...12) {
-                            Text("\(viewModel.monthInterval) \(viewModel.monthInterval == 1 ? "mese" : "mesi")")
+                            Text("\(viewModel.monthInterval) \(viewModel.monthInterval == 1 ? "month_unit".localized : "months_unit".localized)")
                                 .foregroundColor(theme.primaryColor)
                         }
                         .frame(width: 200)
                     }
                     .padding(.horizontal)
                     
-                    Text("Ancorato al mese di inizio attività.")
+                    Text("anchored_start_month".localized)
                         .font(.caption)
                         .themedSecondaryText()
                         .padding(.horizontal)
@@ -369,7 +369,7 @@ struct MonthRecurrenceSettingsCard: View {
                 
             case .specificMonths:
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Seleziona mesi")
+                    Text("select_months".localized)
                         .font(.subheadline)
                         .themedSecondaryText()
                         .padding(.horizontal)
@@ -428,18 +428,18 @@ struct YearRecurrenceSettingsCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Ricorrenza annuale")
+            Text("yearly_recurrence".localized)
                 .font(.headline)
                 .themedPrimaryText()
                 .padding(.horizontal)
             
             HStack(spacing: 4) {
                 SegmentPill(
-                    title: "Ogni N anni",
+                    title: "every_n_years".localized,
                     selected: viewModel.yearRecurrenceMode == .everyNYears
                 ) { viewModel.yearRecurrenceMode = .everyNYears }
                 SegmentPill(
-                    title: "Pattern (modulo)",
+                    title: "pattern_modulo".localized,
                     selected: viewModel.yearRecurrenceMode == .moduloPattern
                 ) { viewModel.yearRecurrenceMode = .moduloPattern }
             }
@@ -458,18 +458,18 @@ struct YearRecurrenceSettingsCard: View {
             case .everyNYears:
                 VStack(spacing: 12) {
                     HStack {
-                        Text("Ripeti ogni")
+                        Text("repeat_every".localized)
                             .themedPrimaryText()
                         Spacer()
                         Stepper(value: $viewModel.yearInterval, in: 1...10) {
-                            Text("\(viewModel.yearInterval) \(viewModel.yearInterval == 1 ? "anno" : "anni")")
+                            Text("\(viewModel.yearInterval) \(viewModel.yearInterval == 1 ? "year_unit".localized : "years_unit".localized)")
                                 .foregroundColor(theme.primaryColor)
                         }
                         .frame(width: 200)
                     }
                     .padding(.horizontal)
                     
-                    Text("Ancorato all'anno di inizio attività.")
+                    Text("anchored_start_year".localized)
                         .font(.caption)
                         .themedSecondaryText()
                         .padding(.horizontal)
@@ -478,7 +478,7 @@ struct YearRecurrenceSettingsCard: View {
             case .moduloPattern:
                 VStack(spacing: 12) {
                     HStack {
-                        Text("Ogni k anni (k ≥ 2)")
+                        Text("every_k_years".localized)
                             .themedPrimaryText()
                         Spacer()
                         Stepper(value: $viewModel.yearModuloK, in: 2...10) {
@@ -490,7 +490,7 @@ struct YearRecurrenceSettingsCard: View {
                     .padding(.horizontal)
                     
                     HStack {
-                        Text("Offset")
+                        Text("offset".localized)
                             .themedPrimaryText()
                         Spacer()
                         Stepper(value: $viewModel.yearModuloOffset, in: 0...(max(0, viewModel.yearModuloK - 1))) {
@@ -502,12 +502,12 @@ struct YearRecurrenceSettingsCard: View {
                     .padding(.horizontal)
                     
                     if viewModel.yearModuloK == 2 {
-                        Text(viewModel.yearModuloOffset == 0 ? "Anni pari" : "Anni dispari")
+                        Text(viewModel.yearModuloOffset == 0 ? "even_years".localized : "odd_years".localized)
                             .font(.caption)
                             .foregroundColor(theme.primaryColor)
                             .padding(.horizontal)
                     } else {
-                        Text("Gli anni selezionati soddisfano: (anno − ancoraggio) % k = offset")
+                        Text("modulo_years_formula_desc".localized)
                             .font(.caption)
                             .themedSecondaryText()
                             .padding(.horizontal)
@@ -538,10 +538,10 @@ struct LongTermInfoCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Obiettivi a lungo termine")
+            Text("long_term_goals".localized)
                 .font(.headline)
                 .themedPrimaryText()
-            Text("Le attività a lungo termine non hanno impostazioni di ricorrenza.")
+            Text("long_term_tasks_no_recurrence".localized)
                 .font(.subheadline)
                 .themedSecondaryText()
         }
@@ -590,15 +590,16 @@ struct WrapOrdinalWeeks: View {
     @Environment(\.theme) private var theme
     
     private func label(for value: Int) -> String {
-        switch value {
-        case 1: return "1ª"
-        case 2: return "2ª"
-        case 3: return "3ª"
-        case 4: return "4ª"
-        case 5: return "5ª"
-        case -1: return "Ultima"
-        default: return "\(value)ª"
+        if value == -1 {
+            return "last_ordinal".localized
         }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .ordinal
+        formatter.locale = Locale(identifier: LanguageManager.shared.actualLanguageCode)
+        if let formatted = formatter.string(from: NSNumber(value: value)) {
+            return formatted
+        }
+        return "\(value)"
     }
     
     var body: some View {

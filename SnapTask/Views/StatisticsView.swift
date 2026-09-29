@@ -623,6 +623,7 @@ private struct DifficultyChart: View {
 
 private struct PerformanceTab: View {
     @ObservedObject var viewModel: StatisticsViewModel
+    @State private var selectedTimeRange: StatisticsViewModel.TimeRange = .week
     @State private var selectedTaskForSheet: StatisticsViewModel.TaskPerformanceAnalytics?
     @State private var highlightedTaskId: String?
     @Environment(\.theme) private var theme
@@ -654,11 +655,6 @@ private struct PerformanceTab: View {
         .sheet(item: $selectedTaskForSheet) { task in
             TaskPerformanceDetailView(task: task)
         }
-        .onAppear {
-            if viewModel.selectedTimeRange == .today {
-                viewModel.selectedTimeRange = .week
-            }
-        }
     }
     
     private var timeRangeSelector: some View {
@@ -678,10 +674,10 @@ private struct PerformanceTab: View {
                 ForEach(StatisticsViewModel.TimeRange.allCases.filter { $0 != .today }, id: \.self) { range in
                     TimeRangeButton(
                         range: range,
-                        isSelected: viewModel.selectedTimeRange == range,
+                        isSelected: selectedTimeRange == range,
                         action: {
                             withAnimation(.smooth(duration: 0.8)) {
-                                viewModel.selectedTimeRange = range
+                                selectedTimeRange = range
                             }
                         }
                     )
@@ -748,7 +744,7 @@ private struct PerformanceTab: View {
             let qualityData = generateQualityData()
             
             if !qualityData.isEmpty {
-                QualityChart(data: qualityData, timeRange: viewModel.selectedTimeRange, highlightedTaskId: $highlightedTaskId)
+                QualityChart(data: qualityData, timeRange: selectedTimeRange, highlightedTaskId: $highlightedTaskId)
                 
                 TaskLegendView(
                     tasks: qualityData.map { ($0.taskId, $0.taskName, $0.color) },
@@ -779,7 +775,7 @@ private struct PerformanceTab: View {
             let difficultyData = generateDifficultyData()
             
             if !difficultyData.isEmpty {
-                DifficultyChart(data: difficultyData, timeRange: viewModel.selectedTimeRange, highlightedTaskId: $highlightedTaskId)
+                DifficultyChart(data: difficultyData, timeRange: selectedTimeRange, highlightedTaskId: $highlightedTaskId)
                 
                 TaskLegendView(
                     tasks: difficultyData.map { ($0.taskId, $0.taskName, $0.color) },
@@ -797,28 +793,28 @@ private struct PerformanceTab: View {
     }
     
     private func generateQualityData() -> [TaskChartData] {
-        let (startDate, _) = viewModel.selectedTimeRange.dateRange
+        let (startDate, _) = selectedTimeRange.dateRange
         return viewModel.taskPerformanceAnalytics.compactMap { task in
             let rawPoints = task.completions.compactMap { completion -> ChartPoint? in
                 guard let rating = completion.qualityRating else { return nil }
                 return ChartPoint(value: Double(rating), date: completion.date)
             }.sorted { $0.date < $1.date }
             
-            let points = aggregate(points: rawPoints, startDate: startDate, for: viewModel.selectedTimeRange)
+            let points = aggregate(points: rawPoints, startDate: startDate, for: selectedTimeRange)
             guard !points.isEmpty else { return nil }
             return TaskChartData(taskId: task.taskId.uuidString, taskName: task.taskName, color: task.categoryColor ?? "#6366F1", points: points)
         }
     }
     
     private func generateDifficultyData() -> [TaskChartData] {
-        let (startDate, _) = viewModel.selectedTimeRange.dateRange
+        let (startDate, _) = selectedTimeRange.dateRange
         return viewModel.taskPerformanceAnalytics.compactMap { task in
             let rawPoints = task.completions.compactMap { completion -> ChartPoint? in
                 guard let rating = completion.difficultyRating else { return nil }
                 return ChartPoint(value: Double(rating), date: completion.date)
             }.sorted { $0.date < $1.date }
             
-            let points = aggregate(points: rawPoints, startDate: startDate, for: viewModel.selectedTimeRange)
+            let points = aggregate(points: rawPoints, startDate: startDate, for: selectedTimeRange)
             guard !points.isEmpty else { return nil }
             return TaskChartData(taskId: task.taskId.uuidString, taskName: task.taskName, color: task.categoryColor ?? "#6366F1", points: points)
         }
@@ -1132,7 +1128,13 @@ private struct TaskCompletionCard: View {
     }
     
     var body: some View {
-        VStack(spacing: 14) {
+        let stats = completionStats
+        let totalCompleted = stats.reduce(0) { $0 + $1.completedTasks }
+        let totalTasks = stats.reduce(0) { $0 + $1.totalTasks }
+        let hasTaskData = totalTasks > 0
+        let avgRate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
+
+        return VStack(spacing: 14) {
             VStack(spacing: 10) {
                 HStack {
                     Text("task_completion_rate".localized)
@@ -1155,7 +1157,7 @@ private struct TaskCompletionCard: View {
             }
             VStack(spacing: 10) {
                 if hasTaskData {
-                    Chart(completionStats) { stat in
+                    Chart(stats) { stat in
                         BarMark(
                             x: .value("day".localized, stat.day),
                             y: .value("completed".localized, Double(stat.completedTasks))
@@ -1182,15 +1184,12 @@ private struct TaskCompletionCard: View {
                             AxisValueLabel().font(.caption2).foregroundStyle(theme.textColor)
                         }
                     }
-                    .animation(.smooth(duration: 0.8), value: completionStats)
+                    .animation(.smooth(duration: 0.8), value: stats)
                     
                     HStack(spacing: 16) {
                         HStack(spacing: 6) { Circle().fill(Color.green).frame(width: 8, height: 8); Text("completed".localized).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(theme.textColor) }
                         HStack(spacing: 6) { Rectangle().fill(Color.gray.opacity(0.3)).frame(width: 8, height: 8); Text("total_available".localized).font(.system(.caption2, design: .rounded, weight: .medium)).foregroundColor(theme.textColor) }
                         Spacer()
-                        let totalCompleted = completionStats.reduce(0) { $0 + $1.completedTasks }
-                        let totalTasks = completionStats.reduce(0) { $0 + $1.totalTasks }
-                        let avgRate = totalTasks > 0 ? Double(totalCompleted) / Double(totalTasks) : 0.0
                         Text("\(Int(avgRate * 100))%").font(.system(.caption, design: .rounded, weight: .bold)).foregroundColor(theme.textColor)
                     }
                 } else {
@@ -1200,11 +1199,6 @@ private struct TaskCompletionCard: View {
         }
         .padding(16)
         .background(cardBackground)
-    }
-
-    private var hasTaskData: Bool {
-        let totalTasks = completionStats.reduce(0) { $0 + $1.totalTasks }
-        return totalTasks > 0
     }
 
     private var completionStats: [StatisticsViewModel.WeeklyStat] {
