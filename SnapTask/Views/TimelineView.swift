@@ -1750,6 +1750,136 @@ struct TimelineTaskCard: View {
 
     private let maxSwipeDistance: CGFloat = -210
 
+
+    @ViewBuilder
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center) {
+                Text(task.name)
+                    .font(.headline)
+                    .foregroundColor(theme.textColor)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
+                
+                if task.recurrence != nil && currentStreak > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "flame.fill")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 12))
+                        Text("\(currentStreak)")
+                            .font(.system(.caption, design: .rounded).bold())
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.orange.opacity(0.15))
+                    )
+                }
+                
+                Spacer()
+                
+                if !task.subtasks.isEmpty {
+                    Button(action: {
+                        withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
+                            isExpanded.toggle()
+                        }
+                    }) {
+                        VStack {
+                            if task.description != nil {
+                                Spacer()
+                            }
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 12))
+                                .foregroundColor(theme.secondaryTextColor)
+                                .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                                .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: isExpanded)
+                            if task.description != nil {
+                                Spacer()
+                            }
+                        }
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
+                }
+            }
+            .padding(.leading, 0)
+            
+            if let description = task.description {
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(theme.secondaryTextColor)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var scheduleBadge: some View {
+        if viewModel.selectedTimeScope == .today {
+            if task.hasSpecificTime {
+                let t = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
+                let timeText: String = {
+                    if task.hasDuration && task.duration > 0 {
+                        return TimeFormat.range(t, t.addingTimeInterval(task.duration))
+                    }
+                    return TimeFormat.time(t)
+                }()
+                
+                HStack(spacing: 4) {
+                    if isCurrentlyActiveNow {
+                        Circle()
+                            .fill(theme.primaryColor)
+                            .frame(width: 5, height: 5)
+                    }
+                    Text(timeText)
+                        .font(.system(.caption, design: .monospaced))
+                        .fontWeight(isCurrentlyActiveNow ? .bold : .medium)
+                        .foregroundColor(isCurrentlyActiveNow ? theme.primaryColor : theme.secondaryTextColor)
+                }
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(isCurrentlyActiveNow ? theme.primaryColor.opacity(0.12) : theme.surfaceColor)
+                .cornerRadius(4)
+            } else {
+                Text("all_day".localized)
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(4)
+            }
+        } else if (task.hasSpecificTime || task.hasSpecificDay), let dayText = dateBadgeText {
+            HStack(spacing: 6) {
+                Text(dayText)
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundColor(theme.secondaryTextColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(theme.surfaceColor)
+                    .cornerRadius(4)
+                if let timeText = timeBadgeText {
+                    Text(timeText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(theme.secondaryTextColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(theme.surfaceColor)
+                        .cornerRadius(4)
+                }
+            }
+            .lineLimit(1)
+            .fixedSize()
+        }
+    }
+
     var body: some View {
         ZStack {
             // Background actions layer
@@ -1841,123 +1971,19 @@ struct TimelineTaskCard: View {
                         .cornerRadius(2)
                         .padding(.vertical, 4)
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .center) {
-                            Text(task.name)
-                                .font(.headline)
-                                .foregroundColor(theme.textColor)
-                            
-                            if task.recurrence != nil && currentStreak > 0 {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "flame.fill")
-                                        .foregroundColor(.orange)
-                                        .font(.system(size: 12))
-                                    Text("\(currentStreak)")
-                                        .font(.system(.caption, design: .rounded).bold())
-                                        .foregroundColor(.orange)
-                                }
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color.orange.opacity(0.15))
-                                )
-                            }
-                            
-                            Spacer()
-                            
-                            if !task.subtasks.isEmpty {
-                                Button(action: {
-                                    withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
-                                        isExpanded.toggle()
-                                    }
-                                }) {
-                                    VStack {
-                                        if task.description != nil {
-                                            Spacer()
-                                        }
-                                        Image(systemName: "chevron.down")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(theme.secondaryTextColor)
-                                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                                            .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: isExpanded)
-                                        if task.description != nil {
-                                            Spacer()
-                                        }
-                                    }
-                                    .frame(width: 24, height: 24)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(BorderlessButtonStyle())
-                            }
+                    // Title and schedule badge share the row when they fit; otherwise the
+                    // badge drops below the title so long names never break mid-word.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .center, spacing: 8) {
+                            titleBlock
+                            scheduleBadge
                         }
-                        .padding(.leading, 0)
-                        
-                        if let description = task.description {
-                            Text(description)
-                                .font(.subheadline)
-                                .foregroundColor(theme.secondaryTextColor)
-                                .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 4) {
+                            titleBlock
+                            scheduleBadge
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Spacer()
-                    
-                    if viewModel.selectedTimeScope == .today {
-                        if task.hasSpecificTime {
-                            let t = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
-                            let timeText: String = {
-                                if task.hasDuration && task.duration > 0 {
-                                    return TimeFormat.range(t, t.addingTimeInterval(task.duration))
-                                }
-                                return TimeFormat.time(t)
-                            }()
-                            
-                            HStack(spacing: 4) {
-                                if isCurrentlyActiveNow {
-                                    Circle()
-                                        .fill(theme.primaryColor)
-                                        .frame(width: 5, height: 5)
-                                }
-                                Text(timeText)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .fontWeight(isCurrentlyActiveNow ? .bold : .medium)
-                                    .foregroundColor(isCurrentlyActiveNow ? theme.primaryColor : theme.secondaryTextColor)
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(isCurrentlyActiveNow ? theme.primaryColor.opacity(0.12) : theme.surfaceColor)
-                            .cornerRadius(4)
-                        } else {
-                            Text("all_day".localized)
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundColor(.blue)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(4)
-                        }
-                    } else if (task.hasSpecificTime || task.hasSpecificDay), let dayText = dateBadgeText {
-                        HStack(spacing: 6) {
-                            Text(dayText)
-                                .font(.system(.caption, design: .rounded))
-                                .foregroundColor(theme.secondaryTextColor)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(theme.surfaceColor)
-                                .cornerRadius(4)
-                            if let timeText = timeBadgeText {
-                                Text(timeText)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(theme.secondaryTextColor)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(theme.surfaceColor)
-                                    .cornerRadius(4)
-                            }
-                        }
-                    }
                     
                     Image(systemName: task.priority.icon)
                         .foregroundColor(Color(hex: task.priority.color))

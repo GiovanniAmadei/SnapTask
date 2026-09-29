@@ -62,9 +62,27 @@ enum TimeFormat {
         formatter(template: "jmm").string(from: date)
     }
 
-    /// "14:30 - 15:00" style range.
+    private static var intervalCache: [String: DateIntervalFormatter] = [:]
+
+    /// Compact, locale-aware range: "14:30 – 15:00" or "2:30 – 3:00 PM" (shared AM/PM is not repeated).
     static func range(_ start: Date, _ end: Date) -> String {
-        "\(time(start)) - \(time(end))"
+        guard Calendar.current.isDate(start, inSameDayAs: end) else {
+            // Across midnight the interval formatter would add dates; keep it to two times.
+            return "\(time(start)) – \(time(end))"
+        }
+        let preference = TimeFormatPreference.current
+        let key = "\(preference.rawValue)|\(Locale.current.identifier)"
+        lock.lock(); defer { lock.unlock() }
+        let f: DateIntervalFormatter
+        if let cached = intervalCache[key] {
+            f = cached
+        } else {
+            f = DateIntervalFormatter()
+            f.locale = preference.locale
+            f.dateTemplate = "jmm"
+            intervalCache[key] = f
+        }
+        return f.string(from: start, to: end)
     }
 
     /// Hour only, e.g. "14" or "2 PM" (chart axes, timeline rows).
