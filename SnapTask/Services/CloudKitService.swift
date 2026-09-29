@@ -449,6 +449,21 @@ class CloudKitService: ObservableObject {
                 let record = createCategoryRecord(from: category)
                 _ = try await privateDatabase.save(record)
                 print(" Category saved: \(category.name)")
+            } catch let error as CKError where category.icon != nil
+                        && (error.code == .invalidArguments || error.code == .serverRejectedRequest) {
+                // The production schema may not have the "icon" field yet (added in 1.8):
+                // sync name and color anyway, the icon stays local until the schema is deployed.
+                print(" Category save rejected, retrying without icon: \(error.localizedDescription)")
+                var withoutIcon = category
+                withoutIcon.icon = nil
+                do {
+                    _ = try await privateDatabase.save(createCategoryRecord(from: withoutIcon))
+                    print(" Category saved without icon: \(category.name)")
+                } catch let retryError as CKError {
+                    await handleCloudKitError(retryError)
+                } catch {
+                    await handleSyncError(error)
+                }
             } catch let error as CKError {
                 print(" CloudKit error saving category: \(error.localizedDescription)")
                 await handleCloudKitError(error)
