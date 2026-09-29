@@ -43,6 +43,14 @@ class WatchConnectivityHandler: NSObject, ObservableObject {
                 self?.sendFullSyncToWatch()
             }
             .store(in: &cancellables)
+        
+        // Sync to Watch when categories change
+        NotificationCenter.default.publisher(for: .categoriesDidUpdate)
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.sendFullSyncToWatch()
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Send Data to Watch
@@ -244,6 +252,45 @@ class WatchConnectivityHandler: NSObject, ObservableObject {
         TaskManager.shared.saveTrackingSession(trackingSession)
         print("📱 Tracking session saved from Watch: \(trackingSession.taskName ?? "Unknown")")
     }
+    
+    private func handleCategoryUpdate(_ message: [String: Any]) {
+        var categoryData: Data?
+        
+        if let base64String = message["categoryBase64"] as? String {
+            categoryData = Data(base64Encoded: base64String)
+        } else if let data = message["category"] as? Data {
+            categoryData = data
+        }
+        
+        guard let data = categoryData,
+              let category = try? JSONDecoder().decode(Category.self, from: data) else {
+            print("📱 Failed to decode category from Watch")
+            return
+        }
+        
+        // Upsert category: add if new, update if exists
+        if CategoryManager.shared.categories.contains(where: { $0.id == category.id }) {
+            CategoryManager.shared.updateCategory(category)
+            print("📱 Category updated from Watch: \(category.name)")
+        } else {
+            CategoryManager.shared.addCategory(category)
+            print("📱 Category added from Watch: \(category.name)")
+        }
+    }
+    
+    private func handleCategoryDeletion(_ message: [String: Any]) {
+        guard let categoryIdString = message["categoryId"] as? String,
+              let categoryId = UUID(uuidString: categoryIdString) else {
+            return
+        }
+        
+        if let category = CategoryManager.shared.categories.first(where: { $0.id == categoryId }) {
+            Task {
+                await CategoryManager.shared.forceRemoveCategory(category)
+            }
+            print("📱 Category deleted from Watch: \(category.name)")
+        }
+    }
 }
 
 // MARK: - WCSessionDelegate
@@ -321,6 +368,14 @@ extension WatchConnectivityHandler: WCSessionDelegate {
                 
             case "saveTrackingSession":
                 self.handleTrackingSession(message)
+                replyHandler?(["status": "success"])
+                
+            case "updateCategory":
+                self.handleCategoryUpdate(message)
+                replyHandler?(["status": "success"])
+                
+            case "deleteCategory":
+                self.handleCategoryDeletion(message)
                 replyHandler?(["status": "success"])
                 
             default:
