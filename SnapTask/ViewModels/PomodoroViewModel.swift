@@ -50,7 +50,16 @@ class PomodoroViewModel: ObservableObject {
     }
     
     private var timer: AnyCancellable? {
-        didSet { Logger.pomodoro("Timer state updated: \(self.timer != nil)", level: .debug) }
+        didSet {
+            // Only log real transitions (nil ↔ non-nil). Assigning `nil`
+            // to an already-nil timer is a common idempotent code path
+            // (e.g. `stop()` called on an already-stopped session) and
+            // logging every one of those flooded the console.
+            let wasNil = oldValue == nil
+            let isNil = timer == nil
+            guard wasNil != isNil else { return }
+            Logger.pomodoro("Timer state updated: \(!isNil)", level: .debug)
+        }
     }
     private var startDate: Date?
     private var pausedTimeRemaining: TimeInterval?
@@ -91,11 +100,37 @@ class PomodoroViewModel: ObservableObject {
         restorePersistedStateIfNeeded()
         
         NotificationCenter.default.publisher(for: .pomodoroSettingsUpdated)
+            // Defer to the next run-loop tick so we never re-enter a SwiftUI
+            // update cycle (which was causing a feedback loop between
+            // setActiveTask → updateSettings → sink → objectWillChange → body).
+            .receive(on: RunLoop.main)
             .sink { [weak self] notification in
-                if let context = notification.object as? PomodoroContext,
-                   context == self?.context {
-                    self?.applySettingsToCurrentSession()
+                // Compare contexts explicitly: PomodoroContext is a Swift enum
+                // bridged as `Any?` through NotificationCenter; the cast below
+                // returns nil on older iOS versions in rare cases, so we also
+                // accept a nil object as "any context" to stay permissive.
+                guard let self else { return }
+                let notifContext = notification.object as? PomodoroContext
+                if notifContext == nil || notifContext == self.context {
+                    self.applySettingsToCurrentSession()
                 }
+            }
+            .store(in: &cancellables)
+        
+        // Forward settings-manager changes into this VM so any view that
+        // observes the VM (e.g. session counter "2/6") re-renders as soon
+        // as the user saves new settings — without this, the counter would
+        // still say "2/4" until another @Published value changes.
+        //
+        // `receive(on: RunLoop.main)` is critical: forwarding
+        // `objectWillChange` synchronously while SwiftUI is already updating
+        // the body triggers "Publishing changes from within view updates" and,
+        // combined with an `onAppear`-driven re-entry in `setActiveTask`,
+        // produced an infinite loop of `timer = nil` assignments.
+        settingsManager.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
             }
             .store(in: &cancellables)
     }
@@ -215,10 +250,35 @@ class PomodoroViewModel: ObservableObject {
                 } else {
                     startDate = Date()
                     startTimer()
+                    // Re-align Live Activity on app relaunch. The manager
+                    // reattaches to an existing activity in its init, so
+                    // calling start() here simply refreshes the endDate
+                    // (or creates one if it was lost).
+                    LiveActivityManager.shared.start(
+                        taskName: activeTask?.name ?? "Focus Session",
+                        categoryColorHex: activeTask?.category?.color,
+                        categoryName: activeTask?.category?.name,
+                        phase: liveActivityPhase,
+                        timeRemaining: newRemaining,
+                        phaseTotalDuration: currentLiveActivityPhaseDuration,
+                        currentSession: currentSession,
+                        totalSessions: settings.totalSessions
+                    )
                 }
             } else {
                 // paused/notStarted/completed
                 self.timeRemaining = saved.timeRemaining
+                if self.state == .paused {
+                    LiveActivityManager.shared.update(
+                        phase: .paused,
+                        timeRemaining: self.timeRemaining,
+                        phaseTotalDuration: currentLiveActivityPhaseDuration,
+                        currentSession: currentSession,
+                        totalSessions: settings.totalSessions
+                    )
+                } else if self.state == .completed {
+                    LiveActivityManager.shared.end(dismissImmediately: false)
+                }
             }
         } catch {
             Logger.pomodoro("Failed decoding persisted state: \(error)", level: .error)
@@ -324,11 +384,41 @@ class PomodoroViewModel: ObservableObject {
         }
     }
     
+    /// Current effective phase (working or onBreak), correctly resolved even when paused.
+    var effectivePhase: PomodoroState {
+        if state == .paused {
+            return pausedState ?? .working
+        }
+        if state == .notStarted {
+            return .working
+        }
+        return state
+    }
+    
+    var isWorkingPhase: Bool {
+        return effectivePhase == .working
+    }
+    
+    /// Total focus time accumulated so far across full completed sessions plus the current in-flight work session.
+    var totalTrackedFocusTime: TimeInterval {
+        let fullCompletedTime = Double(completedWorkSessions.count) * settings.workDuration
+        let currentSessionWorkTime: TimeInterval
+        if effectivePhase == .working {
+            currentSessionWorkTime = max(0, settings.workDuration - timeRemaining)
+        } else {
+            // If on break, the work portion of this session is already accounted for in completedWorkSessions
+            currentSessionWorkTime = 0
+        }
+        return fullCompletedTime + currentSessionWorkTime
+    }
+    
     var progress: Double {
         guard state != .notStarted && state != .completed else { return 0.0 }
         
-        let total = state == .working ? settings.workDuration : 
-                   (currentSession % settings.sessionsUntilLongBreak == 0 ? 
+        let isWork = effectivePhase == .working
+        let divisor = max(1, settings.sessionsUntilLongBreak)
+        let total = isWork ? settings.workDuration : 
+                   (currentSession % divisor == 0 ? 
                     settings.longBreakDuration : settings.breakDuration)
         guard total > 0 else {
             Logger.pomodoro("Invalid timer duration configuration", level: .error)
@@ -343,45 +433,72 @@ class PomodoroViewModel: ObservableObject {
         guard state != .notStarted else { return 0.0 }
         
         let totalWorkTime = Double(settings.totalSessions) * settings.workDuration
+        guard totalWorkTime > 0 else { return 0.0 }
         let completedWorkTime = Double(completedWorkSessions.count) * settings.workDuration
         
-        // Add current session progress if working
-        let currentProgress = state == .working ? progress * settings.workDuration : 0
+        // Add current session progress if in working phase (even if paused)
+        let currentProgress = effectivePhase == .working ? progress * settings.workDuration : 0
         
         return min(1.0, (completedWorkTime + currentProgress) / totalWorkTime)
     }
     
     // Set active task and configure settings for task context
     func setActiveTask(_ task: TodoTask) {
-        if activeTask?.id != task.id || state == .notStarted {
-            // Stop current timer if running
-            timer?.cancel()
-            timer = nil
-            
-            self.activeTask = task
-            self.context = .task
-            
-            // Use task-specific settings or default task settings
-            let taskSettings = task.pomodoroSettings ?? settingsManager.taskSettings
-            settingsManager.updateSettings(taskSettings, for: .task)
-            
-            self.timeRemaining = taskSettings.workDuration
-            self.currentSession = 1
-            self.completedWorkSessions = []
-            self.completedBreakSessions = []
-            self.state = .notStarted
-            self.startDate = nil
-            self.pausedTimeRemaining = nil
-            self.pausedState = nil
-            
-            self.sessionStartTime = nil
-            self.pauseStartTime = nil
-            self.totalPausedTime = 0
-            persistState()
-        }
+        // Bail out when the task is already the active one.
+        //
+        // Important: we do NOT also reset on `state == .notStarted` here.
+        // That condition caused an infinite loop because
+        // `PomodoroView.onAppear` uses `isActiveTask(task)` which in turn
+        // requires `state != .notStarted` — so right after `setActiveTask`
+        // (which leaves state == .notStarted) any re-evaluation of
+        // `onAppear` would call `setActiveTask` again, firing all the
+        // @Published setters and re-entering the update cycle.
+        guard activeTask?.id != task.id else { return }
+        
+        // Stop current timer and tear down any in-flight Live Activity:
+        // it was referring to the previous task so the user-visible name
+        // and color are now stale.
+        timer?.cancel()
+        timer = nil
+        LiveActivityManager.shared.end(dismissImmediately: true)
+        
+        self.activeTask = task
+        self.context = .task
+        
+        // Use task-specific settings or default task settings
+        let taskSettings = task.pomodoroSettings ?? settingsManager.taskSettings
+        settingsManager.updateSettings(taskSettings, for: .task)
+        
+        self.timeRemaining = taskSettings.workDuration
+        self.currentSession = 1
+        self.completedWorkSessions = []
+        self.completedBreakSessions = []
+        self.state = .notStarted
+        self.startDate = nil
+        self.pausedTimeRemaining = nil
+        self.pausedState = nil
+        
+        self.sessionStartTime = nil
+        self.pauseStartTime = nil
+        self.totalPausedTime = 0
+        persistState()
     }
     
     func initializeGeneralSession() {
+        // Idempotent: once we're already in a fresh general-context
+        // session there's nothing to do. Re-running this would reset
+        // every @Published value and trigger another round of SwiftUI
+        // updates — which, combined with `PomodoroTabView.onAppear` that
+        // calls this method, produced the `timer = nil` freeze loop.
+        if context == .general
+            && state == .notStarted
+            && activeTask == nil
+            && currentSession == 1
+            && completedWorkSessions.isEmpty
+            && completedBreakSessions.isEmpty {
+            return
+        }
+        
         stop()
         self.activeTask = nil
         self.context = .general
@@ -417,7 +534,9 @@ class PomodoroViewModel: ObservableObject {
     func start() {
         guard timer == nil else { return }
         
-        if state == .paused {
+        let wasPaused = (state == .paused)
+        
+        if wasPaused {
             state = pausedState ?? .working
             if let pauseStart = pauseStartTime {
                 totalPausedTime += Date().timeIntervalSince(pauseStart)
@@ -435,6 +554,29 @@ class PomodoroViewModel: ObservableObject {
         Task {
             await scheduleSessionEndNotification()
         }
+        
+        // Live Activity: start fresh or resume from paused
+        if wasPaused {
+            LiveActivityManager.shared.update(
+                phase: liveActivityPhase,
+                timeRemaining: timeRemaining,
+                phaseTotalDuration: currentLiveActivityPhaseDuration,
+                currentSession: currentSession,
+                totalSessions: settings.totalSessions
+            )
+        } else {
+            LiveActivityManager.shared.start(
+                taskName: activeTask?.name ?? "Focus Session",
+                categoryColorHex: activeTask?.category?.color,
+                categoryName: activeTask?.category?.name,
+                phase: liveActivityPhase,
+                timeRemaining: timeRemaining,
+                phaseTotalDuration: currentLiveActivityPhaseDuration,
+                currentSession: currentSession,
+                totalSessions: settings.totalSessions
+            )
+        }
+        
         persistState()
     }
     
@@ -459,6 +601,15 @@ class PomodoroViewModel: ObservableObject {
         
         // Remove notifications
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        
+        LiveActivityManager.shared.update(
+            phase: .paused,
+            timeRemaining: timeRemaining,
+            phaseTotalDuration: currentLiveActivityPhaseDuration,
+            currentSession: currentSession,
+            totalSessions: settings.totalSessions
+        )
+        
         persistState()
     }
     
@@ -477,6 +628,17 @@ class PomodoroViewModel: ObservableObject {
             sessionStartTime = Date()
             totalPausedTime = 0
             
+            // start() bails out early because the timer is already running;
+            // update the Live Activity explicitly so the phase/endDate
+            // reflect the new break window.
+            LiveActivityManager.shared.update(
+                phase: .onBreak,
+                timeRemaining: timeRemaining,
+                phaseTotalDuration: currentLiveActivityPhaseDuration,
+                currentSession: currentSession,
+                totalSessions: settings.totalSessions
+            )
+            
             start()
         } else {
             completedBreakSessions.insert(currentSession - 1)
@@ -486,6 +648,19 @@ class PomodoroViewModel: ObservableObject {
     }
     
     func stop() {
+        // Idempotent: if we're already fully stopped, don't re-publish a
+        // bunch of @Published values (which would kick off another SwiftUI
+        // update cycle and, combined with certain `onAppear` hooks, cause
+        // a feedback loop).
+        if state == .notStarted
+            && timer == nil
+            && currentSession == 1
+            && completedWorkSessions.isEmpty
+            && completedBreakSessions.isEmpty
+            && pausedState == nil {
+            return
+        }
+        
         timer?.cancel()
         timer = nil
         state = .notStarted
@@ -503,6 +678,9 @@ class PomodoroViewModel: ObservableObject {
         
         // Remove notifications
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        
+        // End Live Activity
+        LiveActivityManager.shared.end(dismissImmediately: true)
         
         // Clean up UserDefaults
         UserDefaults.standard.removeObject(forKey: "pomodoro_background_timestamp")
@@ -534,6 +712,7 @@ class PomodoroViewModel: ObservableObject {
         if currentSession >= settings.totalSessions {
             state = .completed
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            LiveActivityManager.shared.end(dismissImmediately: false)
             // Clear persisted state when cycle is completed
             UserDefaults.standard.removeObject(forKey: persistedKey)
             return
@@ -552,6 +731,16 @@ class PomodoroViewModel: ObservableObject {
         Task {
             await scheduleSessionEndNotification()
         }
+        
+        // Transition Live Activity to break phase
+        LiveActivityManager.shared.update(
+            phase: .onBreak,
+            timeRemaining: timeRemaining,
+            phaseTotalDuration: currentLiveActivityPhaseDuration,
+            currentSession: currentSession,
+            totalSessions: settings.totalSessions
+        )
+        
         // Persist after transitioning to break
         persistState()
     }
@@ -567,6 +756,7 @@ class PomodoroViewModel: ObservableObject {
         if currentSession > settings.totalSessions {
             state = .completed
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            LiveActivityManager.shared.end(dismissImmediately: false)
             // Clear persisted state when cycle is completed
             UserDefaults.standard.removeObject(forKey: persistedKey)
             return
@@ -584,28 +774,98 @@ class PomodoroViewModel: ObservableObject {
         Task {
             await scheduleSessionEndNotification()
         }
+        
+        // Transition Live Activity back to working phase
+        LiveActivityManager.shared.update(
+            phase: .working,
+            timeRemaining: timeRemaining,
+            phaseTotalDuration: currentLiveActivityPhaseDuration,
+            currentSession: currentSession,
+            totalSessions: settings.totalSessions
+        )
+        
         // Persist after transitioning back to work
         persistState()
     }
     
     private func applySettingsToCurrentSession() {
+        // Keep currentSession inside the new valid range. If the user
+        // lowered totalSessions below the in-flight session, clamp it so
+        // the UI and Live Activity stay consistent.
+        let newTotal = max(1, settings.totalSessions)
+        if currentSession > newTotal {
+            currentSession = newTotal
+        }
+        
         // If session hasn't started or is completed, update time remaining
-        if state == .notStarted {
+        switch state {
+        case .notStarted:
             timeRemaining = settings.workDuration
-        } 
-        // If currently working and progress is 0 (just started), update duration
-        else if state == .working && progress < 0.01 {
+        case .working where progress < 0.01:
+            // Just started working — safe to apply new work duration.
             timeRemaining = settings.workDuration
-        }
-        // If on break and progress is 0 (just started break), update break duration
-        else if state == .onBreak && progress < 0.01 {
-            let isLongBreak = currentSession % settings.sessionsUntilLongBreak == 0
+        case .onBreak where progress < 0.01:
+            // Just started the break — safe to apply new break duration.
+            let divisor = max(1, settings.sessionsUntilLongBreak)
+            let isLongBreak = currentSession % divisor == 0
             timeRemaining = isLongBreak ? settings.longBreakDuration : settings.breakDuration
+        default:
+            // Mid-session: do NOT reset timeRemaining (it would be jarring
+            // to the user). Just let the new totals propagate to the UI.
+            break
         }
+        
+        // Keep the Live Activity session totals in sync so the Dynamic
+        // Island progress bar matches the new configuration.
+        if state == .working || state == .onBreak || state == .paused {
+            LiveActivityManager.shared.update(
+                phase: liveActivityPhase,
+                timeRemaining: timeRemaining,
+                phaseTotalDuration: currentLiveActivityPhaseDuration,
+                currentSession: currentSession,
+                totalSessions: newTotal
+            )
+        }
+        
+        persistState()
     }
     
     private var pausedState: PomodoroState?
     
+    /// Map internal Pomodoro state to the Live Activity phase.
+    private var liveActivityPhase: PomodoroActivityAttributes.ContentState.Phase {
+        switch state {
+        case .working:
+            return .working
+        case .onBreak:
+            return .onBreak
+        case .paused:
+            return .paused
+        case .notStarted, .completed:
+            return .working
+        }
+    }
+    
+    private var currentLiveActivityPhaseDuration: TimeInterval {
+        let divisor = max(1, settings.sessionsUntilLongBreak)
+
+        switch state {
+        case .working:
+            return settings.workDuration
+        case .onBreak:
+            return currentSession % divisor == 0 ? settings.longBreakDuration : settings.breakDuration
+        case .paused:
+            switch pausedState {
+            case .onBreak:
+                return currentSession % divisor == 0 ? settings.longBreakDuration : settings.breakDuration
+            case .working, .paused, .notStarted, .completed, .none:
+                return settings.workDuration
+            }
+        case .notStarted, .completed:
+            return settings.workDuration
+        }
+    }
+
     func isSessionCompleted(session: Int, isWork: Bool) -> Bool {
         if isWork {
             return completedWorkSessions.contains(session)

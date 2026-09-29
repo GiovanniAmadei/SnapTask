@@ -1,9 +1,14 @@
 import SwiftUI
 
+/// General (task-less) Pomodoro screen rendered inside the Focus tab.
+///
+/// Presentation layer only: the shared body (timer hero + session
+/// overview + controls) lives in `PomodoroSessionView` so it stays
+/// identical to the per-task fullscreen experience.
 struct PomodoroTabView: View {
     @StateObject private var viewModel = PomodoroViewModel.shared
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var showingCompletionSheet = false
     @State private var completedFocusTime: TimeInterval = 0
     @AppStorage("pomodoroFocusColor") private var focusColorHex = "#4F46E5"
@@ -12,7 +17,8 @@ struct PomodoroTabView: View {
     private var focusColor: Color { Color(hex: focusColorHex) }
     private var breakColor: Color { Color(hex: breakColorHex) }
     
-    // Create a placeholder task for general pomodoro sessions
+    /// Placeholder task used by the completion sheet when the user
+    /// finishes a general (non-task) focus session.
     private var generalPomodoroTask: TodoTask {
         TodoTask(
             name: "general_focus_session".localized,
@@ -24,244 +30,56 @@ struct PomodoroTabView: View {
         )
     }
     
+    private var isTaskContext: Bool { viewModel.activeTask != nil }
+    
+    private var settingsContext: PomodoroContext { isTaskContext ? .task : .general }
+    
     var body: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    // Fix spacing like PomodoroView
-                    VStack(spacing: 0) {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(height: 20)
-                        
-                        VStack(spacing: 16) {
-                            // Session indicator and Settings button
-                            HStack {
-                                // Session indicator
-                                HStack(spacing: 4) {
-                                    Text("session".localized)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
-                                        .font(.caption)
-                                        .foregroundColor(.primary)
-                                }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule()
-                                        .fill(Color(.systemGray6))
-                                )
-                                
-                                Spacer()
-                                
-                                // Settings button
-                                NavigationLink {
-                                    ContextualPomodoroSettingsView(context: .general)
-                                } label: {
-                                    Image(systemName: "gear")
-                                        .font(.body.weight(.medium))
-                                        .foregroundColor(.blue)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(
-                                            Capsule()
-                                                .fill(Color.blue.opacity(0.1))
-                                        )
-                                }
+            Group {
+                if showingCompletionSheet {
+                    PomodoroCompletionView(
+                        task: viewModel.activeTask ?? generalPomodoroTask,
+                        focusTimeCompleted: completedFocusTime
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                } else {
+                    PomodoroSessionView(
+                        viewModel: viewModel,
+                        focusColor: focusColor,
+                        breakColor: breakColor,
+                        onStop: { handleStop() },
+                        onTogglePlayPause: { togglePlayPause() },
+                        onSkip: { viewModel.skip() }
+                    ) {
+                        PomodoroScreenHeader(
+                            title: viewModel.activeTask?.name ?? "general_focus_session".localized,
+                            subtitle: viewModel.activeTask?.category?.name,
+                            accent: viewModel.activeTask?.category.map { Color(hex: $0.color) },
+                            sessionText: "\(viewModel.currentSession)/\(viewModel.totalSessions)",
+                            settingsDestination: {
+                                ContextualPomodoroSettingsView(context: self.settingsContext, presentedAsSheet: false)
                             }
-                            .padding(.horizontal, 24)
-                            
-                            ZStack {
-                                // Outer progress ring - subtle background
-                                Circle()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [
-                                                (viewModel.state == .working ? focusColor : breakColor).opacity(0.1),
-                                                (viewModel.state == .working ? focusColor : breakColor).opacity(0.1)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 6
-                                    )
-                                    .frame(width: 220, height: 220)
-                                
-                                // Progress ring with gradient
-                                Circle()
-                                    .trim(from: 0.0, to: viewModel.progress)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: viewModel.state == .working ? 
-                                                [focusColor, focusColor.opacity(0.7)] : [breakColor, breakColor.opacity(0.7)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        style: StrokeStyle(
-                                            lineWidth: 6,
-                                            lineCap: .round
-                                        )
-                                    )
-                                    .frame(width: 220, height: 220)
-                                    .rotationEffect(Angle(degrees: -90))
-                                    .animation(.easeInOut(duration: 0.3), value: viewModel.progress)
-                                
-                                // Inner content
-                                VStack(spacing: 8) {
-                                    // Session state with icon
-                                    HStack(spacing: 6) {
-                                        Image(systemName: viewModel.state == .working ? "brain.head.profile" : "cup.and.saucer.fill")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(viewModel.state == .working ? focusColor : breakColor)
-                                        
-                                        Text(viewModel.state == .working ? "focus_time".localized : "break_time".localized)
-                                            .font(.system(.subheadline, design: .rounded))
-                                            .foregroundColor(.secondary)
-                                    }
-                                    
-                                    // Large time display
-                                    Text(timeString(from: viewModel.timeRemaining))
-                                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                                        .monospacedDigit()
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: viewModel.state == .working ? 
-                                                    [focusColor, focusColor.opacity(0.7)] : [breakColor, breakColor.opacity(0.7)],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .contentTransition(.numericText())
-                                    
-                                    // Progress percentage
-                                    Text("\(Int(viewModel.progress * 100))%")
-                                        .font(.system(.caption, design: .rounded).weight(.medium))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .padding(.vertical, 12)
-                        }
-                        .background(
-                            LinearGradient(
-                                colors: [
-                                    Color(.systemBackground),
-                                    Color(.systemGray6).opacity(0.3)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
                         )
                     }
-                    
-                    // Session Timeline - Redesigned
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("session_overview".localized)
-                                .font(.headline.weight(.semibold))
-                            Spacer()
-                            Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 16)
-                        
-                        ModernSessionTimeline(viewModel: viewModel)
-                            .padding(.horizontal, 24)
-                    }
-                    
-                    Spacer()
-                    
-                    // Modern Control Buttons
-                    VStack(spacing: 16) {
-                        // Primary Control Row
-                        HStack(spacing: 20) {
-                            // Stop Button
-                            ControlButton(
-                                icon: "stop.fill",
-                                size: .medium,
-                                color: .red,
-                                isDisabled: viewModel.state == .notStarted || viewModel.state == .completed
-                            ) {
-                                handleStop()
-                            }
-                            
-                            // Main Play/Pause Button
-                            ControlButton(
-                                icon: viewModel.state == .working || viewModel.state == .onBreak ? 
-                                    "pause.fill" : "play.fill",
-                                size: .large,
-                                color: viewModel.state == .working ? focusColor : 
-                                       viewModel.state == .onBreak ? breakColor : 
-                                       viewModel.state == .notStarted ? .blue : focusColor,  
-                                isPulsing: viewModel.state == .working || viewModel.state == .onBreak
-                            ) {
-                                if viewModel.state == .notStarted || viewModel.state == .paused {
-                                    viewModel.start()
-                                } else {
-                                    viewModel.pause()
-                                }
-                            }
-                            
-                            // Skip Button
-                            ControlButton(
-                                icon: "forward.fill",
-                                size: .medium,
-                                color: viewModel.state == .working ? focusColor : 
-                                       viewModel.state == .onBreak ? breakColor : .primary,
-                                isDisabled: viewModel.state == .notStarted || viewModel.state == .completed
-                            ) {
-                                viewModel.skip()
-                            }
-                        }
-                        
-                        // Additional info
-                        if viewModel.state != .notStarted {
-                            let completionTime = Date().addingTimeInterval(viewModel.timeRemaining)
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("finishes_at".localized + " \(formatTimeOnly(completionTime))")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
+                    .padding(.top, 4)
                 }
             }
-            .navigationTitle("pomodoro".localized)
+            .themedBackground()
+            .navigationTitle(showingCompletionSheet ? "focus_session".localized : "pomodoro".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "minus")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                            .frame(width: 32, height: 32)
-                            .background(
-                                Circle()
-                                    .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1))
-                            )
+                if !showingCompletionSheet {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        PomodoroCircleIconButton(systemName: "minus", tint: theme.textColor) {
+                            dismiss()
+                        }
                     }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { 
-                        viewModel.stop()
-                        dismiss()
-                    }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.red)
-                            .frame(width: 32, height: 32)
-                            .background(
-                                Circle()
-                                    .fill(Color.red.opacity(0.1))
-                            )
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        PomodoroCircleIconButton(systemName: "xmark", tint: .red) {
+                            viewModel.stop()
+                            dismiss()
+                        }
                     }
                 }
             }
@@ -270,43 +88,35 @@ struct PomodoroTabView: View {
                     viewModel.initializeGeneralSession()
                 }
             }
-            .onChange(of: viewModel.state) { oldState, newState in
+            .onChange(of: viewModel.state) { _, newState in
                 if newState == .completed {
-                    // Calculate total focus time completed
-                    completedFocusTime = Double(viewModel.currentSession) * viewModel.settings.workDuration
+                    completedFocusTime = max(1, viewModel.totalTrackedFocusTime)
                     showingCompletionSheet = true
                 }
-            }
-            .sheet(isPresented: $showingCompletionSheet) {
-                PomodoroCompletionView(
-                    task: generalPomodoroTask, 
-                    focusTimeCompleted: completedFocusTime
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Color(.systemBackground))
             }
             .ignoresSafeArea(edges: .bottom)
         }
     }
     
     private func handleStop() {
-        viewModel.stop()
+        HapticManager.shared.impact(.medium)
+        if viewModel.state == .notStarted {
+            viewModel.stop()
+            dismiss()
+        } else {
+            completedFocusTime = viewModel.totalTrackedFocusTime
+            viewModel.pause()
+            showingCompletionSheet = true
+        }
     }
     
-    private func formatTimeOnly(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
-    
-    private func timeString(from timeInterval: TimeInterval) -> String {
-        let minutes = Int(timeInterval) / 60
-        let seconds = Int(timeInterval) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-    
-    private func formatTime(_ seconds: TimeInterval) -> String {
-        let minutes = Int(seconds) / 60
-        return "\(minutes) min"
+    private func togglePlayPause() {
+        if viewModel.state == .notStarted || viewModel.state == .paused {
+            HapticManager.shared.impact(.medium)
+            viewModel.start()
+        } else {
+            HapticManager.shared.impact(.light)
+            viewModel.pause()
+        }
     }
 }

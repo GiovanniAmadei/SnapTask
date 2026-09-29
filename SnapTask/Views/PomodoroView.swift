@@ -31,60 +31,74 @@ struct PomodoroView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            if isCompactMode {
-                compactLayout
+        Group {
+            if showingCompletionSheet {
+                PomodoroCompletionView(
+                    task: task,
+                    focusTimeCompleted: completedFocusTime
+                )
             } else {
-                fullscreenLayout
+                VStack(spacing: 0) {
+                    if isCompactMode {
+                        compactLayout
+                    } else {
+                        fullscreenLayout
+                    }
+                }
             }
         }
         .themedBackground()
+        .onChange(of: viewModel.currentSession) { _ in
+            HapticManager.shared.notification(.success)
+        }
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { 
-                    dismiss() 
-                }) {
-                    Image(systemName: "minus")
-                        .font(.system(size: 16, weight: .medium))
-                        .themedPrimaryText()
-                        .frame(width: 32, height: 32)
-                        .background(
-                            Circle()
-                                .fill(theme.surfaceColor)
-                        )
-                }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 8) {
-                    if isCompactMode {
-                        Button(action: {
-                            expandToFullscreen()
-                        }) {
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(theme.accentColor)
-                                .frame(width: 32, height: 32)
-                                .background(
-                                    Circle()
-                                        .fill(theme.accentColor.opacity(0.1))
-                                )
-                        }
-                    }
-                    
+            if !showingCompletionSheet {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { 
-                        viewModel.stop()
-                        dismiss()
+                        dismiss() 
                     }) {
-                        Image(systemName: "xmark")
+                        Image(systemName: "minus")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.red)
+                            .themedPrimaryText()
                             .frame(width: 32, height: 32)
                             .background(
                                 Circle()
-                                    .fill(Color.red.opacity(0.1))
+                                    .fill(theme.surfaceColor)
                             )
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 8) {
+                        if isCompactMode {
+                            Button(action: {
+                                expandToFullscreen()
+                            }) {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(theme.accentColor)
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(theme.accentColor.opacity(0.1))
+                                    )
+                            }
+                        }
+                        
+                        Button(action: { 
+                            viewModel.stop()
+                            dismiss()
+                        }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.red)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    Circle()
+                                        .fill(Color.red.opacity(0.1))
+                                )
+                        }
                     }
                 }
             }
@@ -96,21 +110,12 @@ struct PomodoroView: View {
         }
         .onChange(of: viewModel.state) { oldState, newState in
             if newState == .completed {
-                completedFocusTime = Double(viewModel.currentSession) * viewModel.settings.workDuration
+                completedFocusTime = max(1, viewModel.totalTrackedFocusTime)
                 showingCompletionSheet = true
             }
         }
-        .sheet(isPresented: $showingCompletionSheet) {
-            PomodoroCompletionView(
-                task: task,
-                focusTimeCompleted: completedFocusTime
-            )
-        }
         .sheet(isPresented: $showingSettings) {
             ContextualPomodoroSettingsView(context: .task)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .pomodoroCompleted)) { _ in
-            dismiss()
         }
     }
     
@@ -265,8 +270,10 @@ struct PomodoroView: View {
                 
                 Button(action: {
                     if viewModel.state == .notStarted || viewModel.state == .paused {
+                        HapticManager.shared.impact(.medium)
                         viewModel.start()
                     } else {
+                        HapticManager.shared.impact(.light)
                         viewModel.pause()
                     }
                 }) {
@@ -274,8 +281,8 @@ struct PomodoroView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: viewModel.state == .working ? 
-                                        [focusColor, focusColor.opacity(0.8)] : 
+                                    colors: viewModel.state == .working ?
+                                        [focusColor, focusColor.opacity(0.8)] :
                                         viewModel.state == .onBreak ? 
                                         [breakColor, breakColor.opacity(0.8)] :
                                         [theme.accentColor, theme.accentColor.opacity(0.8)],
@@ -317,11 +324,7 @@ struct PomodoroView: View {
                 
                 if isCompactMode {
                     Button(action: {
-                        let sessionProgress = viewModel.state == .working ? viewModel.progress : 1.0
-                        let completedFullSessions = max(0, viewModel.currentSession - 1)
-                        let currentSessionTime = sessionProgress * viewModel.settings.workDuration
-                        completedFocusTime = Double(completedFullSessions) * viewModel.settings.workDuration + currentSessionTime
-                        showingCompletionSheet = true
+                        handleDone()
                     }) {
                         ZStack {
                             Circle()
@@ -342,237 +345,61 @@ struct PomodoroView: View {
     }
     
     private var fullscreenLayout: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(height: 20)
-                
-                VStack(spacing: 16) {
-                    HStack(spacing: 12) {
-                        if let category = task.category {
-                            Circle()
-                                .fill(Color(hex: category.color))
-                                .frame(width: 12, height: 12)
-                        }
-                        
-                        Text(task.name)
-                            .font(.system(.title3, design: .rounded).weight(.semibold))
-                            .lineLimit(1)
-                            .themedPrimaryText()
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 4) {
-                            Text("session".localized)
-                                .font(.system(.footnote, design: .rounded))
-                                .themedSecondaryText()
-                            Text("\(viewModel.currentSession)/\(viewModel.totalSessions)")
-                                .font(.system(.footnote, design: .rounded).weight(.medium))
-                                .themedPrimaryText()
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(theme.surfaceColor)
-                        )
-                        
-                        Button(action: { showingSettings = true }) {
-                            Image(systemName: "gear")
-                                .font(.body.weight(.medium))
-                                .foregroundColor(theme.accentColor)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule()
-                                        .fill(theme.accentColor.opacity(0.1))
-                                )
-                        }
-                        
-                        Button("completed".localized) {
-                            handleDone()
-                        }
-                        .font(.system(.footnote, design: .rounded).weight(.medium))
-                        .foregroundColor(theme.accentColor)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(theme.accentColor.opacity(0.1))
-                        )
-                    }
-                    .padding(.horizontal, 24)
-                    
-                    ZStack {
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        (viewModel.state == .working ? focusColor : breakColor).opacity(0.1),
-                                        (viewModel.state == .working ? focusColor : breakColor).opacity(0.1)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 6
-                            )
-                            .frame(width: 220, height: 220)
-                        
-                        Circle()
-                            .trim(from: 0.0, to: viewModel.progress)
-                            .stroke(
-                                LinearGradient(
-                                    colors: viewModel.state == .working ? 
-                                        [focusColor, focusColor.opacity(0.7)] : [breakColor, breakColor.opacity(0.7)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                style: StrokeStyle(
-                                    lineWidth: 6,
-                                    lineCap: .round
-                                )
-                            )
-                            .frame(width: 220, height: 220)
-                            .rotationEffect(Angle(degrees: -90))
-                            .animation(.easeInOut(duration: 0.3), value: viewModel.progress)
-                        
-                        VStack(spacing: 8) {
-                            HStack(spacing: 6) {
-                                Image(systemName: viewModel.state == .working ? "brain.head.profile" : "cup.and.saucer.fill")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(viewModel.state == .working ? focusColor : breakColor)
-                                
-                                Text(viewModel.state == .working ? "focus_time".localized : "break_time".localized)
-                                    .font(.system(.subheadline, design: .rounded))
-                                    .themedSecondaryText()
-                            }
-                            
-                            Text(timeString(from: viewModel.timeRemaining))
-                                .font(.system(size: 36, weight: .bold, design: .rounded))
-                                .monospacedDigit()
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: viewModel.state == .working ? 
-                                            [focusColor, focusColor.opacity(0.7)] : [breakColor, breakColor.opacity(0.7)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .contentTransition(.numericText())
-                            
-                            Text("\(Int(viewModel.progress * 100))%")
-                                .font(.system(.caption, design: .rounded).weight(.medium))
-                                .themedSecondaryText()
-                        }
-                    }
-                    .padding(.vertical, 12)
-                }
-                .background(
-                    LinearGradient(
-                        colors: [
-                            theme.backgroundColor,
-                            theme.surfaceColor.opacity(0.3)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+        PomodoroSessionView(
+            viewModel: viewModel,
+            focusColor: focusColor,
+            breakColor: breakColor,
+            onStop: { handleStop() },
+            onTogglePlayPause: { togglePlayPause() },
+            onSkip: { viewModel.skip() }
+        ) {
+            PomodoroScreenHeader(
+                title: task.name,
+                subtitle: task.category?.name,
+                accent: task.category.map { Color(hex: $0.color) },
+                sessionText: "\(viewModel.currentSession)/\(viewModel.totalSessions)",
+                settingsDestination: {
+                    ContextualPomodoroSettingsView(context: .task, presentedAsSheet: false)
+                },
+                trailingAction: PomodoroScreenHeader<ContextualPomodoroSettingsView>.TrailingAction(
+                    title: "completed".localized,
+                    systemImage: "checkmark.circle.fill",
+                    tint: theme.accentColor,
+                    action: { handleDone() }
                 )
-            }
-            
-            VStack(spacing: 12) {
-                HStack {
-                    Text("session_overview".localized)
-                        .font(.headline.weight(.semibold))
-                        .themedPrimaryText()
-                    Spacer()
-                    Text("\(formatTime(viewModel.timeRemaining)) " + "left".localized)
-                        .font(.system(.footnote, design: .rounded))
-                        .themedSecondaryText()
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-                
-                ModernSessionTimeline(viewModel: viewModel)
-                    .padding(.horizontal, 24)
-            }
-            
-            Spacer()
-            
-            VStack(spacing: 16) {
-                HStack(spacing: 20) {
-                    ControlButton(
-                        icon: "stop.fill",
-                        size: .medium,
-                        color: .red,
-                        isDisabled: viewModel.state == .notStarted || viewModel.state == .completed
-                    ) {
-                        handleStop()
-                    }
-                    
-                    ControlButton(
-                        icon: viewModel.state == .working || viewModel.state == .onBreak ? 
-                            "pause.fill" : "play.fill",
-                        size: .large,
-                        color: viewModel.state == .working ? focusColor : 
-                               viewModel.state == .onBreak ? breakColor : 
-                               viewModel.state == .notStarted ? theme.accentColor : focusColor,  
-                        isPulsing: viewModel.state == .working || viewModel.state == .onBreak
-                    ) {
-                        if viewModel.state == .notStarted || viewModel.state == .paused {
-                            viewModel.start()
-                        } else {
-                            viewModel.pause()
-                        }
-                    }
-                    
-                    ControlButton(
-                        icon: "forward.fill",
-                        size: .medium,
-                        color: viewModel.state == .working ? focusColor : 
-                               viewModel.state == .onBreak ? breakColor : theme.textColor,
-                        isDisabled: viewModel.state == .notStarted || viewModel.state == .completed
-                    ) {
-                        viewModel.skip()
-                    }
-                }
-                
-                if viewModel.state != .notStarted {
-                    let completionTime = Date().addingTimeInterval(viewModel.timeRemaining)
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                            .font(.system(.footnote, design: .rounded))
-                            .themedSecondaryText()
-                        Text("finishes_at".localized + " \(formatTimeOnly(completionTime))")
-                            .font(.system(.footnote, design: .rounded))
-                            .themedSecondaryText()
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            )
+        }
+        .padding(.top, 4)
+    }
+    
+    private func togglePlayPause() {
+        if viewModel.state == .notStarted || viewModel.state == .paused {
+            HapticManager.shared.impact(.medium)
+            viewModel.start()
+        } else {
+            HapticManager.shared.impact(.light)
+            viewModel.pause()
         }
     }
     
     private func currentSessionProgressBar(width: CGFloat) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (viewModel.currentSession % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = viewModel.currentSession % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         
         var elapsedTime: TimeInterval = 0
+        let phase = viewModel.effectivePhase
         
-        if viewModel.state == .working {
-            elapsedTime = viewModel.settings.workDuration - viewModel.timeRemaining
-        } else if viewModel.state == .onBreak {
-            let breakDuration = viewModel.currentSession % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-                viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
-            elapsedTime = viewModel.settings.workDuration + (breakDuration - viewModel.timeRemaining)
+        if phase == .working {
+            elapsedTime = max(0, viewModel.settings.workDuration - viewModel.timeRemaining)
+        } else if phase == .onBreak {
+            elapsedTime = viewModel.settings.workDuration + max(0, breakDuration - viewModel.timeRemaining)
         }
         
         let workProgress = min(1.0, elapsedTime / viewModel.settings.workDuration)
-        let totalProgress = min(1.0, elapsedTime / totalSessionTime)
         
         return HStack(spacing: 0) {
             // Work portion (always green when completed/in progress)
@@ -581,8 +408,8 @@ struct PomodoroView: View {
                 .frame(width: width * workPortion * workProgress)
             
             // Break portion (only visible during break)
-            if viewModel.state == .onBreak {
-                let breakProgress = (elapsedTime - viewModel.settings.workDuration) / (totalSessionTime - viewModel.settings.workDuration)
+            if phase == .onBreak {
+                let breakProgress = max(0, min(1.0, (elapsedTime - viewModel.settings.workDuration) / max(1, totalSessionTime - viewModel.settings.workDuration)))
                 let breakPortion = 1.0 - workPortion
                 
                 Rectangle()
@@ -595,9 +422,10 @@ struct PomodoroView: View {
     }
     
     private func completedSessionProgressBar(width: CGFloat, session: Int) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (session % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = session % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         let breakPortion = 1.0 - workPortion
         
@@ -615,9 +443,10 @@ struct PomodoroView: View {
     }
     
     private func sessionBackgroundBar(width: CGFloat, session: Int) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (session % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = session % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         let breakPortion = 1.0 - workPortion
         
@@ -646,28 +475,25 @@ struct PomodoroView: View {
     }
     
     private func handleStop() {
-        viewModel.stop()
+        HapticManager.shared.impact(.medium)
+        if viewModel.state == .notStarted {
+            viewModel.stop()
+            dismiss()
+        } else {
+            completedFocusTime = viewModel.totalTrackedFocusTime
+            viewModel.pause()
+            showingCompletionSheet = true
+        }
     }
     
     private func handleDone() {
-        // Solo apri completion sheet se la sessione è effettivamente completa o fermata
-        if viewModel.state == .completed {
-            showingCompletionSheet = true
-        } else if viewModel.state == .working || viewModel.state == .onBreak || viewModel.state == .paused {
-            // Se la sessione è attiva, fermala prima e poi apri completion sheet
-            let sessionProgress = viewModel.state == .working ? viewModel.progress : 1.0
-            let completedFullSessions = max(0, viewModel.currentSession - 1)
-            let currentSessionTime = sessionProgress * viewModel.settings.workDuration
-            completedFocusTime = Double(completedFullSessions) * viewModel.settings.workDuration + currentSessionTime
-            
-            // Ferma il timer
-            viewModel.stop()
-            
-            // Ora apri completion sheet
-            showingCompletionSheet = true
-        } else {
-            // Se non è iniziata, semplicemente chiudi
+        HapticManager.shared.impact(.medium)
+        if viewModel.state == .notStarted {
             dismiss()
+        } else {
+            completedFocusTime = viewModel.totalTrackedFocusTime
+            viewModel.pause()
+            showingCompletionSheet = true
         }
     }
     
@@ -779,20 +605,20 @@ struct MiniPomodoroWidget: View {
     }
     
     private func miniWidgetCurrentSessionBar(width: CGFloat) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (viewModel.currentSession % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = viewModel.currentSession % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         
         var elapsedTime: TimeInterval = 0
+        let phase = viewModel.effectivePhase
         
-        if viewModel.state == .working {
-            elapsedTime = viewModel.settings.workDuration - viewModel.timeRemaining
-        } else if viewModel.state == .onBreak {
-            let breakDuration = viewModel.currentSession % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-                viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
-            elapsedTime = viewModel.settings.workDuration + (breakDuration - viewModel.timeRemaining)
+        if phase == .working {
+            elapsedTime = max(0, viewModel.settings.workDuration - viewModel.timeRemaining)
+        } else if phase == .onBreak {
+            elapsedTime = viewModel.settings.workDuration + max(0, breakDuration - viewModel.timeRemaining)
         }
         
         let workProgress = min(1.0, elapsedTime / viewModel.settings.workDuration)
@@ -804,8 +630,8 @@ struct MiniPomodoroWidget: View {
                 .frame(width: width * workPortion * workProgress)
             
             // Break portion (only during break)
-            if viewModel.state == .onBreak {
-                let breakProgress = (elapsedTime - viewModel.settings.workDuration) / (totalSessionTime - viewModel.settings.workDuration)
+            if phase == .onBreak {
+                let breakProgress = max(0, min(1.0, (elapsedTime - viewModel.settings.workDuration) / max(1, totalSessionTime - viewModel.settings.workDuration)))
                 let breakPortion = 1.0 - workPortion
                 
                 Capsule()
@@ -818,9 +644,10 @@ struct MiniPomodoroWidget: View {
     }
     
     private func miniWidgetSessionBackground(width: CGFloat, session: Int) -> some View {
-        let totalSessionTime = viewModel.settings.workDuration + 
-            (session % viewModel.settings.sessionsUntilLongBreak == 0 ? 
-             viewModel.settings.longBreakDuration : viewModel.settings.breakDuration)
+        let divisor = max(1, viewModel.settings.sessionsUntilLongBreak)
+        let isLongBreak = session % divisor == 0
+        let breakDuration = isLongBreak ? viewModel.settings.longBreakDuration : viewModel.settings.breakDuration
+        let totalSessionTime = viewModel.settings.workDuration + breakDuration
         let workPortion = viewModel.settings.workDuration / totalSessionTime
         let breakPortion = 1.0 - workPortion
         
@@ -856,4 +683,11 @@ struct MiniPomodoroWidget: View {
                 .frame(width: width * breakPortion, height: 4)
         }
     }
+}
+
+extension Notification.Name {
+    static let expandActivePomodoro = Notification.Name("expandActivePomodoro")
+    static let openFocusTabPomodoro = Notification.Name("openFocusTabPomodoro")
+    static let expandActiveTimer = Notification.Name("expandActiveTimer")
+    static let openFocusTabTimeTracker = Notification.Name("openFocusTabTimeTracker")
 }
