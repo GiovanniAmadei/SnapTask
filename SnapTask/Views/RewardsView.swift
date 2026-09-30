@@ -605,203 +605,353 @@ struct RewardCard: View {
     let onEditTapped: () -> Void
     var onDuplicateTapped: () -> Void = {}
     let onDeleteTapped: () -> Void
-
-    @ObservedObject private var categoryManager = CategoryManager.shared
+    
+    @StateObject private var categoryManager = CategoryManager.shared
     @Environment(\.theme) private var theme
     @State private var isAnimating = false
     @State private var successAnimation = false
-
-    private var category: Category? {
-        reward.categoryId.flatMap { id in categoryManager.categories.first { $0.id == id } }
-    }
-
-    private var categoryColor: Color { category.map { Color(hex: $0.color) } ?? theme.primaryColor }
-
-    /// Colors of the progress fill and of the icon/button: theme gradient for general rewards, category color otherwise.
-    private var gradientColors: [Color] {
-        reward.isGeneralReward ? [theme.primaryColor, theme.secondaryColor] : [categoryColor, categoryColor.opacity(0.75)]
-    }
-
-    private var available: Int {
-        let points = reward.isGeneralReward
-            ? RewardManager.shared.availablePoints(for: reward.frequency)
-            : RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
-        return max(points, 0)
-    }
-
+    
     private var progress: Double {
-        reward.pointsCost > 0 ? min(Double(available) / Double(reward.pointsCost), 1) : 1
+        let safeCurrentPoints = max(currentPoints, 0)
+        let actualAvailablePoints = reward.isGeneralReward ? 
+            RewardManager.shared.availablePoints(for: reward.frequency) :
+            RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
+        return min(Double(actualAvailablePoints) / Double(reward.pointsCost), 1.0)
     }
-
-    /// Redemptions in the current period of the reward's frequency.
-    private var redeemedThisPeriod: Int {
+    
+    private var categoryColor: Color {
+        if let categoryId = reward.categoryId,
+           let category = categoryManager.categories.first(where: { $0.id == categoryId }) {
+            return Color(hex: category.color)
+        }
+        return theme.primaryColor
+    }
+    
+    private var redemptionInfo: (hasBeenRedeemed: Bool, redemptionCount: Int) {
         let calendar = Calendar.current
         let now = Date()
-        return reward.redemptions.filter { date in
+        
+        let relevantRedemptions = reward.redemptions.filter { redemptionDate in
             switch reward.frequency {
-            case .daily: return calendar.isDate(date, inSameDayAs: now)
-            case .weekly: return calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear)
-            case .monthly: return calendar.isDate(date, equalTo: now, toGranularity: .month)
-            case .yearly: return calendar.isDate(date, equalTo: now, toGranularity: .year)
-            case .oneTime: return true
+            case .daily:
+                return calendar.isDate(redemptionDate, inSameDayAs: now)
+            case .weekly:
+                let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now))!
+                let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)!
+                return redemptionDate >= weekStart && redemptionDate < weekEnd
+            case .monthly:
+                let components = calendar.dateComponents([.year, .month], from: now)
+                let monthStart = calendar.date(from: components)!
+                let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart)!
+                return redemptionDate >= monthStart && redemptionDate < monthEnd
+            case .yearly:
+                let components = calendar.dateComponents([.year], from: now)
+                let yearStart = calendar.date(from: components)!
+                let yearEnd = calendar.date(byAdding: .year, value: 1, to: yearStart)!
+                return redemptionDate >= yearStart && redemptionDate < yearEnd
+            case .oneTime:
+                return true
             }
-        }.count
+        }
+        
+        return (hasBeenRedeemed: !relevantRedemptions.isEmpty, redemptionCount: relevantRedemptions.count)
     }
-
+    
     var body: some View {
         ZStack {
-            // Card with the progress towards the cost painted as a gradient from the left.
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            // Background card
+            RoundedRectangle(cornerRadius: 16)
                 .fill(theme.surfaceColor)
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(LinearGradient(colors: gradientColors.map { $0.opacity(canRedeem ? 0.22 : 0.16) },
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .mask(alignment: .leading) {
-                    GeometryReader { geo in
-                        Rectangle().frame(width: geo.size.width * progress)
+            
+            ZStack {
+                // Base progress layer
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: reward.isGeneralReward ? 
+                            [theme.primaryColor.opacity(0.15), theme.secondaryColor.opacity(0.20)] :
+                            [categoryColor.opacity(0.15), categoryColor.opacity(0.20)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .mask(
+                        GeometryReader { geometry in
+                            HStack {
+                                Rectangle()
+                                    .frame(width: geometry.size.width * progress)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    )
+            }
+            
+            // Success animation overlay
+            if successAnimation {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.green.opacity(0.3))
+                    .overlay(
+                        VStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                                .background(
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 40, height: 40)
+                                )
+                            
+                            Text("riscattato!".localized)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                    )
+                    .transition(.opacity)
+            }
+            
+            // Card content with improved layout
+            VStack(spacing: 8) {
+                // Header row with icon and title
+                HStack(spacing: 12) {
+                    // Enhanced icon with category color
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: canRedeem ? 
+                                (reward.isGeneralReward ? 
+                                 [theme.primaryColor, theme.secondaryColor] :
+                                 [categoryColor, categoryColor.opacity(0.8)]) :
+                                [Color.gray.opacity(0.4), Color.gray.opacity(0.5)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 38, height: 38)
+                        
+                        Image(systemName: reward.icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
                     }
-                }
-                .animation(.easeInOut(duration: 0.4), value: progress)
-
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: reward.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(LinearGradient(
-                            colors: canRedeem ? gradientColors : [Color.gray.opacity(0.45), Color.gray.opacity(0.6)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing)))
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(reward.name)
-                            .font(.headline)
-                            .themedPrimaryText()
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
+                    
+                    // Title and tag
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .top) {
+                            Text(reward.name)
+                                .font(.system(size: 15, weight: .semibold))
+                                .themedPrimaryText()
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 4) {
+                                rewardTypeTag
+                                    .fixedSize()
+                                
+                                // Redemption counter (only if redeemed multiple times)
+                                if redemptionInfo.redemptionCount > 1 {
+                                    redemptionCounterTag
+                                } else if redemptionInfo.hasBeenRedeemed {
+                                    redemptionIndicator
+                                }
+                            }
+                        }
+                        
                         if let description = reward.description, !description.isEmpty {
                             Text(description)
-                                .font(.subheadline)
-                                .themedSecondaryText()
-                                .lineLimit(2)
-                        }
-                    }
-
-                    Spacer(minLength: 6)
-
-                    VStack(alignment: .trailing, spacing: 0) {
-                        Text(reward.pointsCost.formatted())
-                            .font(.system(.title3, design: .rounded).weight(.bold))
-                            .monospacedDigit()
-                            .foregroundColor(categoryColor)
-                            .lineLimit(1)
-                        Text("pts".localized)
-                            .font(.caption2.weight(.medium))
-                            .themedSecondaryText()
-                    }
-                    .fixedSize()
-                }
-
-                HStack(spacing: 6) {
-                    tag(icon: reward.isGeneralReward ? "star.fill" : (category?.displayIcon ?? "tag.fill"),
-                        text: reward.isGeneralReward ? "general".localized : (category?.name ?? reward.categoryName ?? ""),
-                        color: categoryColor)
-                    if redeemedThisPeriod > 0 {
-                        tag(icon: "checkmark.circle.fill",
-                            text: redeemedThisPeriod > 1 ? "\(redeemedThisPeriod)×" : "redeemed".localized,
-                            color: .green)
-                    }
-                }
-
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("\(available.formatted())/\(reward.pointsCost.formatted()) " + "points".localized)
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundColor(canRedeem ? Color(hex: "00C853") : categoryColor)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        if !canRedeem {
-                            Text("need_more_points".localized.replacingOccurrences(of: "{points}", with: "\(reward.pointsCost - available)"))
-                                .font(.caption)
+                                .font(.system(size: 12))
                                 .themedSecondaryText()
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.8)
                         }
                     }
-                    Spacer(minLength: 8)
-                    redeemButton
                 }
-            }
-            .padding(16)
-            .opacity(successAnimation ? 0.25 : 1)
 
-            if successAnimation {
-                VStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundColor(.green)
-                    Text("riscattato!".localized)
-                        .font(.subheadline.weight(.semibold))
-                        .themedPrimaryText()
+                // Bottom row with points and redeem button
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        if reward.isGeneralReward {
+                            let actualPoints = RewardManager.shared.availablePoints(for: reward.frequency)
+                            let safePoints = max(actualPoints, 0)
+                            Text("\(safePoints)/\(reward.pointsCost) " + "points".localized)
+                                .font(.system(size: 13, weight: .medium))
+                                .lineLimit(1)
+                                .foregroundColor(canRedeem ? Color(hex: "00C853") : theme.primaryColor)
+                        } else if let categoryId = reward.categoryId {
+                            let categoryPoints = RewardManager.shared.availablePointsForCategory(categoryId, frequency: reward.frequency)
+                            let safeCategoryPoints = max(categoryPoints, 0)
+                            Text("\(safeCategoryPoints)/\(reward.pointsCost) " + "points".localized)
+                                .font(.system(size: 13, weight: .medium))
+                                .lineLimit(1)
+                                .foregroundColor(canRedeem ? Color(hex: "00C853") : categoryColor)
+                        }
+                        
+                        if !canRedeem {
+                            let actualAvailablePoints = reward.isGeneralReward ? 
+                                RewardManager.shared.availablePoints(for: reward.frequency) :
+                                RewardManager.shared.availablePointsForCategory(reward.categoryId!, frequency: reward.frequency)
+                            let missingPoints = reward.pointsCost - max(actualAvailablePoints, 0)
+                            Text("need_more_points".localized.replacingOccurrences(of: "{points}", with: "\(missingPoints)"))
+                                .font(.system(size: 11))
+                                .themedSecondaryText()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        // Animation sequence
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            isAnimating = true
+                        }
+                        
+                        // Show success animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.easeInOut(duration: 0.4)) {
+                                successAnimation = true
+                            }
+                        }
+                        
+                        // Call redeem action
+                        onRedeemTapped()
+                        
+                        // Hide success animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                successAnimation = false
+                                isAnimating = false
+                            }
+                        }
+                    }) {
+                        Text("redeem".localized)
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 7)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(
+                                        canRedeem ?
+                                        (reward.isGeneralReward ?
+                                         theme.gradient :
+                                         LinearGradient(
+                                            colors: [categoryColor, categoryColor.opacity(0.8)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                         )) :
+                                        LinearGradient(
+                                            colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                            .foregroundColor(.white)
+                            .shadow(color: canRedeem ? (reward.isGeneralReward ? theme.primaryColor.opacity(0.3) : categoryColor.opacity(0.3)) : Color.clear, radius: 2, x: 0, y: 1)
+                    }
+                    .disabled(!canRedeem)
+                    .scaleEffect(isAnimating ? 0.95 : 1.0)
                 }
-                .transition(.scale.combined(with: .opacity))
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .opacity(successAnimation ? 0.3 : 1.0)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(canRedeem ? categoryColor.opacity(0.35) : Color.clear, lineWidth: 1)
-        )
         .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
-        .contentShape(RoundedRectangle(cornerRadius: 18))
+        // Tap anywhere on the card (outside the redeem button) to edit.
+        .contentShape(RoundedRectangle(cornerRadius: 16))
         .onTapGesture { onEditTapped() }
+
+        // Context Menu
         .contextMenu {
-            Button { onEditTapped() } label: { Label("edit".localized, systemImage: "pencil") }
-            Button { onDuplicateTapped() } label: { Label("duplicate".localized, systemImage: "plus.square.on.square") }
-            Button(role: .destructive) { onDeleteTapped() } label: { Label("delete".localized, systemImage: "trash") }
-        }
-    }
-
-    private var redeemButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { isAnimating = true }
-            onRedeemTapped()
-            withAnimation(.easeInOut(duration: 0.3).delay(0.1)) { successAnimation = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    successAnimation = false
-                    isAnimating = false
-                }
+            Button {
+                onEditTapped()
+            } label: {
+                Label("edit".localized, systemImage: "pencil")
             }
-        } label: {
-            Label("redeem".localized, systemImage: "gift.fill")
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .frame(height: 36)
-                .background(Capsule().fill(LinearGradient(
-                    colors: canRedeem ? gradientColors : [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
-                    startPoint: .leading, endPoint: .trailing)))
-                .shadow(color: canRedeem ? categoryColor.opacity(0.3) : .clear, radius: 3, y: 2)
+            
+            Button {
+                onDuplicateTapped()
+            } label: {
+                Label("duplicate".localized, systemImage: "plus.square.on.square")
+            }
+            
+            Button(role: .destructive) {
+                onDeleteTapped()
+            } label: {
+                Label("delete".localized, systemImage: "trash")
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(!canRedeem)
-        .fixedSize()
-        .scaleEffect(isAnimating ? 0.95 : 1)
     }
-
-    private func tag(icon: String, text: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 9, weight: .bold))
-            Text(text).font(.caption2.weight(.semibold)).lineLimit(1)
+    
+    private var redemptionIndicator: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(.green)
+            
+            Text("redeemed".localized)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(.green)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .foregroundColor(color)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(color.opacity(0.12)))
-        .overlay(Capsule().strokeBorder(color.opacity(0.2), lineWidth: 0.5))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.green.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.green.opacity(0.2), lineWidth: 0.5)
+                )
+        )
+    }
+    
+    private var redemptionCounterTag: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 8))
+                .foregroundColor(.green)
+            
+            Text("\(redemptionInfo.redemptionCount)x")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.green)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.green.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.green.opacity(0.3), lineWidth: 0.5)
+                )
+        )
+    }
+    
+    private var rewardTypeTag: some View {
+        HStack(spacing: 3) {
+            Image(systemName: reward.isGeneralReward ? "star.fill" : (categoryManager.categories.first { $0.id == reward.categoryId }?.displayIcon ?? "folder.fill"))
+                .font(.system(size: 8))
+                .foregroundColor(reward.isGeneralReward ? theme.primaryColor : categoryColor)
+            Text(reward.isGeneralReward ? "general".localized : (reward.categoryName ?? reward.frequency.shortDisplayName.localized))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(reward.isGeneralReward ? theme.primaryColor : categoryColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill((reward.isGeneralReward ? theme.primaryColor : categoryColor).opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder((reward.isGeneralReward ? theme.primaryColor : categoryColor).opacity(0.2), lineWidth: 0.5)
+                )
+        )
     }
 }
 
