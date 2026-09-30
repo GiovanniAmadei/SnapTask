@@ -2140,3 +2140,6 @@
 "stats_cadence_year" = "annuale";
 "stats_rate_per_year" = "Completamento per anno";
 "stats_details" = "Dettagli";
+"stats_values_count" = "%d valori";
+"stats_sparse_note" = "Le attività settimanali, mensili e annuali hanno un valore per periodo: i punti mostrano ogni valore, la linea tratteggiata la loro media.";
+"stats_values_one" = "1 valore";

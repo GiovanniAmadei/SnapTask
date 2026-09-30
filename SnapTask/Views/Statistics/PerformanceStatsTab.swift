@@ -146,12 +146,14 @@ struct PerformanceStatsTab: View {
     private var unit: Calendar.Component { viewModel.selectedTimeRange.performanceUnit }
 
     private func series(for task: StatisticsViewModel.TaskPerformanceAnalytics, color: Color) -> ComparisonSeries {
+        let cadence = TaskManager.shared.tasks.first { $0.id == task.taskId }.map(StatisticsViewModel.cadence(for:)) ?? .day
         let buckets = PerformanceBucket.make(from: task.completions, unit: unit)
         return ComparisonSeries(id: task.taskId.uuidString, name: task.taskName, color: color,
                                 points: buckets.compactMap { bucket in
                                     (metric == .quality ? bucket.quality : bucket.difficulty)
                                         .map { ComparisonPoint(date: bucket.start, value: $0) }
-                                })
+                                },
+                                cadence: cadence)
     }
 
     private var trendCard: some View {
@@ -185,6 +187,11 @@ struct PerformanceStatsTab: View {
                                     axisLabel: axisLabel, tooltipTitle: tooltipTitle)
                     .frame(height: 190)
                     .id("\(viewModel.selectedTimeRange)-\(metric)-\(compared.joined())")
+                if !selected.isEmpty {
+                    ComparisonLegend(series: selected) { item in
+                        item.average.map { String(format: "%.1f", $0) }
+                    }
+                }
             }
         }
     }

@@ -2106,3 +2106,6 @@
 "stats_cadence_year" = "anual";
 "stats_rate_per_year" = "Conclusão por ano";
 "stats_details" = "Detalhes";
+"stats_values_count" = "%d valores";
+"stats_sparse_note" = "Tarefas semanais, mensais e anuais têm um valor por período: os pontos mostram cada valor e a linha tracejada a média.";
+"stats_values_one" = "1 valor";

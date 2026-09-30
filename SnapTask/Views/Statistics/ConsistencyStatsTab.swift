@@ -69,7 +69,8 @@ private struct TrendComparisonCard: View {
             return ComparisonSeries(id: id, name: habit.name,
                                     color: ComparisonPalette.colors[index % ComparisonPalette.colors.count],
                                     points: habit.rateSeries(unit: unit.calendarComponent, from: range.start, to: range.end,
-                                                             window: window))
+                                                             window: habit.cadence == .day ? window : 1),
+                                    cadence: habit.cadence)
         }
     }
 
@@ -128,19 +129,8 @@ private struct TrendComparisonCard: View {
 
     private var legend: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(compared.enumerated()), id: \.element) { index, id in
-                if let habit = viewModel.habitSummaries.first(where: { $0.taskId.uuidString == id }) {
-                    HStack(spacing: 8) {
-                        Circle().fill(ComparisonPalette.colors[index % ComparisonPalette.colors.count]).frame(width: 8, height: 8)
-                        Text(habit.name).font(.caption.weight(.medium)).lineLimit(1).themedPrimaryText()
-                        Spacer()
-                        Text("🔥 \(habit.currentStreak)").font(.caption2).monospacedDigit().themedSecondaryText()
-                        Text(StatsFormat.percent(habit.periodRate))
-                            .font(.caption.weight(.bold)).monospacedDigit()
-                            .frame(width: 40, alignment: .trailing)
-                            .themedPrimaryText()
-                    }
-                }
+            ComparisonLegend(series: selectedSeries) { item in
+                viewModel.habitSummaries.first { $0.taskId.uuidString == item.id }.map { StatsFormat.percent($0.periodRate) }
             }
             HStack(spacing: 8) {
                 RoundedRectangle(cornerRadius: 1).fill(theme.secondaryTextColor.opacity(0.55)).frame(width: 8, height: 2)

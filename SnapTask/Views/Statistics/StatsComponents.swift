@@ -295,6 +295,14 @@ struct ComparisonSeries: Identifiable, Equatable {
     let name: String
     let color: Color
     let points: [ComparisonPoint]
+    var cadence: StatisticsViewModel.HabitCadence = .day
+
+    /// Weekly/monthly/yearly tasks (or very few values): a smooth line would suggest data that doesn't exist.
+    var isSparse: Bool { cadence != .day || points.count < 4 }
+
+    var average: Double? {
+        points.isEmpty ? nil : points.reduce(0) { $0 + $1.value } / Double(points.count)
+    }
 }
 
 struct ComparisonPoint: Equatable {
@@ -352,18 +360,57 @@ struct ComparisonLineChart: View {
                 }
             }
             ForEach(series) { item in
-                ForEach(item.points, id: \.date) { point in
-                    LineMark(x: .value("date".localized, point.date, unit: unit),
-                             y: .value("value", point.value),
-                             series: .value("series", item.id))
-                        .interpolationMethod(.monotone)
-                        .foregroundStyle(item.color)
-                        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                        .symbol {
-                            if item.points.count <= 14 {
-                                Circle().fill(item.color).frame(width: 5, height: 5)
+                if item.isSparse {
+                    // Few values: its average as a dashed level, a step line between values
+                    // (the value holds for the whole period) and labelled dots.
+                    if let average = item.average {
+                        RuleMark(y: .value("average".localized, average))
+                            .foregroundStyle(item.color.opacity(0.45))
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                            .annotation(position: .top, alignment: .trailing, spacing: 2) {
+                                Text("Ø " + format(average))
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(item.color)
                             }
+                    }
+                    if item.points.count > 1 {
+                        ForEach(item.points, id: \.date) { point in
+                            LineMark(x: .value("date".localized, point.date, unit: unit),
+                                     y: .value("value", point.value),
+                                     series: .value("series", item.id))
+                                .interpolationMethod(.stepEnd)
+                                .foregroundStyle(item.color.opacity(0.6))
+                                .lineStyle(StrokeStyle(lineWidth: 1.5))
                         }
+                    }
+                    ForEach(item.points, id: \.date) { point in
+                        PointMark(x: .value("date".localized, point.date, unit: unit),
+                                  y: .value("value", point.value))
+                            .symbolSize(item.points.count <= 3 ? 110 : 55)
+                            .foregroundStyle(item.color)
+                            .annotation(position: .top, spacing: 3) {
+                                if item.points.count <= 6 {
+                                    Text(format(point.value))
+                                        .font(.system(size: 9, weight: .bold))
+                                        .monospacedDigit()
+                                        .foregroundStyle(item.color)
+                                }
+                            }
+                    }
+                } else {
+                    ForEach(item.points, id: \.date) { point in
+                        LineMark(x: .value("date".localized, point.date, unit: unit),
+                                 y: .value("value", point.value),
+                                 series: .value("series", item.id))
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(item.color)
+                            .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                            .symbol {
+                                if item.points.count <= 14 {
+                                    Circle().fill(item.color).frame(width: 5, height: 5)
+                                }
+                            }
+                    }
                 }
             }
             if let bucket = selectedBucket {
@@ -550,5 +597,45 @@ extension View {
         #else
         self
         #endif
+    }
+}
+
+/// One line per selected series; non-daily ones say how often they happen and how many values there are.
+struct ComparisonLegend: View {
+    let series: [ComparisonSeries]
+    var trailing: (ComparisonSeries) -> String? = { _ in nil }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(series) { item in
+                HStack(spacing: 8) {
+                    Circle().fill(item.color).frame(width: 8, height: 8)
+                    Text(item.name).font(.caption.weight(.medium)).lineLimit(1).themedPrimaryText()
+                    if item.cadence != .day {
+                        Text(item.cadence.localizedName)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(item.color)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Capsule().fill(item.color.opacity(0.12)))
+                    }
+                    Spacer()
+                    if item.isSparse {
+                        Text(item.points.count == 1 ? "stats_values_one".localized
+                             : String(format: "stats_values_count".localized, item.points.count))
+                            .font(.caption2).monospacedDigit().themedSecondaryText()
+                    }
+                    if let value = trailing(item) {
+                        Text(value).font(.caption.weight(.bold)).monospacedDigit()
+                            .frame(minWidth: 40, alignment: .trailing).themedPrimaryText()
+                    }
+                }
+            }
+            if series.contains(where: \.isSparse) {
+                Text("stats_sparse_note".localized)
+                    .font(.caption2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .themedSecondaryText()
+            }
+        }
     }
 }

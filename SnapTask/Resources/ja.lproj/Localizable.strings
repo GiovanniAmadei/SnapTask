@@ -2107,3 +2107,6 @@
 "stats_cadence_year" = "毎年";
 "stats_rate_per_year" = "年ごとの達成率";
 "stats_details" = "詳細";
+"stats_values_count" = "%d件の値";
+"stats_sparse_note" = "毎週・毎月・毎年のタスクは期間ごとに1つの値です。点が各値、点線がその平均を示します。";
+"stats_values_one" = "1件の値";

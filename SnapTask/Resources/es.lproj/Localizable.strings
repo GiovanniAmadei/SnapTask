@@ -2317,3 +2317,6 @@
 "stats_cadence_year" = "anual";
 "stats_rate_per_year" = "Cumplimiento por año";
 "stats_details" = "Detalles";
+"stats_values_count" = "%d valores";
+"stats_sparse_note" = "Las tareas semanales, mensuales y anuales tienen un valor por periodo: los puntos muestran cada valor y la línea discontinua su media.";
+"stats_values_one" = "1 valor";

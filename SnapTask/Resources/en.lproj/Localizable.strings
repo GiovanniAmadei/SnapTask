@@ -2181,3 +2181,6 @@
 "stats_cadence_year" = "yearly";
 "stats_rate_per_year" = "Completion per year";
 "stats_details" = "Details";
+"stats_values_count" = "%d values";
+"stats_sparse_note" = "Weekly, monthly and yearly tasks have one value per period: dots show each value, the dashed line their average.";
+"stats_values_one" = "1 value";

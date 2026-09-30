@@ -2023,3 +2023,6 @@
 "stats_cadence_year" = "annuelle";
 "stats_rate_per_year" = "Réalisation par an";
 "stats_details" = "Détails";
+"stats_values_count" = "%d valeurs";
+"stats_sparse_note" = "Les tâches hebdomadaires, mensuelles et annuelles ont une valeur par période : les points montrent chaque valeur, la ligne pointillée leur moyenne.";
+"stats_values_one" = "1 valeur";

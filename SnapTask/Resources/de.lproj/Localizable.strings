@@ -2034,3 +2034,6 @@
 "stats_cadence_year" = "jährlich";
 "stats_rate_per_year" = "Erledigung pro Jahr";
 "stats_details" = "Details";
+"stats_values_count" = "%d Werte";
+"stats_sparse_note" = "Wöchentliche, monatliche und jährliche Aufgaben haben einen Wert pro Zeitraum: Punkte zeigen jeden Wert, die gestrichelte Linie den Durchschnitt.";
+"stats_values_one" = "1 Wert";
