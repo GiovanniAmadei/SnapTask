@@ -2316,8 +2316,4 @@
 "stats_cadence_month" = "mensual";
 "stats_cadence_year" = "anual";
 "stats_rate_per_year" = "Cumplimiento por año";
-"stats_compare" = "Comparar";
-"stats_edit_selection" = "Editar";
-"stats_compare_limit" = "Elige hasta %d tareas. La tendencia general queda como referencia discontinua.";
-"stats_clear" = "Borrar";
 "stats_details" = "Detalles";

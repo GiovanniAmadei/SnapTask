@@ -2022,8 +2022,4 @@
 "stats_cadence_month" = "mensuelle";
 "stats_cadence_year" = "annuelle";
 "stats_rate_per_year" = "Réalisation par an";
-"stats_compare" = "Comparer";
-"stats_edit_selection" = "Modifier";
-"stats_compare_limit" = "Choisis jusqu'à %d tâches. La tendance globale reste en pointillés comme référence.";
-"stats_clear" = "Effacer";
 "stats_details" = "Détails";

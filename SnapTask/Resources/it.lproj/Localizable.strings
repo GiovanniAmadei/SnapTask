@@ -2139,8 +2139,4 @@
 "stats_cadence_month" = "mensile";
 "stats_cadence_year" = "annuale";
 "stats_rate_per_year" = "Completamento per anno";
-"stats_compare" = "Confronta";
-"stats_edit_selection" = "Modifica";
-"stats_compare_limit" = "Scegli fino a %d attività. L'andamento complessivo resta come riferimento tratteggiato.";
-"stats_clear" = "Azzera";
 "stats_details" = "Dettagli";

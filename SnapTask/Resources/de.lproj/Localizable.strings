@@ -2033,8 +2033,4 @@
 "stats_cadence_month" = "monatlich";
 "stats_cadence_year" = "jährlich";
 "stats_rate_per_year" = "Erledigung pro Jahr";
-"stats_compare" = "Vergleichen";
-"stats_edit_selection" = "Bearbeiten";
-"stats_compare_limit" = "Wähle bis zu %d Aufgaben. Der Gesamtverlauf bleibt als gestrichelte Referenz.";
-"stats_clear" = "Zurücksetzen";
 "stats_details" = "Details";

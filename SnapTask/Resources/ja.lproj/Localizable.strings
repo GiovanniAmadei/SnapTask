@@ -2106,8 +2106,4 @@
 "stats_cadence_month" = "毎月";
 "stats_cadence_year" = "毎年";
 "stats_rate_per_year" = "年ごとの達成率";
-"stats_compare" = "比較";
-"stats_edit_selection" = "編集";
-"stats_compare_limit" = "最大%d件のタスクを選択できます。全体の推移は点線で表示されます。";
-"stats_clear" = "クリア";
 "stats_details" = "詳細";

@@ -2105,8 +2105,4 @@
 "stats_cadence_month" = "mensal";
 "stats_cadence_year" = "anual";
 "stats_rate_per_year" = "Conclusão por ano";
-"stats_compare" = "Comparar";
-"stats_edit_selection" = "Editar";
-"stats_compare_limit" = "Escolha até %d tarefas. A tendência geral fica como referência tracejada.";
-"stats_clear" = "Limpar";
 "stats_details" = "Detalhes";

@@ -2180,8 +2180,4 @@
 "stats_cadence_month" = "monthly";
 "stats_cadence_year" = "yearly";
 "stats_rate_per_year" = "Completion per year";
-"stats_compare" = "Compare";
-"stats_edit_selection" = "Edit";
-"stats_compare_limit" = "Choose up to %d tasks. The overall trend stays as a dashed reference.";
-"stats_clear" = "Clear";
 "stats_details" = "Details";
