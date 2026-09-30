@@ -26,6 +26,7 @@ class CloudKitService: ObservableObject {
     private let financeBudgetRecordType = "FinanceBudget"
     private let financialGoalRecordType = "FinancialGoal"
     private let customFinanceCategoryRecordType = "CustomFinanceCategory"
+    private let taskListOrderRecordType = "TaskListOrder"
     
     // Subscription IDs
     private let subscriptionID = "SnapTaskZone-changes"
@@ -544,6 +545,22 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    // MARK: - Task List Order Operations
+    func saveTaskListOrder(_ order: TaskListOrder) {
+        guard isCloudKitEnabled else { return }
+        
+        Task {
+            do {
+                // Record con nome fisso per lista: .allKeys lo sovrascrive senza conflitti
+                try await batchSaveRecords([createTaskListOrderRecord(from: order)])
+                print(" Task list order saved: \(order.listKey)")
+            } catch {
+                // Senza il tipo TaskListOrder nello schema di produzione l'ordine resta solo locale
+                print(" Failed to save task list order: \(error)")
+            }
+        }
+    }
+    
     // MARK: - Points History Operations
     func savePointsEntry(_ entry: PointsHistory) {
         guard isCloudKitEnabled else { return }
@@ -886,6 +903,7 @@ class CloudKitService: ObservableObject {
         var financeBudgets: [FinanceBudget] = []
         var financialGoals: [FinancialGoal] = []
         var customFinanceCategories: [CustomFinanceCategory] = []
+        var taskListOrders: [TaskListOrder] = []
         struct DeletionMarkerEvent {
             let type: String
             let id: String
@@ -956,6 +974,10 @@ class CloudKitService: ObservableObject {
             case self.customFinanceCategoryRecordType:
                 if let category = self.createCustomFinanceCategory(from: record) {
                     changes.customFinanceCategories.append(category)
+                }
+            case self.taskListOrderRecordType:
+                if let order = self.createTaskListOrder(from: record) {
+                    changes.taskListOrders.append(order)
                 }
             case self.deletionMarkerRecordType:
                 if let type = record["type"] as? String,
@@ -1065,6 +1087,10 @@ class CloudKitService: ObservableObject {
                 if let category = self.createCustomFinanceCategory(from: record) {
                     changes.customFinanceCategories.append(category)
                 }
+            case self.taskListOrderRecordType:
+                if let order = self.createTaskListOrder(from: record) {
+                    changes.taskListOrders.append(order)
+                }
             case self.deletionMarkerRecordType:
                 if let type = record["type"] as? String,
                    let itemId = record["itemId"] as? String {
@@ -1112,6 +1138,7 @@ class CloudKitService: ObservableObject {
         await mergeTrackingSessions(changes.trackingSessions)
         await mergeJournalEntries(changes.journalEntries)
         await mergeFinanceData(entries: changes.financeEntries, budgets: changes.financeBudgets, goals: changes.financialGoals, customCategories: changes.customFinanceCategories)
+        TaskOrderManager.shared.mergeRemote(changes.taskListOrders)
         
         if !changes.settings.isEmpty {
             await applySettings(changes.settings)
@@ -1971,6 +1998,26 @@ class CloudKitService: ObservableObject {
         reward.lastModifiedDate = lastModifiedDate ?? Date()
         
         return reward
+    }
+    
+    private func createTaskListOrderRecord(from order: TaskListOrder) -> CKRecord {
+        let recordID = CKRecord.ID(recordName: "order-\(order.listKey)", zoneID: zoneID)
+        let record = CKRecord(recordType: taskListOrderRecordType, recordID: recordID)
+        record["listKey"] = order.listKey
+        record["taskIds"] = order.taskIds.map { $0.uuidString }
+        record["orderLastModified"] = order.lastModified
+        return record
+    }
+    
+    private func createTaskListOrder(from record: CKRecord) -> TaskListOrder? {
+        guard let listKey = record["listKey"] as? String,
+              let taskIds = record["taskIds"] as? [String] else { return nil }
+        let lastModified = record["orderLastModified"] as? Date ?? record.modificationDate ?? .distantPast
+        return TaskListOrder(
+            listKey: listKey,
+            taskIds: taskIds.compactMap { UUID(uuidString: $0) },
+            lastModified: lastModified
+        )
     }
     
     private func createPointsHistoryRecord(from entry: PointsHistory) -> CKRecord {

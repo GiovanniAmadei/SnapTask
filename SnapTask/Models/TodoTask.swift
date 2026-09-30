@@ -83,7 +83,6 @@ struct TodoTask: Identifiable, Codable, Equatable {
     var scopeEndDate: Date? = nil
     var notificationLeadTimeMinutes: Int = 0
     var autoCarryOver: Bool = false
-    var orderIndex: Double? = nil
     
     // Life Orchestration properties
     var domainId: UUID? = nil

@@ -996,6 +996,7 @@ class TaskManager: ObservableObject {
         // Also clear in-memory state to ensure UI updates immediately
         tasks = []
         trackingSessions = []
+        TaskOrderManager.shared.removeAll()
         
         // Cancel notifications
         notificationManager.cancelAllNotifications()
