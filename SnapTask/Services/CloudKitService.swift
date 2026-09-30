@@ -509,6 +509,16 @@ class CloudKitService: ObservableObject {
                 let record = createRewardRecord(from: reward)
                 _ = try await privateDatabase.save(record)
                 print(" Reward saved: \(reward.name)")
+            } catch let error as CKError where error.code == .invalidArguments || error.code == .serverRejectedRequest {
+                // Production schema without the 1.8 fields: save the old fields so the rest still syncs.
+                let record = createRewardRecord(from: reward)
+                for key in ["categoryId", "categoryName", "archivedDate"] { record[key] = nil }
+                do {
+                    _ = try await privateDatabase.save(record)
+                    print(" Reward saved without 1.8 fields: \(reward.name)")
+                } catch {
+                    print(" Failed to save reward: \(error)")
+                }
             } catch {
                 print(" Failed to save reward: \(error)")
             }
@@ -1921,6 +1931,11 @@ class CloudKitService: ObservableObject {
         
         encodeToRecord(record, key: "redemptions", value: reward.redemptions)
         
+        // Added in 1.8 (need the production schema): category rewards used to sync as general ones.
+        record["categoryId"] = reward.categoryId?.uuidString
+        record["categoryName"] = reward.categoryName
+        record["archivedDate"] = reward.archivedDate
+        
         return record
     }
     
@@ -1949,6 +1964,9 @@ class CloudKitService: ObservableObject {
         )
         
         reward.redemptions = redemptions
+        reward.categoryId = (record["categoryId"] as? String).flatMap(UUID.init(uuidString:))
+        reward.categoryName = record["categoryName"] as? String
+        reward.archivedDate = record["archivedDate"] as? Date
         reward.creationDate = creationDate ?? Date()
         reward.lastModifiedDate = lastModifiedDate ?? Date()
         

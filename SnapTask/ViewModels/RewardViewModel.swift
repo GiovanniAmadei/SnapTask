@@ -43,7 +43,8 @@ class RewardViewModel: ObservableObject {
         totalAvailablePoints = RewardManager.shared.availablePoints(for: .oneTime, on: Date())
     }
     
-    private func updateRewards(_ rewards: [Reward]) {
+    private func updateRewards(_ allRewards: [Reward]) {
+        let rewards = allRewards.filter { !$0.isArchived }
         dailyRewards = rewards.filter { $0.frequency == .daily }
         weeklyRewards = rewards.filter { $0.frequency == .weekly }
         monthlyRewards = rewards.filter { $0.frequency == .monthly }
@@ -63,6 +64,11 @@ class RewardViewModel: ObservableObject {
     
     func removeReward(_ reward: Reward) {
         RewardManager.shared.removeReward(reward)
+        updatePoints()
+    }
+    
+    func archiveReward(_ reward: Reward) {
+        RewardManager.shared.archiveReward(reward)
         updatePoints()
     }
     

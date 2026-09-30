@@ -18,11 +18,18 @@ struct RewardFormView: View {
     @State private var customPointsText: String = "100"
     
     var initialReward: Reward?
+    /// True when `initialReward` is an existing reward (false for new ones and duplicates).
+    var isEditing: Bool
     var onSave: ((Reward) -> Void)?
+    var onDelete: ((Reward, RewardDeletionMode) -> Void)?
+    @State private var showingDeleteConfirmation = false
     
-    init(initialReward: Reward? = nil, onSave: ((Reward) -> Void)? = nil) {
+    init(initialReward: Reward? = nil, isEditing: Bool? = nil,
+         onSave: ((Reward) -> Void)? = nil, onDelete: ((Reward, RewardDeletionMode) -> Void)? = nil) {
         self.initialReward = initialReward
+        self.isEditing = isEditing ?? (initialReward != nil)
         self.onSave = onSave
+        self.onDelete = onDelete
     }
     
     var body: some View {
@@ -247,7 +254,7 @@ struct RewardFormView: View {
                         VStack(spacing: 16) {
                             Picker("frequency".localized, selection: $selectedFrequency) {
                                 ForEach(RewardFrequency.allCases) { frequency in
-                                    Text(frequency.displayName).tag(frequency)
+                                    Text(frequency.pickerLabel).tag(frequency)
                                 }
                             }
                             .pickerStyle(.segmented)
@@ -293,11 +300,46 @@ struct RewardFormView: View {
                     .disabled(!canSave)
                     .padding(.horizontal)
                     .padding(.top, 8)
-                    .padding(.bottom, 32)
+                    
+                    if isEditing, let reward = initialReward {
+                        VStack(spacing: 12) {
+                            if !reward.redemptions.isEmpty {
+                                Text(String(format: (reward.redemptions.count == 1 ? "reward_history_summary_one" : "reward_history_summary").localized,
+                                            reward.redemptions.count,
+                                            reward.redemptions.max()!.formatted(date: .abbreviated, time: .omitted)))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            Button(role: .destructive) {
+                                showingDeleteConfirmation = true
+                            } label: {
+                                Label("delete_reward".localized, systemImage: "trash")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(RoundedRectangle(cornerRadius: 16).fill(Color.red.opacity(0.1)))
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    Color.clear.frame(height: 24)
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(initialReward == nil ? "new_reward".localized : "edit_reward".localized)
+            .navigationTitle(isEditing ? "edit_reward".localized : "new_reward".localized)
+            .alert(RewardDeletion.title(for: initialReward),
+                                isPresented: $showingDeleteConfirmation) {
+                RewardDeletion.buttons(for: initialReward) { reward, mode in
+                    dismiss()
+                    onDelete?(reward, mode)
+                }
+            } message: {
+                Text(RewardDeletion.message(for: initialReward))
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -320,7 +362,7 @@ struct RewardFormView: View {
         }
         .onAppear {
             if let reward = initialReward {
-                rewardName = reward.name
+                rewardName = isEditing ? reward.name : String(format: "reward_copy_name".localized, reward.name)
                 rewardDescription = reward.description ?? ""
                 pointsCost = reward.pointsCost
                 selectedFrequency = reward.frequency
@@ -403,25 +445,25 @@ struct RewardFormView: View {
     }
     
     private var canSave: Bool {
-        !rewardName.isEmpty && (isGeneralReward || selectedCategoryId != nil)
+        !rewardName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (isGeneralReward || selectedCategoryId != nil)
     }
     
     private func saveReward() {
         let categoryName = selectedCategoryId != nil ? 
             categoryManager.categories.first(where: { $0.id == selectedCategoryId })?.name : nil
         
-        let reward = Reward(
-            id: initialReward?.id ?? UUID(),
-            name: rewardName,
-            description: rewardDescription.isEmpty ? nil : rewardDescription,
-            pointsCost: pointsCost,
-            frequency: selectedFrequency,
-            icon: icon,
-            categoryId: isGeneralReward ? nil : selectedCategoryId,
-            categoryName: categoryName
-        )
+        // Editing keeps the reward's history (redemptions, creation date): only the edited fields change.
+        var reward = initialReward ?? Reward(name: rewardName, pointsCost: pointsCost)
+        reward.name = rewardName.trimmingCharacters(in: .whitespacesAndNewlines)
+        reward.description = rewardDescription.isEmpty ? nil : rewardDescription
+        reward.pointsCost = pointsCost
+        reward.frequency = selectedFrequency
+        reward.icon = icon
+        reward.categoryId = isGeneralReward ? nil : selectedCategoryId
+        reward.categoryName = isGeneralReward ? nil : categoryName
+        reward.lastModifiedDate = Date()
         
-        if initialReward != nil {
+        if isEditing {
             RewardManager.shared.updateReward(reward)
         } else {
             RewardManager.shared.addReward(reward)
@@ -439,10 +481,7 @@ struct RewardCategoryCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 8) {
-                Image(systemName: "folder.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(Color(hex: category.color))
-                    .frame(width: 32, height: 32)
+                CategoryIconTile(icon: category.displayIcon, color: Color(hex: category.color), size: 32)
                 
                 Text(category.name)
                     .font(.caption.weight(.medium))
@@ -471,5 +510,47 @@ struct RewardCategoryCard: View {
 struct RewardFormView_Previews: PreviewProvider {
     static var previews: some View {
         RewardFormView()
+    }
+}
+
+enum RewardDeletionMode {
+    /// Delete the reward and its redemptions: the points spent become available again.
+    case refund
+    /// Hide the reward but keep its redemptions: the points stay spent.
+    case keepSpent
+}
+
+/// Texts and buttons for the delete confirmation (shared by the card menu and the edit form).
+enum RewardDeletion {
+    static func title(for reward: Reward?) -> String {
+        String(format: "delete_reward_title".localized, reward?.name ?? "")
+    }
+
+    static func spentPoints(_ reward: Reward?) -> Int {
+        guard let reward else { return 0 }
+        return reward.redemptions.count * reward.pointsCost
+    }
+
+    static func message(for reward: Reward?) -> String {
+        let count = reward?.redemptions.count ?? 0
+        guard count > 0 else { return "delete_reward_message".localized }
+        let times = count == 1 ? "reward_redeemed_once".localized
+                               : String(format: "reward_redeemed_times".localized, count)
+        return String(format: "delete_reward_choice_message".localized, times, spentPoints(reward))
+    }
+
+    /// Alert buttons: a choice about the points only when the reward was redeemed.
+    @ViewBuilder
+    static func buttons(for reward: Reward?, onDelete: @escaping (Reward, RewardDeletionMode) -> Void,
+                        onCancel: @escaping () -> Void = {}) -> some View {
+        if let reward {
+            if reward.redemptions.isEmpty {
+                Button("delete".localized, role: .destructive) { onDelete(reward, .refund) }
+            } else {
+                Button(String(format: "delete_reward_refund".localized, spentPoints(reward))) { onDelete(reward, .refund) }
+                Button("delete_reward_keep_spent".localized, role: .destructive) { onDelete(reward, .keepSpent) }
+            }
+        }
+        Button("cancel".localized, role: .cancel) { onCancel() }
     }
 }

@@ -213,9 +213,18 @@ struct RedeemedRewardCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(reward.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .themedPrimaryText()
+                    HStack(spacing: 6) {
+                        Text(reward.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .themedPrimaryText()
+                        if reward.isArchived {
+                            Text("reward_archived_tag".localized)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Capsule().fill(Color.secondary.opacity(0.15)))
+                        }
+                    }
                     
                     if let description = reward.description {
                         Text(description)
@@ -242,7 +251,7 @@ struct RedeemedRewardCard: View {
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(Color(hex: "FF6B6B"))
                     
-                    Text("\(redemptionDates.count) " + "times".localized)
+                    Text(redemptionDates.count == 1 ? "redeemed_once_short".localized : "\(redemptionDates.count) " + "times".localized)
                         .font(.system(size: 12))
                         .themedSecondaryText()
                 }

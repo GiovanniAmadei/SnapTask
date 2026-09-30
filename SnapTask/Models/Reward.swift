@@ -29,6 +29,11 @@ enum RewardFrequency: String, Codable, CaseIterable, Identifiable {
         }
     }
     
+    /// Short label for segmented pickers (displayName of `oneTime` is a whole sentence).
+    var pickerLabel: String {
+        self == .oneTime ? "reward_frequency_once".localized : displayName
+    }
+
     var iconName: String {
         switch self {
         case .daily: return "sun.max"
@@ -53,6 +58,12 @@ struct Reward: Identifiable, Codable, Equatable {
     
     var categoryId: UUID?
     var categoryName: String?
+    /// Set when the reward was removed but its points stay spent: hidden from the list,
+    /// still counted in the points balance and shown in the redemption history.
+    /// Optional so rewards saved before 1.8 still decode.
+    var archivedDate: Date?
+    
+    var isArchived: Bool { archivedDate != nil }
     
     var isGeneralReward: Bool {
         return categoryId == nil
@@ -122,6 +133,7 @@ struct Reward: Identifiable, Codable, Equatable {
         lhs.icon == rhs.icon &&
         lhs.redemptions == rhs.redemptions &&
         lhs.categoryId == rhs.categoryId &&
-        lhs.categoryName == rhs.categoryName
+        lhs.categoryName == rhs.categoryName &&
+        lhs.archivedDate == rhs.archivedDate
     }
 }

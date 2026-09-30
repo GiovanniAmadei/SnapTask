@@ -13,11 +13,18 @@ struct RewardsView: View {
     @State private var showingCategoryPointsBreakdown = false
     @State private var showingPremiumPaywall = false
     @State private var selectedFrequencyFilter: RewardFrequency? = nil
+    @State private var duplicatingReward: Reward?
+    @State private var rewardToDelete: Reward?
+    /// Deleted reward hidden from the list for a few seconds so it can be restored.
+    @State private var pendingDeletion: Reward?
+    @State private var pendingDeletionMode: RewardDeletionMode = .refund
+    @State private var deletionTask: Task<Void, Never>?
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
     
     private var allRewards: [Reward] {
         (viewModel.dailyRewards + viewModel.weeklyRewards + viewModel.monthlyRewards + viewModel.yearlyRewards + viewModel.oneTimeRewards)
+            .filter { $0.id != pendingDeletion?.id }
             .sorted { $0.pointsCost < $1.pointsCost }
     }
     
@@ -109,8 +116,29 @@ struct RewardsView: View {
                 }
             }
             .sheet(item: $selectedReward) { reward in
-                RewardFormView(initialReward: reward)
+                RewardFormView(initialReward: reward, onDelete: { scheduleDeletion($0, mode: $1) })
             }
+            .sheet(item: $duplicatingReward) { reward in
+                RewardFormView(initialReward: reward, isEditing: false)
+            }
+            .alert(RewardDeletion.title(for: rewardToDelete),
+                                isPresented: Binding(get: { rewardToDelete != nil }, set: { if !$0 { rewardToDelete = nil } })) {
+                RewardDeletion.buttons(for: rewardToDelete, onDelete: { reward, mode in
+                    scheduleDeletion(reward, mode: mode)
+                    rewardToDelete = nil
+                }, onCancel: { rewardToDelete = nil })
+            } message: {
+                Text(RewardDeletion.message(for: rewardToDelete))
+            }
+            .overlay(alignment: .bottom) {
+                if let reward = pendingDeletion {
+                    undoBanner(for: reward)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 96)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .onDisappear { commitPendingDeletion() }
             .sheet(isPresented: $showingPointsHistory) {
                 PointsHistoryView()
             }
@@ -129,6 +157,14 @@ struct RewardsView: View {
         }
     }
     
+    @ViewBuilder
+    private var periodChips: some View {
+        CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: theme.primaryColor)
+        CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: theme.secondaryColor)
+        CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: theme.accentColor)
+        CompactPointsChip(title: "year_short".localized, points: viewModel.yearlyPoints, color: theme.primaryColor.opacity(0.8))
+    }
+
     private var unifiedPointsFilterView: some View {
         VStack(spacing: 12) {
             // Header with total points and detail button
@@ -177,11 +213,23 @@ struct RewardsView: View {
             .buttonStyle(PlainButtonStyle())
             
             // Period breakdown chips
-            HStack(spacing: 6) {
-                CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: theme.primaryColor)
-                CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: theme.secondaryColor)
-                CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: theme.accentColor)
-                CompactPointsChip(title: "year_short".localized, points: viewModel.yearlyPoints, color: theme.primaryColor.opacity(0.8))
+            // One row when it fits, otherwise 2×2: the chips never push the page wider than the screen.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) { periodChips }
+                Grid(horizontalSpacing: 6, verticalSpacing: 6) {
+                    GridRow {
+                        CompactPointsChip(title: "today".localized, points: viewModel.dailyPoints, color: theme.primaryColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        CompactPointsChip(title: "week_short".localized, points: viewModel.weeklyPoints, color: theme.secondaryColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    GridRow {
+                        CompactPointsChip(title: "month_short".localized, points: viewModel.monthlyPoints, color: theme.accentColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        CompactPointsChip(title: "year_short".localized, points: viewModel.yearlyPoints, color: theme.primaryColor.opacity(0.8))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
             }
         }
         .padding(.horizontal, 18)
@@ -313,8 +361,16 @@ struct RewardsView: View {
                                     onEditTapped: {
                                         selectedReward = reward
                                     },
+                                    onDuplicateTapped: {
+                                        var copy = reward
+                                        copy = Reward(name: reward.name, description: reward.description,
+                                                      pointsCost: reward.pointsCost, frequency: reward.frequency,
+                                                      icon: reward.icon, categoryId: reward.categoryId,
+                                                      categoryName: reward.categoryName)
+                                        duplicatingReward = copy
+                                    },
                                     onDeleteTapped: {
-                                        viewModel.removeReward(reward)
+                                        rewardToDelete = reward
                                     }
                                 )
                             }
@@ -325,6 +381,66 @@ struct RewardsView: View {
         }
     }
     
+    // MARK: - Deletion with undo
+
+    private func scheduleDeletion(_ reward: Reward, mode: RewardDeletionMode) {
+        commitPendingDeletion()
+        HapticManager.shared.notification(.warning)
+        pendingDeletionMode = mode
+        withAnimation(.snappy) { pendingDeletion = reward }
+        deletionTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard !Task.isCancelled else { return }
+            commitPendingDeletion()
+        }
+    }
+
+    private func commitPendingDeletion() {
+        deletionTask?.cancel()
+        deletionTask = nil
+        guard let reward = pendingDeletion else { return }
+        switch pendingDeletionMode {
+        case .refund: viewModel.removeReward(reward)
+        case .keepSpent: viewModel.archiveReward(reward)
+        }
+        withAnimation(.snappy) { pendingDeletion = nil }
+    }
+
+    private func undoDeletion() {
+        deletionTask?.cancel()
+        deletionTask = nil
+        HapticManager.shared.impact(.light)
+        withAnimation(.snappy) { pendingDeletion = nil }
+    }
+
+    private func undoBanner(for reward: Reward) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "trash.fill")
+                .foregroundColor(.white.opacity(0.8))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(String(format: "reward_deleted".localized, reward.name))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                if !reward.redemptions.isEmpty {
+                    Text(pendingDeletionMode == .refund
+                         ? String(format: "reward_points_refunded".localized, RewardDeletion.spentPoints(reward))
+                         : "reward_points_kept".localized)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            Button("undo".localized) { undoDeletion() }
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(.yellow)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.black.opacity(0.85)))
+    }
+
     private var emptyRewardsView: some View {
         VStack(spacing: 20) {
             ZStack {
@@ -637,6 +753,7 @@ struct RewardCard: View {
     let currentPoints: Int
     let onRedeemTapped: () -> Void
     let onEditTapped: () -> Void
+    var onDuplicateTapped: () -> Void = {}
     let onDeleteTapped: () -> Void
     
     @StateObject private var categoryManager = CategoryManager.shared
@@ -916,6 +1033,9 @@ struct RewardCard: View {
             .opacity(successAnimation ? 0.3 : 1.0)
         }
         .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
+        // Tap anywhere on the card (outside the redeem button) to edit.
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .onTapGesture { onEditTapped() }
 
         // Context Menu
         .contextMenu {
@@ -923,6 +1043,12 @@ struct RewardCard: View {
                 onEditTapped()
             } label: {
                 Label("edit".localized, systemImage: "pencil")
+            }
+            
+            Button {
+                onDuplicateTapped()
+            } label: {
+                Label("duplicate".localized, systemImage: "plus.square.on.square")
             }
             
             Button(role: .destructive) {

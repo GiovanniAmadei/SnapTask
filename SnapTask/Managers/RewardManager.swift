@@ -132,11 +132,28 @@ class RewardManager: ObservableObject {
         }
     }
     
+    /// Removes the reward but keeps its redemptions, so the points already spent stay spent.
+    func archiveReward(_ reward: Reward) {
+        guard var archived = rewards.first(where: { $0.id == reward.id }) else { return }
+        archived.archivedDate = Date()
+        archived.lastModifiedDate = Date()
+        updateReward(archived)
+    }
+    
+    /// Rewards shown in the list (archived ones only live in the redemption history).
+    var activeRewards: [Reward] { rewards.filter { !$0.isArchived } }
+    
     func removeReward(_ reward: Reward) {
+        let wasRedeemed = rewards.first { $0.id == reward.id }?.redemptions.isEmpty == false
         rewards.removeAll { $0.id == reward.id }
         saveRewards()
         
         CloudKitService.shared.deleteReward(reward)
+        
+        // Its redemptions are gone: rebuild the period balances so the spent points come back everywhere.
+        if wasRedeemed {
+            recalculateDailyPointsFromSources()
+        }
     }
     
     func importRewards(_ newRewards: [Reward]) {
@@ -625,19 +642,19 @@ class RewardManager: ObservableObject {
     }
     
     func rewardsFor(frequency: RewardFrequency) -> [Reward] {
-        return rewards.filter { $0.frequency == frequency }
+        return activeRewards.filter { $0.frequency == frequency }
     }
     
     func rewardsForCategory(_ categoryId: UUID?) -> [Reward] {
-        return rewards.filter { $0.categoryId == categoryId }
+        return activeRewards.filter { $0.categoryId == categoryId }
     }
     
     func generalRewards() -> [Reward] {
-        return rewards.filter { $0.isGeneralReward }
+        return activeRewards.filter { $0.isGeneralReward }
     }
     
     func categorySpecificRewards() -> [Reward] {
-        return rewards.filter { !$0.isGeneralReward }
+        return activeRewards.filter { !$0.isGeneralReward }
     }
     
     // MARK: - Persistence
