@@ -35,6 +35,9 @@ class FeedbackManager: ObservableObject {
                 
                 await MainActor.run {
                     self.feedbackItems = remoteFeedback.sorted { $0.votes > $1.votes }
+                    // Replies visible in the list don't need a notification later.
+                    let userId = self.getCurrentUserId()
+                    FeedbackReplyNotifier.shared.markRepliesSeen(in: remoteFeedback.filter { $0.authorId == userId })
                     self.saveLocalFeedback() // Cache locally
                     self.isLoading = false
                     print("🔄 [LOAD] UI updated with \(self.feedbackItems.count) items")
@@ -73,6 +76,8 @@ class FeedbackManager: ObservableObject {
         // Submit to Firebase
         do {
             try await firebaseService.submitFeedback(feedbackWithAuthor)
+            // The author can now receive replies: make sure the push token is stored.
+            await FeedbackReplyNotifier.shared.registerPushTokenIfNeeded(force: true)
             // Reload feedback to get updated list
             await MainActor.run {
                 Task {
@@ -215,6 +220,10 @@ class FeedbackManager: ObservableObject {
     
     func isCurrentUserDeveloper() -> Bool {
         return getCurrentUserId() == developerUserId
+    }
+    
+    func currentUserId() -> String {
+        getCurrentUserId()
     }
     
     private func getCurrentUserId() -> String {

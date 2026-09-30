@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var selectedTaskId: UUID?
     @State private var showingJournal = false
     @State private var selectedJournalDate: Date?
+    @State private var feedbackFromNotification: FeedbackFocus?
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var themeManager = ThemeManager.shared
     @State private var refreshID = UUID()
@@ -68,6 +69,16 @@ struct ContentView: View {
                 }
             }
         }
+        .sheet(item: $feedbackFromNotification) { focus in
+            NavigationStack {
+                FeedbackView(focusFeedbackId: focus.id)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("close".localized) { feedbackFromNotification = nil }
+                        }
+                    }
+            }
+        }
         #if DEBUG
         .onAppear {
             // Debug only: `-openTab 4` opens a main tab at launch (screenshots without tapping).
@@ -100,7 +111,20 @@ struct ContentView: View {
                 UserDefaults.standard.removeObject(forKey: "pendingJournalDateFromNotification")
             }
             
+            if let idString = UserDefaults.standard.string(forKey: FeedbackReplyNotifier.pendingFeedbackKey) {
+                UserDefaults.standard.removeObject(forKey: FeedbackReplyNotifier.pendingFeedbackKey)
+                if let id = UUID(uuidString: idString) {
+                    feedbackFromNotification = FeedbackFocus(id: id)
+                }
+            }
+            
             checkPendingQuickAdd()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openFeedbackFromNotification)) { notification in
+            if let id = notification.object as? UUID {
+                UserDefaults.standard.removeObject(forKey: FeedbackReplyNotifier.pendingFeedbackKey)
+                feedbackFromNotification = FeedbackFocus(id: id)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             checkPendingQuickAdd()
@@ -247,4 +271,9 @@ struct ContentView: View {
             NotificationCenter.default.post(name: .openQuickAdd, object: nil)
         }
     }
+}
+
+/// Suggestion to highlight when the Community is opened from a reply notification.
+private struct FeedbackFocus: Identifiable {
+    let id: UUID
 }

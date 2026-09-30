@@ -15,6 +15,7 @@ class FirebaseService: ObservableObject {
     private let likesCollection = "likes"
     private let repliesCollection = "feedback_replies"
     private let replyLikesCollection = "reply_likes"
+    private let pushTokensCollection = "push_tokens"
     
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -140,6 +141,21 @@ class FirebaseService: ObservableObject {
         return feedbackItems
     }
     
+    /// Feedback written by one anonymous user (used to detect new developer replies).
+    func fetchFeedback(authoredBy authorId: String) async throws -> [FeedbackItem] {
+        let snapshot = try await db.collection(feedbackCollection)
+            .whereField("authorId", isEqualTo: authorId)
+            .getDocuments()
+        return snapshot.documents.compactMap { createFeedbackItem(from: $0.data()) }
+    }
+
+    /// Stores the APNs token of a feedback author so developer replies can be pushed to them.
+    func savePushToken(userId: String, data: [String: Any]) async throws {
+        var payload = data
+        payload["updatedAt"] = Timestamp()
+        try await db.collection(pushTokensCollection).document(userId).setData(payload, merge: true)
+    }
+
     func submitReply(_ reply: FeedbackReply) async throws {
         let feedbackRef = db.collection(feedbackCollection).document(reply.feedbackId.uuidString)
         

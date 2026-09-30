@@ -2218,3 +2218,5 @@
 "rewards_history_short" = "History";
 "rewards_redeemed_short" = "Redeemed";
 "reward_redeemed_success" = "Redeemed!";
+
+"feedback_reply_notification_title" = "Giovanni replied to your suggestion";

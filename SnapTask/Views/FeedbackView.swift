@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct FeedbackView: View {
+    /// Suggestion to expand and scroll to (opened from a developer-reply notification).
+    var focusFeedbackId: UUID? = nil
+    
     @StateObject private var feedbackManager = FeedbackManager.shared
+    @State private var didApplyFocus = false
     @State private var showingNewFeedback = false
     @State private var searchText = ""
     @State private var isSearchExpanded = false
@@ -254,6 +258,7 @@ struct FeedbackView: View {
     
     @ViewBuilder
     private var feedbackListSection: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(filteredFeedback) { item in
@@ -277,6 +282,7 @@ struct FeedbackView: View {
                             showingDeleteAlert = true
                         }
                     )
+                    .id(item.id)
                 }
                 
                 if filteredFeedback.isEmpty && !feedbackManager.isLoading {
@@ -289,6 +295,22 @@ struct FeedbackView: View {
         }
         .refreshable {
             feedbackManager.loadFeedback()
+        }
+        .onAppear { applyFocus(proxy) }
+        .onChange(of: feedbackManager.feedbackItems.map(\.id)) { _, _ in applyFocus(proxy) }
+        }
+    }
+    
+    private func applyFocus(_ proxy: ScrollViewProxy) {
+        guard let id = focusFeedbackId, !didApplyFocus,
+              feedbackManager.feedbackItems.contains(where: { $0.id == id }) else { return }
+        didApplyFocus = true
+        currentFilter = .allMostVoted
+        expandedItems.insert(id)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(id, anchor: .top)
+            }
         }
     }
     

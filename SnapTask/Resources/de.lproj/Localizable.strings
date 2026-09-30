@@ -2071,3 +2071,5 @@
 "rewards_history_short" = "Punkteverlauf";
 "rewards_redeemed_short" = "Eingelöst";
 "reward_redeemed_success" = "Eingelöst!";
+
+"feedback_reply_notification_title" = "Giovanni hat auf deinen Vorschlag geantwortet";

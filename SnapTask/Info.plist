@@ -2,24 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSCalendarsUsageDescription</key>
-	<string>Snaptask needs calendar access to sync your tasks and create calendar events automatically.</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>SnapTask needs full access to your calendar to create, update, and remove calendar events linked to your tasks.</string>
-	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
-	<string>SnapTask needs write access to your calendar to create and update calendar events for your tasks.</string>
-	<key>NSUserNotificationUsageDescription</key>
-	<string>SnapTask needs notification access to send alerts when your focus sessions complete and provide live timer updates.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>SnapTask usa il riconoscimento vocale per permetterti di dettare note e creare task automaticamente tramite l'IA.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>SnapTask usa il microfono per registrare la tua voce durante la dettatura con l'IA.</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
-	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
-	<true/>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.snaptask.feedback-replies</string>
+		<string>com.snaptask.timer-update</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -39,5 +26,27 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>SnapTask needs full access to your calendar to create, update, and remove calendar events linked to your tasks.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Snaptask needs calendar access to sync your tasks and create calendar events automatically.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>SnapTask needs write access to your calendar to create and update calendar events for your tasks.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SnapTask usa il microfono per registrare la tua voce durante la dettatura con l'IA.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SnapTask usa il riconoscimento vocale per permetterti di dettare note e creare task automaticamente tramite l'IA.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>SnapTask needs notification access to send alerts when your focus sessions complete and provide live timer updates.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>

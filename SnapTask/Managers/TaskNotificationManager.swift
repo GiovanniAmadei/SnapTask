@@ -672,6 +672,11 @@ extension TaskNotificationManager: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        if FeedbackReplyNotifier.isFeedbackReply(notification.request.content.userInfo) {
+            FeedbackReplyNotifier.handleWillPresent(userInfo: notification.request.content.userInfo)
+            completionHandler([.banner, .list, .sound])
+            return
+        }
         if notification.request.identifier == "dailyQuote" || notification.request.identifier.hasPrefix("dailyQuote_") {
             completionHandler([.banner, .sound])
             return
@@ -690,6 +695,14 @@ extension TaskNotificationManager: UNUserNotificationCenterDelegate {
         
         // completionHandler MUST be called synchronously - async work continues independently
         defer { completionHandler() }
+        
+        let userInfo = response.notification.request.content.userInfo
+        if FeedbackReplyNotifier.isFeedbackReply(userInfo) {
+            if actionIdentifier == UNNotificationDefaultActionIdentifier {
+                FeedbackReplyNotifier.handleTap(userInfo: userInfo)
+            }
+            return
+        }
         
         // identifier format: "task_<UUID>" or "task_<UUID>_<timestamp>"
         // Extract the UUID portion (always at index 1 when split by "_", but UUID itself has hyphens not underscores)

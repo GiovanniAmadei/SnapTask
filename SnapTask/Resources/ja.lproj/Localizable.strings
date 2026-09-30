@@ -2144,3 +2144,5 @@
 "rewards_history_short" = "ポイント履歴";
 "rewards_redeemed_short" = "交換済み";
 "reward_redeemed_success" = "交換しました！";
+
+"feedback_reply_notification_title" = "Giovanniがあなたの提案に返信しました";

@@ -2177,3 +2177,5 @@
 "rewards_history_short" = "Cronologia";
 "rewards_redeemed_short" = "Riscattati";
 "reward_redeemed_success" = "Riscattato!";
+
+"feedback_reply_notification_title" = "Giovanni ha risposto al tuo suggerimento";

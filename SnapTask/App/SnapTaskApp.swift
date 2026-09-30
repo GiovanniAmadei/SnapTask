@@ -72,6 +72,21 @@ struct SnapTaskApp: App {
                     registerForRemoteNotifications()
                     
                     initializeAppData()
+                    
+                    #if DEBUG
+                    // `-debugOpenFeedback <UUID>`: same path as tapping a reply notification.
+                    if let id = UserDefaults.standard.string(forKey: "debugOpenFeedback") {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            FeedbackReplyNotifier.handleTap(userInfo: ["type": FeedbackReplyNotifier.notificationType, "feedbackId": id])
+                        }
+                    }
+                    if UserDefaults.standard.bool(forKey: "simulateFeedbackReply") {
+                        Task {
+                            try? await Task.sleep(nanoseconds: 3_000_000_000)
+                            await FeedbackReplyNotifier.shared.postDebugNotification()
+                        }
+                    }
+                    #endif
                 }
                 .onOpenURL { url in
                     // Deep links used by the Control Center / Action Button
@@ -108,9 +123,14 @@ struct SnapTaskApp: App {
                         
                         requestBackgroundAppRefresh()
                         UIApplication.shared.applicationIconBadgeNumber = 0
+                        
+                        Task {
+                            await FeedbackReplyNotifier.shared.checkForNewReplies()
+                        }
                     }
                     else if newPhase == .background {
                         scheduleBackgroundAppRefresh()
+                        FeedbackReplyNotifier.shared.scheduleBackgroundRefresh()
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .openTaskFromNotification)) { notification in
@@ -232,6 +252,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.snaptask.timer-update", using: nil) { task in
             self.handleBackgroundTimerUpdate(task: task as! BGAppRefreshTask)
         }
+        FeedbackReplyNotifier.registerBackgroundTask()
         
         // Backup Firebase configuration
         if FirebaseApp.app() == nil {
@@ -256,7 +277,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // Handle notification when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         // Show all notifications even when app is in foreground
-        if notification.request.identifier.hasPrefix("pomodoro-") {
+        let userInfo = notification.request.content.userInfo
+        if FeedbackReplyNotifier.isFeedbackReply(userInfo) {
+            FeedbackReplyNotifier.handleWillPresent(userInfo: userInfo)
+            completionHandler([.banner, .list, .sound])
+        } else if notification.request.identifier.hasPrefix("pomodoro-") {
             completionHandler([.banner, .sound])
         } else if notification.request.identifier.hasPrefix("task_") {
             completionHandler([.banner, .sound])
@@ -273,8 +298,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let identifier = response.notification.request.identifier
         let actionIdentifier = response.actionIdentifier
+        let userInfo = response.notification.request.content.userInfo
         
-        if identifier == "dailyQuote" || identifier.hasPrefix("dailyQuote_") {
+        if FeedbackReplyNotifier.isFeedbackReply(userInfo) {
+            FeedbackReplyNotifier.handleTap(userInfo: userInfo)
+        } else if identifier == "dailyQuote" || identifier.hasPrefix("dailyQuote_") {
             Task {
                 await QuoteManager.shared.forceUpdateQuote()
             }
@@ -388,6 +416,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         print("📱 Successfully registered for remote notifications")
+        Task { @MainActor in
+            FeedbackReplyNotifier.shared.didRegister(deviceToken: deviceToken)
+        }
     }
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
@@ -411,6 +442,8 @@ extension Notification.Name {
     /// Posted when the app is opened via the Control Center / Action Button
     /// "Quick Add Task" control and should immediately present the new-task sheet.
     static let openQuickAdd = Notification.Name("openQuickAdd")
+    /// Posted when the user taps a "developer replied to your suggestion" notification.
+    static let openFeedbackFromNotification = Notification.Name("openFeedbackFromNotification")
     /// Posted from `SnapTaskApp.onOpenURL` to ask `ContentView` to re-run
     /// `checkPendingQuickAdd()` when the app receives a `snaptask://quickadd`
     /// deep link while it's already in foreground.
