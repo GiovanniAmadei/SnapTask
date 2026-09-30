@@ -2147,7 +2147,7 @@
 "feedback_reply_notification_title" = "Giovanni respondeu à sua sugestão";
 
 // Inbox
-"scope_inbox" = "Caixa de entrada";
+"scope_inbox" = "Inbox";
 "inbox_add_placeholder" = "Anote algo rápido…";
 "inbox_empty_title" = "Sua caixa de entrada está vazia";
 "inbox_empty_subtitle" = "Anote ideias, tarefas e compras sem data. Planeje quando quiser.";

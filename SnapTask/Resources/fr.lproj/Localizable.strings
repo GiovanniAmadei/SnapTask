@@ -2064,7 +2064,7 @@
 "feedback_reply_notification_title" = "Giovanni a répondu à ta suggestion";
 
 // Inbox
-"scope_inbox" = "Boîte de réception";
+"scope_inbox" = "Inbox";
 "inbox_add_placeholder" = "Noter rapidement…";
 "inbox_empty_title" = "Ta boîte de réception est vide";
 "inbox_empty_subtitle" = "Note tes idées, courses et choses à faire sans date. Planifie-les quand tu veux.";

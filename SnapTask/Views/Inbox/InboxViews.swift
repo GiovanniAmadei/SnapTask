@@ -72,6 +72,51 @@ extension UIApplication {
     }
 }
 
+// MARK: - Shortcut
+
+/// Round button next to the + that opens the inbox (and goes back to today when it's open).
+struct InboxShortcutButton: View {
+    @ObservedObject var viewModel: TimelineViewModel
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        let isActive = viewModel.selectedTimeScope == .inbox
+        let openCount = viewModel.openInboxCount
+        Button {
+            HapticManager.shared.selection()
+            withAnimation(.easeInOut(duration: 0.25)) {
+                viewModel.selectedTimeScope = isActive ? .today : .inbox
+            }
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Circle()
+                    .fill(isActive ? theme.primaryColor : theme.surfaceColor)
+                    .frame(width: 44, height: 44)
+                    .overlay(Circle().strokeBorder(theme.primaryColor.opacity(0.3), lineWidth: 1))
+                    .shadow(color: theme.shadowColor, radius: 6, x: 0, y: 3)
+                    .overlay(
+                        Image(systemName: isActive ? "tray.fill" : "tray")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(isActive ? .white : theme.primaryColor)
+                    )
+
+                if openCount > 0 && !isActive {
+                    Text(openCount > 99 ? "99+" : "\(openCount)")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 5)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Capsule().fill(Color.red))
+                        .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 1.5))
+                        .offset(x: 4, y: -4)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("scope_inbox".localized))
+    }
+}
+
 // MARK: - Empty state
 
 struct InboxEmptyState: View {

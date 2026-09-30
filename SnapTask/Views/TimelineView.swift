@@ -749,7 +749,6 @@ private struct EmptyHourSlotButtonStyle: ButtonStyle {
 
 struct TimelineHeaderView: View {
     @ObservedObject var viewModel: TimelineViewModel
-    @ObservedObject private var taskManager = TaskManager.shared
     @Binding var selectedDayOffset: Int
     @Binding var showingCalendarPicker: Bool
     @Binding var scrollProxy: ScrollViewProxy?
@@ -760,58 +759,10 @@ struct TimelineHeaderView: View {
     @ObservedObject private var journalManager = JournalManager.shared
     @ObservedObject private var settingsManager = CloudKitSettingsManager.shared
 
-    private var scopeMenuShowsName: Bool {
-        switch viewModel.selectedTimeScope {
-        case .week, .month, .year: return true
-        case .today, .inbox, .longTerm, .all: return false
-        }
-    }
-
-    /// Opens the Inbox (undated quick notes); tapping again goes back to today.
-    private var inboxButton: some View {
-        let isActive = viewModel.selectedTimeScope == .inbox
-        let openCount = viewModel.openInboxCount
-        return Button(action: {
-            HapticManager.shared.selection()
-            withAnimation(.easeInOut(duration: 0.25)) {
-                viewModel.selectedTimeScope = isActive ? .today : .inbox
-            }
-        }) {
-            ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isActive ? theme.primaryColor : theme.primaryColor.opacity(0.12))
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
-                    )
-                    .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
-                    .overlay(
-                        Image(systemName: "tray.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(isActive ? .white : theme.primaryColor)
-                    )
-
-                if openCount > 0 && !isActive {
-                    Text(openCount > 99 ? "99+" : "\(openCount)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 4)
-                        .frame(minWidth: 16, minHeight: 16)
-                        .background(Capsule().fill(Color.red))
-                        .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 1.5))
-                        .offset(x: 6, y: -6)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("scope_inbox".localized))
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
-                HStack(alignment: .center, spacing: 8) {
+                HStack(alignment: .center, spacing: 6) {
                     Button(action: {
                         if !viewModel.isCurrentPeriod {
                             HapticManager.shared.selection()
@@ -822,11 +773,30 @@ struct TimelineHeaderView: View {
                         }
                     }) {
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(viewModel.currentPeriodString)
-                                .font(.title2.bold())
-                                .themedPrimaryText()
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
+                            // Never truncated: full size on one line, else two lines (week ranges),
+                            // and only as a last resort a smaller single line.
+                            ViewThatFits(in: .horizontal) {
+                                Text(viewModel.currentPeriodString)
+                                    .font(.title2.bold())
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                
+                                if let lines = viewModel.currentPeriodLines {
+                                    VStack(alignment: .leading, spacing: -1) {
+                                        Text(lines.0)
+                                        Text(lines.1)
+                                    }
+                                    .font(.headline.weight(.bold))
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                }
+                                
+                                Text(viewModel.currentPeriodString)
+                                    .font(.title2.bold())
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                            }
+                            .themedPrimaryText()
                             
                             if !viewModel.isCurrentPeriod {
                                 HStack(spacing: 3) {
@@ -842,13 +812,15 @@ struct TimelineHeaderView: View {
                     }
                     .buttonStyle(.plain)
                     .contentShape(Rectangle())
+                    // Take the room before the spacer does: the title shrinks only when it has to.
+                    .layoutPriority(1)
                     
                     if viewModel.selectedTimeScope == .today {
                         Button(action: { showingJournal = true }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(theme.primaryColor.opacity(0.12))
-                                    .frame(width: 34, height: 34)
+                                    .frame(width: 32, height: 32)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
                                             .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
@@ -879,7 +851,7 @@ struct TimelineHeaderView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(theme.primaryColor.opacity(0.12))
-                                .frame(width: 34, height: 34)
+                                .frame(width: 32, height: 32)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
                                         .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
@@ -896,11 +868,9 @@ struct TimelineHeaderView: View {
                         MandalaHubView()
                     }
                     
-                    inboxButton
-                    
                     Spacer(minLength: 8)
                     
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         if (viewModel.selectedTimeScope != .today || settingsManager.hideDaysBar) && viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .inbox && viewModel.selectedTimeScope != .all {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -913,9 +883,9 @@ struct TimelineHeaderView: View {
                                 }
                             }) {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 13, weight: .semibold))
                                     .themedPrimary()
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 28, height: 28)
                                     .background(
                                         Circle()
                                             .fill(theme.primaryColor.opacity(0.1))
@@ -934,9 +904,9 @@ struct TimelineHeaderView: View {
                                 }
                             }) {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 13, weight: .semibold))
                                     .themedPrimary()
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 28, height: 28)
                                     .background(
                                         Circle()
                                             .fill(theme.primaryColor.opacity(0.1))
@@ -957,7 +927,7 @@ struct TimelineHeaderView: View {
                                             .foregroundColor(scope.tint)
                                             .font(.system(size: 14, weight: .medium))
                                         
-                                        Text(scope.displayName)
+                                        Text(scope.timelineMenuName)
                                             .font(.subheadline)
                                         
                                         Spacer()
@@ -972,26 +942,18 @@ struct TimelineHeaderView: View {
                             }
                         } label: {
                             HStack(spacing: 4) {
-                                Image(systemName: viewModel.selectedTimeScope.icon)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(viewModel.selectedTimeScope.tint)
-                                
-                                // The title already names these scopes (Today/date, Inbox, Long term, All):
-                                // repeating it here left no room for the title in longer languages.
-                                if scopeMenuShowsName {
-                                    Text(viewModel.selectedTimeScope.displayName)
-                                        .font(.subheadline.weight(.semibold))
-                                        .themedPrimaryText()
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-                                }
+                                // Text only (the icons are in the menu): the scope name must never be cut.
+                                Text(viewModel.selectedTimeScope.timelineMenuName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .themedPrimaryText()
+                                    .lineLimit(1)
                                 
                                 Image(systemName: "chevron.down")
                                     .font(.system(size: 10, weight: .medium))
                                     .themedSecondaryText()
                             }
-                            .padding(.leading, 0)
-                            .padding(.trailing, 4)
+                            .padding(.leading, 10)
+                            .padding(.trailing, 8)
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
@@ -1022,7 +984,7 @@ struct TimelineHeaderView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(theme.primaryColor.opacity(0.12))
-                                    .frame(width: 34, height: 34)
+                                    .frame(width: 32, height: 32)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
                                             .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
@@ -1422,6 +1384,11 @@ struct TaskListView: View {
                     isShowingTaskForm: $showingNewTask,
                     timeScope: viewModel.selectedTimeScope
                 )
+                
+                // Beside the + (56pt): quick way in and out of the inbox, with the open count.
+                InboxShortcutButton(viewModel: viewModel)
+                    .offset(x: -(28 + 18 + 22))
+                    .padding(.bottom, 6)
             }
             .padding(.bottom, 16)
         }
@@ -2732,6 +2699,13 @@ struct CompactTimelineTaskView: View {
 }
 
 extension TaskTimeScope {
+    /// Name in the timeline scope menu. The day scope reads "Day" (like Week/Month/Year):
+    /// the title next to it already says Today or the date, so repeating it wasted the room
+    /// the title needs, and it was wrong while looking at another day.
+    var timelineMenuName: String {
+        self == .today ? "day".localized : displayName
+    }
+
     /// SwiftUI color for `color` (a plain name, not an asset: `Color("blue")` rendered nothing).
     var tint: Color {
         switch self {

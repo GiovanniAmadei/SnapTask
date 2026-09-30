@@ -145,11 +145,11 @@ class TimelineViewModel: ObservableObject {
                 return formatter.string(from: selectedDate)
             }
         case .week:
+            // Compact localized range ("28 set – 4 ott", "1–7 ott"): the header has little room.
             let weekEnd = calendar.date(byAdding: .day, value: 6, to: currentWeek)!
-            formatter.dateFormat = "dd MMM"
-            let startString = formatter.string(from: currentWeek)
-            let endString = formatter.string(from: weekEnd)
-            return "\(startString) - \(endString)"
+            let interval = DateIntervalFormatter()
+            interval.dateTemplate = "dMMM"
+            return interval.string(from: currentWeek, to: weekEnd)
         case .month:
             formatter.dateFormat = "MMMM yyyy"
             return formatter.string(from: currentMonth)
@@ -163,6 +163,16 @@ class TimelineViewModel: ObservableObject {
         case .all:
             return "all_goals".localized
         }
+    }
+    
+    /// Week range split on two lines ("28 set –" / "4 ott") for when one line doesn't fit the header.
+    var currentPeriodLines: (String, String)? {
+        guard selectedTimeScope == .week else { return nil }
+        let calendar = Calendar.current
+        let weekEnd = calendar.date(byAdding: .day, value: 6, to: currentWeek)!
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
+        return ("\(formatter.string(from: currentWeek)) –", formatter.string(from: weekEnd))
     }
     
     var scopeSubtitle: String {

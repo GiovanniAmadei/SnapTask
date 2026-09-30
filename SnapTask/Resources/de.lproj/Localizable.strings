@@ -2081,3 +2081,4 @@
 "inbox_empty_subtitle" = "Notiere Ideen, Erledigungen und Einkäufe ohne Datum. Plane sie, wann du willst.";
 "inbox_plan" = "Planen";
 "inbox_scope_description" = "Ohne Datum: später planen";
+"scope_all" = "Alle";
