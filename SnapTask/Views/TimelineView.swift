@@ -1593,6 +1593,7 @@ struct TimelineTaskCard: View {
     let onToggleSubtask: (UUID) -> Void
     @ObservedObject var viewModel: TimelineViewModel
     @State private var isExpanded = false
+    @State private var subtasksHeight: CGFloat = 0
     @State private var showingPomodoro = false
     @State private var showingEditSheet = false
     @State private var showingDetailView = false
@@ -1900,7 +1901,7 @@ struct TimelineTaskCard: View {
     /// Shows subtask progress and toggles the subtask list.
     private var subtasksChip: some View {
         Button(action: {
-            withAnimation(.interpolatingSpring(stiffness: 350, damping: 30)) {
+            withAnimation(.smooth(duration: 0.3)) {
                 isExpanded.toggle()
             }
         }) {
@@ -2137,7 +2138,9 @@ struct TimelineTaskCard: View {
                 }
                 .padding(Self.contentInset)
                 
-                if isExpanded && !task.subtasks.isEmpty {
+                if !task.subtasks.isEmpty {
+                    // Always in the hierarchy; the height is animated frame by frame so the
+                    // List row grows/shrinks together with the card instead of jumping.
                     VStack(spacing: 8) {
                         ForEach(task.subtasks) { subtask in
                             TimelineSubtaskRow(
@@ -2147,7 +2150,12 @@ struct TimelineTaskCard: View {
                             )
                         }
                     }
-                    .padding(.vertical, 8)
+                    .padding(.top, 2)
+                    .padding(.bottom, Self.contentInset)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { subtasksHeight = $0 }
+                    .modifier(RevealHeight(progress: isExpanded ? 1 : 0, fullHeight: subtasksHeight))
+                    .allowsHitTesting(isExpanded)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 60)
@@ -2406,6 +2414,25 @@ private struct AddTaskButton: View {
                 .animation(.interpolatingSpring(stiffness: 600, damping: 25), value: isPressed)
         }
         .buttonStyle(BorderlessButtonStyle())
+    }
+}
+
+/// Reveals content from the top by animating its layout height (not just its rendering),
+/// so containers such as List rows resize in step with the animation.
+private struct RevealHeight: ViewModifier, Animatable {
+    var progress: CGFloat
+    let fullHeight: CGFloat
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(Double(min(1, progress * 1.5)))
+            .frame(height: fullHeight * progress, alignment: .top)
+            .clipped()
     }
 }
 
