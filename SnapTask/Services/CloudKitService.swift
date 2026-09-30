@@ -1399,6 +1399,10 @@ class CloudKitService: ObservableObject {
                     if mergedTask.notificationId == nil {
                         mergedTask.notificationId = localTask.notificationId
                     }
+                    // L'ordine manuale non è su CloudKit: tieni quello locale
+                    if mergedTask.orderIndex == nil {
+                        mergedTask.orderIndex = localTask.orderIndex
+                    }
                     print(" Remote task is newer for \(remoteTask.name)")
                 } else if localTask.lastModifiedDate > remoteTask.lastModifiedDate {
                     mergedTask = localTask
@@ -1409,6 +1413,9 @@ class CloudKitService: ObservableObject {
                     mergedTask.hasNotification = localTask.hasNotification || remoteTask.hasNotification
                     if mergedTask.notificationId == nil {
                         mergedTask.notificationId = localTask.notificationId
+                    }
+                    if mergedTask.orderIndex == nil {
+                        mergedTask.orderIndex = localTask.orderIndex
                     }
                     
                     var mergedCompletions = remoteTask.completions

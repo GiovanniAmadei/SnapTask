@@ -393,7 +393,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
         lhs.notificationLeadTimeMinutes == rhs.notificationLeadTimeMinutes &&
         lhs.autoCarryOver == rhs.autoCarryOver &&
         lhs.domainId == rhs.domainId &&
-        lhs.goalId == rhs.goalId
+        lhs.goalId == rhs.goalId &&
+        lhs.orderIndex == rhs.orderIndex
     }
     
     // MARK: - Completion Key Helper
@@ -679,6 +680,7 @@ extension TodoTask {
         case autoCarryOver
         case domainId
         case goalId
+        case orderIndex
     }
     
     init(from decoder: Decoder) throws {
@@ -719,5 +721,6 @@ extension TodoTask {
         autoCarryOver = try c.decodeIfPresent(Bool.self, forKey: .autoCarryOver) ?? false
         domainId = try c.decodeIfPresent(UUID.self, forKey: .domainId)
         goalId = try c.decodeIfPresent(UUID.self, forKey: .goalId)
+        orderIndex = try c.decodeIfPresent(Double.self, forKey: .orderIndex)
     }
 }

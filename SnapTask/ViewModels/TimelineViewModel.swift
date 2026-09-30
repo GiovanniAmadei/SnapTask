@@ -84,31 +84,49 @@ class TimelineViewModel: ObservableObject {
     @Published var showingTimelineView = false
     
     @Published var draggedTask: TodoTask? = nil
+    private var pendingManualOrder: [UUID]? = nil
     
     // MARK: - Task Reordering
-    func moveTask(_ draggedItem: TodoTask, toTarget targetItem: TodoTask) {
-        guard let draggedIndex = tasks.firstIndex(where: { $0.id == draggedItem.id }),
-              let targetIndex = tasks.firstIndex(where: { $0.id == targetItem.id }) else {
-            return
-        }
-        
-        let draggedTask = tasks.remove(at: draggedIndex)
-        let actualTargetIndex = targetIndex > draggedIndex ? targetIndex - 1 : targetIndex
-        
-        tasks.insert(draggedTask, at: actualTargetIndex)
-        
-        // Update order indices for all tasks to persist the new order
-        updateOrderIndices()
+    var canReorderTasks: Bool {
+        organization == .none && selectedTimeScope != .all
     }
     
-    private func updateOrderIndices() {
-        for (index, task) in tasks.enumerated() {
-            var updatedTask = task
-            updatedTask.orderIndex = Double(index)
-            Task {
-                await TaskManager.shared.updateTask(updatedTask)
-            }
+    func beginDrag(_ task: TodoTask) {
+        // Un trascinamento precedente rilasciato fuori dalla lista non passa da performDrop
+        commitTaskReorder()
+        draggedTask = task
+    }
+    
+    /// Sposta il task trascinato al posto del task sotto il dito.
+    /// Aggiorna solo l'anteprima: il salvataggio avviene in commitTaskReorder().
+    @discardableResult
+    func moveTask(_ draggedItem: TodoTask, toTarget targetItem: TodoTask) -> Bool {
+        guard canReorderTasks,
+              case .single(let visibleTasks) = organizedTasksForSelectedDate() else { return false }
+    
+        var orderedIds = visibleTasks.map(\.id)
+        guard let from = orderedIds.firstIndex(of: draggedItem.id),
+              let to = orderedIds.firstIndex(of: targetItem.id),
+              from != to else { return false }
+    
+        orderedIds.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+    
+        let positions = Dictionary(orderedIds.enumerated().map { ($1, Double($0)) }, uniquingKeysWith: { first, _ in first })
+        tasks = tasks.map { task in
+            guard let position = positions[task.id] else { return task }
+            var updated = task
+            updated.orderIndex = position
+            return updated
         }
+        pendingManualOrder = orderedIds
+        return true
+    }
+    
+    func commitTaskReorder() {
+        draggedTask = nil
+        guard let orderedIds = pendingManualOrder else { return }
+        pendingManualOrder = nil
+        taskManager.applyManualOrder(orderedIds)
     }
     
     // MARK: - TimeScope Properties
@@ -845,12 +863,18 @@ class TimelineViewModel: ObservableObject {
             ]
             return OrganizedTasks.sections(sections)
         case .none:
+            // Prima i task ordinati a mano, nell'ordine scelto; poi quelli mai spostati, per orario
             let sortedTasks = scopedTasks.sorted { task1, task2 in
-                if let order1 = task1.orderIndex, let order2 = task2.orderIndex {
+                switch (task1.orderIndex, task2.orderIndex) {
+                case let (order1?, order2?) where order1 != order2:
                     return order1 < order2
+                case (.some, .none):
+                    return true
+                case (.none, .some):
+                    return false
+                default:
+                    return task1.startTime < task2.startTime
                 }
-                // Fallback a startTime se non c'è orderIndex
-                return task1.startTime < task2.startTime
             }
             return OrganizedTasks.single(sortedTasks)
         }

@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UniformTypeIdentifiers
 
 struct TimelineView: View {
     @StateObject var viewModel: TimelineViewModel
@@ -1170,7 +1171,16 @@ struct TaskListView: View {
                             switch viewModel.organizedTasksForSelectedDate() {
                             case .single(let tasks):
                                 ForEach(tasks, id: \.id) { task in
-                                    taskCardRow(for: task)
+                                    if viewModel.canReorderTasks {
+                                        taskCardRow(for: task)
+                                            .onDrag {
+                                                viewModel.beginDrag(task)
+                                                return NSItemProvider(object: task.id.uuidString as NSString)
+                                            }
+                                            .onDrop(of: [UTType.text], delegate: TaskDropDelegate(item: task, viewModel: viewModel))
+                                    } else {
+                                        taskCardRow(for: task)
+                                    }
                                 }
                             
                             case .sections(let sections):
@@ -1188,6 +1198,8 @@ struct TaskListView: View {
                         .padding(.horizontal, 4)
                         .padding(.bottom, 100)
                         .padding(.top, 8)
+                        // Rilascio negli spazi tra le card: salva comunque il nuovo ordine
+                        .onDrop(of: [UTType.text], delegate: TaskListDropDelegate(viewModel: viewModel))
                         .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
                         .onTapGesture {
                             if viewModel.openSwipeTaskId != nil {
@@ -2308,6 +2320,44 @@ private struct BrainDumpButton: View {
                 .animation(.interpolatingSpring(stiffness: 600, damping: 25), value: isPressed)
         }
         .buttonStyle(BorderlessButtonStyle())
+    }
+}
+
+struct TaskDropDelegate: DropDelegate {
+    let item: TodoTask
+    let viewModel: TimelineViewModel
+    
+    func dropEntered(info: DropInfo) {
+        guard let draggedItem = viewModel.draggedTask, draggedItem.id != item.id else { return }
+        
+        withAnimation(.interpolatingSpring(stiffness: 300, damping: 30)) {
+            if viewModel.moveTask(draggedItem, toTarget: item) {
+                HapticManager.shared.selection()
+            }
+        }
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: viewModel.draggedTask != nil ? .move : .forbidden)
+    }
+    
+    func performDrop(info: DropInfo) -> Bool {
+        viewModel.commitTaskReorder()
+        return true
+    }
+}
+
+struct TaskListDropDelegate: DropDelegate {
+    let viewModel: TimelineViewModel
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: viewModel.draggedTask != nil ? .move : .forbidden)
+    }
+    
+    func performDrop(info: DropInfo) -> Bool {
+        guard viewModel.draggedTask != nil else { return false }
+        viewModel.commitTaskReorder()
+        return true
     }
 }
 

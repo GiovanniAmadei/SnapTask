@@ -155,6 +155,23 @@ class TaskManager: ObservableObject {
         }
     }
 
+    /// Salva l'ordine manuale scelto con il drag and drop (vista predefinita).
+    /// L'ordine è solo locale: niente CloudKit, notifiche o calendario, e lastModifiedDate non cambia.
+    func applyManualOrder(_ orderedIds: [UUID]) {
+        var changed = false
+        for (position, id) in orderedIds.enumerated() {
+            guard let index = tasks.firstIndex(where: { $0.id == id }) else { continue }
+            let newOrder = Double(position)
+            if tasks[index].orderIndex != newOrder {
+                tasks[index].orderIndex = newOrder
+                changed = true
+            }
+        }
+        guard changed else { return }
+        saveTasks()
+        notifyTasksUpdated()
+    }
+
     /// Apply a task coming from a remote source (Watch/CloudKit) and trust its contents
     /// - If the task exists, replace it entirely (including completions)
     /// - If it does not exist, append it (create)
@@ -168,6 +185,9 @@ class TaskManager: ObservableObject {
             var taskToStore = incoming
             if taskToStore.notificationId == nil {
                 taskToStore.notificationId = tasks[index].notificationId
+            }
+            if taskToStore.orderIndex == nil {
+                taskToStore.orderIndex = tasks[index].orderIndex
             }
             tasks[index] = taskToStore
             print("🔁 Upsert remote: replaced task \(incoming.name)")
