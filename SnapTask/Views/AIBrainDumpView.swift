@@ -698,7 +698,7 @@ struct ParsedTaskRowView: View {
                     if task.hasSpecificTime, let time = task.startTime {
                         HStack(spacing: 4) {
                             Image(systemName: "clock.fill")
-                            Text(time.formatted(date: .omitted, time: .shortened))
+                            Text(TimeFormat.time(time))
                             Button(action: {
                                 task.hasSpecificTime = false
                                 task.startTime = nil

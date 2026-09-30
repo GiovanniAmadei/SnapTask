@@ -507,7 +507,7 @@ struct TaskDetailView: View {
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         Spacer()
-                        Text(task.startTime.formatted(date: .omitted, time: .shortened))
+                        Text(TimeFormat.time(task.startTime))
                             .font(.subheadline)
                             .themedPrimaryText()
                     }
