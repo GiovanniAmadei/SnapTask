@@ -2143,3 +2143,4 @@
 "reward_last_on" = "最終 %@";
 "rewards_history_short" = "ポイント履歴";
 "rewards_redeemed_short" = "交換済み";
+"reward_redeemed_success" = "交換しました！";

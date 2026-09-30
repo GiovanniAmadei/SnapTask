@@ -2070,3 +2070,4 @@
 "reward_last_on" = "zuletzt am %@";
 "rewards_history_short" = "Punkteverlauf";
 "rewards_redeemed_short" = "Eingelöst";
+"reward_redeemed_success" = "Eingelöst!";

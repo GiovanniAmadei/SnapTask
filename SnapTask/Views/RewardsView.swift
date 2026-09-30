@@ -37,6 +37,7 @@ struct RewardsView: View {
     @State private var pendingDeletion: Reward?
     @State private var pendingDeletionMode: RewardDeletionMode = .refund
     @State private var deletionTask: Task<Void, Never>?
+    @State private var redeemedRewardId: UUID?
     @Environment(\.theme) private var theme
 
     private var allRewards: [Reward] {
@@ -294,6 +295,12 @@ struct RewardsView: View {
                                         if viewModel.canRedeemReward(reward) {
                                             HapticManager.shared.notification(.success)
                                             viewModel.redeemReward(reward)
+                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { redeemedRewardId = reward.id }
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                                                if redeemedRewardId == reward.id {
+                                                    withAnimation(.easeOut(duration: 0.3)) { redeemedRewardId = nil }
+                                                }
+                                            }
                                         }
                                     },
                                     onEditTapped: { selectedReward = reward },
@@ -303,7 +310,8 @@ struct RewardsView: View {
                                                                    icon: reward.icon, categoryId: reward.categoryId,
                                                                    categoryName: reward.categoryName)
                                     },
-                                    onDeleteTapped: { rewardToDelete = reward }
+                                    onDeleteTapped: { rewardToDelete = reward },
+                                    showsRedeemSuccess: redeemedRewardId == reward.id
                                 )
                             }
                         }
@@ -576,11 +584,13 @@ struct RewardCard: View {
     let onEditTapped: () -> Void
     var onDuplicateTapped: () -> Void = {}
     let onDeleteTapped: () -> Void
+    /// Owned by the list: the card is redrawn when its points change, so local state would be lost.
+    var showsRedeemSuccess = false
     
     @StateObject private var categoryManager = CategoryManager.shared
     @Environment(\.theme) private var theme
     @State private var isAnimating = false
-    @State private var successAnimation = false
+    private var successAnimation: Bool { showsRedeemSuccess }
     
     private var progress: Double {
         let safeCurrentPoints = max(currentPoints, 0)
@@ -657,29 +667,6 @@ struct RewardCard: View {
                     )
             }
             
-            // Success animation overlay
-            if successAnimation {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.green.opacity(0.3))
-                    .overlay(
-                        VStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.white)
-                                .background(
-                                    Circle()
-                                        .fill(Color.green)
-                                        .frame(width: 40, height: 40)
-                                )
-                            
-                            Text("riscattato!".localized)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-                    )
-                    .transition(.opacity)
-            }
-            
             // Card content with improved layout
             VStack(spacing: 8) {
                 // Header row with icon and title
@@ -718,11 +705,16 @@ struct RewardCard: View {
                                 rewardTypeTag
                                     .fixedSize()
                                 
-                                // Redemption counter (only if redeemed multiple times)
+                                // Redemption badge: full label when it fits, otherwise just the check.
                                 if redemptionInfo.redemptionCount > 1 {
-                                    redemptionCounterTag
+                                    redemptionCounterTag.fixedSize()
                                 } else if redemptionInfo.hasBeenRedeemed {
-                                    redemptionIndicator
+                                    ViewThatFits(in: .horizontal) {
+                                        redemptionIndicator.fixedSize()
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.green)
+                                    }
                                 }
                             }
                         }
@@ -776,22 +768,9 @@ struct RewardCard: View {
                             isAnimating = true
                         }
                         
-                        // Show success animation
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            withAnimation(.easeInOut(duration: 0.4)) {
-                                successAnimation = true
-                            }
-                        }
-                        
-                        // Call redeem action
                         onRedeemTapped()
-                        
-                        // Hide success animation
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                successAnimation = false
-                                isAnimating = false
-                            }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            withAnimation(.easeOut(duration: 0.2)) { isAnimating = false }
                         }
                     }) {
                         Text("redeem".localized)
@@ -827,7 +806,33 @@ struct RewardCard: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
-            .opacity(successAnimation ? 0.3 : 1.0)
+            .opacity(successAnimation ? 0 : 1.0)
+        }
+        // Redeem confirmation: covers the card (drawn on top, content hidden) instead of mixing with it.
+        .overlay {
+            if successAnimation {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(LinearGradient(colors: [Color(hex: "00C853"), Color(hex: "00A844")],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 34, weight: .bold))
+                            .symbolEffect(.bounce, value: successAnimation)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("reward_redeemed_success".localized)
+                                .font(.headline)
+                            Text("\(reward.name) · -\(reward.pointsCost) " + "pts".localized)
+                                .font(.subheadline)
+                                .opacity(0.9)
+                                .lineLimit(1)
+                        }
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                }
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
+            }
         }
         .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
         // Tap anywhere on the card (outside the redeem button) to edit.

@@ -2176,3 +2176,4 @@
 "reward_last_on" = "ultimo il %@";
 "rewards_history_short" = "Cronologia";
 "rewards_redeemed_short" = "Riscattati";
+"reward_redeemed_success" = "Riscattato!";

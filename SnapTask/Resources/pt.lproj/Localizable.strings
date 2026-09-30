@@ -2142,3 +2142,4 @@
 "reward_last_on" = "último em %@";
 "rewards_history_short" = "Histórico";
 "rewards_redeemed_short" = "Resgatadas";
+"reward_redeemed_success" = "Resgatada!";

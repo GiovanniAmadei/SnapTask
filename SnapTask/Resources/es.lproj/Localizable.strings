@@ -2353,3 +2353,4 @@
 "reward_last_on" = "último el %@";
 "rewards_history_short" = "Historial";
 "rewards_redeemed_short" = "Canjeadas";
+"reward_redeemed_success" = "¡Canjeada!";

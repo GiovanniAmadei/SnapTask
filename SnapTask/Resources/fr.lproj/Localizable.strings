@@ -2059,3 +2059,4 @@
 "reward_last_on" = "dernier le %@";
 "rewards_history_short" = "Historique";
 "rewards_redeemed_short" = "Échangées";
+"reward_redeemed_success" = "Échangée !";

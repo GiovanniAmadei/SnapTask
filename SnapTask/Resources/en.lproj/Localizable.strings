@@ -2217,3 +2217,4 @@
 "reward_last_on" = "last on %@";
 "rewards_history_short" = "History";
 "rewards_redeemed_short" = "Redeemed";
+"reward_redeemed_success" = "Redeemed!";
