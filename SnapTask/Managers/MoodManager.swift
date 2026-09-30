@@ -32,6 +32,16 @@ final class MoodManager: ObservableObject {
         NotificationCenter.default.post(name: .moodDidUpdate, object: nil)
     }
 
+    /// Bulk import (demo data): one save and one notification instead of one per day.
+    func importEntries(_ newEntries: [MoodEntry], replacing: Bool) {
+        if replacing { entries.removeAll() }
+        for entry in newEntries {
+            entries[Calendar.current.startOfDay(for: entry.date)] = entry
+        }
+        save()
+        NotificationCenter.default.post(name: .moodDidUpdate, object: nil)
+    }
+
     func allEntries() -> [MoodEntry] {
         Array(entries.values).sorted { $0.date < $1.date }
     }

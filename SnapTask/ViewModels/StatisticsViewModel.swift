@@ -26,6 +26,9 @@ class StatisticsViewModel: ObservableObject {
         let name: String
         let color: String
         let hours: Double
+        /// Set for real categories (nil for "Uncategorized" and per-task tracking entries).
+        var categoryId: UUID? = nil
+        var icon: String? = nil
         
         static func == (lhs: CategoryStat, rhs: CategoryStat) -> Bool {
             return lhs.name == rhs.name &&
@@ -38,9 +41,13 @@ class StatisticsViewModel: ObservableObject {
     private static let isoFormatter = ISO8601DateFormatter()
 
     private func calculateCategoryStats(for range: TimeRange) -> [CategoryStat] {
+        let (startDate, endDate) = range.dateRange
+        return calculateCategoryStats(from: startDate, to: endDate)
+    }
+
+    private func calculateCategoryStats(from startDate: Date, to endDate: Date) -> [CategoryStat] {
         let categories = categoryManager.categories
         let allTasks = taskManager.tasks
-        let (startDate, endDate) = range.dateRange
         let calendar = Calendar.current
         let startOfStartDate = calendar.startOfDay(for: startDate)
         let endOfEndDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate))!
@@ -116,7 +123,9 @@ class StatisticsViewModel: ObservableObject {
                 categoryStatsList.append(CategoryStat(
                     name: category.name,
                     color: category.color,
-                    hours: totalHours
+                    hours: totalHours,
+                    categoryId: category.id,
+                    icon: category.icon
                 ))
             }
         }
@@ -202,12 +211,26 @@ class StatisticsViewModel: ObservableObject {
     @Published private(set) var weeklyStats: [WeeklyStat] = []
     @Published private(set) var currentStreak: Int = 0
     @Published private(set) var bestStreak: Int = 0
-    @Published var selectedTimeRange: TimeRange = .week
+    /// Recomputed synchronously: views must never render the new period with the old period's data
+    /// (Swift Charts can crash interpolating between incompatible data sets).
+    @Published var selectedTimeRange: TimeRange = .week {
+        didSet {
+            guard oldValue != selectedTimeRange, !isGeneratingWidgetStats else { return }
+            forceUIRefreshOnNextUpdate = true
+            performImmediateUpdate(skipWidgetSave: true)
+        }
+    }
     @Published private(set) var habitSummaries: [HabitSummary] = []
     @Published private(set) var overview = PeriodOverview()
     @Published private(set) var completionBuckets: [CompletionBucket] = []
     @Published private(set) var trendBuckets: [CompletionBucket] = []
     @Published private(set) var weekdayRates: [WeekdayRate] = []
+    /// Hours per category name in the previous period of the same length (empty for "all time").
+    @Published private(set) var previousCategoryHours: [String: Double] = [:]
+    /// False when the previous period starts before any data exists (a comparison would be meaningless).
+    @Published private(set) var hasPreviousPeriod = false
+    /// Completed/resolved tasks per finished day of the selected period (used to relate mood and productivity).
+    @Published private(set) var dailyCompletion: [Date: DayCount] = [:]
     @Published private(set) var recurringTasks: [TodoTask] = []
     @Published private(set) var taskPerformanceAnalytics: [TaskPerformanceAnalytics] = []
     @Published private(set) var topPerformingTasks: [TaskPerformanceAnalytics] = []
@@ -495,16 +518,6 @@ class StatisticsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        $selectedTimeRange
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard self?.isGeneratingWidgetStats != true else { return }
-                self?.forceUIRefreshOnNextUpdate = true
-                print("📊 Time range changed - immediate update")
-                self?.performImmediateUpdate(skipWidgetSave: true)
-            }
-            .store(in: &cancellables)
     }
     
     private func updateCategoryStats() {
@@ -652,6 +665,12 @@ class StatisticsViewModel: ObservableObject {
         var rate: Double { total > 0 ? Double(completed) / Double(total) : 0 }
     }
 
+    struct DayCount: Equatable {
+        let completed: Int
+        let total: Int
+        var rate: Double { total > 0 ? Double(completed) / Double(total) : 0 }
+    }
+
     struct WeekdayRate: Identifiable, Equatable {
         var id: Int { weekday }
         /// Calendar weekday (1 = Sunday).
@@ -773,9 +792,124 @@ class StatisticsViewModel: ObservableObject {
                                total: byWeekday[weekday]?.total ?? 0)
         }
 
+        dailyCompletion = finishedDays.mapValues { DayCount(completed: $0.completed, total: $0.total) }
+
+        let length = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+        let previousEnd = calendar.date(byAdding: .day, value: -1, to: start)!
+        let previousStart = calendar.date(byAdding: .day, value: -length, to: previousEnd)!
+        if selectedTimeRange == .allTime || previousStart < (firstDataDay ?? today) {
+            previousCategoryHours = [:]
+            hasPreviousPeriod = false
+        } else {
+            let previous = calculateCategoryStats(from: previousStart, to: previousEnd)
+            previousCategoryHours = Dictionary(previous.map { ($0.name, $0.hours) }, uniquingKeysWith: +)
+            hasPreviousPeriod = true
+        }
+
         habitSummaries = trackedRecurringTasks
             .map { habitSummary(for: $0, periodStart: start, periodEnd: end, today: today) }
             .sorted { ($0.currentStreak, $0.bestStreak) > ($1.currentStreak, $1.bestStreak) }
+    }
+
+    // MARK: - Category detail
+
+    struct CategoryTaskShare: Identifiable, Equatable {
+        let id: UUID
+        let name: String
+        let icon: String
+        let hours: Double
+        let completions: Int
+    }
+
+    struct CategoryDetail: Equatable {
+        let hours: Double
+        let previousHours: Double?
+        let completions: Int
+        let trackedSessionHours: Double
+        /// Hours per bucket of the selected period.
+        let buckets: [(start: Date, hours: Double)]
+        let tasks: [CategoryTaskShare]
+        let weekdayHours: [(weekday: Int, hours: Double)]
+
+        static func == (lhs: CategoryDetail, rhs: CategoryDetail) -> Bool {
+            lhs.hours == rhs.hours && lhs.completions == rhs.completions && lhs.tasks == rhs.tasks
+        }
+    }
+
+    /// Same sources as the donut (completed tasks' duration + tracked sessions), split by day and by task.
+    func categoryDetail(for categoryId: UUID) -> CategoryDetail {
+        let calendar = Calendar.current
+        let (start, end) = periodDays
+        let endExclusive = calendar.date(byAdding: .day, value: 1, to: end)!
+        var perDay: [Date: Double] = [:]
+        var perTask: [UUID: (name: String, icon: String, hours: Double, completions: Int)] = [:]
+        var completions = 0
+
+        for task in taskManager.tasks where task.category?.id == categoryId {
+            for (date, completion) in task.completions where completion.isCompleted && date >= start && date < endExclusive {
+                var duration: TimeInterval = 0
+                if let actual = completion.actualDuration, actual > 0 {
+                    duration = actual
+                } else if task.totalTrackedTime > 0 {
+                    duration = task.totalTrackedTime
+                } else if task.hasDuration && task.duration > 0 {
+                    duration = task.duration
+                }
+                let hours = duration / 3600
+                let day = calendar.startOfDay(for: date)
+                perDay[day, default: 0] += hours
+                let icon = (task.icon.isEmpty || task.icon == "circle") ? (task.category?.icon ?? "checkmark.circle") : task.icon
+                var entry = perTask[task.id] ?? (task.name, icon, 0, 0)
+                entry.hours += hours
+                entry.completions += 1
+                perTask[task.id] = entry
+                completions += 1
+            }
+        }
+
+        var sessionHours = 0.0
+        let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
+        let key = "category_\(categoryId.uuidString)"
+        for (dateKey, dayData) in timeTrackingData {
+            guard let date = Self.isoFormatter.date(from: dateKey), date >= start, date < endExclusive,
+                  let hours = dayData[key], hours > 0 else { continue }
+            perDay[calendar.startOfDay(for: date), default: 0] += hours
+            sessionHours += hours
+        }
+
+        let unit = bucketUnit(forTrend: false)
+        let component: Calendar.Component = unit == .day ? .day : (unit == .week ? .weekOfYear : .month)
+        var cursor = unit == .day ? start : (calendar.dateInterval(of: component, for: start)?.start ?? start)
+        var buckets: [(start: Date, hours: Double)] = []
+        while cursor <= end {
+            let next = calendar.date(byAdding: component, value: 1, to: cursor)!
+            let hours = perDay.filter { $0.key >= cursor && $0.key < next }.reduce(0) { $0 + $1.value }
+            buckets.append((cursor, hours))
+            cursor = next
+        }
+
+        var byWeekday: [Int: Double] = [:]
+        for (day, hours) in perDay {
+            byWeekday[calendar.component(.weekday, from: day), default: 0] += hours
+        }
+        let weekdayHours = (0..<7).map { offset -> (weekday: Int, hours: Double) in
+            let weekday = (calendar.firstWeekday - 1 + offset) % 7 + 1
+            return (weekday, byWeekday[weekday] ?? 0)
+        }
+
+        let total = perDay.values.reduce(0, +)
+        let name = categoryManager.categories.first { $0.id == categoryId }?.name
+        return CategoryDetail(
+            hours: total,
+            previousHours: hasPreviousPeriod ? (name.flatMap { previousCategoryHours[$0] } ?? 0) : nil,
+            completions: completions,
+            trackedSessionHours: sessionHours,
+            buckets: buckets,
+            tasks: perTask.map { CategoryTaskShare(id: $0.key, name: $0.value.name, icon: $0.value.icon,
+                                                   hours: $0.value.hours, completions: $0.value.completions) }
+                .sorted { $0.hours > $1.hours },
+            weekdayHours: weekdayHours
+        )
     }
 
     private func makeBuckets(_ daily: [Date: (completed: Int, total: Int)], from start: Date, to end: Date, unit: BucketUnit) -> [CompletionBucket] {

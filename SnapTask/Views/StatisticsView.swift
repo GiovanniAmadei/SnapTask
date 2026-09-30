@@ -81,6 +81,8 @@ struct StatisticsView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                // Charts are rebuilt for the new period, never interpolated between periods.
+                .transaction(value: viewModel.selectedTimeRange) { $0.animation = nil }
                 .id(selectedTab)
                 .transition(.opacity)
             }

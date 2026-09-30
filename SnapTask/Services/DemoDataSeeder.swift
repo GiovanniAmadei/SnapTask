@@ -78,6 +78,7 @@ final class DemoDataSeeder {
         await seedRewardRedemptions(refs.rewardsByName)
 
         await seedFinances()
+        seedMoods(replace: replace)
 
         RewardManager.shared.recalculateDailyPointsFromSources()
 
@@ -765,6 +766,28 @@ final class DemoDataSeeder {
                 completeTaskForDay(taskId: id, on: today, estimatedMinutes: est, baseDifficulty: diff, baseQuality: qual)
             }
         }
+    }
+
+    // MARK: - Mood: a slow random walk, better on weekends and during the vacation, logged on ~75% of days
+    private func seedMoods(replace: Bool) {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        var level = 4.8
+        var result: [MoodEntry] = []
+        for offset in stride(from: scenario.historyDays, through: 0, by: -1) {
+            guard let day = cal.date(byAdding: .day, value: -offset, to: today) else { continue }
+            level += Double.random(in: -0.7...0.7)
+            level += (4.8 - level) * 0.15
+            var value = level
+            let weekday = cal.component(.weekday, from: day)
+            if weekday == 1 || weekday == 7 { value += 0.6 }
+            if (100...110).contains(offset) { value += 1.2 }
+            guard offset == 0 || Double.random(in: 0...1) < 0.75 else { continue }
+            let score = min(7, max(1, Int(value.rounded())))
+            let type = MoodType.allCases.first { $0.score == score } ?? .neutral
+            result.append(MoodEntry(date: day, type: type, notes: nil))
+        }
+        MoodManager.shared.importEntries(result, replacing: replace)
     }
 
     // MARK: - Stress scenario: many extra habits with a year of history

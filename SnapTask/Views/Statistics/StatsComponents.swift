@@ -287,3 +287,224 @@ struct StatsSegmentedControl<Value: Hashable>: View {
         .background(Capsule().fill(theme.surfaceColor))
     }
 }
+
+// MARK: - Comparison (single items vs the overall reference)
+
+struct ComparisonSeries: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let color: Color
+    let points: [ComparisonPoint]
+}
+
+struct ComparisonPoint: Equatable {
+    let date: Date
+    let value: Double
+}
+
+enum ComparisonPalette {
+    /// Distinct colors by selection order: category colors could repeat (same category, same color).
+    static let colors: [Color] = [Color(hex: "3B82F6"), Color(hex: "EC4899"), Color(hex: "10B981")]
+    static let maxSelection = 3
+}
+
+/// Line chart that shows up to three selected items plus an optional dashed "overall" reference.
+struct ComparisonLineChart: View {
+    let series: [ComparisonSeries]
+    let reference: ComparisonSeries?
+    let unit: Calendar.Component
+    let yDomain: ClosedRange<Double>
+    let yTicks: [Double]
+    let format: (Double) -> String
+    let axisLabel: (Date) -> String
+    let tooltipTitle: (Date) -> String
+    @Environment(\.theme) private var theme
+    @State private var selectedDate: Date?
+
+    private var selectedBucket: Date? {
+        guard let selectedDate else { return nil }
+        return Calendar.current.dateInterval(of: unit, for: selectedDate)?.start
+    }
+
+    /// With nothing selected the overall line is the main (solid) series.
+    private var overallIsMain: Bool { series.isEmpty }
+
+    var body: some View {
+        let accent = StatsPalette(theme: theme).completed
+        Chart {
+            if let reference {
+                ForEach(reference.points, id: \.date) { point in
+                    LineMark(x: .value("date".localized, point.date, unit: unit),
+                             y: .value("value", point.value),
+                             series: .value("series", reference.id))
+                        .interpolationMethod(.monotone)
+                        .foregroundStyle(overallIsMain ? accent : theme.secondaryTextColor.opacity(0.55))
+                        .lineStyle(overallIsMain
+                                   ? StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                                   : StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [4, 3]))
+                    if overallIsMain {
+                        AreaMark(x: .value("date".localized, point.date, unit: unit),
+                                 y: .value("value", point.value))
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(LinearGradient(colors: [accent.opacity(0.25), accent.opacity(0.02)],
+                                                            startPoint: .top, endPoint: .bottom))
+                    }
+                }
+            }
+            ForEach(series) { item in
+                ForEach(item.points, id: \.date) { point in
+                    LineMark(x: .value("date".localized, point.date, unit: unit),
+                             y: .value("value", point.value),
+                             series: .value("series", item.id))
+                        .interpolationMethod(.monotone)
+                        .foregroundStyle(item.color)
+                        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .symbol {
+                            if item.points.count <= 14 {
+                                Circle().fill(item.color).frame(width: 5, height: 5)
+                            }
+                        }
+                }
+            }
+            if let bucket = selectedBucket {
+                RuleMark(x: .value("date".localized, bucket, unit: unit))
+                    .foregroundStyle(theme.secondaryTextColor.opacity(0.35))
+                    .annotation(position: .top, spacing: 4,
+                                overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
+                        ChartTooltip(title: tooltipTitle(bucket), lines: tooltipLines(at: bucket, accent: accent))
+                    }
+            }
+        }
+        .chartYScale(domain: yDomain)
+        .chartXSelection(value: $selectedDate)
+        .chartYAxis {
+            AxisMarks(position: .leading, values: yTicks) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
+                    .foregroundStyle(theme.secondaryTextColor.opacity(0.2))
+                AxisValueLabel { Text(format(value.as(Double.self) ?? 0)) }
+                    .font(.caption2)
+                    .foregroundStyle(theme.secondaryTextColor)
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 6)) { value in
+                AxisValueLabel {
+                    if let date = value.as(Date.self) { Text(axisLabel(date)) }
+                }
+                .font(.caption2)
+                .foregroundStyle(theme.secondaryTextColor)
+            }
+        }
+    }
+
+    private func tooltipLines(at bucket: Date, accent: Color) -> [(color: Color, text: String)] {
+        var lines: [(color: Color, text: String)] = []
+        for item in series {
+            if let point = item.points.first(where: { $0.date == bucket }) {
+                lines.append((item.color, "\(item.name): \(format(point.value))"))
+            }
+        }
+        if let reference, let point = reference.points.first(where: { $0.date == bucket }) {
+            lines.append((overallIsMain ? accent : theme.secondaryTextColor, "\(reference.name): \(format(point.value))"))
+        }
+        return lines
+    }
+}
+
+/// Horizontal chips to pick up to three items to compare; selected chips take the series color.
+struct ComparisonChips: View {
+    struct Item: Identifiable {
+        let id: String
+        let name: String
+        let icon: String
+    }
+
+    let items: [Item]
+    @Binding var selection: [String]
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                chip(title: "stats_overall".localized, icon: "sum", isSelected: selection.isEmpty, color: theme.accentColor) {
+                    withAnimation(.snappy) { selection.removeAll() }
+                }
+                ForEach(items) { item in
+                    let index = selection.firstIndex(of: item.id)
+                    chip(title: item.name, icon: item.icon, isSelected: index != nil,
+                         color: index.map { ComparisonPalette.colors[$0 % ComparisonPalette.colors.count] } ?? theme.accentColor) {
+                        withAnimation(.snappy) { toggle(item.id) }
+                    }
+                }
+            }
+            .padding(.vertical, 1)
+        }
+    }
+
+    private func toggle(_ id: String) {
+        if let index = selection.firstIndex(of: id) {
+            selection.remove(at: index)
+        } else {
+            if selection.count >= ComparisonPalette.maxSelection { selection.removeFirst() }
+            selection.append(id)
+        }
+    }
+
+    private func chip(title: String, icon: String, isSelected: Bool, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon).font(.system(size: 10, weight: .semibold))
+                Text(title).font(.caption.weight(.medium)).lineLimit(1)
+            }
+            .foregroundColor(isSelected ? .white : theme.textColor)
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(Capsule().fill(isSelected ? color : theme.textColor.opacity(0.06)))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+enum RollingRate {
+    /// Rate per bucket computed over the last `window` buckets (sum of done / sum of scheduled):
+    /// a single habit has few occurrences per bucket, so raw rates jump between 0 and 100%.
+    static func points(_ buckets: [(date: Date, done: Int, total: Int)], window: Int) -> [ComparisonPoint] {
+        let sorted = buckets.sorted { $0.date < $1.date }
+        return sorted.indices.compactMap { index in
+            let slice = sorted[max(0, index - window + 1)...index]
+            let done = slice.reduce(0) { $0 + $1.done }
+            let total = slice.reduce(0) { $0 + $1.total }
+            guard sorted[index].total > 0, total > 0 else { return nil }
+            return ComparisonPoint(date: sorted[index].date, value: Double(done) / Double(total) * 100)
+        }
+    }
+
+    /// 7 days for daily buckets over a month, 4 weeks for weekly buckets, none otherwise.
+    static func window(unit: Calendar.Component, period: StatisticsViewModel.TimeRange) -> Int {
+        switch (unit, period) {
+        case (.day, .month): return 7
+        case (.weekOfYear, _): return 4
+        default: return 1
+        }
+    }
+}
+
+extension StatisticsViewModel.HabitSummary {
+    /// Completion rate per calendar bucket between `start` and `end` (rolling over `window` buckets).
+    func rateSeries(unit: Calendar.Component, from start: Date, to end: Date, window: Int = 1) -> [ComparisonPoint] {
+        let calendar = Calendar.current
+        var grouped: [Date: (done: Int, total: Int)] = [:]
+        // Every bucket of the period is present (also empty ones) so the rolling window spans real time.
+        var cursor = calendar.dateInterval(of: unit, for: start)?.start ?? start
+        while cursor <= end {
+            grouped[cursor] = (0, 0)
+            cursor = calendar.date(byAdding: unit, value: 1, to: cursor)!
+        }
+        for day in days where day.date >= start && day.date <= end && (day.state == .done || day.state == .missed) {
+            let key = calendar.dateInterval(of: unit, for: day.date)?.start ?? day.date
+            grouped[key, default: (0, 0)].total += 1
+            if day.state == .done { grouped[key, default: (0, 0)].done += 1 }
+        }
+        return RollingRate.points(grouped.map { ($0.key, $0.value.done, $0.value.total) }, window: window)
+    }
+}
