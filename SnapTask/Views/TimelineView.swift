@@ -182,6 +182,7 @@ struct ViewControlBarView: View {
                             .strokeBorder(theme.primaryColor.opacity(viewModel.viewMode == .list ? 0.6 : 0.25), lineWidth: 1)
                     )
             )
+            .fixedSize()
             
             if viewModel.selectedTimeScope == .all {
                 Button(action: {
@@ -206,24 +207,38 @@ struct ViewControlBarView: View {
             
             Spacer()
             
-            // Organization status - themed
-            HStack(spacing: 4) {
-                Image(systemName: viewModel.organization.icon)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(theme.secondaryTextColor)
-                
-                Text(viewModel.organizationStatusText)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(theme.secondaryTextColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+            // Organization status - themed. When grouped/sorted it doubles as the reset control.
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.organization = .none
+                }
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: viewModel.organization.icon)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(theme.secondaryTextColor)
+                    
+                    Text(viewModel.organizationStatusText)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(theme.secondaryTextColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    
+                    if viewModel.organization != .none {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.secondaryTextColor.opacity(0.7))
+                    }
+                }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(theme.surfaceColor)
+                )
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(theme.surfaceColor)
-            )
+            .buttonStyle(.plain)
+            .disabled(viewModel.organization == .none)
             
             // Filter button - themed
             Button(action: {
@@ -239,21 +254,6 @@ struct ViewControlBarView: View {
                     )
             }
             
-            // Reset button - themed
-            if viewModel.organization != .none {
-                Button(action: {
-                    viewModel.resetView()
-                }) {
-                    Image(systemName: "arrow.clockwise.circle")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(theme.secondaryTextColor)
-                        .frame(width: 32, height: 32)
-                        .background(
-                            Circle()
-                                .fill(theme.surfaceColor)
-                        )
-                }
-            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -1187,7 +1187,7 @@ struct TaskListView: View {
                         .sheet(isPresented: $showingMandalaSheet) {
                             MandalaHubView()
                         }
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, 14)
                         .padding(.bottom, 100)
                         .padding(.top, 8)
                         .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
@@ -1374,7 +1374,7 @@ struct TaskListView: View {
         List {
             if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
                 mandalaBannerCard
-                    .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 6, trailing: 4))
+                    .listRowInsets(EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -1382,8 +1382,8 @@ struct TaskListView: View {
             if case .single(let tasks) = viewModel.organizedTasksForSelectedDate() {
                 ForEach(tasks, id: \.id) { task in
                     taskCardRow(for: task)
-                        .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 14))
-                        .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 6, trailing: 4))
+                        .contentShape(.dragPreview, RoundedRectangle(cornerRadius: TimelineTaskCard.cornerRadius, style: .continuous))
+                        .listRowInsets(EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
@@ -1774,14 +1774,14 @@ struct TimelineTaskCard: View {
         if gradientEnabled, let category = task.category {
             let baseColor = Color(hex: category.color)
             return LinearGradient(
-                colors: [
-                    baseColor.opacity(0.12),
-                    baseColor.opacity(0.06),
-                    baseColor.opacity(0.02),
-                    Color.clear
+                stops: [
+                    .init(color: baseColor.opacity(0.22), location: 0),
+                    .init(color: baseColor.opacity(0.10), location: 0.35),
+                    .init(color: baseColor.opacity(0.03), location: 0.7),
+                    .init(color: .clear, location: 1)
                 ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                startPoint: .leading,
+                endPoint: .trailing
             )
         } else {
             return LinearGradient(
@@ -1793,6 +1793,11 @@ struct TimelineTaskCard: View {
     }
 
     private let maxSwipeDistance: CGFloat = -210
+
+    /// Uniform inset around the 38pt icon (radius 11): the card radius follows it
+    /// (11 + 12 ≈ 22) so icon and card corners stay concentric.
+    static let contentInset: CGFloat = 12
+    static let cornerRadius: CGFloat = 22
 
 
     private var titleBlock: some View {
@@ -2130,8 +2135,7 @@ struct TimelineTaskCard: View {
                     .buttonStyle(BorderlessButtonStyle())
                     .frame(width: 44, height: 44)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(Self.contentInset)
                 
                 if isExpanded && !task.subtasks.isEmpty {
                     VStack(spacing: 8) {
@@ -2149,30 +2153,30 @@ struct TimelineTaskCard: View {
             .frame(maxWidth: .infinity, minHeight: 60)
             .background(
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                         .fill(theme.surfaceColor)
                     
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                         .fill(categoryGradient)
                     
                     if isCurrentlyActiveNow {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                             .strokeBorder(theme.primaryColor.opacity(0.85), lineWidth: 1.5)
                     } else if gradientEnabled, let category = task.category {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                             .strokeBorder(
                                 LinearGradient(
                                     colors: [
-                                        Color(hex: category.color).opacity(0.25),
+                                        Color(hex: category.color).opacity(0.35),
                                         Color(hex: category.color).opacity(0.08)
                                     ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                                    startPoint: .leading,
+                                    endPoint: .trailing
                                 ),
                                 lineWidth: 1
                             )
                     } else {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                             .strokeBorder(theme.borderColor.opacity(0.4), lineWidth: 1)
                     }
                 }
