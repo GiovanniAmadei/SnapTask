@@ -608,13 +608,19 @@ struct RewardCard: View {
 
     @ObservedObject private var categoryManager = CategoryManager.shared
     @Environment(\.theme) private var theme
-    @State private var justRedeemed = false
+    @State private var isAnimating = false
+    @State private var successAnimation = false
 
     private var category: Category? {
         reward.categoryId.flatMap { id in categoryManager.categories.first { $0.id == id } }
     }
 
-    private var tint: Color { category.map { Color(hex: $0.color) } ?? theme.primaryColor }
+    private var categoryColor: Color { category.map { Color(hex: $0.color) } ?? theme.primaryColor }
+
+    /// Colors of the progress fill and of the icon/button: theme gradient for general rewards, category color otherwise.
+    private var gradientColors: [Color] {
+        reward.isGeneralReward ? [theme.primaryColor, theme.secondaryColor] : [categoryColor, categoryColor.opacity(0.75)]
+    }
 
     private var available: Int {
         let points = reward.isGeneralReward
@@ -643,98 +649,112 @@ struct RewardCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                CategoryIconTile(icon: reward.icon, color: tint, size: 46)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(reward.name)
-                        .font(.headline)
-                        .themedPrimaryText()
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let description = reward.description, !description.isEmpty {
-                        Text(description)
-                            .font(.subheadline)
-                            .themedSecondaryText()
-                            .lineLimit(2)
+        ZStack {
+            // Card with the progress towards the cost painted as a gradient from the left.
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(theme.surfaceColor)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(LinearGradient(colors: gradientColors.map { $0.opacity(canRedeem ? 0.22 : 0.16) },
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .mask(alignment: .leading) {
+                    GeometryReader { geo in
+                        Rectangle().frame(width: geo.size.width * progress)
                     }
-                    HStack(spacing: 6) {
-                        tag(icon: category?.displayIcon ?? "star.fill",
-                            text: category?.name ?? "general".localized, color: tint)
-                        if redeemedThisPeriod > 0 {
-                            tag(icon: "checkmark",
-                                text: redeemedThisPeriod > 1 ? "\(redeemedThisPeriod)×" : "redeemed".localized,
-                                color: .green)
+                }
+                .animation(.easeInOut(duration: 0.4), value: progress)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: reward.icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(LinearGradient(
+                            colors: canRedeem ? gradientColors : [Color.gray.opacity(0.45), Color.gray.opacity(0.6)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing)))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(reward.name)
+                            .font(.headline)
+                            .themedPrimaryText()
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let description = reward.description, !description.isEmpty {
+                            Text(description)
+                                .font(.subheadline)
+                                .themedSecondaryText()
+                                .lineLimit(2)
                         }
                     }
-                    .padding(.top, 2)
+
+                    Spacer(minLength: 6)
+
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text(reward.pointsCost.formatted())
+                            .font(.system(.title3, design: .rounded).weight(.bold))
+                            .monospacedDigit()
+                            .foregroundColor(categoryColor)
+                            .lineLimit(1)
+                        Text("pts".localized)
+                            .font(.caption2.weight(.medium))
+                            .themedSecondaryText()
+                    }
+                    .fixedSize()
                 }
 
-                Spacer(minLength: 6)
+                HStack(spacing: 6) {
+                    tag(icon: reward.isGeneralReward ? "star.fill" : (category?.displayIcon ?? "tag.fill"),
+                        text: reward.isGeneralReward ? "general".localized : (category?.name ?? reward.categoryName ?? ""),
+                        color: categoryColor)
+                    if redeemedThisPeriod > 0 {
+                        tag(icon: "checkmark.circle.fill",
+                            text: redeemedThisPeriod > 1 ? "\(redeemedThisPeriod)×" : "redeemed".localized,
+                            color: .green)
+                    }
+                }
 
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(reward.pointsCost.formatted())
-                        .font(.system(.title3, design: .rounded).weight(.bold))
-                        .monospacedDigit()
-                        .foregroundColor(tint)
-                        .lineLimit(1)
-                    Text("pts".localized)
-                        .font(.caption2.weight(.medium))
-                        .themedSecondaryText()
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("\(available.formatted())/\(reward.pointsCost.formatted()) " + "points".localized)
+                            .font(.subheadline.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundColor(canRedeem ? Color(hex: "00C853") : categoryColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        if !canRedeem {
+                            Text("need_more_points".localized.replacingOccurrences(of: "{points}", with: "\(reward.pointsCost - available)"))
+                                .font(.caption)
+                                .themedSecondaryText()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+                    Spacer(minLength: 8)
+                    redeemButton
                 }
             }
+            .padding(16)
+            .opacity(successAnimation ? 0.25 : 1)
 
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(tint.opacity(0.15))
-                            Capsule().fill(canRedeem ? Color.green : tint)
-                                .frame(width: max(6, proxy.size.width * progress))
-                        }
-                    }
-                    .frame(height: 6)
-                    Text(canRedeem
-                         ? "\(available.formatted())/\(reward.pointsCost.formatted()) " + "pts".localized
-                         : "need_more_points".localized.replacingOccurrences(of: "{points}", with: "\(reward.pointsCost - available)"))
-                        .font(.caption.weight(.medium))
-                        .monospacedDigit()
-                        .foregroundColor(canRedeem ? .green : theme.secondaryTextColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Button {
-                    onRedeemTapped()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { justRedeemed = true }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        withAnimation(.easeOut) { justRedeemed = false }
-                    }
-                } label: {
-                    Label(justRedeemed ? "riscattato!".localized : "redeem".localized,
-                          systemImage: justRedeemed ? "checkmark" : "gift.fill")
+            if successAnimation {
+                VStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(.green)
+                    Text("riscattato!".localized)
                         .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .foregroundColor(canRedeem || justRedeemed ? .white : theme.secondaryTextColor)
-                        .padding(.horizontal, 14)
-                        .frame(height: 36)
-                        .background(Capsule().fill(justRedeemed ? Color.green
-                                                   : (canRedeem ? tint : theme.secondaryTextColor.opacity(0.12))))
+                        .themedPrimaryText()
                 }
-                .buttonStyle(.plain)
-                .disabled(!canRedeem)
-                .fixedSize()
+                .transition(.scale.combined(with: .opacity))
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(theme.surfaceColor))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(canRedeem ? tint.opacity(0.35) : .clear, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(canRedeem ? categoryColor.opacity(0.35) : Color.clear, lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 22))
+        .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
+        .contentShape(RoundedRectangle(cornerRadius: 18))
         .onTapGesture { onEditTapped() }
         .contextMenu {
             Button { onEditTapped() } label: { Label("edit".localized, systemImage: "pencil") }
@@ -743,15 +763,45 @@ struct RewardCard: View {
         }
     }
 
+    private var redeemButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { isAnimating = true }
+            onRedeemTapped()
+            withAnimation(.easeInOut(duration: 0.3).delay(0.1)) { successAnimation = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    successAnimation = false
+                    isAnimating = false
+                }
+            }
+        } label: {
+            Label("redeem".localized, systemImage: "gift.fill")
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .frame(height: 36)
+                .background(Capsule().fill(LinearGradient(
+                    colors: canRedeem ? gradientColors : [Color.gray.opacity(0.3), Color.gray.opacity(0.4)],
+                    startPoint: .leading, endPoint: .trailing)))
+                .shadow(color: canRedeem ? categoryColor.opacity(0.3) : .clear, radius: 3, y: 2)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canRedeem)
+        .fixedSize()
+        .scaleEffect(isAnimating ? 0.95 : 1)
+    }
+
     private func tag(icon: String, text: String, color: Color) -> some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             Image(systemName: icon).font(.system(size: 9, weight: .bold))
             Text(text).font(.caption2.weight(.semibold)).lineLimit(1)
         }
         .foregroundColor(color)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .background(Capsule().fill(color.opacity(0.12)))
+        .overlay(Capsule().strokeBorder(color.opacity(0.2), lineWidth: 0.5))
     }
 }
 
