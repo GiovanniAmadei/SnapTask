@@ -2124,7 +2124,7 @@
 "stats_quadrant_hard_low" = "Difficile · bassa";
 "stats_quality_vs_difficulty" = "Qualità e difficoltà per attività";
 "stats_share_of_time" = "%@ del tuo tempo";
-"stats_tap_category_hint" = "Tocca una categoria per i dettagli";
+"stats_tap_category_hint" = "Tocca una fetta per vederla, di nuovo per i dettagli";
 "stats_tasks_in_category" = "Attività";
 "stats_times" = "%d×";
 "stats_tracked_sessions" = "Sessioni tracciate";
@@ -2134,3 +2134,13 @@
 "stats_rolling_note" = "Media mobile su %@";
 "stats_n_weeks" = "%d settimane";
 "stats_n_days" = "%d giorni";
+"stats_cadence_day" = "giornaliera";
+"stats_cadence_week" = "settimanale";
+"stats_cadence_month" = "mensile";
+"stats_cadence_year" = "annuale";
+"stats_rate_per_year" = "Completamento per anno";
+"stats_compare" = "Confronta";
+"stats_edit_selection" = "Modifica";
+"stats_compare_limit" = "Scegli fino a %d attività. L'andamento complessivo resta come riferimento tratteggiato.";
+"stats_clear" = "Azzera";
+"stats_details" = "Dettagli";

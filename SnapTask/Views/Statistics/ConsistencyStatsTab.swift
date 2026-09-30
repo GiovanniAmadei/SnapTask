@@ -90,7 +90,11 @@ private struct TrendComparisonCard: View {
     var body: some View {
         StatsCard(title: "stats_trend".localized, subtitle: subtitle) {
             VStack(alignment: .leading, spacing: 12) {
-                ComparisonChips(items: habits.map { .init(id: $0.taskId.uuidString, name: $0.name, icon: $0.icon) },
+                ComparisonChips(items: habits.map {
+                                    .init(id: $0.taskId.uuidString, name: $0.name, icon: $0.icon, color: Color(hex: $0.color),
+                                          group: $0.categoryName,
+                                          detail: "🔥 \($0.currentStreak) · \(StatsFormat.percent($0.periodRate))")
+                                },
                                 selection: $compared)
                 if overall.points.isEmpty {
                     StatsEmptyState(systemImage: "chart.line.uptrend.xyaxis",

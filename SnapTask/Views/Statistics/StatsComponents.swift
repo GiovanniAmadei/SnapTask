@@ -411,57 +411,178 @@ struct ComparisonLineChart: View {
     }
 }
 
-/// Horizontal chips to pick up to three items to compare; selected chips take the series color.
+/// Wrapping layout: chips flow on as many lines as needed instead of scrolling horizontally.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, lineHeight: CGFloat = 0, maxX: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > width { x = 0; y += lineHeight + spacing; lineHeight = 0 }
+            x += size.width + spacing
+            maxX = max(maxX, x - spacing)
+            lineHeight = max(lineHeight, size.height)
+        }
+        return CGSize(width: min(maxX, width), height: y + lineHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, lineHeight: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX && x + size.width > bounds.maxX { x = bounds.minX; y += lineHeight + spacing; lineHeight = 0 }
+            view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+        }
+    }
+}
+
+/// Shows what is being compared (overall + up to three items) and opens a searchable picker to change it.
 struct ComparisonChips: View {
     struct Item: Identifiable {
         let id: String
         let name: String
         let icon: String
+        var color: Color = .gray
+        var group: String? = nil
+        var detail: String? = nil
     }
 
     let items: [Item]
     @Binding var selection: [String]
     @Environment(\.theme) private var theme
+    @State private var showingPicker = false
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                chip(title: "stats_overall".localized, icon: "sum", isSelected: selection.isEmpty, color: theme.accentColor) {
-                    withAnimation(.snappy) { selection.removeAll() }
-                }
-                ForEach(items) { item in
-                    let index = selection.firstIndex(of: item.id)
-                    chip(title: item.name, icon: item.icon, isSelected: index != nil,
-                         color: index.map { ComparisonPalette.colors[$0 % ComparisonPalette.colors.count] } ?? theme.accentColor) {
-                        withAnimation(.snappy) { toggle(item.id) }
+        FlowLayout(spacing: 6) {
+            if selection.isEmpty {
+                chip(title: "stats_overall".localized, icon: "sum", color: theme.accentColor, removable: false)
+            }
+            ForEach(Array(selection.enumerated()), id: \.element) { index, id in
+                if let item = items.first(where: { $0.id == id }) {
+                    chip(title: item.name, icon: item.icon,
+                         color: ComparisonPalette.colors[index % ComparisonPalette.colors.count], removable: true) {
+                        withAnimation(.snappy) { selection.removeAll { $0 == id } }
                     }
                 }
             }
-            .padding(.vertical, 1)
+            Button { showingPicker = true } label: {
+                Label(selection.isEmpty ? "stats_compare".localized : "stats_edit_selection".localized,
+                      systemImage: selection.isEmpty ? "plus" : "slider.horizontal.3")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(theme.accentColor)
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .background(Capsule().strokeBorder(theme.accentColor.opacity(0.5), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showingPicker) {
+            ComparisonPickerSheet(items: items, selection: $selection)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    private func chip(title: String, icon: String, color: Color, removable: Bool, onRemove: (() -> Void)? = nil) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon).font(.system(size: 10, weight: .semibold))
+            Text(title).font(.caption.weight(.medium)).lineLimit(1)
+            if removable {
+                Button { onRemove?() } label: {
+                    Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 10)
+        .frame(height: 28)
+        .background(Capsule().fill(color))
+    }
+}
+
+private struct ComparisonPickerSheet: View {
+    let items: [ComparisonChips.Item]
+    @Binding var selection: [String]
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private var filtered: [ComparisonChips.Item] {
+        query.isEmpty ? items : items.filter { $0.name.localizedCaseInsensitiveContains(query) }
+    }
+
+    private var groups: [(String, [ComparisonChips.Item])] {
+        let grouped = Dictionary(grouping: filtered) { $0.group ?? "uncategorized".localized }
+        return grouped.keys.sorted().map { ($0, grouped[$0] ?? []) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(String(format: "stats_compare_limit".localized, ComparisonPalette.maxSelection))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(groups, id: \.0) { group, groupItems in
+                    Section(group) {
+                        ForEach(groupItems) { item in
+                            let index = selection.firstIndex(of: item.id)
+                            Button { toggle(item.id) } label: {
+                                HStack(spacing: 12) {
+                                    CategoryIconTile(icon: item.icon, color: item.color, size: 30)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(item.name).foregroundStyle(.primary)
+                                        if let detail = item.detail {
+                                            Text(detail).font(.caption).foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    Spacer()
+                                    if let index {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.title3)
+                                            .foregroundStyle(ComparisonPalette.colors[index % ComparisonPalette.colors.count])
+                                    } else {
+                                        Image(systemName: "circle")
+                                            .font(.title3)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(index == nil && selection.count >= ComparisonPalette.maxSelection)
+                            .opacity(index == nil && selection.count >= ComparisonPalette.maxSelection ? 0.4 : 1)
+                        }
+                    }
+                }
+            }
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always))
+            .navigationTitle("stats_compare".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    if !selection.isEmpty {
+                        Button("stats_clear".localized) { selection.removeAll() }
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("done".localized) { dismiss() }
+                }
+            }
         }
     }
 
     private func toggle(_ id: String) {
         if let index = selection.firstIndex(of: id) {
             selection.remove(at: index)
-        } else {
-            if selection.count >= ComparisonPalette.maxSelection { selection.removeFirst() }
+        } else if selection.count < ComparisonPalette.maxSelection {
             selection.append(id)
         }
-    }
-
-    private func chip(title: String, icon: String, isSelected: Bool, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 10, weight: .semibold))
-                Text(title).font(.caption.weight(.medium)).lineLimit(1)
-            }
-            .foregroundColor(isSelected ? .white : theme.textColor)
-            .padding(.horizontal, 10)
-            .frame(height: 28)
-            .background(Capsule().fill(isSelected ? color : theme.textColor.opacity(0.06)))
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -493,6 +614,19 @@ extension StatisticsViewModel.HabitSummary {
     /// Completion rate per calendar bucket between `start` and `end` (rolling over `window` buckets).
     func rateSeries(unit: Calendar.Component, from start: Date, to end: Date, window: Int = 1) -> [ComparisonPoint] {
         let calendar = Calendar.current
+        if cadence != .day {
+            // One point per period, placed at the bucket containing its start.
+            let resolved = periods.filter { $0.date <= end && $0.state != .pending &&
+                calendar.date(byAdding: cadence.component, value: 1, to: $0.date)! > start }
+            var grouped: [Date: (done: Int, total: Int)] = [:]
+            for period in resolved {
+                let key = calendar.dateInterval(of: unit, for: max(period.date, start))?.start ?? period.date
+                grouped[key, default: (0, 0)].total += 1
+                if period.state == .done { grouped[key, default: (0, 0)].done += 1 }
+            }
+            let buckets = grouped.map { ($0.key, $0.value.done, $0.value.total) }
+            return RollingRate.points(buckets, window: 1)
+        }
         var grouped: [Date: (done: Int, total: Int)] = [:]
         // Every bucket of the period is present (also empty ones) so the rolling window spans real time.
         var cursor = calendar.dateInterval(of: unit, for: start)?.start ?? start

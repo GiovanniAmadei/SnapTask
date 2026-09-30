@@ -70,6 +70,8 @@ private struct TimeDistributionChartCard: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @Environment(\.theme) private var theme
     @State private var selectedAngle: Double?
+    /// Slice chosen with a tap: stays highlighted with its numbers; a second tap opens the detail.
+    @State private var pinnedSlice: DonutSlice?
     @State private var detailSlice: DonutSlice?
 
     private func displayName(_ name: String) -> String {
@@ -109,7 +111,7 @@ private struct TimeDistributionChartCard: View {
         return nil
     }
 
-    private var selectedSlice: DonutSlice? { slice(at: selectedAngle) }
+    private var selectedSlice: DonutSlice? { slice(at: selectedAngle) ?? pinnedSlice.flatMap { pinned in slices.first { $0.id == pinned.id } } }
 
     private var previousTotal: Double? {
         guard viewModel.hasPreviousPeriod else { return nil }
@@ -161,15 +163,23 @@ private struct TimeDistributionChartCard: View {
                         let dx = location.x - center.x, dy = location.y - center.y
                         let radius = min(geo.size.width, geo.size.height) / 2
                         let distance = hypot(dx, dy)
-                        guard distance > radius * 0.55, distance < radius * 1.05, total > 0 else { return }
+                        // Center: open the pinned slice. Outside the ring: clear the selection.
+                        if distance <= radius * 0.55 {
+                            if let pinned = pinnedSlice { detailSlice = pinned }
+                            return
+                        }
+                        guard distance < radius * 1.05, total > 0 else {
+                            withAnimation(.snappy) { pinnedSlice = nil }
+                            return
+                        }
                         var angle = atan2(dx, -dy)  // 0 at 12 o'clock, clockwise
                         if angle < 0 { angle += 2 * .pi }
-                        if let hit = slice(at: angle / (2 * .pi) * total) {
-                            selectedAngle = angle / (2 * .pi) * total
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                selectedAngle = nil
-                                detailSlice = hit
-                            }
+                        guard let hit = slice(at: angle / (2 * .pi) * total) else { return }
+                        if hit.id == pinnedSlice?.id {
+                            detailSlice = hit
+                        } else {
+                            HapticManager.shared.impact(.light)
+                            withAnimation(.snappy) { pinnedSlice = hit }
                         }
                     }
             }
@@ -189,12 +199,27 @@ private struct TimeDistributionChartCard: View {
                     .minimumScaleFactor(0.6)
                     .frame(maxWidth: 96)
                     .themedPrimaryText()
-                Text(selectedSlice.map { "\($0.name) · \(StatsFormat.percent(total > 0 ? $0.hours / total : 0))" }
-                     ?? "stats_total".localized)
+                Text(selectedSlice?.name ?? "stats_total".localized)
                     .font(.caption2)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .frame(maxWidth: 96)
                     .themedSecondaryText()
+                if let selectedSlice {
+                    Text(StatsFormat.percent(total > 0 ? selectedSlice.hours / total : 0))
+                        .font(.caption2.weight(.semibold))
+                        .monospacedDigit()
+                        .themedSecondaryText()
+                }
+                if pinnedSlice != nil {
+                    HStack(spacing: 2) {
+                        Text("stats_details".localized)
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(theme.accentColor)
+                    .padding(.top, 2)
+                }
             }
         }
     }
@@ -231,7 +256,7 @@ private struct TimeDistributionChartCard: View {
                                     .monospacedDigit()
                                     .frame(width: 32, alignment: .trailing)
                                     .themedSecondaryText()
-                                if let previous = slice.previousHours {
+                                if let previous = slice.previousHours, pinnedSlice == nil || pinnedSlice?.id == slice.id {
                                     DeltaBadge(current: slice.hours, previous: previous, compact: true)
                                         .frame(minWidth: 44, alignment: .trailing)
                                 }
@@ -243,6 +268,8 @@ private struct TimeDistributionChartCard: View {
                     }
                     .padding(.vertical, 8)
                     .contentShape(Rectangle())
+                    .opacity(selectedSlice == nil || selectedSlice?.id == slice.id ? 1 : 0.4)
+                    .animation(.snappy, value: selectedSlice?.id)
                 }
                 .buttonStyle(.plain)
                 if index < slices.count - 1 {

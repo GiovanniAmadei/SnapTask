@@ -102,12 +102,11 @@ private struct HabitRow: View {
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
                         .themedPrimaryText()
-                    if let category = habit.categoryName {
-                        Text(category)
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .themedSecondaryText()
-                    }
+                    Text([habit.categoryName, habit.cadence == .day ? nil : habit.cadence.localizedName]
+                            .compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption2)
+                        .lineLimit(1)
+                        .themedSecondaryText()
                 }
                 Spacer(minLength: 6)
                 HStack(spacing: 12) {
@@ -126,7 +125,7 @@ private struct HabitRow: View {
                     .font(.caption2.weight(.bold))
                     .foregroundColor(theme.secondaryTextColor.opacity(0.5))
             }
-            HabitHeatmap(days: habit.days, color: color, cellSize: 9, spacing: 2, showsLabels: false)
+            HabitCadenceHeatmap(habit: habit, compact: true)
         }
         .padding(14)
         .background(
@@ -161,8 +160,16 @@ struct HabitDetailView: View {
 
     private var color: Color { Color(hex: habit.color) }
 
+    /// Days (daily habits) or periods (weekly/monthly/yearly habits) inside the selected range.
     private var periodDays: [StatisticsViewModel.HabitDay] {
         let range = viewModel.periodDays
+        if habit.cadence != .day {
+            let calendar = Calendar.current
+            return habit.periods.filter {
+                let next = calendar.date(byAdding: habit.cadence.component, value: 1, to: $0.date)!
+                return next > range.start && $0.date <= range.end
+            }
+        }
         return habit.days.filter { $0.date >= range.start && $0.date <= range.end }
     }
 
@@ -175,6 +182,11 @@ struct HabitDetailView: View {
     }
 
     private var bucketComponent: Calendar.Component {
+        switch habit.cadence {
+        case .week: return .month
+        case .month, .year: return .year
+        case .day: break
+        }
         switch viewModel.selectedTimeRange {
         case .today, .week, .month: return .weekOfYear
         case .year, .allTime: return .month
@@ -216,12 +228,16 @@ struct HabitDetailView: View {
                     tiles
                     StatsCard(title: "stats_calendar".localized) {
                         VStack(alignment: .leading, spacing: 10) {
-                            HabitHeatmap(days: habit.days, color: color, cellSize: 14, spacing: 3, scrollable: true)
-                            HabitHeatmapLegend(color: color)
+                            HabitCadenceHeatmap(habit: habit)
+                            HabitHeatmapLegend(color: color, cadence: habit.cadence)
                         }
                     }
-                    trendCard
-                    weekdayCard
+                    if habit.cadence != .year {
+                        trendCard
+                    }
+                    if habit.cadence == .day {
+                        weekdayCard
+                    }
                 }
                 .padding(16)
             }
@@ -265,7 +281,8 @@ struct HabitDetailView: View {
 
     private var trendCard: some View {
         StatsCard(title: "stats_trend".localized,
-                  subtitle: bucketComponent == .month ? "stats_rate_per_month".localized : "stats_rate_per_week".localized) {
+                  subtitle: bucketComponent == .year ? "stats_rate_per_year".localized
+                    : (bucketComponent == .month ? "stats_rate_per_month".localized : "stats_rate_per_week".localized)) {
             if rateBuckets.isEmpty {
                 StatsEmptyState(systemImage: "chart.bar", title: "stats_no_data_title".localized,
                                 message: "stats_no_data_period".localized)
@@ -290,7 +307,8 @@ struct HabitDetailView: View {
                     AxisMarks(values: .automatic(desiredCount: 6)) { value in
                         AxisValueLabel {
                             if let date = value.as(Date.self) {
-                                Text(bucketComponent == .month
+                                Text(bucketComponent == .year ? date.formatted(.dateTime.year())
+                                     : bucketComponent == .month
                                      ? date.formatted(.dateTime.month(.abbreviated))
                                      : date.formatted(.dateTime.day().month(.abbreviated)))
                             }

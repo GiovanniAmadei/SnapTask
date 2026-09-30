@@ -2090,7 +2090,7 @@
 "stats_quadrant_hard_low" = "Difícil · baixa";
 "stats_quality_vs_difficulty" = "Qualidade vs dificuldade";
 "stats_share_of_time" = "%@ do seu tempo";
-"stats_tap_category_hint" = "Toque em uma categoria para ver detalhes";
+"stats_tap_category_hint" = "Toque numa fatia para vê-la e de novo para os detalhes";
 "stats_tasks_in_category" = "Tarefas";
 "stats_times" = "%d×";
 "stats_tracked_sessions" = "Sessões cronometradas";
@@ -2100,3 +2100,13 @@
 "stats_rolling_note" = "Média móvel de %@";
 "stats_n_weeks" = "%d semanas";
 "stats_n_days" = "%d dias";
+"stats_cadence_day" = "diária";
+"stats_cadence_week" = "semanal";
+"stats_cadence_month" = "mensal";
+"stats_cadence_year" = "anual";
+"stats_rate_per_year" = "Conclusão por ano";
+"stats_compare" = "Comparar";
+"stats_edit_selection" = "Editar";
+"stats_compare_limit" = "Escolha até %d tarefas. A tendência geral fica como referência tracejada.";
+"stats_clear" = "Limpar";
+"stats_details" = "Detalhes";

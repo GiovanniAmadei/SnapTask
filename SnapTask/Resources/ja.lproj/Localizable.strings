@@ -2091,7 +2091,7 @@
 "stats_quadrant_hard_low" = "難しい・低品質";
 "stats_quality_vs_difficulty" = "品質と難易度";
 "stats_share_of_time" = "時間の%@";
-"stats_tap_category_hint" = "カテゴリをタップして詳細を表示";
+"stats_tap_category_hint" = "タップで表示、もう一度タップで詳細";
 "stats_tasks_in_category" = "タスク";
 "stats_times" = "%d回";
 "stats_tracked_sessions" = "計測したセッション";
@@ -2101,3 +2101,13 @@
 "stats_rolling_note" = "%@の移動平均";
 "stats_n_weeks" = "%d週間";
 "stats_n_days" = "%d日間";
+"stats_cadence_day" = "毎日";
+"stats_cadence_week" = "毎週";
+"stats_cadence_month" = "毎月";
+"stats_cadence_year" = "毎年";
+"stats_rate_per_year" = "年ごとの達成率";
+"stats_compare" = "比較";
+"stats_edit_selection" = "編集";
+"stats_compare_limit" = "最大%d件のタスクを選択できます。全体の推移は点線で表示されます。";
+"stats_clear" = "クリア";
+"stats_details" = "詳細";

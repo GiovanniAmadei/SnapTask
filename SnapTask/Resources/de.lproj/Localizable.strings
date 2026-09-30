@@ -2018,7 +2018,7 @@
 "stats_quadrant_hard_low" = "Schwer · niedrig";
 "stats_quality_vs_difficulty" = "Qualität vs. Schwierigkeit";
 "stats_share_of_time" = "%@ deiner Zeit";
-"stats_tap_category_hint" = "Tippe auf eine Kategorie für Details";
+"stats_tap_category_hint" = "Tippe auf ein Segment, erneut für Details";
 "stats_tasks_in_category" = "Aufgaben";
 "stats_times" = "%d×";
 "stats_tracked_sessions" = "Getrackte Sitzungen";
@@ -2028,3 +2028,13 @@
 "stats_rolling_note" = "Gleitender Durchschnitt über %@";
 "stats_n_weeks" = "%d Wochen";
 "stats_n_days" = "%d Tage";
+"stats_cadence_day" = "täglich";
+"stats_cadence_week" = "wöchentlich";
+"stats_cadence_month" = "monatlich";
+"stats_cadence_year" = "jährlich";
+"stats_rate_per_year" = "Erledigung pro Jahr";
+"stats_compare" = "Vergleichen";
+"stats_edit_selection" = "Bearbeiten";
+"stats_compare_limit" = "Wähle bis zu %d Aufgaben. Der Gesamtverlauf bleibt als gestrichelte Referenz.";
+"stats_clear" = "Zurücksetzen";
+"stats_details" = "Details";

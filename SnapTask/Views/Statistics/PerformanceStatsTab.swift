@@ -165,7 +165,7 @@ struct PerformanceStatsTab: View {
             guard let task = rated.first(where: { $0.taskId.uuidString == id }) else { return nil }
             return series(for: task, color: ComparisonPalette.colors[index % ComparisonPalette.colors.count])
         }
-        return StatsCard(title: "stats_trend".localized, subtitle: "stats_compare_hint".localized) {
+        return StatsCard(title: "stats_trend".localized) {
             Picker("", selection: $metric) {
                 ForEach(Metric.allCases, id: \.self) { Text($0.title).tag($0) }
             }
@@ -173,8 +173,11 @@ struct PerformanceStatsTab: View {
             .frame(width: 170)
         } content: {
             VStack(alignment: .leading, spacing: 12) {
-                ComparisonChips(items: rated.map { .init(id: $0.taskId.uuidString, name: $0.taskName,
-                                                         icon: $0.displayIcon) },
+                ComparisonChips(items: rated.map {
+                                    .init(id: $0.taskId.uuidString, name: $0.taskName, icon: $0.displayIcon,
+                                          color: Color(hex: $0.categoryColor ?? "#6366F1"), group: $0.categoryName,
+                                          detail: "★ \($0.averageQuality.map { String(format: "%.1f", $0) } ?? "–") · ⚡︎ \($0.averageDifficulty.map { String(format: "%.1f", $0) } ?? "–")")
+                                },
                                 selection: $compared)
                 ComparisonLineChart(series: selected, reference: overall, unit: unit,
                                     yDomain: 0...10, yTicks: [0, 5, 10],

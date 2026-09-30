@@ -136,13 +136,134 @@ struct HabitHeatmap: View {
 
 struct HabitHeatmapLegend: View {
     let color: Color
+    var cadence: StatisticsViewModel.HabitCadence = .day
     @Environment(\.theme) private var theme
 
     var body: some View {
         HStack(spacing: 12) {
             LegendDot(color: color, label: "stats_legend_done".localized)
             LegendDot(color: color.opacity(0.2), label: "stats_legend_missed".localized)
-            LegendDot(color: theme.secondaryTextColor.opacity(0.08), label: "stats_legend_not_scheduled".localized)
+            if cadence == .day {
+                LegendDot(color: theme.secondaryTextColor.opacity(0.08), label: "stats_legend_not_scheduled".localized)
+            }
         }
+    }
+}
+
+/// Picks the right grid for the habit's cadence: a day heatmap for daily habits,
+/// a grid of its own weeks/months/years otherwise (a day grid would be almost empty).
+struct HabitCadenceHeatmap: View {
+    let habit: StatisticsViewModel.HabitSummary
+    var compact = false
+
+    var body: some View {
+        let color = Color(hex: habit.color)
+        switch habit.cadence {
+        case .day:
+            HabitHeatmap(days: habit.days, color: color,
+                         cellSize: compact ? 9 : 14, spacing: compact ? 2 : 3,
+                         showsLabels: !compact, scrollable: !compact)
+        case .week, .month, .year:
+            HabitPeriodGrid(periods: habit.periods, cadence: habit.cadence, color: color, compact: compact)
+        }
+    }
+}
+
+/// Weeks: one column per month with its weeks stacked. Months: one row per year, twelve columns.
+/// Years: one cell per year. Cells keep a readable size instead of stretching.
+struct HabitPeriodGrid: View {
+    let periods: [StatisticsViewModel.HabitDay]
+    let cadence: StatisticsViewModel.HabitCadence
+    let color: Color
+    var compact = false
+    @Environment(\.theme) private var theme
+
+    private var calendar: Calendar { Calendar.current }
+    private var spacing: CGFloat { compact ? 3 : 4 }
+    private var labelFont: Font { .system(size: compact ? 9 : 10, weight: .medium) }
+
+    var body: some View {
+        switch cadence {
+        case .month: monthGrid
+        case .week: weekGrid
+        default: yearRow
+        }
+    }
+
+    // MARK: Months: rows = years
+
+    private var monthGrid: some View {
+        let byYear = Dictionary(grouping: periods) { calendar.component(.year, from: $0.date) }
+        let years = byYear.keys.sorted().suffix(compact ? 2 : 3)
+        let symbols = calendar.veryShortMonthSymbols
+        return VStack(alignment: .leading, spacing: spacing) {
+            HStack(spacing: spacing) {
+                Text("").frame(width: 30)
+                ForEach(0..<12, id: \.self) { month in
+                    Text(symbols[month]).font(labelFont).themedSecondaryText().frame(maxWidth: .infinity)
+                }
+            }
+            ForEach(Array(years), id: \.self) { year in
+                HStack(spacing: spacing) {
+                    Text(String(year)).font(labelFont).monospacedDigit().themedSecondaryText()
+                        .frame(width: 30, alignment: .leading)
+                    ForEach(1...12, id: \.self) { month in
+                        cell(byYear[year]?.first { calendar.component(.month, from: $0.date) == month })
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Weeks: columns = months
+
+    private var weekGrid: some View {
+        let recent = Array(periods.suffix(compact ? 26 : 53))
+        let byMonth = Dictionary(grouping: recent) { calendar.dateInterval(of: .month, for: $0.date)?.start ?? $0.date }
+        let months = byMonth.keys.sorted()
+        return HStack(alignment: .top, spacing: spacing) {
+            ForEach(months, id: \.self) { month in
+                VStack(spacing: spacing) {
+                    Text(month.formatted(.dateTime.month(.narrow))).font(labelFont).themedSecondaryText()
+                    ForEach(byMonth[month] ?? [], id: \.date) { week in cell(week) }
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    // MARK: Years
+
+    private var yearRow: some View {
+        let recent = Array(periods.suffix(6))
+        return HStack(spacing: spacing * 2) {
+            ForEach(recent, id: \.date) { year in
+                VStack(spacing: 4) {
+                    cell(year)
+                    Text(year.date.formatted(.dateTime.year())).font(labelFont).monospacedDigit().themedSecondaryText()
+                }
+                .frame(maxWidth: compact ? 44 : 56)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: Cell
+
+    @ViewBuilder
+    private func cell(_ period: StatisticsViewModel.HabitDay?) -> some View {
+        let shape = RoundedRectangle(cornerRadius: compact ? 3 : 4, style: .continuous)
+        Group {
+            switch period?.state {
+            case .done: shape.fill(color)
+            case .missed: shape.fill(color.opacity(0.2))
+            case .pending: shape.fill(theme.secondaryTextColor.opacity(0.08)).overlay(shape.strokeBorder(color, lineWidth: 1.5))
+            default: shape.fill(theme.secondaryTextColor.opacity(0.06))
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: compact ? 18 : 26, maxHeight: compact ? 18 : 26)
+        .frame(maxWidth: .infinity)
     }
 }

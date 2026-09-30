@@ -2007,7 +2007,7 @@
 "stats_quadrant_hard_low" = "Difficile · faible";
 "stats_quality_vs_difficulty" = "Qualité vs difficulté";
 "stats_share_of_time" = "%@ de ton temps";
-"stats_tap_category_hint" = "Touche une catégorie pour les détails";
+"stats_tap_category_hint" = "Touche une part pour la voir, encore pour les détails";
 "stats_tasks_in_category" = "Tâches";
 "stats_times" = "%d×";
 "stats_tracked_sessions" = "Sessions chronométrées";
@@ -2017,3 +2017,13 @@
 "stats_rolling_note" = "Moyenne glissante sur %@";
 "stats_n_weeks" = "%d semaines";
 "stats_n_days" = "%d jours";
+"stats_cadence_day" = "quotidienne";
+"stats_cadence_week" = "hebdomadaire";
+"stats_cadence_month" = "mensuelle";
+"stats_cadence_year" = "annuelle";
+"stats_rate_per_year" = "Réalisation par an";
+"stats_compare" = "Comparer";
+"stats_edit_selection" = "Modifier";
+"stats_compare_limit" = "Choisis jusqu'à %d tâches. La tendance globale reste en pointillés comme référence.";
+"stats_clear" = "Effacer";
+"stats_details" = "Détails";

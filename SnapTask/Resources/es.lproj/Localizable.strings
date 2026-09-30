@@ -2301,7 +2301,7 @@
 "stats_quadrant_hard_low" = "Difícil · baja";
 "stats_quality_vs_difficulty" = "Calidad vs dificultad";
 "stats_share_of_time" = "%@ de tu tiempo";
-"stats_tap_category_hint" = "Toca una categoría para ver detalles";
+"stats_tap_category_hint" = "Toca una sección para verla y otra vez para los detalles";
 "stats_tasks_in_category" = "Tareas";
 "stats_times" = "%d×";
 "stats_tracked_sessions" = "Sesiones registradas";
@@ -2311,3 +2311,13 @@
 "stats_rolling_note" = "Media móvil de %@";
 "stats_n_weeks" = "%d semanas";
 "stats_n_days" = "%d días";
+"stats_cadence_day" = "diaria";
+"stats_cadence_week" = "semanal";
+"stats_cadence_month" = "mensual";
+"stats_cadence_year" = "anual";
+"stats_rate_per_year" = "Cumplimiento por año";
+"stats_compare" = "Comparar";
+"stats_edit_selection" = "Editar";
+"stats_compare_limit" = "Elige hasta %d tareas. La tendencia general queda como referencia discontinua.";
+"stats_clear" = "Borrar";
+"stats_details" = "Detalles";

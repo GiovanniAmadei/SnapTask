@@ -700,9 +700,49 @@ class StatisticsViewModel: ObservableObject {
         let bestStreak: Int
         let periodCompleted: Int
         let periodTotal: Int
-        /// Every calendar day from the start of the history window to today (oldest first).
+        /// Every calendar day from the start of the history window to today (oldest first). Only for daily cadence.
         let days: [HabitDay]
+        var cadence: HabitCadence = .day
+        /// One entry per week/month/year for non-daily habits (oldest first); `date` is the period start.
+        var periods: [HabitDay] = []
         var periodRate: Double { periodTotal > 0 ? Double(periodCompleted) / Double(periodTotal) : 0 }
+    }
+
+    /// Granularity of one occurrence: daily habits get a day heatmap, the others a grid of their own periods.
+    enum HabitCadence: Equatable {
+        case day, week, month, year
+
+        var component: Calendar.Component {
+            switch self {
+            case .day: return .day
+            case .week: return .weekOfYear
+            case .month: return .month
+            case .year: return .year
+            }
+        }
+
+        var localizedName: String {
+            switch self {
+            case .day: return "stats_cadence_day".localized
+            case .week: return "stats_cadence_week".localized
+            case .month: return "stats_cadence_month".localized
+            case .year: return "stats_cadence_year".localized
+            }
+        }
+    }
+
+    static func cadence(for task: TodoTask) -> HabitCadence {
+        switch task.timeScope {
+        case .week: return .week
+        case .month: return .month
+        case .year, .longTerm: return .year
+        default: break
+        }
+        switch task.recurrence?.type {
+        case .monthly, .monthlyOrdinal: return .month
+        case .yearly: return .year
+        default: return .day
+        }
     }
 
     enum BucketUnit {
@@ -949,7 +989,47 @@ class StatisticsViewModel: ObservableObject {
     }
 
     /// Streaks are computed on the whole history (up to 2 years), period numbers only on the selected period.
+    /// Non-daily habits: a period counts as done when the task was completed at least once inside it.
+    private func periodicHabitSummary(for task: TodoTask, cadence: HabitCadence, periodStart: Date, periodEnd: Date, today: Date) -> HabitSummary {
+        let calendar = Calendar.current
+        let unit = cadence.component
+        let lookback = cadence == .year ? -6 : -2
+        let earliest = calendar.date(byAdding: .year, value: lookback, to: today)!
+        let completedDays = task.completions.filter { $0.value.isCompleted }.map { calendar.startOfDay(for: $0.key) }
+        // Scoped tasks move their start date forward each period: history begins at the first completion if earlier.
+        let firstDay = min(calendar.startOfDay(for: task.startTime), completedDays.min() ?? today)
+        var cursor = calendar.dateInterval(of: unit, for: max(firstDay, earliest))?.start ?? today
+
+        var periods: [HabitDay] = []
+        var run = 0, best = 0, completed = 0, total = 0
+        while cursor <= today {
+            let next = calendar.date(byAdding: unit, value: 1, to: cursor)!
+            let done = completedDays.contains { $0 >= cursor && $0 < next }
+            let isCurrent = today < next
+            let state: HabitDayState = done ? .done : (isCurrent ? .pending : .missed)
+            if done { run += 1; best = max(best, run) } else if !isCurrent { run = 0 }
+            // Periods overlapping the selected range; the current one only once it's done.
+            if next > periodStart && cursor <= periodEnd && state != .pending {
+                total += 1
+                if done { completed += 1 }
+            }
+            periods.append(HabitDay(date: cursor, state: state))
+            cursor = next
+        }
+
+        let icon = (task.icon.isEmpty || task.icon == "circle") ? (task.category?.icon ?? "repeat") : task.icon
+        return HabitSummary(taskId: task.id, name: task.name, icon: icon,
+                            color: task.category?.color ?? "#6366F1", categoryName: task.category?.name,
+                            currentStreak: run, bestStreak: best,
+                            periodCompleted: completed, periodTotal: total,
+                            days: [], cadence: cadence, periods: periods)
+    }
+
     private func habitSummary(for task: TodoTask, periodStart: Date, periodEnd: Date, today: Date) -> HabitSummary {
+        let cadence = Self.cadence(for: task)
+        if cadence != .day {
+            return periodicHabitSummary(for: task, cadence: cadence, periodStart: periodStart, periodEnd: periodEnd, today: today)
+        }
         let calendar = Calendar.current
         let twoYearsAgo = calendar.date(byAdding: .day, value: -730, to: today)!
         var day = max(calendar.startOfDay(for: task.startTime), twoYearsAgo)

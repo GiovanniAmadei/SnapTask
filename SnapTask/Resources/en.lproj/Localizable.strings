@@ -2165,7 +2165,7 @@
 "stats_quadrant_hard_low" = "Hard · low";
 "stats_quality_vs_difficulty" = "Quality vs difficulty";
 "stats_share_of_time" = "%@ of your time";
-"stats_tap_category_hint" = "Tap a category for details";
+"stats_tap_category_hint" = "Tap a slice to see it, tap again for details";
 "stats_tasks_in_category" = "Tasks";
 "stats_times" = "%d×";
 "stats_tracked_sessions" = "Tracked sessions";
@@ -2175,3 +2175,13 @@
 "stats_rolling_note" = "Rolling average over %@";
 "stats_n_weeks" = "%d weeks";
 "stats_n_days" = "%d days";
+"stats_cadence_day" = "daily";
+"stats_cadence_week" = "weekly";
+"stats_cadence_month" = "monthly";
+"stats_cadence_year" = "yearly";
+"stats_rate_per_year" = "Completion per year";
+"stats_compare" = "Compare";
+"stats_edit_selection" = "Edit";
+"stats_compare_limit" = "Choose up to %d tasks. The overall trend stays as a dashed reference.";
+"stats_clear" = "Clear";
+"stats_details" = "Details";
