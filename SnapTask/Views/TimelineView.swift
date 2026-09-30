@@ -1160,6 +1160,8 @@ struct TaskListView: View {
                             bottomBarOverlay
                                 .padding(.bottom, 16)
                         }
+                } else if viewModel.canReorderTasks {
+                    reorderableTaskList
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -1363,6 +1365,48 @@ struct TaskListView: View {
         
         await MainActor.run {
             isRefreshing = false
+        }
+    }
+    
+    /// Vista predefinita: List nativa, così il riordino (tieni premuto e trascina)
+    /// ha scorrimento automatico, animazioni e vibrazione di sistema.
+    private var reorderableTaskList: some View {
+        List {
+            if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
+                mandalaBannerCard
+                    .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 6, trailing: 4))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            
+            if case .single(let tasks) = viewModel.organizedTasksForSelectedDate() {
+                ForEach(tasks, id: \.id) { task in
+                    taskCardRow(for: task)
+                        .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 14))
+                        .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 6, trailing: 4))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+                .onMove { source, destination in
+                    viewModel.moveTasks(fromOffsets: source, toOffset: destination)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+        .contentMargins(.top, 2, for: .scrollContent)
+        .contentMargins(.bottom, 100, for: .scrollContent)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .refreshable {
+            await performCloudKitSync()
+        }
+        .overlay(alignment: .bottom) {
+            bottomBarOverlay
+                .padding(.bottom, 16)
+        }
+        .sheet(isPresented: $showingMandalaSheet) {
+            MandalaHubView()
         }
     }
     

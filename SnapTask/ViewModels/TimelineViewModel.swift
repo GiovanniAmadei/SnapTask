@@ -83,32 +83,35 @@ class TimelineViewModel: ObservableObject {
     @Published var showingFilterSheet = false
     @Published var showingTimelineView = false
     
-    @Published var draggedTask: TodoTask? = nil
-    
-    // MARK: - Task Reordering
-    func moveTask(_ draggedItem: TodoTask, toTarget targetItem: TodoTask) {
-        guard let draggedIndex = tasks.firstIndex(where: { $0.id == draggedItem.id }),
-              let targetIndex = tasks.firstIndex(where: { $0.id == targetItem.id }) else {
-            return
+    // MARK: - Manual Order (drag and drop)
+    /// Lista a cui si applica l'ordine manuale; nil dove l'ordine non si può cambiare.
+    var manualOrderListKey: String? {
+        let periodDate: Date
+        switch selectedTimeScope {
+        case .week: periodDate = currentWeek
+        case .month: periodDate = currentMonth
+        case .year: periodDate = currentYear
+        default: periodDate = selectedDate
         }
-        
-        let draggedTask = tasks.remove(at: draggedIndex)
-        let actualTargetIndex = targetIndex > draggedIndex ? targetIndex - 1 : targetIndex
-        
-        tasks.insert(draggedTask, at: actualTargetIndex)
-        
-        // Update order indices for all tasks to persist the new order
-        updateOrderIndices()
+        return TaskOrderManager.listKey(scope: selectedTimeScope, date: periodDate)
     }
     
-    private func updateOrderIndices() {
-        for (index, task) in tasks.enumerated() {
-            var updatedTask = task
-            updatedTask.orderIndex = Double(index)
-            Task {
-                await TaskManager.shared.updateTask(updatedTask)
-            }
-        }
+    /// Il riordino a mano c'è solo nella vista predefinita: le altre ordinano per orario, categoria o priorità.
+    var canReorderTasks: Bool {
+        organization == .none && manualOrderListKey != nil
+    }
+    
+    func moveTasks(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard canReorderTasks,
+              let listKey = manualOrderListKey,
+              case .single(let visibleTasks) = organizedTasksForSelectedDate() else { return }
+        
+        var orderedIds = visibleTasks.map(\.id)
+        orderedIds.move(fromOffsets: source, toOffset: destination)
+        
+        objectWillChange.send()
+        TaskOrderManager.shared.setOrder(orderedIds, listKey: listKey)
+        HapticManager.shared.impact(.light)
     }
     
     // MARK: - TimeScope Properties
@@ -193,6 +196,15 @@ class TimelineViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.refreshTasks()
+            }
+            .store(in: &cancellables)
+        
+        // Ordine manuale cambiato da CloudKit (o da un'altra schermata)
+        TaskOrderManager.shared.$orders
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
             }
             .store(in: &cancellables)
         
@@ -845,14 +857,8 @@ class TimelineViewModel: ObservableObject {
             ]
             return OrganizedTasks.sections(sections)
         case .none:
-            let sortedTasks = scopedTasks.sorted { task1, task2 in
-                if let order1 = task1.orderIndex, let order2 = task2.orderIndex {
-                    return order1 < order2
-                }
-                // Fallback a startTime se non c'è orderIndex
-                return task1.startTime < task2.startTime
-            }
-            return OrganizedTasks.single(sortedTasks)
+            guard let listKey = manualOrderListKey else { return OrganizedTasks.single(scopedTasks) }
+            return OrganizedTasks.single(TaskOrderManager.shared.sorted(scopedTasks, listKey: listKey))
         }
     }
     
