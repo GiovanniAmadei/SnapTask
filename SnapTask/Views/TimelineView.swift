@@ -1164,7 +1164,7 @@ struct TaskListView: View {
                     reorderableTaskList
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 12) {
+                        LazyVStack(spacing: 10) {
                             if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
                                 mandalaBannerCard
                             }
@@ -1187,7 +1187,7 @@ struct TaskListView: View {
                         .sheet(isPresented: $showingMandalaSheet) {
                             MandalaHubView()
                         }
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, 10)
                         .padding(.bottom, 100)
                         .padding(.top, 8)
                         .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
@@ -1374,7 +1374,7 @@ struct TaskListView: View {
         List {
             if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
                 mandalaBannerCard
-                    .listRowInsets(EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
+                    .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -1383,7 +1383,7 @@ struct TaskListView: View {
                 ForEach(tasks, id: \.id) { task in
                     taskCardRow(for: task)
                         .contentShape(.dragPreview, RoundedRectangle(cornerRadius: TimelineTaskCard.cornerRadius, style: .continuous))
-                        .listRowInsets(EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
+                        .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
