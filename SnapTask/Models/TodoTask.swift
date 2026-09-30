@@ -8,6 +8,8 @@ enum TaskTimeScope: String, CaseIterable, Codable {
     case month = "month"
     case year = "year"
     case longTerm = "longTerm"
+    /// Undated quick notes/tasks captured on the fly, scheduled later.
+    case inbox = "inbox"
     case all = "all"
     
     var displayName: String {
@@ -17,6 +19,7 @@ enum TaskTimeScope: String, CaseIterable, Codable {
         case .month: return "scope_month".localized
         case .year: return "scope_year".localized
         case .longTerm: return "scope_long_term".localized
+        case .inbox: return "scope_inbox".localized
         case .all: return "scope_all".localized
         }
     }
@@ -28,6 +31,7 @@ enum TaskTimeScope: String, CaseIterable, Codable {
         case .month: return "calendar"
         case .year: return "trophy.fill"
         case .longTerm: return "sparkles"
+        case .inbox: return "tray.fill"
         case .all: return "square.grid.2x2"
         }
     }
@@ -39,6 +43,7 @@ enum TaskTimeScope: String, CaseIterable, Codable {
         case .month: return "orange"
         case .year: return "purple"
         case .longTerm: return "pink"
+        case .inbox: return "indigo"
         case .all: return "teal"
         }
     }
@@ -184,6 +189,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
             return "this_year".localized
         case .longTerm:
             return "long_term_objective".localized
+        case .inbox:
+            return "scope_inbox".localized
         case .all:
             return "all_time".localized
         }
@@ -218,8 +225,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
             }
             // Fallback: check same year
             return calendar.isDate(startTime, equalTo: date, toGranularity: .year)
-        case .longTerm:
-            return true // Always show long-term tasks
+        case .longTerm, .inbox:
+            return true // Always show long-term and inbox tasks
         case .all:
             return true // Always show all-time tasks
         }
@@ -424,8 +431,8 @@ struct TodoTask: Identifiable, Codable, Equatable {
                 return calendar.dateInterval(of: .year, for: scopeStart)?.start ?? calendar.startOfDay(for: scopeStart)
             }
             return calendar.dateInterval(of: .year, for: date)?.start ?? calendar.startOfDay(for: date)
-        case .longTerm:
-            // Per obiettivi a lungo termine, usiamo una data fissa per permettere un singolo completamento
+        case .longTerm, .inbox:
+            // Per obiettivi a lungo termine e voci Inbox, usiamo una data fissa per permettere un singolo completamento
             return calendar.startOfDay(for: startTime)
         case .all:
             // Per tutti i tempi, usiamo una data fissa per permettere un singolo completamento

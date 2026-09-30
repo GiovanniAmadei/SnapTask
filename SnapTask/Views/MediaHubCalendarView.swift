@@ -138,6 +138,7 @@ struct MediaHubCalendarView: View {
         case .month: return "month".localized
         case .year: return "year".localized
         case .longTerm: return "long_term".localized
+        case .inbox: return "scope_inbox".localized
         case .all: return "all".localized
         }
     }
@@ -156,7 +157,7 @@ struct MediaHubCalendarView: View {
                 yearHeader
             case .year:
                 decadeHeader
-            case .longTerm, .all:
+            case .longTerm, .inbox, .all:
                 EmptyView()
             }
         }
@@ -179,7 +180,7 @@ struct MediaHubCalendarView: View {
             monthListView
         case .year:
             yearListView
-        case .longTerm, .all:
+        case .longTerm, .inbox, .all:
             EmptyView()
         }
     }
@@ -211,7 +212,7 @@ struct MediaHubCalendarView: View {
             } else {
                 selectYearPrompt
             }
-        case .longTerm:
+        case .longTerm, .inbox:
             longTermDetailView
         case .all:
             EmptyView()

@@ -2220,3 +2220,11 @@
 "reward_redeemed_success" = "Redeemed!";
 
 "feedback_reply_notification_title" = "Giovanni replied to your suggestion";
+
+// Inbox
+"scope_inbox" = "Inbox";
+"inbox_add_placeholder" = "Jot something down…";
+"inbox_empty_title" = "Your Inbox is empty";
+"inbox_empty_subtitle" = "Capture ideas, errands and things to buy without a date. Plan them when you're ready.";
+"inbox_plan" = "Plan";
+"inbox_scope_description" = "No date: plan it later";

@@ -1245,7 +1245,7 @@ final class DemoDataSeeder {
             } else {
                 startTime = yearStart
             }
-        case .longTerm:
+        case .longTerm, .inbox:
             if let h = hour, let m = minute {
                 startTime = cal.date(bySettingHour: h, minute: m, second: 0, of: scopeAnchor) ?? scopeAnchor
             } else {

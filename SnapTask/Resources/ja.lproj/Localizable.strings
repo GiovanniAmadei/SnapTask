@@ -2146,3 +2146,11 @@
 "reward_redeemed_success" = "交換しました！";
 
 "feedback_reply_notification_title" = "Giovanniがあなたの提案に返信しました";
+
+// Inbox
+"scope_inbox" = "インボックス";
+"inbox_add_placeholder" = "さっとメモ…";
+"inbox_empty_title" = "インボックスは空です";
+"inbox_empty_subtitle" = "アイデアや用事、買い物を日付なしでメモ。準備ができたら予定に入れましょう。";
+"inbox_plan" = "計画";
+"inbox_scope_description" = "日付なし：あとで予定に";

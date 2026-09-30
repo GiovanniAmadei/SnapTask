@@ -749,6 +749,7 @@ private struct EmptyHourSlotButtonStyle: ButtonStyle {
 
 struct TimelineHeaderView: View {
     @ObservedObject var viewModel: TimelineViewModel
+    @ObservedObject private var taskManager = TaskManager.shared
     @Binding var selectedDayOffset: Int
     @Binding var showingCalendarPicker: Bool
     @Binding var scrollProxy: ScrollViewProxy?
@@ -758,6 +759,54 @@ struct TimelineHeaderView: View {
     @State private var showingMandala = false
     @ObservedObject private var journalManager = JournalManager.shared
     @ObservedObject private var settingsManager = CloudKitSettingsManager.shared
+
+    private var scopeMenuShowsName: Bool {
+        switch viewModel.selectedTimeScope {
+        case .week, .month, .year: return true
+        case .today, .inbox, .longTerm, .all: return false
+        }
+    }
+
+    /// Opens the Inbox (undated quick notes); tapping again goes back to today.
+    private var inboxButton: some View {
+        let isActive = viewModel.selectedTimeScope == .inbox
+        let openCount = viewModel.openInboxCount
+        return Button(action: {
+            HapticManager.shared.selection()
+            withAnimation(.easeInOut(duration: 0.25)) {
+                viewModel.selectedTimeScope = isActive ? .today : .inbox
+            }
+        }) {
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isActive ? theme.primaryColor : theme.primaryColor.opacity(0.12))
+                    .frame(width: 34, height: 34)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
+                    )
+                    .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+                    .overlay(
+                        Image(systemName: "tray.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(isActive ? .white : theme.primaryColor)
+                    )
+
+                if openCount > 0 && !isActive {
+                    Text(openCount > 99 ? "99+" : "\(openCount)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 4)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .background(Capsule().fill(Color.red))
+                        .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 1.5))
+                        .offset(x: 6, y: -6)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("scope_inbox".localized))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -847,10 +896,12 @@ struct TimelineHeaderView: View {
                         MandalaHubView()
                     }
                     
+                    inboxButton
+                    
                     Spacer(minLength: 8)
                     
                     HStack(spacing: 8) {
-                        if (viewModel.selectedTimeScope != .today || settingsManager.hideDaysBar) && viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .all {
+                        if (viewModel.selectedTimeScope != .today || settingsManager.hideDaysBar) && viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .inbox && viewModel.selectedTimeScope != .all {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     viewModel.navigateToPrevious()
@@ -903,7 +954,7 @@ struct TimelineHeaderView: View {
                                 }) {
                                     HStack(spacing: 8) {
                                         Image(systemName: scope.icon)
-                                            .foregroundColor(Color(scope.color))
+                                            .foregroundColor(scope.tint)
                                             .font(.system(size: 14, weight: .medium))
                                         
                                         Text(scope.displayName)
@@ -923,13 +974,17 @@ struct TimelineHeaderView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: viewModel.selectedTimeScope.icon)
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Color(viewModel.selectedTimeScope.color))
+                                    .foregroundColor(viewModel.selectedTimeScope.tint)
                                 
-                                Text(viewModel.selectedTimeScope.displayName)
-                                    .font(.subheadline.weight(.semibold))
-                                    .themedPrimaryText()
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                                // The title already names these scopes (Today/date, Inbox, Long term, All):
+                                // repeating it here left no room for the title in longer languages.
+                                if scopeMenuShowsName {
+                                    Text(viewModel.selectedTimeScope.displayName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .themedPrimaryText()
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
                                 
                                 Image(systemName: "chevron.down")
                                     .font(.system(size: 10, weight: .medium))
@@ -1115,8 +1170,31 @@ struct TaskListView: View {
     @Environment(\.theme) private var theme
     
     var body: some View {
+        VStack(spacing: 0) {
+            // Pinned above both the empty state and the list, so it keeps focus
+            // (and the keyboard) while notes are being added one after another.
+            if viewModel.selectedTimeScope == .inbox {
+                InboxQuickAddField()
+                    .padding(.horizontal, 10)
+                    .padding(.top, 8)
+                    .padding(.bottom, 2)
+            }
         Group {
-            if viewModel.tasks.isEmpty {
+            if viewModel.tasks.isEmpty && viewModel.selectedTimeScope == .inbox {
+                VStack(spacing: 0) {
+                    Spacer()
+                    InboxEmptyState()
+                    Spacer()
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture { UIApplication.shared.dismissKeyboard() }
+                .overlay(alignment: .bottom) {
+                    bottomBarOverlay
+                        .padding(.bottom, 16)
+                }
+            } else if viewModel.tasks.isEmpty {
                 // Empty state
                 VStack(spacing: 20) {
                     if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
@@ -1168,6 +1246,7 @@ struct TaskListView: View {
                             if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
                                 mandalaBannerCard
                             }
+
                             
                             switch viewModel.organizedTasksForSelectedDate() {
                             case .single(let tasks):
@@ -1198,6 +1277,7 @@ struct TaskListView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .scrollDismissesKeyboard(.immediately)
                     .refreshable {
                         await performCloudKitSync()
                     }
@@ -1207,6 +1287,7 @@ struct TaskListView: View {
                     }
                 }
             }
+        }
         }
         .fullScreenCover(isPresented: $showingActivePomodoroSession) {
             if pomodoroViewModel.activeTask != nil {
@@ -1378,6 +1459,7 @@ struct TaskListView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
+
             
             if case .single(let tasks) = viewModel.organizedTasksForSelectedDate() {
                 ForEach(tasks, id: \.id) { task in
@@ -1394,6 +1476,7 @@ struct TaskListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.immediately)
         .environment(\.defaultMinListRowHeight, 0)
         .contentMargins(.top, 2, for: .scrollContent)
         .contentMargins(.bottom, 100, for: .scrollContent)
@@ -1597,6 +1680,7 @@ struct TimelineTaskCard: View {
     @State private var showingPomodoro = false
     @State private var showingEditSheet = false
     @State private var showingDetailView = false
+    @State private var showingPlanSheet = false
     @State private var dragOffset: CGFloat = 0
     @State private var isAutoCompleting = false
     @State private var showingTrackingModeSelection = false
@@ -1700,7 +1784,7 @@ struct TimelineTaskCard: View {
             return viewModel.currentMonth
         case .year:
             return viewModel.currentYear
-        case .longTerm:
+        case .longTerm, .inbox:
             return Calendar.current.startOfDay(for: task.startTime)
         case .all:
             // For "all" scope, use the task's own scope to determine the date
@@ -1713,7 +1797,7 @@ struct TimelineTaskCard: View {
                 return viewModel.currentMonth
             case .year:
                 return viewModel.currentYear
-            case .longTerm:
+            case .longTerm, .inbox:
                 return Calendar.current.startOfDay(for: task.startTime)
             case .all:
                 return Calendar.current.startOfDay(for: Date())
@@ -1998,6 +2082,32 @@ struct TimelineTaskCard: View {
                 Spacer()
                 
                 HStack(spacing: 8) {
+                    if task.timeScope == .inbox {
+                        Button(action: {
+                            UIApplication.shared.dismissKeyboard()
+                            showingPlanSheet = true
+                            resetSwipe()
+                        }) {
+                            VStack(spacing: 4) {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.indigo)
+                                    .frame(width: 50, height: 50)
+                                    .overlay(
+                                        Image(systemName: "calendar.badge.plus")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    )
+                                
+                                Text("inbox_plan".localized)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.indigo)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                                    .frame(width: 56)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
                     Button(action: {
                         showingTrackingModeSelection = true
                         resetSwipe()
@@ -2018,8 +2128,10 @@ struct TimelineTaskCard: View {
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
+                    }
                     
                     Button(action: {
+                        UIApplication.shared.dismissKeyboard()
                         showingEditSheet = true
                         resetSwipe()
                     }) {
@@ -2241,8 +2353,12 @@ struct TimelineTaskCard: View {
             if dragOffset != 0 {
                 resetSwipe()
             } else {
+                UIApplication.shared.dismissKeyboard()
                 showingDetailView = true
             }
+        }
+        .sheet(isPresented: $showingPlanSheet) {
+            PlanInboxItemSheet(task: task)
         }
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in
@@ -2611,6 +2727,21 @@ struct CompactTimelineTaskView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+extension TaskTimeScope {
+    /// SwiftUI color for `color` (a plain name, not an asset: `Color("blue")` rendered nothing).
+    var tint: Color {
+        switch self {
+        case .today: return .blue
+        case .week: return .green
+        case .month: return .orange
+        case .year: return .purple
+        case .longTerm: return .pink
+        case .inbox: return .indigo
+        case .all: return .teal
         }
     }
 }

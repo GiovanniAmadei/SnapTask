@@ -2145,3 +2145,11 @@
 "reward_redeemed_success" = "Resgatada!";
 
 "feedback_reply_notification_title" = "Giovanni respondeu à sua sugestão";
+
+// Inbox
+"scope_inbox" = "Caixa de entrada";
+"inbox_add_placeholder" = "Anote algo rápido…";
+"inbox_empty_title" = "Sua caixa de entrada está vazia";
+"inbox_empty_subtitle" = "Anote ideias, tarefas e compras sem data. Planeje quando quiser.";
+"inbox_plan" = "Planejar";
+"inbox_scope_description" = "Sem data: planeje depois";

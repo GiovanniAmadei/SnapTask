@@ -416,7 +416,7 @@ struct TaskFormView: View {
                                     HStack(spacing: 8) {
                                         Image(systemName: viewModel.selectedTimeScope.icon)
                                             .font(.system(size: 12))
-                                            .foregroundColor(Color(viewModel.selectedTimeScope.color))
+                                            .foregroundColor(viewModel.selectedTimeScope.tint)
                                         Text(viewModel.timeScopeTitle)
                                             .font(.subheadline.weight(.semibold))
                                             .themedPrimaryText()
@@ -644,7 +644,7 @@ struct TaskFormView: View {
                                         Spacer()
                                         Image(systemName: viewModel.selectedTimeScope.icon)
                                             .font(.system(size: 16))
-                                            .foregroundColor(Color(viewModel.selectedTimeScope.color))
+                                            .foregroundColor(viewModel.selectedTimeScope.tint)
                                     }
                                     
                                     // Period picker based on scope

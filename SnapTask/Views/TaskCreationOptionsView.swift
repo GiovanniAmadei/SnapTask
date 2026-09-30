@@ -40,7 +40,7 @@ struct TaskCreationOptionsView: View {
             return viewModel.currentMonth
         case .year:
             return viewModel.currentYear
-        case .longTerm:
+        case .longTerm, .inbox:
             return Date()
         case .all:
             return Date()
@@ -387,6 +387,7 @@ struct TaskCreationOptionsView: View {
         case .month: return "this_month".localized
         case .year: return "this_year".localized
         case .longTerm: return "long_term_objective".localized
+        case .inbox: return "scope_inbox".localized
         case .all:
             return "all_tasks".localized
         }
@@ -463,6 +464,8 @@ struct TaskCreationOptionsView: View {
             endComps.month = 12
             endComps.day = 31
             scopeEndDate = cal.date(from: endComps)
+        case .inbox:
+            startTime = Date()
         case .longTerm:
             if template.hasSpecificTime {
                 var comps = cal.dateComponents([.year, .month, .day], from: Date())

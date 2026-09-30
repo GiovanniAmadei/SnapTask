@@ -116,7 +116,8 @@ struct WatchTaskFormView: View {
     private var isYearly: Bool { if case .yearly = recurrenceType { return true }; return false }
     
     private var availableScopes: [TaskTimeScope] {
-        TaskTimeScope.allCases.filter { $0 != .all }
+        // Inbox items are captured on iPhone; the watch form keeps the dated scopes.
+        TaskTimeScope.allCases.filter { $0 != .all && $0 != .inbox }
     }
     
     private func scopeName(_ scope: TaskTimeScope) -> String {
@@ -126,6 +127,7 @@ struct WatchTaskFormView: View {
         case .month: return "Month"
         case .year: return "Year"
         case .longTerm: return "Long Term"
+        case .inbox: return "Inbox"
         case .all: return "All"
         }
     }
@@ -192,7 +194,7 @@ struct WatchTaskFormView: View {
             endComps.day = 31
             let end = calendar.date(from: endComps) ?? start
             return start...end
-        case .longTerm, .today, .all:
+        case .longTerm, .inbox, .today, .all:
             return Date.distantPast...Date.distantFuture
         }
     }
@@ -211,7 +213,7 @@ struct WatchTaskFormView: View {
         case .year:
             formatter.dateFormat = "yyyy"
             return formatter.string(from: periodRange.lowerBound)
-        case .longTerm:
+        case .longTerm, .inbox:
             return "Long Term"
         case .today:
             formatter.dateStyle = .medium
@@ -515,7 +517,7 @@ struct WatchTaskFormView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                case .longTerm:
+                case .longTerm, .inbox:
                     Text("No fixed period")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -1176,7 +1178,7 @@ struct WatchTaskFormView: View {
                 taskStart = yearStart
             }
             return (taskStart, yearStart, yearEnd)
-        case .longTerm:
+        case .longTerm, .inbox:
             if hasSpecificDay {
                 let baseDay = calendar.startOfDay(for: specificDayDate)
                 let taskStart = hasSpecificTime ? merge(date: baseDay, time: startTime) : baseDay

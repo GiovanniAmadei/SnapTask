@@ -593,7 +593,7 @@ struct AIBrainDumpView: View {
                     task.scopeEndDate = cal.date(from: endComps)
                     task.startTime = yearStart
                     task.hasSpecificDay = false
-                case .longTerm, .all:
+                case .longTerm, .inbox, .all:
                     task.scopeStartDate = nil
                     task.scopeEndDate = nil
                     task.hasSpecificDay = false

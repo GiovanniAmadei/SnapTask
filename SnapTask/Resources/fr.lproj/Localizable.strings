@@ -2062,3 +2062,11 @@
 "reward_redeemed_success" = "Échangée !";
 
 "feedback_reply_notification_title" = "Giovanni a répondu à ta suggestion";
+
+// Inbox
+"scope_inbox" = "Boîte de réception";
+"inbox_add_placeholder" = "Noter rapidement…";
+"inbox_empty_title" = "Ta boîte de réception est vide";
+"inbox_empty_subtitle" = "Note tes idées, courses et choses à faire sans date. Planifie-les quand tu veux.";
+"inbox_plan" = "Planifier";
+"inbox_scope_description" = "Sans date : à planifier plus tard";

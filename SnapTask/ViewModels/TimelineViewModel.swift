@@ -138,7 +138,10 @@ class TimelineViewModel: ObservableObject {
             if calendar.isDateInToday(selectedDate) {
                 return "scope_today".localized
             } else {
-                formatter.dateStyle = .medium
+                // The day strip already shows the weekday; skip the year when it's the current one
+                // so the title fits next to the header buttons.
+                let sameYear = calendar.isDate(selectedDate, equalTo: Date(), toGranularity: .year)
+                formatter.setLocalizedDateFormatFromTemplate(sameYear ? "d MMM" : "d MMM yyyy")
                 return formatter.string(from: selectedDate)
             }
         case .week:
@@ -155,6 +158,8 @@ class TimelineViewModel: ObservableObject {
             return formatter.string(from: currentYear)
         case .longTerm:
             return "scope_long_term".localized
+        case .inbox:
+            return "scope_inbox".localized
         case .all:
             return "all_goals".localized
         }
@@ -332,6 +337,8 @@ class TimelineViewModel: ObservableObject {
             filtered = tasksForYear(currentYear, from: allTasks)
         case .longTerm:
             filtered = longTermTasks(from: allTasks)
+        case .inbox:
+            filtered = inboxTasks(from: allTasks)
         case .all:
             if showAllHistory {
                 filtered = allTasks
@@ -341,7 +348,8 @@ class TimelineViewModel: ObservableObject {
                 let month = tasksForMonth(currentMonth, from: allTasks).filter { $0.timeScope == .month }
                 let year = tasksForYear(currentYear, from: allTasks).filter { $0.timeScope == .year }
                 let longTerm = longTermTasks(from: allTasks) // long term sempre visibili
-                filtered = day + week + month + year + longTerm
+                let inbox = inboxTasks(from: allTasks)
+                filtered = day + week + month + year + longTerm + inbox
             }
         }
         
@@ -479,6 +487,26 @@ class TimelineViewModel: ObservableObject {
         }
     }
     
+    /// Open inbox items, plus the ones checked off in the last day so the tick stays visible.
+    private func inboxTasks(from tasks: [TodoTask]) -> [TodoTask] {
+        let cutoff = Date().addingTimeInterval(-24 * 3600)
+        return tasks.filter { task in
+            guard task.timeScope == .inbox else { return false }
+            guard let completion = task.completions[task.completionKey(for: Date())], completion.isCompleted else {
+                return true
+            }
+            // Toggling a completion bumps lastModifiedDate (completionDate isn't always set).
+            return (completion.completionDate ?? task.lastModifiedDate) > cutoff
+        }
+    }
+    
+    /// Number of inbox items still open (header badge).
+    var openInboxCount: Int {
+        taskManager.tasks.filter { task in
+            task.timeScope == .inbox && task.completions[task.completionKey(for: Date())]?.isCompleted != true
+        }.count
+    }
+    
     // MARK: - Navigation Methods
     
     func navigateToPrevious() {
@@ -493,7 +521,7 @@ class TimelineViewModel: ObservableObject {
             currentMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
         case .year:
             currentYear = calendar.date(byAdding: .year, value: -1, to: currentYear) ?? currentYear
-        case .longTerm, .all:
+        case .longTerm, .inbox, .all:
             break
         }
     }
@@ -510,7 +538,7 @@ class TimelineViewModel: ObservableObject {
             currentMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
         case .year:
             currentYear = calendar.date(byAdding: .year, value: 1, to: currentYear) ?? currentYear
-        case .longTerm, .all:
+        case .longTerm, .inbox, .all:
             break
         }
     }
@@ -528,7 +556,7 @@ class TimelineViewModel: ObservableObject {
             currentMonth = calendar.startOfMonth(for: today)
         case .year:
             currentYear = calendar.startOfYear(for: today)
-        case .longTerm, .all:
+        case .longTerm, .inbox, .all:
             break
         }
     }
@@ -537,12 +565,12 @@ class TimelineViewModel: ObservableObject {
     
     var canNavigatePrevious: Bool {
         // Can always navigate previous (no limits for now)
-        return selectedTimeScope != .longTerm
+        return selectedTimeScope != .longTerm && selectedTimeScope != .inbox
     }
     
     var canNavigateNext: Bool {
         // Can always navigate next (no limits for now)
-        return selectedTimeScope != .longTerm
+        return selectedTimeScope != .longTerm && selectedTimeScope != .inbox
     }
     
     var progressText: String {
@@ -564,6 +592,8 @@ class TimelineViewModel: ObservableObject {
                 return "0 " + "tasks".localized
             case .longTerm:
                 return "no_tasks_long_term".localized
+            case .inbox:
+                return "inbox_empty_title".localized
             }
         }
         
@@ -611,7 +641,7 @@ class TimelineViewModel: ObservableObject {
             targetDate = currentMonth
         case .year:
             targetDate = currentYear
-        case .longTerm:
+        case .longTerm, .inbox:
             targetDate = Date()
         case .all:
             if let t = (tasks.first { $0.id == taskId }) ?? (taskManager.tasks.first { $0.id == taskId }) {
@@ -637,7 +667,7 @@ class TimelineViewModel: ObservableObject {
             targetDate = currentMonth
         case .year:
             targetDate = currentYear
-        case .longTerm:
+        case .longTerm, .inbox:
             targetDate = Date()
         case .all:
             if let t = (tasks.first { $0.id == taskId }) ?? (taskManager.tasks.first { $0.id == taskId }) {
@@ -664,7 +694,7 @@ class TimelineViewModel: ObservableObject {
                 keyDate = calendar.startOfDay(for: currentMonth)
             case .year:
                 keyDate = calendar.startOfDay(for: currentYear)
-            case .longTerm:
+            case .longTerm, .inbox:
                 keyDate = calendar.startOfDay(for: task.startTime)
             case .all:
                 keyDate = calendar.startOfDay(for: completionTargetDate(for: task))
@@ -755,7 +785,7 @@ class TimelineViewModel: ObservableObject {
             return currentMonth
         case .year:
             return currentYear
-        case .longTerm:
+        case .longTerm, .inbox:
             return calendar.startOfDay(for: task.startTime)
         case .all:
             return calendar.startOfDay(for: Date())
@@ -773,7 +803,7 @@ class TimelineViewModel: ObservableObject {
             return currentMonth
         case .year:
             return currentYear
-        case .longTerm:
+        case .longTerm, .inbox:
             return calendar.startOfDay(for: task.startTime)
         case .all:
             return calendar.startOfDay(for: Date())
@@ -802,7 +832,7 @@ class TimelineViewModel: ObservableObject {
             return calendar.isDate(currentMonth, equalTo: calendar.startOfMonth(for: today), toGranularity: .month)
         case .year:
             return calendar.isDate(currentYear, equalTo: calendar.startOfYear(for: today), toGranularity: .year)
-        case .longTerm, .all:
+        case .longTerm, .inbox, .all:
             return true
         }
     }
@@ -919,7 +949,7 @@ class TimelineViewModel: ObservableObject {
     // Group tasks by their time scope for the "All" view
     private func organizeByTimeScope(_ tasks: [TodoTask]) -> OrganizedTasks {
         // Desired order of sections
-        let order: [TaskTimeScope] = [.today, .week, .month, .year, .longTerm]
+        let order: [TaskTimeScope] = [.today, .week, .month, .year, .longTerm, .inbox]
         
         func colorHex(for scope: TaskTimeScope) -> String {
             switch scope {
@@ -928,6 +958,7 @@ class TimelineViewModel: ObservableObject {
             case .month: return "#F59E0B"   // orange
             case .year: return "#8B5CF6"    // purple
             case .longTerm: return "#EC4899"// pink
+            case .inbox: return "#6366F1"   // indigo
             case .all: return "#14B8A6"     // teal (not used in sections)
             }
         }
@@ -1188,7 +1219,7 @@ class TimelineViewModel: ObservableObject {
             let start = currentYear
             let end = (cal.date(byAdding: .year, value: 1, to: start) ?? start).addingTimeInterval(-1)
             return task.scopeEndDate ?? end
-        case .longTerm:
+        case .longTerm, .inbox:
             return nil
         case .all:
             return nil
@@ -1213,7 +1244,7 @@ class TimelineViewModel: ObservableObject {
             threshold = TimeInterval(settings.eisenhowerMonthUrgentDays) * 24 * 3600
         case .year:
             threshold = TimeInterval(settings.eisenhowerYearUrgentDays) * 24 * 3600
-        case .longTerm:
+        case .longTerm, .inbox:
             return false
         case .all:
             switch task.timeScope {
@@ -1226,7 +1257,7 @@ class TimelineViewModel: ObservableObject {
                 threshold = TimeInterval(settings.eisenhowerMonthUrgentDays) * 24 * 3600
             case .year:
                 threshold = TimeInterval(settings.eisenhowerYearUrgentDays) * 24 * 3600
-            case .longTerm, .all:
+            case .longTerm, .inbox, .all:
                 return false
             }
         }

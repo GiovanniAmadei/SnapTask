@@ -70,8 +70,8 @@ enum ContextualRecurrenceType {
             return [.everyMonth, .everyTwoMonths, .everyThreeMonths, .everySixMonths]
         case .year:
             return [.everyYear, .everyTwoYears, .everyThreeYears]
-        case .longTerm:
-            return [] // Long term tasks don't have recurrence
+        case .longTerm, .inbox:
+            return [] // Long term and inbox tasks don't have recurrence
         case .all:
             return [] // "All" è solo vista, nessuna ricorrenza contestuale
         }
@@ -342,6 +342,8 @@ class TaskFormViewModel: ObservableObject {
             return "task_happens_this_year".localized
         case .longTerm:
             return "long_term_goal".localized
+        case .inbox:
+            return "inbox_scope_description".localized
         case .all:
             return "" // Non usato nel form
         }
@@ -366,6 +368,8 @@ class TaskFormViewModel: ObservableObject {
             return String(selectedYear)
         case .longTerm:
             return "long_term_goal".localized
+        case .inbox:
+            return "scope_inbox".localized
         case .all:
             return "" // Non usato nel form
         }
@@ -456,7 +460,7 @@ class TaskFormViewModel: ObservableObject {
                     return "every_k_years_offset_format".localized(yearModuloK, yearModuloOffset + 1)
                 }
             }
-        case .longTerm:
+        case .longTerm, .inbox:
             return "no_recurrence".localized
         case .all:
             return "" // Non applicabile nel form
@@ -589,6 +593,11 @@ class TaskFormViewModel: ObservableObject {
             } else {
                 taskStartTime = Calendar.current.startOfDay(for: Date())
             }
+            scopeStartDate = nil
+            scopeEndDate = nil
+        case .inbox:
+            // Undated: keep the original creation time (it anchors the completion key).
+            taskStartTime = initialTask?.timeScope == .inbox ? (initialTask?.startTime ?? Date()) : Date()
             scopeStartDate = nil
             scopeEndDate = nil
         case .all:
@@ -831,7 +840,7 @@ class TaskFormViewModel: ObservableObject {
             // Legacy contextual types like everyTwoDays can be extended later if needed.
             return createEnhancedRecurrence(startDate: startDay)
             
-        case .longTerm:
+        case .longTerm, .inbox:
             return nil
         case .all:
             return nil // Nessuna ricorrenza in modalità All nel form

@@ -12,7 +12,7 @@ struct ContextualRecurrenceSettingsView: View {
                     HStack {
                         Image(systemName: viewModel.selectedTimeScope.icon)
                             .font(.system(size: 16))
-                            .foregroundColor(Color(viewModel.selectedTimeScope.color))
+                            .foregroundColor(viewModel.selectedTimeScope.tint)
                         
                         Text("recurrence_for".localized + " " + viewModel.selectedTimeScope.displayName)
                             .font(.headline)
@@ -48,13 +48,13 @@ struct ContextualRecurrenceSettingsView: View {
                         case .year:
                             YearRecurrenceSettingsCard(viewModel: viewModel)
                             
-                        case .longTerm:
+                        case .longTerm, .inbox:
                             LongTermInfoCard()
                         case .all:
                             RecurrenceOptionsCard(viewModel: viewModel)
                         }
                         
-                        if viewModel.selectedTimeScope != .longTerm {
+                        if viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .inbox {
                             EndDateSection(viewModel: viewModel)
                         }
                         
@@ -89,7 +89,7 @@ struct ContextualRecurrenceSettingsView: View {
             return "recurrence_desc_month".localized
         case .year:
             return "recurrence_desc_year".localized
-        case .longTerm:
+        case .longTerm, .inbox:
             return "long_term_goals_no_recurrence".localized
         case .all:
             return "choose_how_often_daily_task".localized

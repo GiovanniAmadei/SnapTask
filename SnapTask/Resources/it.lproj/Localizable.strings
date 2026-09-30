@@ -2179,3 +2179,11 @@
 "reward_redeemed_success" = "Riscattato!";
 
 "feedback_reply_notification_title" = "Giovanni ha risposto al tuo suggerimento";
+
+// Inbox
+"scope_inbox" = "Inbox";
+"inbox_add_placeholder" = "Scrivi qualcosa al volo…";
+"inbox_empty_title" = "La tua Inbox è vuota";
+"inbox_empty_subtitle" = "Annota idee, commissioni e cose da comprare senza data. Le pianifichi quando vuoi.";
+"inbox_plan" = "Pianifica";
+"inbox_scope_description" = "Senza data: la pianifichi dopo";

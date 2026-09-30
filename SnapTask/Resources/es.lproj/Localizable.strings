@@ -2356,3 +2356,11 @@
 "reward_redeemed_success" = "¡Canjeada!";
 
 "feedback_reply_notification_title" = "Giovanni ha respondido a tu sugerencia";
+
+// Inbox
+"scope_inbox" = "Bandeja";
+"inbox_add_placeholder" = "Anota algo rápido…";
+"inbox_empty_title" = "Tu bandeja está vacía";
+"inbox_empty_subtitle" = "Apunta ideas, recados y cosas que comprar sin fecha. Planifícalas cuando quieras.";
+"inbox_plan" = "Planificar";
+"inbox_scope_description" = "Sin fecha: planifícala luego";

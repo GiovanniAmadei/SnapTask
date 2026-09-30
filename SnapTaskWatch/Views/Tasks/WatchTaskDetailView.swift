@@ -580,6 +580,8 @@ struct WatchTaskDetailView: View {
             return "Year"
         case .longTerm:
             return "Long Term"
+        case .inbox:
+            return "Inbox"
         case .all:
             return "All"
         }

@@ -39,6 +39,8 @@ final class TaskOrderManager: ObservableObject {
             periodStart = calendar.startOfYear(for: date)
         case .longTerm:
             return "longTerm"
+        case .inbox:
+            return "inbox"
         case .all:
             return nil
         }
