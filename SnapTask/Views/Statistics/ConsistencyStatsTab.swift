@@ -23,6 +23,7 @@ struct ConsistencyStatsTab: View {
             .padding(.top, 4)
             .padding(.bottom, 110) // clears the floating tab bar
         }
+        .statsDebugScrollAnchor()
         .sheet(item: $selectedHabit) { habit in
             HabitDetailView(habit: habit, viewModel: viewModel)
         }

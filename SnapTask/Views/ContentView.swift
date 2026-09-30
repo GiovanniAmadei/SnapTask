@@ -69,6 +69,11 @@ struct ContentView: View {
             }
         }
         #if DEBUG
+        .onAppear {
+            // Debug only: `-openTab 4` opens a main tab at launch (screenshots without tapping).
+            let tab = UserDefaults.standard.integer(forKey: "openTab")
+            if tab > 0 { selectedTab = tab }
+        }
         .task {
             // Debug only: `-seedScenario fullYear|stress|standard` wipes and reseeds demo data at launch.
             if let raw = UserDefaults.standard.string(forKey: "seedScenario"),

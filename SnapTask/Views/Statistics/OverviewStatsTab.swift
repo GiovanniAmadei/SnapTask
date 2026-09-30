@@ -18,6 +18,7 @@ struct OverviewStatsTab: View {
             .padding(.top, 4)
             .padding(.bottom, 110) // clears the floating tab bar
         }
+        .statsDebugScrollAnchor()
     }
 
     private var kpiGrid: some View {

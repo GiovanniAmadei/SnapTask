@@ -93,6 +93,16 @@ struct StatisticsView: View {
             PremiumPaywallView()
         }
         .onAppear {
+            #if DEBUG
+            // Debug only: `-statsTab consistency -statsPeriod Year` for screenshots.
+            if let raw = UserDefaults.standard.string(forKey: "statsTab"), let tab = StatisticsTab(rawValue: raw) {
+                selectedTab = tab
+            }
+            if let raw = UserDefaults.standard.string(forKey: "statsPeriod"),
+               let period = StatisticsViewModel.TimeRange(rawValue: raw) {
+                viewModel.selectedTimeRange = period
+            }
+            #endif
             if !Self.periods.contains(viewModel.selectedTimeRange) {
                 viewModel.selectedTimeRange = .week
             }

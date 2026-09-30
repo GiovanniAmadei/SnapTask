@@ -116,6 +116,7 @@ struct PerformanceStatsTab: View {
             .padding(.top, 4)
             .padding(.bottom, 110) // clears the floating tab bar
         }
+        .statsDebugScrollAnchor()
         .sheet(item: $selectedTask) { task in
             PerformanceTaskDetailView(task: task, timeRange: viewModel.selectedTimeRange)
         }

@@ -508,3 +508,19 @@ extension StatisticsViewModel.HabitSummary {
         return RollingRate.points(grouped.map { ($0.key, $0.value.done, $0.value.total) }, window: window)
     }
 }
+
+extension View {
+    /// Debug only: `-statsAnchor center|bottom` opens statistics scrolled there (screenshots without tapping).
+    @ViewBuilder
+    func statsDebugScrollAnchor() -> some View {
+        #if DEBUG
+        switch UserDefaults.standard.string(forKey: "statsAnchor") {
+        case "center": self.defaultScrollAnchor(.center)
+        case "bottom": self.defaultScrollAnchor(.bottom)
+        default: self
+        }
+        #else
+        self
+        #endif
+    }
+}
