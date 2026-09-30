@@ -2341,3 +2341,15 @@
 "reward_points_kept" = "Puntos gastados · sigue en el historial";
 "reward_archived_tag" = "Eliminada";
 "redeemed_once_short" = "1 vez";
+"rewards_period_day" = "Hoy";
+"rewards_period_week" = "Semana";
+"rewards_period_month" = "Mes";
+"rewards_period_year" = "Año";
+"rewards_period_all" = "Todo";
+"rewards_points_spent" = "Puntos gastados";
+"rewards_redemptions" = "Canjes";
+"rewards_points_earned" = "Puntos ganados";
+"recalculate_from_tasks" = "Recalcular desde tareas";
+"reward_last_on" = "último el %@";
+"rewards_history_short" = "Historial";
+"rewards_redeemed_short" = "Canjeadas";

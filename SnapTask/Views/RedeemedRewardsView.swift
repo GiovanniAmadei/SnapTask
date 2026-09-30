@@ -62,291 +62,149 @@ struct RedeemedRewardsView: View {
         }
     }
     
+    private var shortLabel: (TimeFilter) -> String {
+        { filter in
+            switch filter {
+            case .all: return RewardPeriodLabel.all.localized
+            case .day: return RewardPeriodLabel.day.localized
+            case .week: return RewardPeriodLabel.week.localized
+            case .month: return RewardPeriodLabel.month.localized
+            case .year: return RewardPeriodLabel.year.localized
+            }
+        }
+    }
+
+    private var totalSpent: Int {
+        filteredRedeemedRewards.reduce(0) { $0 + $1.0.pointsCost * $1.1.count }
+    }
+
+    private var redemptionsCount: Int {
+        filteredRedeemedRewards.reduce(0) { $0 + $1.1.count }
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Time Filter Section
-                timeFilterSection
-                
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        if filteredRedeemedRewards.isEmpty {
-                            emptyStateView
-                        } else {
-                            ForEach(filteredRedeemedRewards, id: \.0.id) { reward, dates in
-                                RedeemedRewardCard(reward: reward, redemptionDates: dates)
-                                    .padding(.horizontal, 16)
-                            }
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    StatsSegmentedControl(options: TimeFilter.allCases, selection: $selectedTimeFilter, label: shortLabel)
+
+                    HStack(spacing: 10) {
+                        StatTile(value: "-" + totalSpent.formatted(), label: "rewards_points_spent".localized,
+                                 systemImage: "minus.circle.fill", tint: .red)
+                        StatTile(value: redemptionsCount.formatted(), label: "rewards_redemptions".localized,
+                                 systemImage: "gift.fill", tint: theme.primaryColor)
+                    }
+
+                    if filteredRedeemedRewards.isEmpty {
+                        StatsEmptyState(systemImage: "gift",
+                                        title: "no_rewards_redeemed_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName),
+                                        message: "start_earning_redeem_first".localized)
+                            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(theme.surfaceColor))
+                    } else {
+                        ForEach(filteredRedeemedRewards, id: \.0.id) { reward, dates in
+                            RedeemedRewardCard(reward: reward, redemptionDates: dates)
                         }
                     }
-                    .padding(.top, 16)
-                    .padding(.bottom, 32)
                 }
+                .padding(16)
             }
             .themedBackground()
-            .navigationTitle("")
+            .navigationTitle("rewards_redeemed_short".localized)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarHidden(true)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("done".localized) {
-                        dismiss()
-                    }
-                    .themedPrimary()
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("done".localized) { dismiss() }
                 }
             }
         }
-    }
-    
-    private var timeFilterSection: some View {
-        VStack(spacing: 16) {
-            // Header with title and count
-            HStack {
-                Text("redeemed_rewards".localized)
-                    .font(.system(size: 24, weight: .bold))
-                    .themedPrimaryText()
-                
-                Spacer()
-                
-                Text("\(filteredRedeemedRewards.count) \(filteredRedeemedRewards.count == 1 ? "reward".localized : "rewards".localized)")
-                    .font(.system(size: 14, weight: .medium))
-                    .themedSecondaryText()
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(theme.surfaceColor)
-                    )
-            }
-            
-            // Single row of filter buttons
-            HStack(spacing: 6) {
-                RedeemedTimeFilterChip(filter: .all, isSelected: selectedTimeFilter == .all) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .all }
-                }
-                RedeemedTimeFilterChip(filter: .day, isSelected: selectedTimeFilter == .day) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .day }
-                }
-                RedeemedTimeFilterChip(filter: .week, isSelected: selectedTimeFilter == .week) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .week }
-                }
-                RedeemedTimeFilterChip(filter: .month, isSelected: selectedTimeFilter == .month) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .month }
-                }
-                RedeemedTimeFilterChip(filter: .year, isSelected: selectedTimeFilter == .year) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .year }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(theme.surfaceColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(theme.borderColor, lineWidth: 1)
-                )
-        )
-        .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(selectedTimeFilter.color.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                
-                Image(systemName: "gift.circle")
-                    .font(.system(size: 40))
-                    .foregroundColor(selectedTimeFilter.color)
-            }
-            
-            VStack(spacing: 8) {
-                Text("no_rewards_redeemed_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName))
-                    .font(.system(size: 18, weight: .semibold))
-                    .themedPrimaryText()
-                
-                Text("start_earning_redeem_first".localized)
-                    .font(.system(size: 14))
-                    .themedSecondaryText()
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-        }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 struct RedeemedRewardCard: View {
     let reward: Reward
     let redemptionDates: [Date]
+    @ObservedObject private var categoryManager = CategoryManager.shared
     @Environment(\.theme) private var theme
-    
-    private var totalPointsSpent: Int {
-        redemptionDates.count * reward.pointsCost
+
+    private var tint: Color {
+        reward.categoryId.flatMap { id in categoryManager.categories.first { $0.id == id } }
+            .map { Color(hex: $0.color) } ?? theme.primaryColor
     }
-    
-    private var lastRedeemed: Date? {
-        redemptionDates.max()
-    }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E8E")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 44, height: 44)
-                    
-                    Image(systemName: reward.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 12) {
+                CategoryIconTile(icon: reward.icon, color: tint, size: 42)
+                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(reward.name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.headline)
+                            .lineLimit(1)
                             .themedPrimaryText()
                         if reward.isArchived {
                             Text("reward_archived_tag".localized)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.secondary)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(theme.secondaryTextColor)
                                 .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Capsule().fill(Color.secondary.opacity(0.15)))
+                                .background(Capsule().fill(theme.secondaryTextColor.opacity(0.15)))
+                                .fixedSize()
                         }
                     }
-                    
-                    if let description = reward.description {
-                        Text(description)
-                            .font(.system(size: 13))
-                            .themedSecondaryText()
-                            .lineLimit(1)
-                    }
-                    
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11))
-                            .themedSecondaryText()
-                        
-                        Text(reward.frequency.displayName)
-                            .font(.system(size: 12))
-                            .themedSecondaryText()
-                    }
+                    Text(reward.frequency.pickerLabel + " · " + String(format: "reward_last_on".localized,
+                         (redemptionDates.max() ?? Date()).formatted(date: .abbreviated, time: .omitted)))
+                        .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .themedSecondaryText()
                 }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("-\(totalPointsSpent)")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(Color(hex: "FF6B6B"))
-                    
-                    Text(redemptionDates.count == 1 ? "redeemed_once_short".localized : "\(redemptionDates.count) " + "times".localized)
-                        .font(.system(size: 12))
+                Spacer(minLength: 6)
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("-" + (redemptionDates.count * reward.pointsCost).formatted())
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .monospacedDigit()
+                        .foregroundColor(.red)
+                    Text("\(redemptionDates.count)×")
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
                         .themedSecondaryText()
                 }
             }
-            
-            if let lastRedeemed = lastRedeemed {
-                HStack {
-                    Text("last_redeemed".localized)
-                        .font(.system(size: 12, weight: .medium))
-                        .themedSecondaryText()
-                    
-                    Text(DateFormatter.fullDate.string(from: lastRedeemed))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(theme.primaryColor)
-                    
-                    Spacer()
-                }
-            }
-            
             if redemptionDates.count > 1 {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
-                    ForEach(redemptionDates.suffix(8).reversed(), id: \.self) { date in
-                        Text(DateFormatter.shortDate.string(from: date))
-                            .font(.system(size: 10))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color(hex: "FF6B6B").opacity(0.1))
-                            .foregroundColor(Color(hex: "FF6B6B"))
-                            .cornerRadius(6)
-                    }
-                    
-                    if redemptionDates.count > 8 {
-                        Text("+\(redemptionDates.count - 8)")
-                            .font(.system(size: 10))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(theme.secondaryTextColor.opacity(0.1))
-                            .themedSecondaryText()
-                            .cornerRadius(6)
-                    }
-                }
+                DateChipsGrid(dates: redemptionDates.sorted(by: >), color: tint)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(theme.surfaceColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(theme.borderColor, lineWidth: 1)
-                )
-        )
-        .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(theme.surfaceColor))
     }
 }
 
-struct RedeemedTimeFilterChip: View {
-    let filter: RedeemedRewardsView.TimeFilter
-    let isSelected: Bool
-    let onTap: () -> Void
+/// Recent dates as small chips on a fixed adaptive grid (never overflows, in any language).
+struct DateChipsGrid: View {
+    let dates: [Date]
+    let color: Color
+    var limit = 8
     @Environment(\.theme) private var theme
-    
+
     var body: some View {
-        Button(action: onTap) {
-            Text(compactTitle)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(isSelected ? .white : theme.textColor)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? filter.color : theme.surfaceColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(
-                                    isSelected ? Color.clear : filter.color.opacity(0.3),
-                                    lineWidth: 1
-                                )
-                        )
-                )
-                .shadow(color: isSelected ? filter.color.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
-                .scaleEffect(isSelected ? 1.02 : 1.0)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
-    }
-    
-    private var compactTitle: String {
-        switch filter {
-        case .all: return "all_time".localized
-        case .day: return "today".localized
-        case .week: return "week_short".localized
-        case .month: return "month_short".localized
-        case .year: return "year_short".localized
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 6)], alignment: .leading, spacing: 6) {
+            ForEach(Array(dates.prefix(limit)), id: \.self) { date in
+                Text(date.formatted(.dateTime.day().month(.abbreviated)))
+                    .font(.caption2.weight(.medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundColor(color)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(color.opacity(0.1)))
+            }
+            if dates.count > limit {
+                Text("+\(dates.count - limit)")
+                    .font(.caption2.weight(.semibold))
+                    .themedSecondaryText()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(theme.secondaryTextColor.opacity(0.1)))
+            }
         }
     }
 }

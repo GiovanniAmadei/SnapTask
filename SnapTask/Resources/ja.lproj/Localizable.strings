@@ -2131,3 +2131,15 @@
 "reward_points_kept" = "ポイントは使用済み・履歴に残ります";
 "reward_archived_tag" = "削除済み";
 "redeemed_once_short" = "1回";
+"rewards_period_day" = "今日";
+"rewards_period_week" = "週";
+"rewards_period_month" = "月";
+"rewards_period_year" = "年";
+"rewards_period_all" = "すべて";
+"rewards_points_spent" = "使ったポイント";
+"rewards_redemptions" = "交換回数";
+"rewards_points_earned" = "獲得ポイント";
+"recalculate_from_tasks" = "タスクから再計算";
+"reward_last_on" = "最終 %@";
+"rewards_history_short" = "ポイント履歴";
+"rewards_redeemed_short" = "交換済み";

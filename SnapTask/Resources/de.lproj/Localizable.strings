@@ -2058,3 +2058,15 @@
 "reward_points_kept" = "Punkte bleiben ausgegeben · im Verlauf";
 "reward_archived_tag" = "Gelöscht";
 "redeemed_once_short" = "1-mal";
+"rewards_period_day" = "Heute";
+"rewards_period_week" = "Woche";
+"rewards_period_month" = "Monat";
+"rewards_period_year" = "Jahr";
+"rewards_period_all" = "Alle";
+"rewards_points_spent" = "Ausgegebene Punkte";
+"rewards_redemptions" = "Einlösungen";
+"rewards_points_earned" = "Verdiente Punkte";
+"recalculate_from_tasks" = "Aus Aufgaben neu berechnen";
+"reward_last_on" = "zuletzt am %@";
+"rewards_history_short" = "Punkteverlauf";
+"rewards_redeemed_short" = "Eingelöst";

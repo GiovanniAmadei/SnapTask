@@ -92,90 +92,87 @@ struct PointsHistoryView: View {
         }
     }
     
+    private var shortLabel: (TimeFilter) -> String {
+        { filter in
+            switch filter {
+            case .all: return RewardPeriodLabel.all.localized
+            case .day: return RewardPeriodLabel.day.localized
+            case .week: return RewardPeriodLabel.week.localized
+            case .month: return RewardPeriodLabel.month.localized
+            case .year: return RewardPeriodLabel.year.localized
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Time Filter Section
-                timeFilterSection
-                
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        // Total Points Header - integrated into the scroll view
-                        if !filteredPointsEarningTasks.isEmpty {
-                            filteredPointsHeader
-                        }
-                        
-                        if filteredPointsEarningTasks.isEmpty {
-                            emptyStateView
-                        } else {
-                            ForEach(filteredPointsEarningTasks, id: \.0.id) { task, dates in
-                                TaskPointsCard(
-                                    task: task,
-                                    completionDates: dates,
-                                    isSelected: selectedTasks.contains(task.id),
-                                    isEditMode: isEditMode,
-                                    onSelectionChanged: { isSelected in
-                                        if isSelected {
-                                            selectedTasks.insert(task.id)
-                                        } else {
-                                            selectedTasks.remove(task.id)
-                                        }
-                                    }
-                                )
-                                .padding(.horizontal, 16)
-                            }
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    StatsSegmentedControl(options: TimeFilter.allCases, selection: $selectedTimeFilter, label: shortLabel)
+
+                    HStack(spacing: 10) {
+                        StatTile(value: "+" + filteredTotalPoints.formatted(), label: "rewards_points_earned".localized,
+                                 systemImage: "plus.circle.fill", tint: .green)
+                        StatTile(value: filteredPointsEarningTasks.reduce(0) { $0 + $1.1.count }.formatted(),
+                                 label: "stats_completed".localized, systemImage: "checkmark.circle.fill", tint: theme.primaryColor)
+                    }
+
+                    if filteredPointsEarningTasks.isEmpty {
+                        StatsEmptyState(systemImage: selectedTimeFilter.icon,
+                                        title: "no_points_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName),
+                                        message: "complete_tasks_points_enabled".localized)
+                            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(theme.surfaceColor))
+                    } else {
+                        ForEach(filteredPointsEarningTasks, id: \.0.id) { task, dates in
+                            TaskPointsCard(
+                                task: task,
+                                completionDates: dates,
+                                isSelected: selectedTasks.contains(task.id),
+                                isEditMode: isEditMode,
+                                onSelectionChanged: { isSelected in
+                                    if isSelected { selectedTasks.insert(task.id) } else { selectedTasks.remove(task.id) }
+                                }
+                            )
                         }
                     }
-                    .padding(.top, 16)
-                    .padding(.bottom, 32)
                 }
+                .padding(16)
             }
             .themedBackground()
-            .navigationTitle("")
+            .navigationTitle("rewards_history_short".localized)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarHidden(true)
             .toolbar {
+                // One control per side so the title never gets truncated.
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if !filteredPointsEarningTasks.isEmpty {
-                        Button(isEditMode ? "cancel".localized : "edit".localized) {
-                            withAnimation {
-                                isEditMode.toggle()
-                                if !isEditMode {
-                                    selectedTasks.removeAll()
+                    if isEditMode {
+                        Button("cancel".localized) {
+                            withAnimation { isEditMode = false; selectedTasks.removeAll() }
+                        }
+                    } else {
+                        Menu {
+                            if !filteredPointsEarningTasks.isEmpty {
+                                Button { withAnimation { isEditMode = true } } label: {
+                                    Label("edit".localized, systemImage: "checkmark.circle")
                                 }
                             }
+                            Button { rewardManager.recalculatePointsFromTasks() } label: {
+                                Label("recalculate_from_tasks".localized, systemImage: "arrow.clockwise")
+                            }
+                            Button(role: .destructive) { showingResetAlert = true } label: {
+                                Label("reset_all_points".localized, systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
-                        .themedPrimary()
                     }
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack {
-                        if isEditMode && !selectedTasks.isEmpty {
-                            Button("remove_selected".localized) {
-                                showingRemoveSelectedAlert = true
-                            }
+                    if isEditMode {
+                        Button("remove".localized, role: .destructive) { showingRemoveSelectedAlert = true }
                             .foregroundColor(.red)
-                        }
-                        
-                        if !isEditMode {
-                            Menu {
-                                Button("reset_all_points".localized, role: .destructive) {
-                                    showingResetAlert = true
-                                }
-                                Button("Ricalcola dai task") {
-                                    rewardManager.recalculatePointsFromTasks()
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .themedPrimary()
-                            }
-                        }
-                        
-                        Button("done".localized) {
-                            dismiss()
-                        }
-                        .themedPrimary()
+                            .disabled(selectedTasks.isEmpty)
+                    } else {
+                        Button("done".localized) { dismiss() }
                     }
                 }
             }
@@ -204,170 +201,6 @@ struct PointsHistoryView: View {
         }
     }
     
-    private var timeFilterSection: some View {
-        VStack(spacing: 16) {
-            // Header with title and count
-            HStack {
-                Text("points_history".localized)
-                    .font(.system(size: 24, weight: .bold))
-                    .themedPrimaryText()
-                
-                Spacer()
-                
-                Text("\(filteredPointsEarningTasks.count) \(filteredPointsEarningTasks.count == 1 ? "entry".localized : "entries".localized)")
-                    .font(.system(size: 14, weight: .medium))
-                    .themedSecondaryText()
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(theme.surfaceColor)
-                    )
-            }
-            
-            // Single row - NO GRID, NO VSTACK
-            HStack(spacing: 6) {
-                TimeFilterChip(filter: .all, isSelected: selectedTimeFilter == .all) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .all }
-                }
-                TimeFilterChip(filter: .day, isSelected: selectedTimeFilter == .day) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .day }
-                }
-                TimeFilterChip(filter: .week, isSelected: selectedTimeFilter == .week) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .week }
-                }
-                TimeFilterChip(filter: .month, isSelected: selectedTimeFilter == .month) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .month }
-                }
-                TimeFilterChip(filter: .year, isSelected: selectedTimeFilter == .year) {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTimeFilter = .year }
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(theme.surfaceColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(theme.borderColor, lineWidth: 1)
-                )
-        )
-        .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-    }
-    
-    private var filteredPointsHeader: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(LinearGradient(
-                    colors: [selectedTimeFilter.color, selectedTimeFilter.color.opacity(0.8)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .shadow(color: selectedTimeFilter.color.opacity(0.3), radius: 8, x: 0, y: 4)
-            
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("\(selectedTimeFilter.localizedName) " + "points".localized)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
-                    
-                    Text("\(filteredTotalPoints)")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                
-                Spacer()
-                
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 50, height: 50)
-                    
-                    Image(systemName: selectedTimeFilter.icon)
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                }
-            }
-            .padding(20)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(selectedTimeFilter.color.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                
-                Image(systemName: selectedTimeFilter.icon)
-                    .font(.system(size: 40))
-                    .foregroundColor(selectedTimeFilter.color)
-            }
-            
-            VStack(spacing: 8) {
-                Text("no_points_for".localized.replacingOccurrences(of: "{period}", with: selectedTimeFilter.localizedName))
-                    .font(.system(size: 18, weight: .semibold))
-                    .themedPrimaryText()
-                
-                Text("complete_tasks_points_enabled".localized)
-                    .font(.system(size: 14))
-                    .themedSecondaryText()
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-        }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-struct TimeFilterChip: View {
-    let filter: PointsHistoryView.TimeFilter
-    let isSelected: Bool
-    let onTap: () -> Void
-    @Environment(\.theme) private var theme
-    
-    var body: some View {
-        Button(action: onTap) {
-            Text(compactTitle)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(isSelected ? .white : theme.textColor)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isSelected ? filter.color : theme.surfaceColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(
-                                    isSelected ? Color.clear : filter.color.opacity(0.3),
-                                    lineWidth: 1
-                                )
-                        )
-                )
-                .shadow(color: isSelected ? filter.color.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
-                .scaleEffect(isSelected ? 1.02 : 1.0)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
-    }
-    
-    private var compactTitle: String {
-        switch filter {
-        case .all: return "all_time".localized
-        case .day: return "today".localized
-        case .week: return "week_short".localized
-        case .month: return "month_short".localized 
-        case .year: return "year_short".localized
-        }
-    }
 }
 
 struct TaskPointsCard: View {
@@ -377,129 +210,57 @@ struct TaskPointsCard: View {
     let isEditMode: Bool
     let onSelectionChanged: (Bool) -> Void
     @Environment(\.theme) private var theme
-    
-    private var totalPointsEarned: Int {
-        completionDates.count * task.rewardPoints
+
+    private var tint: Color { task.category.map { Color(hex: $0.color) } ?? theme.primaryColor }
+    private var icon: String {
+        (task.icon.isEmpty || task.icon == "circle") ? (task.category?.icon ?? "checkmark.circle") : task.icon
     }
-    
+
     var body: some View {
-        HStack(spacing: 12) {
-            // Selection circle in edit mode
+        HStack(alignment: .top, spacing: 12) {
             if isEditMode {
-                Button(action: {
-                    onSelectionChanged(!isSelected)
-                }) {
-                    ZStack {
-                        Circle()
-                            .strokeBorder(isSelected ? theme.primaryColor : theme.secondaryTextColor.opacity(0.3), lineWidth: 2)
-                            .frame(width: 24, height: 24)
-                        
-                        if isSelected {
-                            Circle()
-                                .fill(theme.primaryColor)
-                                .frame(width: 16, height: 16)
-                            
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundColor(isSelected ? theme.primaryColor : theme.secondaryTextColor.opacity(0.5))
+                    .padding(.top, 10)
             }
-            
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(LinearGradient(
-                                colors: [theme.primaryColor, theme.secondaryColor],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 44, height: 44)
-                        
-                        Image(systemName: task.icon)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top, spacing: 12) {
+                    CategoryIconTile(icon: icon, color: tint, size: 42)
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(task.name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.headline)
+                            .lineLimit(1)
                             .themedPrimaryText()
-                        
                         Text("\(task.rewardPoints) " + "points_per_completion".localized)
-                            .font(.system(size: 13))
+                            .font(.caption)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                             .themedSecondaryText()
                     }
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("+\(totalPointsEarned)")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(Color(hex: "00C853"))
-                        
-                        Text("\(completionDates.count) " + "times".localized)
-                            .font(.system(size: 12))
+                    Spacer(minLength: 6)
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("+" + (completionDates.count * task.rewardPoints).formatted())
+                            .font(.system(.headline, design: .rounded).weight(.bold))
+                            .monospacedDigit()
+                            .foregroundColor(.green)
+                        Text("\(completionDates.count)×")
+                            .font(.caption.weight(.semibold))
+                            .monospacedDigit()
                             .themedSecondaryText()
                     }
                 }
-                
                 if completionDates.count > 1 {
-                    HStack {
-                        Text("recent_completions".localized)
-                            .font(.system(size: 12, weight: .medium))
-                            .themedSecondaryText()
-                        
-                        Spacer()
-                    }
-                    
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                        ForEach(completionDates.prefix(6), id: \.self) { date in
-                            Text(DateFormatter.shortDate.string(from: date))
-                                .font(.system(size: 11))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(theme.primaryColor.opacity(0.1))
-                                .foregroundColor(theme.primaryColor)
-                                .cornerRadius(8)
-                        }
-                        
-                        if completionDates.count > 6 {
-                            Text("+\(completionDates.count - 6)")
-                                .font(.system(size: 11))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(theme.secondaryTextColor.opacity(0.1))
-                                .themedSecondaryText()
-                                .cornerRadius(8)
-                        }
-                    }
+                    DateChipsGrid(dates: completionDates.sorted(by: >), color: tint, limit: 6)
                 }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(theme.surfaceColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(
-                            isSelected ? theme.primaryColor.opacity(0.5) : theme.borderColor,
-                            lineWidth: isSelected ? 2 : 1
-                        )
-                )
-        )
-        .scaleEffect(isSelected ? 0.98 : 1.0)
-        .animation(.spring(response: 0.3), value: isSelected)
-        .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
-        .onTapGesture {
-            if isEditMode {
-                onSelectionChanged(!isSelected)
-            }
-        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(theme.surfaceColor))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .strokeBorder(isSelected ? theme.primaryColor : .clear, lineWidth: 2))
+        .contentShape(Rectangle())
+        .onTapGesture { if isEditMode { onSelectionChanged(!isSelected) } }
     }
 }
 

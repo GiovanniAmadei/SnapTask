@@ -2205,3 +2205,15 @@
 "reward_points_kept" = "Points stay spent · still in history";
 "reward_archived_tag" = "Deleted";
 "redeemed_once_short" = "once";
+"rewards_period_day" = "Today";
+"rewards_period_week" = "Week";
+"rewards_period_month" = "Month";
+"rewards_period_year" = "Year";
+"rewards_period_all" = "All";
+"rewards_points_spent" = "Points spent";
+"rewards_redemptions" = "Redemptions";
+"rewards_points_earned" = "Points earned";
+"recalculate_from_tasks" = "Recalculate from tasks";
+"reward_last_on" = "last on %@";
+"rewards_history_short" = "History";
+"rewards_redeemed_short" = "Redeemed";

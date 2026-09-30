@@ -15,6 +15,7 @@ struct CategoryPointsBreakdownView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     heroPointsHeader
+                        .padding(.top, 8)
                     periodCardsSection
                     if !categoryManager.categories.isEmpty {
                         categorySection
@@ -25,7 +26,7 @@ struct CategoryPointsBreakdownView: View {
             }
             .themedBackground()
             .navigationTitle("points_overview".localized)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("done".localized) { dismiss() }
@@ -70,11 +71,14 @@ struct CategoryPointsBreakdownView: View {
                     .tracking(1.5)
 
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(totalPoints)")
-                        .font(.system(size: 60, weight: .black, design: .rounded))
+                    Text(totalPoints.formatted())
+                        .font(.system(size: 56, weight: .black, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                         .foregroundColor(.white)
 
-                    Text("pts")
+                    Text("pts".localized)
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white.opacity(0.8))
                         .padding(.bottom, 6)
@@ -92,8 +96,10 @@ struct CategoryPointsBreakdownView: View {
                                 Circle()
                                     .fill(Color(hex: category.color))
                                     .frame(width: 10, height: 10)
-                                Text("\(pts)")
+                                Text(PointsFormat.compact(pts))
                                     .font(.system(size: 13, weight: .bold))
+                                    .monospacedDigit()
+                                    .lineLimit(1)
                                     .foregroundColor(.white)
                                 Text(category.name)
                                     .font(.system(size: 10, weight: .medium))
@@ -125,25 +131,25 @@ struct CategoryPointsBreakdownView: View {
 
             HStack(spacing: 10) {
                 PeriodCard(
-                    title: "today".localized,
+                    title: RewardPeriodLabel.day.localized,
                     points: rewardManager.availablePoints(for: .daily),
                     icon: "sun.max.fill",
                     gradient: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")]
                 )
                 PeriodCard(
-                    title: "week".localized,
+                    title: RewardPeriodLabel.week.localized,
                     points: rewardManager.availablePoints(for: .weekly),
                     icon: "calendar.circle.fill",
                     gradient: [Color(hex: "4ECDC4"), Color(hex: "44A08D")]
                 )
                 PeriodCard(
-                    title: "month".localized,
+                    title: RewardPeriodLabel.month.localized,
                     points: rewardManager.availablePoints(for: .monthly),
                     icon: "calendar.badge.clock",
                     gradient: [Color(hex: "45B7D1"), Color(hex: "2980B9")]
                 )
                 PeriodCard(
-                    title: "year".localized,
+                    title: RewardPeriodLabel.year.localized,
                     points: rewardManager.availablePoints(for: .yearly),
                     icon: "star.circle.fill",
                     gradient: [Color(hex: "FFD700"), Color(hex: "FFA000")]
@@ -205,15 +211,20 @@ private struct PeriodCard: View {
                     .foregroundColor(.white)
             }
 
-            Text("\(points)")
+            Text(PointsFormat.compact(points))
                 .font(.system(size: 20, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .foregroundColor(gradient.first ?? theme.primaryColor)
 
             Text(title)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .themedSecondaryText()
                 .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
+        .padding(.horizontal, 4)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .background(
@@ -258,8 +269,9 @@ private struct CategoryPointRow: View {
                 .font(.system(size: 12, weight: .medium))
                 .themedSecondaryText()
             Spacer()
-            Text("\(points) pts")
+            Text("\(points.formatted()) " + "pts".localized)
                 .font(.system(size: 12, weight: .semibold))
+                .monospacedDigit()
                 .foregroundColor(points > 0 ? categoryColor : theme.secondaryTextColor)
         }
     }
@@ -269,14 +281,7 @@ private struct CategoryPointRow: View {
             // Header row
             HStack(spacing: 10) {
                 // Color circle + icon
-                ZStack {
-                    Circle()
-                        .fill(categoryColor.opacity(0.15))
-                        .frame(width: 36, height: 36)
-                    Circle()
-                        .fill(categoryColor)
-                        .frame(width: 14, height: 14)
-                }
+                CategoryIconTile(icon: category.displayIcon, color: categoryColor, size: 36)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(category.name)
@@ -289,8 +294,11 @@ private struct CategoryPointRow: View {
 
                 Spacer()
 
-                Text("\(totalPoints)")
+                Text(totalPoints.formatted())
                     .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .foregroundColor(categoryColor)
             }
 
