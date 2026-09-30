@@ -152,105 +152,76 @@ struct RewardsView: View {
 
     // MARK: - Points
 
-    private var periods: [(label: String, points: Int)] {
-        [(RewardPeriodLabel.day.localized, viewModel.dailyPoints),
-         (RewardPeriodLabel.week.localized, viewModel.weeklyPoints),
-         (RewardPeriodLabel.month.localized, viewModel.monthlyPoints),
-         (RewardPeriodLabel.year.localized, viewModel.yearlyPoints)]
-    }
-
     private var pointsHero: some View {
-        Button { showingCategoryPointsBreakdown = true } label: {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 2) {
+        VStack(spacing: 12) {
+            // Header with total points and detail button (original style)
+            Button(action: { showingCategoryPointsBreakdown = true }) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("available_points".localized)
-                            .font(.subheadline.weight(.medium))
+                            .font(.system(size: 13, weight: .medium))
                             .themedSecondaryText()
                             .lineLimit(1)
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(viewModel.totalAvailablePoints.formatted())
-                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .font(.system(size: 32, weight: .bold))
                                 .monospacedDigit()
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
                                 .themedPrimaryText()
                             Text("pts".localized)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(size: 12, weight: .semibold))
                                 .themedSecondaryText()
+                                .lineLimit(1)
                         }
                     }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(theme.primaryColor)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(theme.primaryColor.opacity(0.12)))
-                }
 
-                // Four equal columns on one line: values shrink instead of wrapping.
-                HStack(spacing: 0) {
-                    ForEach(Array(periods.enumerated()), id: \.offset) { index, period in
-                        VStack(spacing: 2) {
-                            Text(PointsFormat.compact(period.points))
-                                .font(.system(.headline, design: .rounded).weight(.bold))
-                                .monospacedDigit()
-                                .foregroundColor(theme.primaryColor)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
-                            Text(period.label)
-                                .font(.caption2.weight(.medium))
-                                .themedSecondaryText()
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
+                    Spacer(minLength: 8)
+
+                    VStack(spacing: 4) {
+                        ZStack {
+                            Circle()
+                                .fill(theme.primaryColor.opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .themedPrimary()
                         }
-                        .frame(maxWidth: .infinity)
-                        if index < periods.count - 1 {
-                            Rectangle()
-                                .fill(theme.secondaryTextColor.opacity(0.15))
-                                .frame(width: 1, height: 26)
-                        }
+                        Text("tap_for_details".localized)
+                            .font(.system(size: 9, weight: .medium))
+                            .themedSecondaryText()
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .fixedSize()
                     }
                 }
-                .padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(theme.primaryColor.opacity(0.07)))
             }
-            .padding(16)
-            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(theme.surfaceColor))
-            .contentShape(RoundedRectangle(cornerRadius: 22))
+            .buttonStyle(PlainButtonStyle())
+
+            // Period chips: original style, always one line (equal widths, content shrinks instead of wrapping).
+            HStack(spacing: 6) {
+                CompactPointsChip(title: RewardPeriodLabel.day.localized, points: viewModel.dailyPoints, color: theme.primaryColor)
+                CompactPointsChip(title: RewardPeriodLabel.week.localized, points: viewModel.weeklyPoints, color: theme.secondaryColor)
+                CompactPointsChip(title: RewardPeriodLabel.month.localized, points: viewModel.monthlyPoints, color: theme.accentColor)
+                CompactPointsChip(title: RewardPeriodLabel.year.localized, points: viewModel.yearlyPoints, color: theme.primaryColor.opacity(0.8))
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
+        .themedCard()
+        .padding(.top, 4)
     }
 
     private var quickActions: some View {
-        HStack(spacing: 10) {
-            quickAction("rewards_history_short".localized, icon: "chart.line.uptrend.xyaxis") { showingPointsHistory = true }
-            quickAction("rewards_redeemed_short".localized, icon: "gift") { showingRedeemedRewards = true }
-        }
-    }
-
-    private func quickAction(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(theme.primaryColor)
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .themedPrimaryText()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(theme.secondaryTextColor.opacity(0.5))
+        HStack(spacing: 8) {
+            CompactActionCard(title: "points_history".localized, icon: "chart.line.uptrend.xyaxis", color: theme.primaryColor) {
+                showingPointsHistory = true
             }
-            .padding(.horizontal, 14)
-            .frame(height: 46)
-            .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(theme.surfaceColor))
+            CompactActionCard(title: "redeemed_rewards".localized, icon: "gift.circle", color: theme.secondaryColor) {
+                showingRedeemedRewards = true
+            }
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Rewards
@@ -986,5 +957,67 @@ struct FilterPill: View {
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.15), value: isSelected)
+    }
+}
+
+struct CompactPointsChip: View {
+    let title: String
+    let points: Int
+    let color: Color
+    @Environment(\.theme) private var theme
+
+    private var value: String {
+        points >= 1_000 ? String(format: "%.1fk", Double(points) / 1_000).replacingOccurrences(of: ".0k", with: "k") : "\(points)"
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            // One Text: number and label shrink together instead of truncating the label.
+            (Text(value).font(.system(size: 12, weight: .semibold)).foregroundColor(color)
+             + Text(" " + title).font(.system(size: 11, weight: .medium)).foregroundColor(theme.secondaryTextColor))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 8).fill(color.opacity(0.08)))
+    }
+}
+
+struct CompactActionCard: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(color)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .themedPrimaryText()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(theme.surfaceColor)
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(color.opacity(0.15), lineWidth: 0.5))
+            )
+            .shadow(color: theme.shadowColor, radius: 1, x: 0, y: 0.5)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
