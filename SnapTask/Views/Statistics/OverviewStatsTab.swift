@@ -27,7 +27,9 @@ struct OverviewStatsTab: View {
                      label: "stats_completed".localized,
                      systemImage: "checkmark.circle.fill",
                      tint: palette.completed,
-                     caption: String(format: "stats_of_scheduled".localized, overview.total))
+                     caption: overview.pending > 0
+                        ? String(format: "stats_of_scheduled_pending".localized, overview.total, overview.pending)
+                        : String(format: "stats_of_scheduled".localized, overview.total))
             StatTile(value: StatsFormat.percent(overview.rate),
                      label: "stats_completion_rate".localized,
                      systemImage: "chart.bar.fill",
@@ -36,7 +38,10 @@ struct OverviewStatsTab: View {
             StatTile(value: StatsFormat.hours(overview.trackedHours),
                      label: "stats_time_spent".localized,
                      systemImage: "clock.fill",
-                     tint: .purple)
+                     tint: .purple,
+                     caption: overview.daysInPeriod > 0
+                        ? String(format: "stats_per_day_avg".localized, StatsFormat.hours(overview.trackedHours / Double(overview.daysInPeriod)))
+                        : nil)
             StatTile(value: "\(viewModel.currentStreak)",
                      label: "stats_active_streak".localized,
                      systemImage: "flame.fill",
@@ -95,7 +100,7 @@ private struct TimeDistributionChartCard: View {
                                 message: "stats_no_time_message".localized)
             } else {
                 HStack(alignment: .center, spacing: 16) {
-                    donut.frame(width: 140, height: 140)
+                    donut.frame(width: 124, height: 124)
                     legend
                 }
             }
@@ -117,8 +122,11 @@ private struct TimeDistributionChartCard: View {
                 Text(StatsFormat.hours(selectedSlice?.hours ?? total))
                     .font(.system(.headline, design: .rounded).weight(.bold))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: 76)
                     .themedPrimaryText()
-                Text(selectedSlice?.name ?? "stats_total".localized)
+                Text(selectedSlice.map { "\($0.name) · \(StatsFormat.percent(total > 0 ? $0.hours / total : 0))" } ?? "stats_total".localized)
                     .font(.caption2)
                     .lineLimit(1)
                     .frame(maxWidth: 80)
@@ -140,12 +148,9 @@ private struct TimeDistributionChartCard: View {
                     Text(StatsFormat.hours(slice.hours))
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .fixedSize()
                         .themedPrimaryText()
-                    Text(StatsFormat.percent(total > 0 ? slice.hours / total : 0))
-                        .font(.caption2)
-                        .monospacedDigit()
-                        .frame(width: 32, alignment: .trailing)
-                        .themedSecondaryText()
                 }
                 .opacity(selectedSlice == nil || selectedSlice?.id == slice.id ? 1 : 0.4)
             }
@@ -185,7 +190,9 @@ private struct CompletionChartCard: View {
     var body: some View {
         let palette = StatsPalette(theme: theme)
         StatsCard(title: "task_completion_rate".localized,
-                  subtitle: String(format: "stats_average_per_bucket".localized, averageCompleted, bucketName)) {
+                  subtitle: String(format: "stats_average_per_bucket".localized,
+                                   averageCompleted >= 10 ? String(Int(averageCompleted.rounded())) : String(format: "%.1f", averageCompleted),
+                                   bucketName)) {
             if buckets.allSatisfy({ $0.total == 0 }) {
                 StatsEmptyState(systemImage: "checklist",
                                 title: "stats_no_tasks_title".localized,
@@ -197,6 +204,9 @@ private struct CompletionChartCard: View {
                     HStack(spacing: 14) {
                         LegendDot(color: palette.completed, label: "completed".localized)
                         LegendDot(color: palette.missed, label: "stats_legend_missed".localized)
+                        if buckets.contains(where: { $0.pending > 0 }) {
+                            LegendDot(color: palette.completed.opacity(0.3), label: "stats_legend_todo_today".localized)
+                        }
                     }
                 }
             }
@@ -222,6 +232,11 @@ private struct CompletionChartCard: View {
                         y: .value("stats_legend_missed".localized, bucket.missed))
                     .foregroundStyle(palette.missed)
                     .opacity(selectedBucket == nil || selectedBucket == bucket ? 1 : 0.4)
+                if bucket.pending > 0 {
+                    BarMark(x: .value("date".localized, bucket.start, unit: calendarUnit),
+                            y: .value("stats_legend_todo_today".localized, bucket.pending))
+                        .foregroundStyle(palette.completed.opacity(0.3))
+                }
             }
             RuleMark(y: .value("average".localized, averageCompleted))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
@@ -234,7 +249,9 @@ private struct CompletionChartCard: View {
                                 overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
                         ChartTooltip(title: StatsFormat.bucketTitle(bucket, unit: unit), lines: [
                             (palette.completed, "\(bucket.completed)/\(bucket.total) · \(StatsFormat.percent(bucket.rate))")
-                        ])
+                        ] + (bucket.pending > 0
+                             ? [(palette.completed.opacity(0.3), String(format: "stats_todo_count".localized, bucket.pending))]
+                             : []))
                     }
             }
         }

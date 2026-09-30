@@ -115,9 +115,12 @@ private struct HabitRow: View {
                     Text(StatsFormat.percent(habit.periodRate))
                         .font(.subheadline.weight(.bold))
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .fixedSize()
                         .frame(minWidth: 40, alignment: .trailing)
                         .themedPrimaryText()
                 }
+                .layoutPriority(1)
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.bold))
                     .foregroundColor(theme.secondaryTextColor.opacity(0.5))
@@ -140,6 +143,8 @@ private struct HabitRow: View {
             Text(value)
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
                 .themedPrimaryText()
         }
     }
@@ -152,7 +157,6 @@ struct HabitDetailView: View {
     @ObservedObject var viewModel: StatisticsViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
-    @State private var selectedDate: Date?
 
     private var color: Color { Color(hex: habit.color) }
 
@@ -221,7 +225,6 @@ struct HabitDetailView: View {
                 .padding(16)
             }
             .themedBackground()
-            .navigationTitle(habit.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

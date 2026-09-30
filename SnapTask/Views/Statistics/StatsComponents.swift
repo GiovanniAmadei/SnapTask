@@ -38,6 +38,7 @@ enum StatsFormat {
         let h = totalMinutes / 60
         let m = totalMinutes % 60
         if h == 0 { return "\(m)m" }
+        if h >= 100 { return "\(Int(hours.rounded()))h" }
         return m == 0 ? "\(h)h" : "\(h)h \(m)m"
     }
 
@@ -147,12 +148,12 @@ struct StatTile: View {
                 .themedPrimaryText()
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            if let caption {
-                Text(caption)
-                    .font(.caption2)
-                    .themedSecondaryText()
-                    .lineLimit(1)
-            }
+            // Always reserve the caption line so tiles in the same row share the same height.
+            Text(caption ?? " ")
+                .font(.caption2)
+                .themedSecondaryText()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)

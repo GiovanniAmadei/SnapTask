@@ -206,7 +206,8 @@ final class DemoDataSeeder {
         let today = Date()
         let todayStart = cal.startOfDay(for: today)
 
-        let dailyStart = cal.date(byAdding: .year, value: -1, to: todayStart) ?? todayStart
+        // Tasks start when the history starts, so short scenarios look like a new user.
+        let dailyStart = cal.date(byAdding: .day, value: -scenario.historyDays, to: todayStart) ?? todayStart
 
         func makeTask(name: String,
                       icon: String,

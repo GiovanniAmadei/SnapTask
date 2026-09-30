@@ -54,6 +54,7 @@ struct HabitHeatmap: View {
 
         return Canvas { context, _ in
             var lastLabelX: CGFloat = -100
+            let lastColumn = columns.count - 1
             for (columnIndex, column) in columns.enumerated() {
                 let x = CGFloat(columnIndex) * (cellSize + spacing)
 
@@ -69,11 +70,18 @@ struct HabitHeatmap: View {
                 }
 
                 for (rowIndex, day) in column.enumerated() {
-                    guard let day else { continue }
                     let rect = CGRect(x: x,
                                       y: monthLabelHeight + CGFloat(rowIndex) * (cellSize + spacing),
                                       width: cellSize, height: cellSize)
                     let path = Path(roundedRect: rect, cornerRadius: radius)
+                    guard let day else {
+                        // Days before the habit existed stay as faint cells so the grid keeps its shape;
+                        // future days in the current week are left empty.
+                        if columnIndex < lastColumn {
+                            context.fill(path, with: .color(offColor))
+                        }
+                        continue
+                    }
                     switch day.state {
                     case .done:
                         context.fill(path, with: .color(color))

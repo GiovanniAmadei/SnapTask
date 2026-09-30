@@ -626,11 +626,17 @@ class StatisticsViewModel: ObservableObject {
 
     struct PeriodOverview: Equatable {
         var completed = 0
+        /// Scheduled occurrences already resolved (today's unfinished tasks are excluded).
         var total = 0
+        /// Tasks still to do today.
+        var pending = 0
+        /// Rates only use finished days: a day in progress would otherwise count as 100% (or 0%).
+        var rateCompleted = 0
+        var rateTotal = 0
         var trackedHours = 0.0
         var activeDays = 0
         var daysInPeriod = 0
-        var rate: Double { total > 0 ? Double(completed) / Double(total) : 0 }
+        var rate: Double { rateTotal > 0 ? Double(rateCompleted) / Double(rateTotal) : 0 }
     }
 
     struct CompletionBucket: Identifiable, Equatable {
@@ -639,7 +645,9 @@ class StatisticsViewModel: ObservableObject {
         /// Start of the last day included in the bucket.
         let end: Date
         let completed: Int
+        /// Resolved occurrences: today's unfinished tasks are counted in `pending`, not here.
         let total: Int
+        var pending: Int = 0
         var missed: Int { max(0, total - completed) }
         var rate: Double { total > 0 ? Double(completed) / Double(total) : 0 }
     }
@@ -713,11 +721,18 @@ class StatisticsViewModel: ObservableObject {
             .map { min(today, max($0, threeYearsAgo)) }
         let (start, end) = periodDays
 
+        // Today is still in progress: its unfinished tasks are "pending", not missed.
         var daily: [Date: (completed: Int, total: Int)] = [:]
+        var pendingToday = 0
         var day = start
         while day <= end {
             let stats = getWeeklyStatsForDay(date: day)
-            daily[day] = (stats.completed, stats.total)
+            if day == today {
+                pendingToday = stats.total - stats.completed
+                daily[day] = (stats.completed, stats.completed)
+            } else {
+                daily[day] = (stats.completed, stats.total)
+            }
             day = calendar.date(byAdding: .day, value: 1, to: day)!
         }
 
@@ -726,16 +741,27 @@ class StatisticsViewModel: ObservableObject {
             summary.completed += value.completed
             summary.total += value.total
         }
+        summary.pending = pendingToday
+        var finishedDays = daily
+        finishedDays[today] = nil
+        for value in finishedDays.values {
+            summary.rateCompleted += value.completed
+            summary.rateTotal += value.total
+        }
         summary.daysInPeriod = daily.count
         summary.activeDays = activeDays.filter { $0 >= start && $0 <= end }.count
         summary.trackedHours = categoryStats.reduce(0) { $0 + $1.hours }
         overview = summary
 
-        completionBuckets = makeBuckets(daily, from: start, to: end, unit: bucketUnit(forTrend: false))
-        trendBuckets = makeBuckets(daily, from: start, to: end, unit: bucketUnit(forTrend: true))
+        var bars = makeBuckets(daily, from: start, to: end, unit: bucketUnit(forTrend: false))
+        if let last = bars.indices.last, pendingToday > 0 {
+            bars[last].pending = pendingToday
+        }
+        completionBuckets = bars
+        trendBuckets = makeBuckets(finishedDays, from: start, to: end, unit: bucketUnit(forTrend: true))
 
         var byWeekday: [Int: (completed: Int, total: Int)] = [:]
-        for (date, value) in daily {
+        for (date, value) in finishedDays {
             let weekday = calendar.component(.weekday, from: date)
             byWeekday[weekday, default: (0, 0)].completed += value.completed
             byWeekday[weekday, default: (0, 0)].total += value.total

@@ -65,24 +65,24 @@ struct StatisticsView: View {
                 }
                 .padding(.horizontal, 16)
 
-                TabView(selection: $selectedTab) {
-                    OverviewStatsTab(viewModel: viewModel)
-                        .tag(StatisticsTab.overview)
-
-                    if hasAdvancedAccess {
+                // Only the selected tab is built: cheaper with large histories and always in sync with the selector.
+                Group {
+                    switch selectedTab {
+                    case .overview:
+                        OverviewStatsTab(viewModel: viewModel)
+                    case .streaks where hasAdvancedAccess:
                         StreaksStatsTab(viewModel: viewModel)
-                            .tag(StatisticsTab.streaks)
+                    case .consistency where hasAdvancedAccess:
                         ConsistencyStatsTab(viewModel: viewModel)
-                            .tag(StatisticsTab.consistency)
+                    case .performance where hasAdvancedAccess:
                         PerformanceStatsTab(viewModel: viewModel)
-                            .tag(StatisticsTab.performance)
-                    } else {
-                        PremiumRequiredTab().tag(StatisticsTab.streaks)
-                        PremiumRequiredTab().tag(StatisticsTab.consistency)
-                        PremiumRequiredTab().tag(StatisticsTab.performance)
+                    default:
+                        PremiumRequiredTab()
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .id(selectedTab)
+                .transition(.opacity)
             }
             .themedBackground()
             .navigationBarHidden(true)

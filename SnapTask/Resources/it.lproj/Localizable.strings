@@ -2043,7 +2043,7 @@
 
 /* Statistics redesign 1.8 */
 "stats_completed" = "Completate";
-"stats_of_scheduled" = "su %d previste";
+"stats_of_scheduled" = "su %d";
 "stats_completion_rate" = "Completamento";
 "stats_active_days_of" = "%d/%d giorni attivi";
 "stats_time_spent" = "Tempo dedicato";
@@ -2053,7 +2053,7 @@
 "stats_total" = "Totale";
 "stats_no_time_title" = "Nessun tempo registrato";
 "stats_no_time_message" = "Completa o traccia attività per vedere dove va il tuo tempo.";
-"stats_average_per_bucket" = "Media %.1f completate %@";
+"stats_average_per_bucket" = "Media %@ completate %@";
 "stats_no_tasks_title" = "Nessuna attività nel periodo";
 "stats_no_tasks_message" = "Qui compariranno le attività pianificate.";
 "stats_legend_missed" = "Mancate";
@@ -2099,3 +2099,8 @@
 "stats_period_30d" = "30 giorni";
 "stats_period_12m" = "12 mesi";
 "stats_period_all" = "Tutto";
+"stats_of_scheduled_pending" = "su %d · %d da fare oggi";
+"stats_per_day_avg" = "%@ al giorno";
+"stats_legend_todo_today" = "Da fare oggi";
+"stats_todo_count" = "%d da fare";
+"stats_weekdays_even" = "Costanza simile in tutti i giorni";

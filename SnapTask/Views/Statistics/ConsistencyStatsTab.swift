@@ -148,13 +148,18 @@ private struct WeekdayConsistencyCard: View {
     @Environment(\.theme) private var theme
 
     private var best: StatisticsViewModel.WeekdayRate? {
-        rates.filter { $0.total > 0 }.max { $0.rate < $1.rate }
+        let active = rates.filter { $0.total > 0 }
+        guard let top = active.max(by: { $0.rate < $1.rate }),
+              let bottom = active.min(by: { $0.rate < $1.rate }),
+              top.rate - bottom.rate >= 0.05 else { return nil }
+        return top
     }
 
     var body: some View {
         let accent = StatsPalette(theme: theme).completed
         let symbols = Calendar.current.shortWeekdaySymbols
         let subtitle = best.map { String(format: "stats_best_day".localized, Calendar.current.weekdaySymbols[$0.weekday - 1]) }
+            ?? (rates.contains { $0.total > 0 } ? "stats_weekdays_even".localized : nil)
         StatsCard(title: "stats_by_weekday".localized, subtitle: subtitle) {
             if rates.allSatisfy({ $0.total == 0 }) {
                 StatsEmptyState(systemImage: "calendar", title: "stats_no_data_title".localized,
@@ -163,7 +168,7 @@ private struct WeekdayConsistencyCard: View {
                 Chart(rates) { item in
                     BarMark(x: .value("day".localized, symbols[item.weekday - 1]),
                             y: .value("stats_completion_rate".localized, item.rate * 100))
-                        .foregroundStyle(item.weekday == best?.weekday ? accent : accent.opacity(0.45))
+                        .foregroundStyle(best == nil || item.weekday == best?.weekday ? accent : accent.opacity(0.45))
                         .cornerRadius(4)
                         .annotation(position: .top, spacing: 2) {
                             Text(item.total > 0 ? StatsFormat.percent(item.rate) : "–")
@@ -172,7 +177,7 @@ private struct WeekdayConsistencyCard: View {
                                 .foregroundStyle(theme.secondaryTextColor)
                         }
                 }
-                .chartYScale(domain: 0...110)
+                .chartYScale(domain: 0...115)
                 .chartYAxis(.hidden)
                 .chartXAxis {
                     AxisMarks { _ in
@@ -181,7 +186,7 @@ private struct WeekdayConsistencyCard: View {
                             .foregroundStyle(theme.secondaryTextColor)
                     }
                 }
-                .frame(height: 140)
+                .frame(height: 120)
             }
         }
     }
@@ -198,7 +203,13 @@ private struct HabitRankingCard: View {
     private let collapsedCount = 8
 
     private var ranked: [StatisticsViewModel.HabitSummary] {
-        habits.filter { $0.periodTotal > 0 }.sorted { $0.periodRate > $1.periodRate }
+        // Habits with very few occurrences (e.g. 1/1) go after the ones with enough data to be meaningful.
+        habits.filter { $0.periodTotal > 0 }.sorted {
+            let lhsReliable = $0.periodTotal >= 4, rhsReliable = $1.periodTotal >= 4
+            if lhsReliable != rhsReliable { return lhsReliable }
+            if $0.periodRate != $1.periodRate { return $0.periodRate > $1.periodRate }
+            return $0.periodTotal > $1.periodTotal
+        }
     }
 
     var body: some View {
