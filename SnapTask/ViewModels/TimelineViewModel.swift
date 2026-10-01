@@ -165,14 +165,13 @@ class TimelineViewModel: ObservableObject {
         }
     }
     
-    /// Week range split on two lines ("28 set –" / "4 ott") for when one line doesn't fit the header.
-    var currentPeriodLines: (String, String)? {
+    /// Shorter numeric week range ("28/9 – 4/10") for when the spelled-out one doesn't fit the header.
+    var compactPeriodString: String? {
         guard selectedTimeScope == .week else { return nil }
-        let calendar = Calendar.current
-        let weekEnd = calendar.date(byAdding: .day, value: 6, to: currentWeek)!
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("dMMM")
-        return ("\(formatter.string(from: currentWeek)) –", formatter.string(from: weekEnd))
+        let weekEnd = Calendar.current.date(byAdding: .day, value: 6, to: currentWeek)!
+        let interval = DateIntervalFormatter()
+        interval.dateTemplate = "dM"
+        return interval.string(from: currentWeek, to: weekEnd)
     }
     
     var scopeSubtitle: String {

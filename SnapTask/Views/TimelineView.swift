@@ -755,14 +755,28 @@ struct TimelineHeaderView: View {
     @Environment(\.theme) private var theme
     @State private var showingJournal = false
     @State private var showingSettings = false
-    @State private var showingMandala = false
     @ObservedObject private var journalManager = JournalManager.shared
     @ObservedObject private var settingsManager = CloudKitSettingsManager.shared
+
+    /// Title sizes tried in order (title2 is 22pt).
+    private static let titleSizes: [CGFloat] = [22, 20, 18, 17]
+
+    /// The spelled-out period at each size, then (week only) the numeric range at each size.
+    private var titleCandidates: [(id: Int, text: String, size: CGFloat)] {
+        let texts = [viewModel.currentPeriodString] + (viewModel.compactPeriodString.map { [$0] } ?? [])
+        var result: [(id: Int, text: String, size: CGFloat)] = []
+        for text in texts {
+            for size in Self.titleSizes {
+                result.append((id: result.count, text: text, size: size))
+            }
+        }
+        return result
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
-                HStack(alignment: .center, spacing: 6) {
+                HStack(alignment: .center, spacing: 8) {
                     Button(action: {
                         if !viewModel.isCurrentPeriod {
                             HapticManager.shared.selection()
@@ -773,28 +787,20 @@ struct TimelineHeaderView: View {
                         }
                     }) {
                         VStack(alignment: .leading, spacing: 1) {
-                            // Never truncated: full size on one line, else two lines (week ranges),
-                            // and only as a last resort a smaller single line.
+                            // One line, never truncated: the largest size that fits; week ranges
+                            // fall back to the numeric form before getting any smaller.
                             ViewThatFits(in: .horizontal) {
-                                Text(viewModel.currentPeriodString)
-                                    .font(.title2.bold())
-                                    .lineLimit(1)
-                                    .fixedSize()
-                                
-                                if let lines = viewModel.currentPeriodLines {
-                                    VStack(alignment: .leading, spacing: -1) {
-                                        Text(lines.0)
-                                        Text(lines.1)
-                                    }
-                                    .font(.headline.weight(.bold))
-                                    .lineLimit(1)
-                                    .fixedSize()
+                                ForEach(titleCandidates, id: \.id) { candidate in
+                                    Text(candidate.text)
+                                        .font(candidate.size == Self.titleSizes.first ? .title2.bold() : .system(size: candidate.size, weight: .bold))
+                                        .lineLimit(1)
+                                        .fixedSize()
                                 }
                                 
-                                Text(viewModel.currentPeriodString)
-                                    .font(.title2.bold())
+                                Text(viewModel.compactPeriodString ?? viewModel.currentPeriodString)
+                                    .font(.system(size: Self.titleSizes.last ?? 17, weight: .bold))
                                     .lineLimit(1)
-                                    .minimumScaleFactor(0.5)
+                                    .minimumScaleFactor(0.6)
                             }
                             .themedPrimaryText()
                             
@@ -820,7 +826,7 @@ struct TimelineHeaderView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(theme.primaryColor.opacity(0.12))
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 34, height: 34)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
                                             .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
@@ -846,31 +852,9 @@ struct TimelineHeaderView: View {
                         }
                     }
                     
-                    // Mandala Chart button
-                    Button(action: { showingMandala = true }) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(theme.primaryColor.opacity(0.12))
-                                .frame(width: 32, height: 32)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
-                                )
-                                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
-
-                            Image(systemName: "square.grid.3x3.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(theme.primaryColor)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .sheet(isPresented: $showingMandala) {
-                        MandalaHubView()
-                    }
-                    
                     Spacer(minLength: 8)
                     
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         if (viewModel.selectedTimeScope != .today || settingsManager.hideDaysBar) && viewModel.selectedTimeScope != .longTerm && viewModel.selectedTimeScope != .inbox && viewModel.selectedTimeScope != .all {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -883,9 +867,9 @@ struct TimelineHeaderView: View {
                                 }
                             }) {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 14, weight: .medium))
                                     .themedPrimary()
-                                    .frame(width: 28, height: 28)
+                                    .frame(width: 32, height: 32)
                                     .background(
                                         Circle()
                                             .fill(theme.primaryColor.opacity(0.1))
@@ -904,9 +888,9 @@ struct TimelineHeaderView: View {
                                 }
                             }) {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 14, weight: .medium))
                                     .themedPrimary()
-                                    .frame(width: 28, height: 28)
+                                    .frame(width: 32, height: 32)
                                     .background(
                                         Circle()
                                             .fill(theme.primaryColor.opacity(0.1))
@@ -984,7 +968,7 @@ struct TimelineHeaderView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(theme.primaryColor.opacity(0.12))
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 34, height: 34)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
                                             .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
