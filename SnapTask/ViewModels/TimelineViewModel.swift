@@ -115,7 +115,14 @@ class TimelineViewModel: ObservableObject {
     }
     
     // MARK: - TimeScope Properties
-    @Published var selectedTimeScope: TaskTimeScope = .today
+    @Published var selectedTimeScope: TaskTimeScope = .today {
+        didSet {
+            // Refresh in the same update as the scope change. The Combine pipeline below delivers
+            // one run loop later: until then the list showed the previous scope's tasks under the
+            // new scope, an expensive throwaway render (~1.6s when opening the inbox).
+            if oldValue != selectedTimeScope { refreshTasks() }
+        }
+    }
     @Published var currentWeek: Date = Date()
     @Published var currentMonth: Date = Date()
     @Published var currentYear: Date = Date()
@@ -308,7 +315,7 @@ class TimelineViewModel: ObservableObject {
     }
     
     private func refreshTasks() {
-        tasks = filteredTasksForScope()
+        let refreshed = filteredTasksForScope()
             .sorted { task1, task2 in
                 // First, sort by start time
                 if task1.startTime != task2.startTime {
@@ -323,6 +330,10 @@ class TimelineViewModel: ObservableObject {
                 if n1 != n2 { return n1 < n2 }
                 return task1.id.uuidString < task2.id.uuidString
             }
+        // Skip identical results so repeated refreshes don't redraw the list.
+        if refreshed != tasks {
+            tasks = refreshed
+        }
     }
     
     // MARK: - TimeScope Filtering

@@ -110,13 +110,28 @@ struct Recurrence: Codable, Equatable, Hashable {
         self.trackInStatistics = trackInStatistics
     }
     
+    /// Shared formatter for the "yyyy-MM-dd" keys of `postponedOccurrences` (same output as before,
+    /// without creating a formatter per call).
+    private static let dayKeyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+    private static let dayKeyLock = NSLock()
+    
+    private static func dayKey(for day: Date, calendar: Calendar) -> String {
+        dayKeyLock.lock()
+        defer { dayKeyLock.unlock() }
+        if dayKeyFormatter.timeZone != calendar.timeZone {
+            dayKeyFormatter.timeZone = calendar.timeZone
+        }
+        return dayKeyFormatter.string(from: day)
+    }
+    
     mutating func postponeOccurrence(from originalDate: Date, to targetDate: Date) {
         let calendar = Calendar.current
         let startOfDayOriginal = calendar.startOfDay(for: originalDate)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = calendar.timeZone
-        let key = formatter.string(from: startOfDayOriginal)
+        let key = Self.dayKey(for: startOfDayOriginal, calendar: calendar)
         if postponedOccurrences == nil {
             postponedOccurrences = [:]
         }
@@ -158,18 +173,17 @@ extension Recurrence {
         let calendar = Calendar.current
         let targetDay = calendar.startOfDay(for: date)
         
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = calendar.timeZone
-        let dateKey = formatter.string(from: targetDay)
-        
-        // If this original occurrence was postponed, it should NOT occur on its original date
-        if let postponed = postponedOccurrences, postponed.keys.contains(dateKey) {
-            return false
-        }
-        
-        // If an occurrence was postponed TO this date, it SHOULD occur on this target date
-        if let postponed = postponedOccurrences {
+        // Only tasks with postponed occurrences need the day key. Building a DateFormatter on
+        // every call made this the hottest path in the app (it runs thousands of times per screen).
+        if let postponed = postponedOccurrences, !postponed.isEmpty {
+            let dateKey = Self.dayKey(for: targetDay, calendar: calendar)
+            
+            // If this original occurrence was postponed, it should NOT occur on its original date
+            if postponed.keys.contains(dateKey) {
+                return false
+            }
+            
+            // If an occurrence was postponed TO this date, it SHOULD occur on this target date
             for (_, targetDate) in postponed {
                 if calendar.isDate(targetDate, inSameDayAs: date) {
                     return true

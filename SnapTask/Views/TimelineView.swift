@@ -1879,19 +1879,21 @@ struct TimelineTaskCard: View {
                     .strokeBorder(categoryTint.opacity(0.25), lineWidth: 0.5)
             )
             .overlay(alignment: .bottom) {
-                if showsStreak {
-                    streakBadge
+                // Walks the completion history: compute it once per render.
+                let streak = currentStreak
+                if streak > 0 {
+                    streakBadge(streak)
                         .offset(y: 9)
                 }
             }
     }
 
     /// Streak lives on the icon corner so the info row always fits on one line.
-    private var streakBadge: some View {
+    private func streakBadge(_ streak: Int) -> some View {
         HStack(spacing: 2) {
             Image(systemName: "flame.fill")
                 .font(.system(size: 9, weight: .bold))
-            Text("\(currentStreak)")
+            Text("\(streak)")
                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                 .monospacedDigit()
         }
@@ -1912,10 +1914,6 @@ struct TimelineTaskCard: View {
     private var hasScheduleBadge: Bool {
         if viewModel.selectedTimeScope == .today { return true }
         return (task.hasSpecificTime || task.hasSpecificDay) && dateBadgeText != nil
-    }
-
-    private var showsStreak: Bool {
-        task.recurrence != nil && currentStreak > 0
     }
 
     /// Fixed info row under the title: schedule · subtasks chip (always one line).
@@ -2230,10 +2228,9 @@ struct TimelineTaskCard: View {
                     RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                         .fill(categoryGradient)
                     
-                    if isCurrentlyActiveNow {
-                        RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
-                            .strokeBorder(theme.primaryColor.opacity(0.85), lineWidth: 1.5)
-                    } else if gradientEnabled, let category = task.category {
+                    // A task happening right now is marked by its time badge only: an accent
+                    // border here read as a selection.
+                    if gradientEnabled, let category = task.category {
                         RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                             .strokeBorder(
                                 LinearGradient(
@@ -2251,12 +2248,7 @@ struct TimelineTaskCard: View {
                             .strokeBorder(theme.borderColor.opacity(0.4), lineWidth: 1)
                     }
                 }
-                .shadow(
-                    color: isCurrentlyActiveNow ? theme.primaryColor.opacity(0.25) : theme.shadowColor,
-                    radius: isCurrentlyActiveNow ? 6 : 5,
-                    x: 0,
-                    y: 2
-                )
+                .shadow(color: theme.shadowColor, radius: 5, x: 0, y: 2)
             )
             .offset(x: dragOffset)
             .scaleEffect(deleteScale)
