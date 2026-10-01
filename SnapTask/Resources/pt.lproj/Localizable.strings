@@ -2153,3 +2153,4 @@
 "inbox_empty_subtitle" = "Anote ideias, tarefas e compras sem data. Planeje quando quiser.";
 "inbox_plan" = "Planejar";
 "inbox_scope_description" = "Sem data: planeje depois";
+"task_in_progress_now" = "Agora";

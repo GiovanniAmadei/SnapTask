@@ -902,9 +902,9 @@ struct TimelineHeaderView: View {
                         Menu {
                             ForEach(TaskTimeScope.allCases, id: \.self) { scope in
                                 Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        viewModel.selectedTimeScope = scope
-                                    }
+                                    // No animation: header, day strip and list switch together in
+                                    // one frame instead of animating row by row.
+                                    viewModel.selectedTimeScope = scope
                                 }) {
                                     HStack(spacing: 8) {
                                         Image(systemName: scope.icon)
@@ -1043,12 +1043,15 @@ struct DateSelectorView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 6)
             }
+            // The strip is symmetric around today, so it starts centred on it; onAppear then places
+            // the selected day without animating (it used to slide in from far away every time
+            // the strip came back, e.g. when leaving the inbox).
+            .defaultScrollAnchor(.center)
             .onAppear {
                 scrollProxy = proxy
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        proxy.scrollTo(selectedDayOffset, anchor: .center)
-                    }
+                proxy.scrollTo(selectedDayOffset, anchor: .center)
+                DispatchQueue.main.async {
+                    proxy.scrollTo(selectedDayOffset, anchor: .center)
                 }
             }
             .onChange(of: selectedDayOffset) { _, newValue in
@@ -1612,10 +1615,15 @@ private struct DayCell: View {
         }
     }
     
-    private var dayNumber: String {
+    /// Shared: the strip builds 731 cells, a formatter per cell made every scope change stutter.
+    private static let dayNumberFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "d"
-        return formatter.string(from: date)
+        return formatter
+    }()
+    
+    private var dayNumber: String {
+        Self.dayNumberFormatter.string(from: date)
     }
 }
 
@@ -2228,9 +2236,10 @@ struct TimelineTaskCard: View {
                     RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                         .fill(categoryGradient)
                     
-                    // A task happening right now is marked by its time badge only: an accent
-                    // border here read as a selection.
-                    if gradientEnabled, let category = task.category {
+                    if isCurrentlyActiveNow {
+                        RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                            .strokeBorder(theme.primaryColor.opacity(0.85), lineWidth: 1.5)
+                    } else if gradientEnabled, let category = task.category {
                         RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                             .strokeBorder(
                                 LinearGradient(
@@ -2248,8 +2257,27 @@ struct TimelineTaskCard: View {
                             .strokeBorder(theme.borderColor.opacity(0.4), lineWidth: 1)
                     }
                 }
-                .shadow(color: theme.shadowColor, radius: 5, x: 0, y: 2)
+                .shadow(
+                    color: isCurrentlyActiveNow ? theme.primaryColor.opacity(0.25) : theme.shadowColor,
+                    radius: isCurrentlyActiveNow ? 6 : 5,
+                    x: 0,
+                    y: 2
+                )
             )
+            .overlay(alignment: .topTrailing) {
+                // Names the accent border: this task is happening right now.
+                if isCurrentlyActiveNow {
+                    Text("task_in_progress_now".localized)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(theme.primaryColor))
+                        .offset(x: -22, y: -8)
+                }
+            }
             .offset(x: dragOffset)
             .scaleEffect(deleteScale)
             .opacity(deleteOpacity)

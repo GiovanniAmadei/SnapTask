@@ -2154,3 +2154,4 @@
 "inbox_empty_subtitle" = "アイデアや用事、買い物を日付なしでメモ。準備ができたら予定に入れましょう。";
 "inbox_plan" = "計画";
 "inbox_scope_description" = "日付なし：あとで予定に";
+"task_in_progress_now" = "進行中";

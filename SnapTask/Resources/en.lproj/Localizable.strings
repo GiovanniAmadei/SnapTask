@@ -2228,3 +2228,4 @@
 "inbox_empty_subtitle" = "Capture ideas, errands and things to buy without a date. Plan them when you're ready.";
 "inbox_plan" = "Plan";
 "inbox_scope_description" = "No date: plan it later";
+"task_in_progress_now" = "Now";

@@ -2364,3 +2364,4 @@
 "inbox_empty_subtitle" = "Apunta ideas, recados y cosas que comprar sin fecha. Planifícalas cuando quieras.";
 "inbox_plan" = "Planificar";
 "inbox_scope_description" = "Sin fecha: planifícala luego";
+"task_in_progress_now" = "Ahora";

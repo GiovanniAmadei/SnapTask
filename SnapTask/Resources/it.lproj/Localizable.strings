@@ -2187,3 +2187,4 @@
 "inbox_empty_subtitle" = "Annota idee, commissioni e cose da comprare senza data. Le pianifichi quando vuoi.";
 "inbox_plan" = "Pianifica";
 "inbox_scope_description" = "Senza data: la pianifichi dopo";
+"task_in_progress_now" = "In corso";

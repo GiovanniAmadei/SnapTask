@@ -84,9 +84,8 @@ struct InboxShortcutButton: View {
         let openCount = viewModel.openInboxCount
         Button {
             HapticManager.shared.selection()
-            withAnimation(.easeInOut(duration: 0.25)) {
-                viewModel.selectedTimeScope = isActive ? .today : .inbox
-            }
+            // No animation: header, day strip and list switch together in one frame.
+            viewModel.selectedTimeScope = isActive ? .today : .inbox
         } label: {
             ZStack(alignment: .topTrailing) {
                 Circle()
