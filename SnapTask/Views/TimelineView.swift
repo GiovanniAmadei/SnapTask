@@ -15,6 +15,7 @@ struct TimelineView: View {
         NavigationStack {
             VStack(spacing: 0) {
                     // Header con mese e selettore data
+                    Group {
                     TimelineHeaderView(
                         viewModel: viewModel,
                         selectedDayOffset: $selectedDayOffset,
@@ -37,6 +38,9 @@ struct TimelineView: View {
                     Divider()
                         .padding(.horizontal)
                         .foregroundColor(theme.borderColor)
+                    }
+                    // Fades together with the list on scope changes (see TimelineViewModel.changeScope).
+                    .opacity(viewModel.scopeTransitionProgress)
                     
                     if viewModel.viewMode == .timeline && viewModel.selectedTimeScope == .today {
                         TimelineContentView(
@@ -902,9 +906,7 @@ struct TimelineHeaderView: View {
                         Menu {
                             ForEach(TaskTimeScope.allCases, id: \.self) { scope in
                                 Button(action: {
-                                    // No animation: header, day strip and list switch together in
-                                    // one frame instead of animating row by row.
-                                    viewModel.selectedTimeScope = scope
+                                    viewModel.changeScope(to: scope)
                                 }) {
                                     HStack(spacing: 8) {
                                         Image(systemName: scope.icon)
@@ -1018,7 +1020,9 @@ struct DateSelectorView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                // Lazy: only the visible days are built (731 eager cells made every
+                // appearance of the strip cost ~200ms).
+                LazyHStack(spacing: 12) {
                     ForEach(-365...365, id: \.self) { offset in
                         DayCell(
                             date: Calendar.current.date(
@@ -1043,6 +1047,8 @@ struct DateSelectorView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 6)
             }
+            // A lazy stack takes all the height it is offered: pin it to the cells (60 + 2×6).
+            .frame(height: 72)
             // The strip is symmetric around today, so it starts centred on it; onAppear then places
             // the selected day without animating (it used to slide in from far away every time
             // the strip came back, e.g. when leaving the inbox).
@@ -1139,10 +1145,6 @@ struct TaskListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture { UIApplication.shared.dismissKeyboard() }
-                .overlay(alignment: .bottom) {
-                    bottomBarOverlay
-                        .padding(.bottom, 16)
-                }
             } else if viewModel.tasks.isEmpty {
                 // Empty state
                 VStack(spacing: 20) {
@@ -1169,10 +1171,6 @@ struct TaskListView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
-                .overlay(alignment: .bottom) {
-                    bottomBarOverlay
-                        .padding(.bottom, 16)
-                }
                 .sheet(isPresented: $showingMandalaSheet) {
                     MandalaHubView()
                 }
@@ -1183,10 +1181,6 @@ struct TaskListView: View {
                         .padding(.horizontal, 8)
                         .padding(.top, 8)
                         .padding(.bottom, 100)
-                        .overlay(alignment: .bottom) {
-                            bottomBarOverlay
-                                .padding(.bottom, 16)
-                        }
                 } else if viewModel.canReorderTasks {
                     reorderableTaskList
                 } else {
@@ -1230,13 +1224,17 @@ struct TaskListView: View {
                     .refreshable {
                         await performCloudKitSync()
                     }
-                    .overlay(alignment: .bottom) {
-                        bottomBarOverlay
-                            .padding(.bottom, 16)
-                    }
                 }
             }
         }
+        }
+        // Scope changes fade this content out, switch while it is invisible, and fade it back in
+        // (TimelineViewModel.changeScope). The + stays put above it.
+        .opacity(viewModel.scopeTransitionProgress)
+        .offset(y: (1 - viewModel.scopeTransitionProgress) * 8)
+        .overlay(alignment: .bottom) {
+            bottomBarOverlay
+                .padding(.bottom, 16)
         }
         .fullScreenCover(isPresented: $showingActivePomodoroSession) {
             if pomodoroViewModel.activeTask != nil {
@@ -1437,10 +1435,6 @@ struct TaskListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .refreshable {
             await performCloudKitSync()
-        }
-        .overlay(alignment: .bottom) {
-            bottomBarOverlay
-                .padding(.bottom, 16)
         }
         .sheet(isPresented: $showingMandalaSheet) {
             MandalaHubView()

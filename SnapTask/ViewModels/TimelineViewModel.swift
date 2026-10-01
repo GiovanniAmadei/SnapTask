@@ -115,6 +115,35 @@ class TimelineViewModel: ObservableObject {
     }
     
     // MARK: - TimeScope Properties
+    /// 1 = timeline content visible, 0 = faded out while the scope is being switched.
+    @Published private(set) var scopeTransitionProgress: Double = 1
+    private var pendingScopeChange: DispatchWorkItem?
+
+    /// Gradual scope change: fade the content out, switch while it is invisible, fade the new
+    /// content in. Switching under a cross-fade made the outgoing list jump (it re-rendered with
+    /// the new scope) and animating the rows stuttered.
+    func changeScope(to scope: TaskTimeScope) {
+        guard scope != selectedTimeScope || pendingScopeChange != nil else { return }
+        pendingScopeChange?.cancel()
+        withAnimation(.easeIn(duration: 0.13)) {
+            scopeTransitionProgress = 0
+        }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingScopeChange = nil
+            self.selectedTimeScope = scope
+            // Start the fade-in only once the new scope has been drawn: the timer fires after
+            // that render, so the animation isn't already over when its first frame shows.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                withAnimation(.easeOut(duration: 0.24)) {
+                    self.scopeTransitionProgress = 1
+                }
+            }
+        }
+        pendingScopeChange = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.13, execute: work)
+    }
+
     @Published var selectedTimeScope: TaskTimeScope = .today {
         didSet {
             // Refresh in the same update as the scope change. The Combine pipeline below delivers
