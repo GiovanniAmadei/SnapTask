@@ -40,6 +40,13 @@ class StatisticsViewModel: ObservableObject {
 
     private static let isoFormatter = ISO8601DateFormatter()
 
+    /// Tasks that count in the statistics. Inbox items are undated quick notes: they don't
+    /// belong to the day they were written, so they never enter completion rates, streaks or
+    /// active days.
+    private var statTasks: [TodoTask] {
+        taskManager.tasks.filter { $0.timeScope != .inbox }
+    }
+
     private func calculateCategoryStats(for range: TimeRange) -> [CategoryStat] {
         let (startDate, endDate) = range.dateRange
         return calculateCategoryStats(from: startDate, to: endDate)
@@ -47,7 +54,7 @@ class StatisticsViewModel: ObservableObject {
 
     private func calculateCategoryStats(from startDate: Date, to endDate: Date) -> [CategoryStat] {
         let categories = categoryManager.categories
-        let allTasks = taskManager.tasks
+        let allTasks = statTasks
         let calendar = Calendar.current
         let startOfStartDate = calendar.startOfDay(for: startDate)
         let endOfEndDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate))!
@@ -279,7 +286,7 @@ class StatisticsViewModel: ObservableObject {
         let calendar = Calendar.current
         var nonRec: [Date: [TodoTask]] = [:]
         var rec: [TodoTask] = []
-        for task in taskManager.tasks {
+        for task in statTasks {
             if task.recurrence != nil {
                 rec.append(task)
             } else {
@@ -597,7 +604,7 @@ class StatisticsViewModel: ObservableObject {
     private func updateStreakStats() {
         let calendar = Calendar.current
         var days = Set<Date>()
-        for task in taskManager.tasks {
+        for task in statTasks {
             for (date, completion) in task.completions where completion.isCompleted {
                 days.insert(calendar.startOfDay(for: date))
             }
@@ -630,7 +637,7 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func updateRecurringTasks() {
-        recurringTasks = taskManager.tasks.filter { task in
+        recurringTasks = statTasks.filter { task in
             task.recurrence != nil
         }
     }
@@ -774,7 +781,7 @@ class StatisticsViewModel: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let threeYearsAgo = calendar.date(byAdding: .year, value: -3, to: today)!
-        firstDataDay = taskManager.tasks
+        firstDataDay = statTasks
             .map { calendar.startOfDay(for: $0.startTime) }
             .min()
             .map { min(today, max($0, threeYearsAgo)) }
@@ -885,7 +892,7 @@ class StatisticsViewModel: ObservableObject {
         var perTask: [UUID: (name: String, icon: String, hours: Double, completions: Int)] = [:]
         var completions = 0
 
-        for task in taskManager.tasks where task.category?.id == categoryId {
+        for task in statTasks where task.category?.id == categoryId {
             for (date, completion) in task.completions where completion.isCompleted && date >= start && date < endExclusive {
                 var duration: TimeInterval = 0
                 if let actual = completion.actualDuration, actual > 0 {
@@ -1172,7 +1179,7 @@ class StatisticsViewModel: ObservableObject {
     }
     
     private func updateTaskPerformanceAnalytics() {
-        let allTasks = taskManager.tasks
+        let allTasks = statTasks
         let (startDate, endDate) = selectedTimeRange.dateRange
         let allSessions = taskManager.trackingSessions
         let sessionsByTaskId = Dictionary(grouping: allSessions, by: { $0.taskId })
@@ -1240,7 +1247,7 @@ class StatisticsViewModel: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
         
-        if nonRecurringTasksByDay.isEmpty && recurringTasksList.isEmpty && !taskManager.tasks.isEmpty {
+        if nonRecurringTasksByDay.isEmpty && recurringTasksList.isEmpty && !statTasks.isEmpty {
             refreshTaskPartitions()
         }
         
