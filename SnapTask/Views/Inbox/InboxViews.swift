@@ -72,6 +72,51 @@ extension UIApplication {
     }
 }
 
+// MARK: - Sub-items
+
+/// Field at the bottom of an open inbox item: type a sub-item, press return, keep typing.
+struct InboxSubtaskAddField: View {
+    let taskId: UUID
+    @Environment(\.theme) private var theme
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack {
+            Image(systemName: "plus")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(theme.primaryColor)
+                .frame(width: 32, height: 32)
+
+            TextField("inbox_add_subitem".localized, text: $text)
+                .font(.subheadline)
+                .foregroundColor(theme.textColor)
+                .submitLabel(.return)
+                .focused($isFocused)
+                .onSubmit(add)
+        }
+        // Lines up with the sub-item rows (TimelineSubtaskRow).
+        .padding(.leading, 16)
+        .padding(.trailing, 12)
+    }
+
+    private func add() {
+        let name = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else {
+            isFocused = false
+            return
+        }
+        text = ""
+        guard var task = TaskManager.shared.tasks.first(where: { $0.id == taskId }) else { return }
+        task.subtasks.append(Subtask(name: name))
+        task.lastModifiedDate = Date()
+        HapticManager.shared.impact(.light)
+        Task { await TaskManager.shared.updateTask(task) }
+        // Return dismisses the keyboard by default: keep it up for the next sub-item.
+        DispatchQueue.main.async { isFocused = true }
+    }
+}
+
 // MARK: - Header button
 
 /// Header button next to the journal: opens the inbox from the day view and leads back from it.

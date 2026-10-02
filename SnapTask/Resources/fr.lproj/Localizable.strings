@@ -2070,4 +2070,12 @@
 "inbox_empty_subtitle" = "Note tes idées, courses et choses à faire sans date. Planifie-les quand tu veux.";
 "inbox_plan" = "Planifier";
 "inbox_scope_description" = "Sans date : à planifier plus tard";
-"task_in_progress_now" = "En cours";
+"task_in_progress_now" = "Maintenant";
+
+// Task state
+"task_status_todo" = "À faire";
+"task_status_in_progress" = "En cours";
+"task_status_completed" = "Terminée";
+"inbox_add_subitem" = "Ajouter un élément";
+"auto_in_progress" = "« En cours » automatique";
+"auto_in_progress_description" = "Passe la tâche « En cours » quand tu lances le minuteur ou un Pomodoro, ou coches la première sous-tâche";

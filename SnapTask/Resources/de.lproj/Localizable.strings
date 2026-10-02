@@ -2083,3 +2083,11 @@
 "inbox_scope_description" = "Ohne Datum: später planen";
 "scope_all" = "Alle";
 "task_in_progress_now" = "Jetzt";
+
+// Task state
+"task_status_todo" = "Offen";
+"task_status_in_progress" = "In Arbeit";
+"task_status_completed" = "Erledigt";
+"inbox_add_subitem" = "Eintrag hinzufügen";
+"auto_in_progress" = "„In Arbeit“ automatisch";
+"auto_in_progress_description" = "Markiert eine Aufgabe als „In Arbeit“, wenn du den Timer oder einen Pomodoro startest oder die erste Unteraufgabe abhakst";

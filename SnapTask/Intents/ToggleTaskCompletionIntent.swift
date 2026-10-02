@@ -26,6 +26,8 @@ struct ToggleTaskCompletionIntent: AppIntent {
                 let completionDate = task.completionKey(for: today)
                 var completion = task.completions[completionDate] ?? TaskCompletion(isCompleted: false, completedSubtasks: [])
                 completion.isCompleted.toggle()
+                // Completing or reopening from the widget leaves the occurrence plain "to do".
+                completion.isInProgress = false
                 task.completions[completionDate] = completion
                 if completion.isCompleted {
                     if !task.completionDates.contains(completionDate) { task.completionDates.append(completionDate) }

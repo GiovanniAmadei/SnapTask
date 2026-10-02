@@ -2229,3 +2229,11 @@
 "inbox_plan" = "Plan";
 "inbox_scope_description" = "No date: plan it later";
 "task_in_progress_now" = "Now";
+
+// Task state
+"task_status_todo" = "To do";
+"task_status_in_progress" = "In progress";
+"task_status_completed" = "Completed";
+"inbox_add_subitem" = "Add item";
+"auto_in_progress" = "Auto “In progress”";
+"auto_in_progress_description" = "Mark a task “In progress” when you start its timer or a Pomodoro, or tick the first subtask";

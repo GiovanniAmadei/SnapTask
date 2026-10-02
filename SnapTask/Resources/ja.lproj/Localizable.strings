@@ -2154,4 +2154,12 @@
 "inbox_empty_subtitle" = "アイデアや用事、買い物を日付なしでメモ。準備ができたら予定に入れましょう。";
 "inbox_plan" = "計画";
 "inbox_scope_description" = "日付なし：あとで予定に";
-"task_in_progress_now" = "進行中";
+"task_in_progress_now" = "今";
+
+// Task state
+"task_status_todo" = "未着手";
+"task_status_in_progress" = "進行中";
+"task_status_completed" = "完了";
+"inbox_add_subitem" = "項目を追加";
+"auto_in_progress" = "「進行中」を自動設定";
+"auto_in_progress_description" = "タイマーやポモドーロを開始したとき、または最初のサブタスクにチェックしたときに「進行中」にします";

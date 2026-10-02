@@ -546,6 +546,9 @@ class PomodoroViewModel: ObservableObject {
             state = .working
             sessionStartTime = Date()
             totalPausedTime = 0
+            if let taskId = activeTask?.id {
+                TaskManager.shared.markStartedIfNeeded(taskId)
+            }
         }
         
         startDate = Date()

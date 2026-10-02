@@ -2154,3 +2154,11 @@
 "inbox_plan" = "Planejar";
 "inbox_scope_description" = "Sem data: planeje depois";
 "task_in_progress_now" = "Agora";
+
+// Task state
+"task_status_todo" = "A fazer";
+"task_status_in_progress" = "Em andamento";
+"task_status_completed" = "Concluída";
+"inbox_add_subitem" = "Adicionar item";
+"auto_in_progress" = "Marcar “Em andamento”";
+"auto_in_progress_description" = "Marca a tarefa como “Em andamento” ao iniciar o cronômetro ou um Pomodoro, ou marcar a primeira subtarefa";

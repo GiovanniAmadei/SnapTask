@@ -793,6 +793,14 @@ class TaskManager: ObservableObject {
             }
         }
         
+        // Ticking the first subtask means the task has been started.
+        if completion.isCompleted {
+            completion.isInProgress = false
+        } else if !wasCompleted && SettingsViewModel.shared.autoMarkInProgress {
+            completion.isInProgress = true
+        }
+        task.completions[completionDate] = completion
+        
         task.lastModifiedDate = Date()
         tasks[taskIndex] = task
         
@@ -1187,4 +1195,66 @@ class TaskManager: ObservableObject {
 
 extension Notification.Name {
     static let tasksDidUpdate = Notification.Name("tasksDidUpdate")
+}
+
+// MARK: - In-progress state
+
+/// The three states of one task occurrence.
+enum TaskProgressState: Hashable {
+    case todo
+    case inProgress
+    case completed
+}
+
+extension TaskManager {
+    func progressState(of task: TodoTask, on date: Date) -> TaskProgressState {
+        let completion = task.completions[task.completionKey(for: date)]
+        if completion?.isCompleted == true { return .completed }
+        return completion?.isInProgress == true ? .inProgress : .todo
+    }
+    
+    /// Sets the state of one occurrence. Completing or un-completing goes through
+    /// `toggleTaskCompletion`, so points, confetti, statistics and calendar sync behave
+    /// exactly as with the checkbox.
+    func setProgressState(_ state: TaskProgressState, for taskId: UUID, on date: Date) {
+        guard !isUpdatingFromSync,
+              let task = tasks.first(where: { $0.id == taskId }) else { return }
+        let current = progressState(of: task, on: date)
+        guard current != state else { return }
+        
+        if state == .completed || current == .completed {
+            toggleTaskCompletion(taskId, on: date)
+        }
+        if state != .completed {
+            setInProgress(state == .inProgress, for: taskId, on: date)
+        }
+    }
+    
+    /// Marks an occurrence "In corso" when work on it starts (timer, Pomodoro), if the
+    /// automatic option is on and it isn't already done.
+    func markStartedIfNeeded(_ taskId: UUID) {
+        guard SettingsViewModel.shared.autoMarkInProgress,
+              let task = tasks.first(where: { $0.id == taskId }) else { return }
+        // A one-off day task keeps its state on its own day; everything else uses today.
+        let date = (task.recurrence == nil && task.timeScope == .today) ? task.startTime : Date()
+        guard progressState(of: task, on: date) == .todo else { return }
+        setInProgress(true, for: taskId, on: date)
+    }
+    
+    private func setInProgress(_ inProgress: Bool, for taskId: UUID, on date: Date) {
+        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
+        var task = tasks[index]
+        let key = task.completionKey(for: date)
+        var completion = task.completions[key] ?? TaskCompletion()
+        guard !completion.isCompleted, completion.isInProgress != inProgress else { return }
+        completion.isInProgress = inProgress
+        task.completions[key] = completion
+        task.lastModifiedDate = Date()
+        tasks[index] = task
+        
+        saveTasks()
+        notifyTasksUpdated()
+        objectWillChange.send()
+        debouncedSaveTask(task)
+    }
 }

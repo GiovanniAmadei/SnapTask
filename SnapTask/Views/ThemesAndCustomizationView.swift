@@ -243,6 +243,28 @@ struct ThemesAndCustomizationView: View {
                         .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
                 }
                 .listRowBackground(theme.surfaceColor)
+                
+                HStack(spacing: 12) {
+                    Image(systemName: "circle.lefthalf.filled")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("auto_in_progress".localized)
+                            .themedPrimaryText()
+                        Text("auto_in_progress_description".localized)
+                            .themedSecondaryText()
+                            .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Spacer(minLength: 8)
+                    
+                    Toggle("", isOn: $viewModel.autoMarkInProgress)
+                        .labelsHidden()
+                        .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                }
+                .listRowBackground(theme.surfaceColor)
             } header: {
                 Text("app_behavior".localized)
                     .themedSecondaryText()

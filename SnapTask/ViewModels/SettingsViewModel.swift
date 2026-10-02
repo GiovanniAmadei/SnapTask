@@ -16,6 +16,14 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Marks a task "In corso" by itself when its timer or Pomodoro starts or its first
+    /// subtask is ticked.
+    @Published var autoMarkInProgress: Bool {
+        didSet {
+            UserDefaults.standard.set(autoMarkInProgress, forKey: "autoMarkInProgress")
+        }
+    }
+    
     @Published var showCategoryGradients: Bool {
         didSet {
             UserDefaults.standard.set(showCategoryGradients, forKey: "showCategoryGradients")
@@ -72,6 +80,8 @@ class SettingsViewModel: ObservableObject {
             self.autoCompleteTaskWithSubtasks = true
             UserDefaults.standard.set(true, forKey: "autoCompleteTaskWithSubtasks")
         }
+        
+        self.autoMarkInProgress = UserDefaults.standard.object(forKey: "autoMarkInProgress") as? Bool ?? true
         
         self.showCategoryGradients = UserDefaults.standard.bool(forKey: "showCategoryGradients")
         if !UserDefaults.standard.objectExists(forKey: "showCategoryGradients") {

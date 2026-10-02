@@ -8,6 +8,8 @@ struct TaskCompletion: Codable, Equatable, Hashable {
     var qualityRating: Int?     // 1-10 scale
     var completionDate: Date?   // When this specific completion happened
     var notes: String?          // User notes/comments about this completion
+    /// Started but not finished ("In corso"). Cleared when the occurrence is completed.
+    var isInProgress: Bool
     
     init(
         isCompleted: Bool = false, 
@@ -16,7 +18,8 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         difficultyRating: Int? = nil,
         qualityRating: Int? = nil,
         completionDate: Date? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        isInProgress: Bool = false
     ) {
         self.isCompleted = isCompleted
         self.completedSubtasks = completedSubtasks
@@ -25,6 +28,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         self.qualityRating = qualityRating
         self.completionDate = completionDate
         self.notes = notes
+        self.isInProgress = isInProgress
     }
     
     enum CodingKeys: String, CodingKey {
@@ -35,6 +39,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         case qualityRating
         case completionDate
         case notes
+        case isInProgress
     }
     
     init(from decoder: Decoder) throws {
@@ -55,6 +60,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         qualityRating = try container.decodeIfPresent(Int.self, forKey: .qualityRating)
         completionDate = try container.decodeIfPresent(Date.self, forKey: .completionDate)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        isInProgress = try container.decodeIfPresent(Bool.self, forKey: .isInProgress) ?? false
     }
     
     func encode(to encoder: Encoder) throws {
@@ -70,6 +76,10 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         try container.encodeIfPresent(qualityRating, forKey: .qualityRating)
         try container.encodeIfPresent(completionDate, forKey: .completionDate)
         try container.encodeIfPresent(notes, forKey: .notes)
+        // Only written when set, so completions stay identical for apps that don't know it.
+        if isInProgress {
+            try container.encode(true, forKey: .isInProgress)
+        }
     }
     
     var hasRatings: Bool {

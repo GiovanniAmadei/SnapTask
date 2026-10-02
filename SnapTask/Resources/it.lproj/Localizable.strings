@@ -2187,4 +2187,12 @@
 "inbox_empty_subtitle" = "Annota idee, commissioni e cose da comprare senza data. Le pianifichi quando vuoi.";
 "inbox_plan" = "Pianifica";
 "inbox_scope_description" = "Senza data: la pianifichi dopo";
-"task_in_progress_now" = "In corso";
+"task_in_progress_now" = "Adesso";
+
+// Task state
+"task_status_todo" = "Da fare";
+"task_status_in_progress" = "In corso";
+"task_status_completed" = "Completata";
+"inbox_add_subitem" = "Aggiungi voce";
+"auto_in_progress" = "“In corso” automatico";
+"auto_in_progress_description" = "Segna l'attività “In corso” quando avvii il timer o un Pomodoro, o spunti la prima sottoattività";

@@ -335,6 +335,10 @@ class TimeTrackerViewModel: ObservableObject {
         activeSessions[index].isRunning = true
         activeSessions[index].isPaused = false
         
+        if let taskId = activeSessions[index].taskId {
+            taskManager.markStartedIfNeeded(taskId)
+        }
+        
         restartTimer(for: sessionId)
         
         // Salva stato aggiornato

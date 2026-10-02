@@ -2365,3 +2365,11 @@
 "inbox_plan" = "Planificar";
 "inbox_scope_description" = "Sin fecha: planifícala luego";
 "task_in_progress_now" = "Ahora";
+
+// Task state
+"task_status_todo" = "Pendiente";
+"task_status_in_progress" = "En curso";
+"task_status_completed" = "Completada";
+"inbox_add_subitem" = "Añadir elemento";
+"auto_in_progress" = "“En curso” automático";
+"auto_in_progress_description" = "Marca la tarea como “En curso” al iniciar el temporizador o un Pomodoro, o al marcar la primera subtarea";

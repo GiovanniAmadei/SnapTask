@@ -1769,6 +1769,29 @@ struct TimelineTaskCard: View {
         return false
     }
 
+    private var progressState: TaskProgressState {
+        if isCompleted { return .completed }
+        let key = task.completionKey(for: targetDateForScope)
+        return task.completions[key]?.isInProgress == true ? .inProgress : .todo
+    }
+
+    private var isInProgress: Bool { progressState == .inProgress }
+
+    /// Inbox items use a lighter card: no priority mark, and a tap opens them in place.
+    private var isInbox: Bool { task.timeScope == .inbox }
+
+    private func setProgress(_ state: TaskProgressState) {
+        guard state != progressState else { return }
+        if state == .completed {
+            HapticManager.shared.notification(.success)
+        } else {
+            HapticManager.shared.impact(.light)
+        }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            TaskManager.shared.setProgressState(state, for: task.id, on: targetDateForScope)
+        }
+    }
+
     private var completionProgress: Double {
         guard !task.subtasks.isEmpty else { return isCompleted ? 1.0 : 0.0 }
         let completionDate = task.completionKey(for: targetDateForScope)
@@ -1924,16 +1947,45 @@ struct TimelineTaskCard: View {
     /// Fixed info row under the title: schedule · subtasks chip (always one line).
     @ViewBuilder
     private var metaRow: some View {
-        if hasScheduleBadge || !task.subtasks.isEmpty {
-            HStack(spacing: 6) {
-                if hasScheduleBadge {
-                    scheduleBadge
-                }
-                if !task.subtasks.isEmpty {
-                    subtasksChip
-                }
+        if hasScheduleBadge || !task.subtasks.isEmpty || isInProgress {
+            // One line, never truncated: if it doesn't fit, the "In corso" chip keeps only its icon.
+            ViewThatFits(in: .horizontal) {
+                metaItems(showsProgressLabel: true)
+                metaItems(showsProgressLabel: false)
             }
         }
+    }
+
+    private func metaItems(showsProgressLabel: Bool) -> some View {
+        HStack(spacing: 6) {
+            if hasScheduleBadge {
+                scheduleBadge
+            }
+            if !task.subtasks.isEmpty {
+                subtasksChip
+            }
+            if isInProgress {
+                inProgressChip(showsLabel: showsProgressLabel)
+            }
+        }
+    }
+
+    private func inProgressChip(showsLabel: Bool) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: "play.fill")
+                .font(.system(size: 8, weight: .bold))
+            if showsLabel {
+                Text("task_status_in_progress".localized)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+            }
+        }
+        .foregroundColor(.blue)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(Color.blue.opacity(0.12))
+        .cornerRadius(4)
+        .fixedSize()
     }
 
     /// Shows subtask progress and toggles the subtask list.
@@ -2144,9 +2196,11 @@ struct TimelineTaskCard: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    Image(systemName: task.priority.icon)
-                        .foregroundColor(Color(hex: task.priority.color))
-                        .font(.system(size: 12))
+                    if !isInbox {
+                        Image(systemName: task.priority.icon)
+                            .foregroundColor(Color(hex: task.priority.color))
+                            .font(.system(size: 12))
+                    }
                     
                     if task.pomodoroSettings != nil {
                         Button(action: {
@@ -2170,16 +2224,18 @@ struct TimelineTaskCard: View {
                         .buttonStyle(BorderlessButtonStyle())
                     }
                     
-                    Button(action: {
-                        if isCompleted {
-                            HapticManager.shared.impact(.light)
-                        } else {
-                            HapticManager.shared.notification(.success)
+                    // Tap completes as always; press and hold picks the state (to do, in progress, done).
+                    Menu {
+                        Picker("", selection: Binding(get: { progressState }, set: { setProgress($0) })) {
+                            Label("task_status_todo".localized, systemImage: "circle")
+                                .tag(TaskProgressState.todo)
+                            Label("task_status_in_progress".localized, systemImage: "circle.lefthalf.filled")
+                                .tag(TaskProgressState.inProgress)
+                            Label("task_status_completed".localized, systemImage: "checkmark.circle.fill")
+                                .tag(TaskProgressState.completed)
                         }
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            onToggleComplete()
-                        }
-                    }) {
+                        .pickerStyle(.inline)
+                    } label: {
                         ZStack {
                             Circle()
                                 .stroke(theme.borderColor, lineWidth: 2)
@@ -2194,17 +2250,30 @@ struct TimelineTaskCard: View {
                                     .animation(.easeInOut(duration: 0.35), value: completionProgress)
                             }
                             
-                            Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
+                            Image(systemName: isCompleted ? "checkmark.circle.fill" : (isInProgress ? "circle.lefthalf.filled" : "circle"))
+                                .foregroundColor(isCompleted ? .green : (isInProgress ? .blue : theme.secondaryTextColor))
                                 .font(.title2)
                         }
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                    } primaryAction: {
+                        if isCompleted {
+                            HapticManager.shared.impact(.light)
+                        } else {
+                            HapticManager.shared.notification(.success)
+                        }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            onToggleComplete()
+                        }
                     }
+                    .menuStyle(.button)
                     .buttonStyle(BorderlessButtonStyle())
+                    .menuIndicator(.hidden)
                     .frame(width: 44, height: 44)
                 }
                 .padding(Self.contentInset)
                 
-                if !task.subtasks.isEmpty {
+                if !task.subtasks.isEmpty || isInbox {
                     // Always in the hierarchy; the height is animated frame by frame so the
                     // List row grows/shrinks together with the card instead of jumping.
                     VStack(spacing: 8) {
@@ -2214,6 +2283,9 @@ struct TimelineTaskCard: View {
                                 isCompleted: completedSubtasks.contains(subtask.id),
                                 onToggle: { onToggleSubtask(subtask.id) }
                             )
+                        }
+                        if isInbox {
+                            InboxSubtaskAddField(taskId: task.id)
                         }
                     }
                     .padding(.top, 2)
@@ -2320,6 +2392,14 @@ struct TimelineTaskCard: View {
         .onTapGesture {
             if dragOffset != 0 {
                 resetSwipe()
+            } else if isInbox {
+                if isExpanded {
+                    // Don't leave the keyboard typing into the add field that is being hidden.
+                    UIApplication.shared.dismissKeyboard()
+                }
+                withAnimation(.smooth(duration: 0.3)) {
+                    isExpanded.toggle()
+                }
             } else {
                 UIApplication.shared.dismissKeyboard()
                 showingDetailView = true
