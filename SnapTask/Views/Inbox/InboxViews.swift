@@ -72,10 +72,11 @@ extension UIApplication {
     }
 }
 
-// MARK: - Shortcut
+// MARK: - Header button
 
-/// Round button next to the + that opens the inbox (and goes back to today when it's open).
-struct InboxShortcutButton: View {
+/// Header button next to the journal: opens the inbox from the day view and leads back from it.
+/// Same style as the other header buttons; the badge counts the open items.
+struct InboxHeaderButton: View {
     @ObservedObject var viewModel: TimelineViewModel
     @Environment(\.theme) private var theme
 
@@ -86,29 +87,32 @@ struct InboxShortcutButton: View {
             HapticManager.shared.selection()
             viewModel.changeScope(to: isActive ? .today : .inbox)
         } label: {
-            ZStack(alignment: .topTrailing) {
-                Circle()
-                    .fill(isActive ? theme.primaryColor : theme.surfaceColor)
-                    .frame(width: 44, height: 44)
-                    .overlay(Circle().strokeBorder(theme.primaryColor.opacity(0.3), lineWidth: 1))
-                    .shadow(color: theme.shadowColor, radius: 6, x: 0, y: 3)
-                    .overlay(
-                        Image(systemName: isActive ? "tray.fill" : "tray")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(isActive ? .white : theme.primaryColor)
-                    )
-
-                if openCount > 0 && !isActive {
-                    Text(openCount > 99 ? "99+" : "\(openCount)")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 5)
-                        .frame(minWidth: 18, minHeight: 18)
-                        .background(Capsule().fill(Color.red))
-                        .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 1.5))
-                        .offset(x: 4, y: -4)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isActive ? theme.primaryColor : theme.primaryColor.opacity(0.12))
+                .frame(width: 34, height: 34)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(theme.primaryColor.opacity(0.35), lineWidth: 1)
+                )
+                .shadow(color: theme.shadowColor, radius: 2, x: 0, y: 1)
+                .overlay(
+                    Image(systemName: "tray.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(isActive ? .white : theme.primaryColor)
+                )
+                .overlay(alignment: .topTrailing) {
+                    if openCount > 0 && !isActive {
+                        Text(openCount > 99 ? "99+" : "\(openCount)")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4)
+                            .frame(minWidth: 16, minHeight: 16)
+                            .background(Capsule().fill(Color.red))
+                            .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 1.5))
+                            .fixedSize()
+                            .offset(x: 6, y: -6)
+                    }
                 }
-            }
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.2), value: isActive)

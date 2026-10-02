@@ -859,6 +859,11 @@ struct TimelineHeaderView: View {
                         }
                     }
                     
+                    // Next to the journal in the day view; inside the inbox it leads back.
+                    if viewModel.selectedTimeScope == .today || viewModel.selectedTimeScope == .inbox {
+                        InboxHeaderButton(viewModel: viewModel)
+                    }
+                    
                     Spacer(minLength: 8)
                     
                     HStack(spacing: 8) {
@@ -1372,11 +1377,6 @@ struct TaskListView: View {
                     isShowingTaskForm: $showingNewTask,
                     timeScope: viewModel.selectedTimeScope
                 )
-                
-                // Beside the + (56pt): quick way in and out of the inbox, with the open count.
-                InboxShortcutButton(viewModel: viewModel)
-                    .offset(x: -(28 + 18 + 22))
-                    .padding(.bottom, 6)
             }
             .padding(.bottom, 16)
         }
