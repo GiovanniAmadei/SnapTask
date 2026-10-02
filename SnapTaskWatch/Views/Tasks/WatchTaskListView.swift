@@ -13,7 +13,7 @@ struct WatchTaskListView: View {
             if let recurrence = task.recurrence {
                 return recurrence.shouldOccurOn(date: selectedDate)
             } else {
-                return calendar.isDate(task.startTime, inSameDayAs: selectedDate)
+                return task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: selectedDate)
             }
         }.sorted { $0.startTime < $1.startTime }
     }

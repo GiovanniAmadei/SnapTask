@@ -451,6 +451,8 @@ extension Calendar {
 
 extension TodoTask {
     func occurs(on date: Date) -> Bool {
+        // Undated inbox items never fall on a day: their startTime is only the creation time.
+        guard timeScope != .inbox else { return false }
         if let recurrence {
             return recurrence.shouldOccurOn(date: date)
         } else {

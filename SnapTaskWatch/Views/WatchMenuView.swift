@@ -37,7 +37,7 @@ struct WatchMenuView: View {
             if let recurrence = task.recurrence {
                 return recurrence.shouldOccurOn(date: today)
             } else {
-                return calendar.isDate(task.startTime, inSameDayAs: today)
+                return task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: today)
             }
         }.count
     }

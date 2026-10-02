@@ -62,7 +62,7 @@ struct TaskComplicationProvider: TimelineProvider {
             if let recurrence = task.recurrence {
                 return recurrence.shouldOccurOn(date: today)
             } else {
-                return calendar.isDate(task.startTime, inSameDayAs: today)
+                return task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: today)
             }
         }
         
@@ -103,7 +103,7 @@ struct TaskComplicationProvider: TimelineProvider {
                 if let recurrence = task.recurrence {
                     return recurrence.shouldOccurOn(date: date)
                 } else {
-                    return calendar.isDate(task.startTime, inSameDayAs: date)
+                    return task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: date)
                 }
             }
             
@@ -142,7 +142,7 @@ struct TaskComplicationProvider: TimelineProvider {
                 if let recurrence = task.recurrence {
                     occursToday = recurrence.shouldOccurOn(date: date)
                 } else {
-                    occursToday = calendar.isDate(task.startTime, inSameDayAs: date)
+                    occursToday = task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: date)
                 }
 
                 return occursToday &&

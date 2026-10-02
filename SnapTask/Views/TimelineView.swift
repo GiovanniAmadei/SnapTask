@@ -30,14 +30,17 @@ struct TimelineView: View {
                         .padding(.horizontal)
                         .foregroundColor(theme.borderColor)
                     
-                    ViewControlBarView(viewModel: viewModel)
-                        .themedSurface()
-                        .zIndex(1)
-                    
-                    // Subtle divider between controls and content
-                    Divider()
-                        .padding(.horizontal)
-                        .foregroundColor(theme.borderColor)
+                    // The inbox is a quick list: no view mode, grouping or filter controls.
+                    if viewModel.selectedTimeScope != .inbox {
+                        ViewControlBarView(viewModel: viewModel)
+                            .themedSurface()
+                            .zIndex(1)
+                        
+                        // Subtle divider between controls and content
+                        Divider()
+                            .padding(.horizontal)
+                            .foregroundColor(theme.borderColor)
+                    }
                     }
                     // Fades together with the list on scope changes (see TimelineViewModel.changeScope).
                     .opacity(viewModel.scopeTransitionProgress)
@@ -1175,7 +1178,7 @@ struct TaskListView: View {
                     MandalaHubView()
                 }
             } else {
-                if viewModel.organization == .eisenhower {
+                if viewModel.effectiveOrganization == .eisenhower {
                     EisenhowerMatrixView(viewModel: viewModel)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(.horizontal, 8)

@@ -96,9 +96,15 @@ class TimelineViewModel: ObservableObject {
         return TaskOrderManager.listKey(scope: selectedTimeScope, date: periodDate)
     }
     
+    /// The inbox is a plain quick list: it has no grouping/sorting controls and always uses the
+    /// default (manual) order, whatever is selected for the dated scopes.
+    var effectiveOrganization: TimelineOrganization {
+        selectedTimeScope == .inbox ? .none : organization
+    }
+    
     /// Il riordino a mano c'è solo nella vista predefinita: le altre ordinano per orario, categoria o priorità.
     var canReorderTasks: Bool {
-        organization == .none && manualOrderListKey != nil
+        effectiveOrganization == .none && manualOrderListKey != nil
     }
     
     func moveTasks(fromOffsets source: IndexSet, toOffset destination: Int) {
@@ -903,7 +909,7 @@ class TimelineViewModel: ObservableObject {
             return organizeByTimeScope(scopedTasks)
         }
 
-        switch organization {
+        switch effectiveOrganization {
         case .time:
             let sortedTasks = scopedTasks.sorted { task1, task2 in
                 let calendar = Calendar.current

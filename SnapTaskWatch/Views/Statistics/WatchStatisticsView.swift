@@ -284,7 +284,7 @@ struct WatchStatisticsView: View {
                 if let recurrence = task.recurrence {
                     shouldAppear = recurrence.shouldOccurOn(date: date)
                 } else {
-                    shouldAppear = calendar.isDate(task.startTime, inSameDayAs: date)
+                    shouldAppear = task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: date)
                 }
                 
                 if shouldAppear {
@@ -315,7 +315,7 @@ struct WatchStatisticsView: View {
             if let recurrence = task.recurrence {
                 shouldAppear = recurrence.shouldOccurOn(date: date)
             } else {
-                shouldAppear = calendar.isDate(task.startTime, inSameDayAs: date)
+                shouldAppear = task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: date)
             }
             
             if shouldAppear {
@@ -363,7 +363,7 @@ struct WatchStatisticsView: View {
                 if let recurrence = task.recurrence {
                     shouldAppear = recurrence.shouldOccurOn(date: date)
                 } else {
-                    shouldAppear = calendar.isDate(task.startTime, inSameDayAs: date)
+                    shouldAppear = task.timeScope != .inbox && calendar.isDate(task.startTime, inSameDayAs: date)
                 }
                 
                 if shouldAppear {
