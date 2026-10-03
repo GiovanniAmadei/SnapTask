@@ -2084,3 +2084,29 @@
 "inbox_plan_more_options" = "Plus d'options";
 "tip_in_progress_title" = "Passer une tâche « En cours »";
 "tip_in_progress_message" = "Maintiens le cercle appuyé pour choisir entre À faire, En cours et Terminée.";
+
+// Welcome content and task deletion
+"starter_category_work" = "Travail";
+"starter_category_personal" = "Personnel";
+"starter_category_health" = "Santé";
+"welcome_task1_title" = "Bienvenue dans SnapTask 👋";
+"welcome_task1_description" = "Suis les étapes ci-dessous pour voir comment fonctionne une tâche.";
+"welcome_task1_step1" = "Maintiens le cercle appuyé et choisis « En cours »";
+"welcome_task1_step2" = "Touche la tâche pour l'ouvrir et ajoute une photo";
+"welcome_task1_step3" = "Dans le détail, enregistre un court mémo vocal";
+"welcome_task1_step4" = "Fais glisser la carte vers la gauche et touche Suivre : minuteur ou Pomodoro";
+"welcome_task1_step5" = "Maintiens la carte appuyée et fais-la glisser sous l'autre";
+"welcome_task1_step6" = "Termine-la en touchant le cercle : 10 points dans Récompenses";
+"welcome_task2_title" = "Découvre comment t'organiser 🗂️";
+"welcome_task2_description" = "Un petit tour de l'app.";
+"welcome_task2_step1" = "Touche « Jour » en haut : planifie aussi par semaine, mois et année";
+"welcome_task2_step2" = "Touche le plateau et note une idée dans l'Inbox";
+"welcome_task2_step3" = "Touche le livre et écris quelques lignes dans le journal du jour";
+"welcome_task2_step4" = "Touche le calendrier pour revoir les jours passés";
+"welcome_task2_step5" = "Passe de Liste à Heure pour voir ta journée heure par heure";
+"welcome_task2_step6" = "Donne une catégorie à cette tâche depuis Modifier";
+"welcome_task2_step7" = "Crée ta première tâche avec le +";
+"delete_task_sessions_title" = "Sessions enregistrées : %d";
+"delete_task_sessions_message" = "Les sessions Suivre et Pomodoro de cette tâche sont dans l'onglet Focus. Les supprimer avec la tâche ?";
+"delete_task_and_sessions" = "Supprimer aussi les sessions";
+"delete_task_keep_sessions" = "Supprimer seulement la tâche";

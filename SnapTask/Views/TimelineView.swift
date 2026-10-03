@@ -1655,6 +1655,7 @@ struct TimelineTaskCard: View {
     @State private var showingEditSheet = false
     @State private var showingDetailView = false
     @State private var showingPlanSheet = false
+    @State private var showingDeleteSessionsDialog = false
     @State private var wantsFullPlanForm = false
     @State private var showingFullPlanForm = false
     @State private var dragOffset: CGFloat = 0
@@ -2179,7 +2180,7 @@ struct TimelineTaskCard: View {
                     .buttonStyle(PlainButtonStyle())
                     
                     Button(action: {
-                        deleteTaskWithAnimation()
+                        requestDelete()
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
@@ -2444,6 +2445,9 @@ struct TimelineTaskCard: View {
                 showingDetailView = true
             }
         }
+        .deleteSessionsDialog(isPresented: $showingDeleteSessionsDialog, task: task) { deletingSessions in
+            deleteTaskWithAnimation(deletingSessions: deletingSessions)
+        }
         // One sheet at a time: "Altre opzioni" closes the plan sheet, then the full form opens.
         .sheet(isPresented: $showingPlanSheet, onDismiss: {
             if wantsFullPlanForm {
@@ -2538,7 +2542,16 @@ struct TimelineTaskCard: View {
         return maxSwipeDistance - (maxSwipeDistance - x) * 0.25
     }
 
-    private func deleteTaskWithAnimation() {
+    /// Asks first only when the task has recorded sessions, which would otherwise stay in Focus.
+    private func requestDelete() {
+        if TaskManager.shared.trackingSessionCount(for: task.id) > 0 {
+            showingDeleteSessionsDialog = true
+        } else {
+            deleteTaskWithAnimation()
+        }
+    }
+
+    private func deleteTaskWithAnimation(deletingSessions: Bool = false) {
         guard !isDeleting else { return }
         
         isDeleting = true
@@ -2553,7 +2566,7 @@ struct TimelineTaskCard: View {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             Task {
-                await TaskManager.shared.removeTask(task)
+                await TaskManager.shared.removeTask(task, deletingSessions: deletingSessions)
             }
         }
     }
@@ -2702,6 +2715,7 @@ private struct TimelineSubtaskRow: View {
 struct CompactTimelineTaskView: View {
     let task: TodoTask
     @ObservedObject var viewModel: TimelineViewModel
+    @State private var showingDeleteSessionsDialog = false
     @State private var showingDetailView = false
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
@@ -2850,10 +2864,17 @@ struct CompactTimelineTaskView: View {
 
             Button(role: .destructive) {
                 HapticManager.shared.impact(.medium)
-                viewModel.deleteTask(task)
+                if TaskManager.shared.trackingSessionCount(for: task.id) > 0 {
+                    showingDeleteSessionsDialog = true
+                } else {
+                    viewModel.deleteTask(task)
+                }
             } label: {
                 Label("delete".localized, systemImage: "trash")
             }
+        }
+        .deleteSessionsDialog(isPresented: $showingDeleteSessionsDialog, task: task) { deletingSessions in
+            Task { await TaskManager.shared.removeTask(task, deletingSessions: deletingSessions) }
         }
         .sheet(isPresented: $showingDetailView) {
             NavigationStack {
@@ -2883,6 +2904,24 @@ extension TaskTimeScope {
         case .longTerm: return .pink
         case .inbox: return .indigo
         case .all: return .teal
+        }
+    }
+}
+
+extension View {
+    /// "This task has N recorded sessions": delete them too, keep them, or cancel.
+    func deleteSessionsDialog(isPresented: Binding<Bool>, task: TodoTask, onDelete: @escaping (Bool) -> Void) -> some View {
+        let count = TaskManager.shared.trackingSessionCount(for: task.id)
+        return confirmationDialog(
+            String(format: "delete_task_sessions_title".localized, count),
+            isPresented: isPresented,
+            titleVisibility: .visible
+        ) {
+            Button("delete_task_and_sessions".localized, role: .destructive) { onDelete(true) }
+            Button("delete_task_keep_sessions".localized) { onDelete(false) }
+            Button("cancel".localized, role: .cancel) {}
+        } message: {
+            Text("delete_task_sessions_message".localized)
         }
     }
 }

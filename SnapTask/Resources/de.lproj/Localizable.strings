@@ -2096,3 +2096,29 @@
 "inbox_plan_more_options" = "Weitere Optionen";
 "tip_in_progress_title" = "Als „In Arbeit“ markieren";
 "tip_in_progress_message" = "Halte den Kreis gedrückt, um zwischen Offen, In Arbeit und Erledigt zu wählen.";
+
+// Welcome content and task deletion
+"starter_category_work" = "Arbeit";
+"starter_category_personal" = "Persönlich";
+"starter_category_health" = "Gesundheit";
+"welcome_task1_title" = "Willkommen bei SnapTask 👋";
+"welcome_task1_description" = "Folge den Schritten unten, um zu sehen, wie eine Aufgabe funktioniert.";
+"welcome_task1_step1" = "Halte den Kreis gedrückt und markiere „In Arbeit“";
+"welcome_task1_step2" = "Tippe auf die Aufgabe, öffne sie und füge ein Foto hinzu";
+"welcome_task1_step3" = "Nimm in den Details eine kurze Sprachnotiz auf";
+"welcome_task1_step4" = "Wische die Karte nach links und tippe auf Verfolgen: Timer oder Pomodoro";
+"welcome_task1_step5" = "Halte die Karte gedrückt und ziehe sie unter die andere";
+"welcome_task1_step6" = "Schließe sie mit dem Kreis ab: 10 Punkte in Belohnungen";
+"welcome_task2_title" = "So organisierst du dich 🗂️";
+"welcome_task2_description" = "Eine kurze Tour durch die App.";
+"welcome_task2_step1" = "Tippe oben auf „Tag“: plane auch nach Woche, Monat und Jahr";
+"welcome_task2_step2" = "Tippe auf das Fach und notiere eine Idee im Eingang";
+"welcome_task2_step3" = "Tippe auf das Buch und schreib ein paar Zeilen ins heutige Tagebuch";
+"welcome_task2_step4" = "Tippe auf den Kalender, um vergangene Tage anzusehen";
+"welcome_task2_step5" = "Wechsle von Liste zu Zeit, um den Tag stundenweise zu sehen";
+"welcome_task2_step6" = "Gib dieser Aufgabe unter Bearbeiten eine Kategorie";
+"welcome_task2_step7" = "Erstelle deine erste Aufgabe mit dem +";
+"delete_task_sessions_title" = "Aufgezeichnete Sitzungen: %d";
+"delete_task_sessions_message" = "Die Verfolgen- und Pomodoro-Sitzungen dieser Aufgabe sind im Tab Fokus. Zusammen mit der Aufgabe löschen?";
+"delete_task_and_sessions" = "Auch Sitzungen löschen";
+"delete_task_keep_sessions" = "Nur die Aufgabe löschen";

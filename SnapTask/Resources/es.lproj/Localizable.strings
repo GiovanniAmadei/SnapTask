@@ -2378,3 +2378,29 @@
 "inbox_plan_more_options" = "Más opciones";
 "tip_in_progress_title" = "Marca una tarea “En curso”";
 "tip_in_progress_message" = "Mantén pulsado el círculo para elegir entre Pendiente, En curso y Completada.";
+
+// Welcome content and task deletion
+"starter_category_work" = "Trabajo";
+"starter_category_personal" = "Personal";
+"starter_category_health" = "Salud";
+"welcome_task1_title" = "Bienvenido a SnapTask 👋";
+"welcome_task1_description" = "Sigue los pasos de abajo para ver cómo funciona una tarea.";
+"welcome_task1_step1" = "Mantén pulsado el círculo y márcala “En curso”";
+"welcome_task1_step2" = "Toca la tarea para abrirla y añade una foto";
+"welcome_task1_step3" = "En el detalle, graba un audio breve";
+"welcome_task1_step4" = "Desliza la tarjeta a la izquierda y toca Seguir: temporizador o Pomodoro";
+"welcome_task1_step5" = "Mantén pulsada la tarjeta y arrástrala debajo de la otra";
+"welcome_task1_step6" = "Complétala tocando el círculo: 10 puntos en Recompensas";
+"welcome_task2_title" = "Descubre cómo organizarte 🗂️";
+"welcome_task2_description" = "Un recorrido rápido por la app.";
+"welcome_task2_step1" = "Toca “Día” arriba: planifica también por semana, mes y año";
+"welcome_task2_step2" = "Toca la bandeja y apunta una idea en la Bandeja";
+"welcome_task2_step3" = "Toca el libro y escribe unas líneas en el diario de hoy";
+"welcome_task2_step4" = "Toca el calendario para repasar los días anteriores";
+"welcome_task2_step5" = "Cambia de Lista a Hora para ver el día por horas";
+"welcome_task2_step6" = "Asigna una categoría a esta tarea desde Editar";
+"welcome_task2_step7" = "Crea tu primera tarea con el +";
+"delete_task_sessions_title" = "Sesiones registradas: %d";
+"delete_task_sessions_message" = "Las sesiones de Seguir y Pomodoro de esta tarea están en la pestaña Enfoque. ¿Eliminarlas junto con la tarea?";
+"delete_task_and_sessions" = "Eliminar también las sesiones";
+"delete_task_keep_sessions" = "Eliminar solo la tarea";

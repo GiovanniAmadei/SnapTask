@@ -261,6 +261,7 @@ struct WelcomeView: View {
     
     private func completeOnboarding() {
         UserDefaults.standard.set(true, forKey: "hasShownWelcome")
+        WelcomeContentSeeder.seedIfNeeded()
         dismiss()
     }
 }

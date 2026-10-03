@@ -2168,3 +2168,29 @@
 "inbox_plan_more_options" = "その他のオプション";
 "tip_in_progress_title" = "タスクを「進行中」にする";
 "tip_in_progress_message" = "円を長押しすると、未着手・進行中・完了から選べます。";
+
+// Welcome content and task deletion
+"starter_category_work" = "仕事";
+"starter_category_personal" = "プライベート";
+"starter_category_health" = "健康";
+"welcome_task1_title" = "SnapTaskへようこそ 👋";
+"welcome_task1_description" = "下のステップで、タスクの使い方を確認しましょう。";
+"welcome_task1_step1" = "円を長押しして「進行中」にする";
+"welcome_task1_step2" = "タスクをタップして開き、写真を追加する";
+"welcome_task1_step3" = "詳細画面で短いボイスメモを録音する";
+"welcome_task1_step4" = "カードを左にスワイプして「トラック」をタップ：タイマーかポモドーロ";
+"welcome_task1_step5" = "カードを長押しして、もう一方の下にドラッグする";
+"welcome_task1_step6" = "円をタップして完了：報酬に10ポイント";
+"welcome_task2_title" = "整理のしかたを知ろう 🗂️";
+"welcome_task2_description" = "アプリをさっと一巡りしましょう。";
+"welcome_task2_step1" = "上の「日」をタップ：週・月・年でも計画できます";
+"welcome_task2_step2" = "トレイをタップして、インボックスにアイデアをメモ";
+"welcome_task2_step3" = "本をタップして、今日の日記を書く";
+"welcome_task2_step4" = "カレンダーをタップして、過去の日を振り返る";
+"welcome_task2_step5" = "「リスト」から「時間」に切り替えて、1日を時間ごとに見る";
+"welcome_task2_step6" = "「編集」からこのタスクにカテゴリを設定する";
+"welcome_task2_step7" = "「+」で最初のタスクを作成する";
+"delete_task_sessions_title" = "記録されたセッション：%d件";
+"delete_task_sessions_message" = "このタスクのトラックとポモドーロのセッションはフォーカスタブにあります。タスクと一緒に削除しますか？";
+"delete_task_and_sessions" = "セッションも削除";
+"delete_task_keep_sessions" = "タスクのみ削除";

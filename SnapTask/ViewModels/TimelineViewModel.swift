@@ -284,6 +284,11 @@ class TimelineViewModel: ObservableObject {
         if let raw = defaults.string(forKey: organizationKey),
            let saved = TimelineOrganization(rawValue: raw) {
             organization = saved
+        } else if !defaults.bool(forKey: "hasShownWelcome") {
+            // Fresh install: start in the default view, where the welcome tasks keep their order
+            // and can be dragged. Existing users without a saved choice keep the time order.
+            organization = .none
+            defaults.set(TimelineOrganization.none.rawValue, forKey: organizationKey)
         }
         
         if let raw = defaults.string(forKey: timeSortOrderKey),

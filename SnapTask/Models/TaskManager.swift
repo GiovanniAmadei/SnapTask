@@ -298,6 +298,21 @@ class TaskManager: ObservableObject {
         print(" Updated \(newSessions.count) tracking sessions from sync")
     }
     
+    /// Recorded Track/Pomodoro sessions of a task (shown in the Focus tab).
+    func trackingSessionCount(for taskId: UUID) -> Int {
+        trackingSessions.filter { $0.taskId == taskId }.count
+    }
+    
+    /// Deletes a task and, if asked, its recorded sessions (otherwise they stay in the Focus history).
+    func removeTask(_ task: TodoTask, deletingSessions: Bool) async {
+        if deletingSessions {
+            for session in trackingSessions where session.taskId == task.id {
+                deleteTrackingSession(session)
+            }
+        }
+        await removeTask(task)
+    }
+    
     func deleteTrackingSession(_ session: TrackingSession) {
         guard !isUpdatingFromSync else { return }
         
