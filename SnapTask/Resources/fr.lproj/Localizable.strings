@@ -2081,3 +2081,6 @@
 "auto_in_progress_description" = "Passe la tâche « En cours » quand tu lances le minuteur ou un Pomodoro, ou coches la première sous-tâche";
 "move_to_tomorrow" = "Reporter à demain";
 "all_scope_history" = "Historique";
+"inbox_plan_more_options" = "Plus d'options";
+"tip_in_progress_title" = "Passer une tâche « En cours »";
+"tip_in_progress_message" = "Maintiens le cercle appuyé pour choisir entre À faire, En cours et Terminée.";

@@ -2375,3 +2375,6 @@
 "auto_in_progress_description" = "Marca la tarea como “En curso” al iniciar el temporizador o un Pomodoro, o al marcar la primera subtarea";
 "move_to_tomorrow" = "Mover a mañana";
 "all_scope_history" = "Historial";
+"inbox_plan_more_options" = "Más opciones";
+"tip_in_progress_title" = "Marca una tarea “En curso”";
+"tip_in_progress_message" = "Mantén pulsado el círculo para elegir entre Pendiente, En curso y Completada.";

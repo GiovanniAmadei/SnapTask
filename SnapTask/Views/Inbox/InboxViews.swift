@@ -117,6 +117,56 @@ struct InboxSubtaskAddField: View {
     }
 }
 
+/// Priority picker at the bottom of an open inbox item (quick notes start at medium, unmarked).
+struct InboxPriorityRow: View {
+    let task: TodoTask
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Menu {
+            Picker("", selection: Binding(get: { task.priority }, set: set)) {
+                ForEach(Priority.allCases, id: \.self) { priority in
+                    Label(priority.displayName, systemImage: priority.icon)
+                        .tag(priority)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "flag")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(theme.primaryColor)
+                    .frame(width: 32, height: 32)
+                Text("priority".localized)
+                    .font(.subheadline)
+                    .foregroundColor(theme.secondaryTextColor)
+                Text(task.priority.displayName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(Color(hex: task.priority.color))
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(theme.secondaryTextColor)
+                Spacer(minLength: 0)
+            }
+            .lineLimit(1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // Lines up with the sub-item rows (TimelineSubtaskRow).
+        .padding(.leading, 16)
+        .padding(.trailing, 12)
+    }
+
+    private func set(_ priority: Priority) {
+        guard priority != task.priority,
+              var updated = TaskManager.shared.tasks.first(where: { $0.id == task.id }) else { return }
+        updated.priority = priority
+        updated.lastModifiedDate = Date()
+        HapticManager.shared.selection()
+        Task { await TaskManager.shared.updateTask(updated) }
+    }
+}
+
 // MARK: - Header button
 
 /// Header button next to the journal: opens the inbox from the day view and leads back from it.
@@ -197,6 +247,8 @@ struct InboxEmptyState: View {
 /// Turns an inbox item into a dated task (today, tomorrow, this week or a chosen day).
 struct PlanInboxItemSheet: View {
     let task: TodoTask
+    /// Asks the presenter to close this sheet and open the full task form.
+    var onMoreOptions: () -> Void = {}
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
@@ -249,6 +301,26 @@ struct PlanInboxItemSheet: View {
                         .padding(14)
                         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(theme.surfaceColor))
                     }
+
+                    // Everything a normal task has (period, recurrence, reminders, category...).
+                    Button {
+                        onMoreOptions()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.primaryColor)
+                            Text("inbox_plan_more_options".localized)
+                                .foregroundColor(theme.textColor)
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(theme.secondaryTextColor)
+                        }
+                        .padding(14)
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(theme.surfaceColor))
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(16)
             }
@@ -267,6 +339,25 @@ struct PlanInboxItemSheet: View {
         }
         .timeFormatLocale()
         .presentationDetents([.medium, .large])
+    }
+
+    /// The item as a plain task for today, so the full form opens on the normal options.
+    static func fullFormDraft(from task: TodoTask) -> TodoTask {
+        var draft = task
+        draft.timeScope = .today
+        draft.scopeStartDate = nil
+        draft.scopeEndDate = nil
+        // Today at the next half hour, so turning on "specific time" starts from a sensible time.
+        let now = Date()
+        let calendar = Calendar.current
+        let minute = calendar.component(.minute, from: now)
+        let next = calendar.date(byAdding: .minute, value: minute < 30 ? 30 - minute : 60 - minute, to: now) ?? now
+        let parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: next)
+        draft.startTime = calendar.date(from: parts) ?? next
+        draft.hasSpecificDay = true
+        draft.hasSpecificTime = false
+        draft.completions = [:]
+        return draft
     }
 
     private var quickChoices: some View {

@@ -64,6 +64,7 @@ struct SnapTaskApp: App {
                     computedColorScheme
                 )
                 .onAppear {
+                    InProgressTip.configureTips()
                     setupNotifications()
                     Task {
                         await quoteManager.checkAndUpdateQuote()

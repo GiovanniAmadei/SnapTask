@@ -2165,3 +2165,6 @@
 "auto_in_progress_description" = "タイマーやポモドーロを開始したとき、または最初のサブタスクにチェックしたときに「進行中」にします";
 "move_to_tomorrow" = "明日に移動";
 "all_scope_history" = "履歴";
+"inbox_plan_more_options" = "その他のオプション";
+"tip_in_progress_title" = "タスクを「進行中」にする";
+"tip_in_progress_message" = "円を長押しすると、未着手・進行中・完了から選べます。";

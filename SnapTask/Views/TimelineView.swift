@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 import Combine
 
 struct TimelineView: View {
@@ -1201,6 +1202,10 @@ struct TaskListView: View {
                             if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
                                 mandalaBannerCard
                             }
+                            
+                            if viewModel.selectedTimeScope == .today {
+                                TipView(InProgressTip())
+                            }
 
                             
                             switch viewModel.organizedTasksForSelectedDate() {
@@ -1223,7 +1228,7 @@ struct TaskListView: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.bottom, 100)
-                        .padding(.top, 8)
+                        .padding(.top, 11)
                         .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: viewModel.tasks.map { $0.id })
                         .onTapGesture {
                             if viewModel.openSwipeTaskId != nil {
@@ -1420,6 +1425,14 @@ struct TaskListView: View {
             }
 
             
+            if viewModel.selectedTimeScope == .today {
+                // One-time hint for the state menu; disappears once used or closed.
+                TipView(InProgressTip())
+                    .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            
             if case .single(let tasks) = viewModel.organizedTasksForSelectedDate() {
                 ForEach(tasks, id: \.id) { task in
                     taskCardRow(for: task)
@@ -1437,7 +1450,8 @@ struct TaskListView: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.immediately)
         .environment(\.defaultMinListRowHeight, 0)
-        .contentMargins(.top, 2, for: .scrollContent)
+        // The first card's "Adesso" label rises 8pt above it: leave room so it isn't clipped.
+        .contentMargins(.top, 6, for: .scrollContent)
         .contentMargins(.bottom, 100, for: .scrollContent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .refreshable {
@@ -1641,6 +1655,8 @@ struct TimelineTaskCard: View {
     @State private var showingEditSheet = false
     @State private var showingDetailView = false
     @State private var showingPlanSheet = false
+    @State private var wantsFullPlanForm = false
+    @State private var showingFullPlanForm = false
     @State private var dragOffset: CGFloat = 0
     @State private var isAutoCompleting = false
     @State private var showingTrackingModeSelection = false
@@ -1650,6 +1666,7 @@ struct TimelineTaskCard: View {
     @State private var deleteOpacity: Double = 1.0
     @State private var deleteScale: CGFloat = 1.0
     @State private var isHorizontalSwipe = false
+    @State private var swipeStartOffset: CGFloat?
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
@@ -1785,6 +1802,7 @@ struct TimelineTaskCard: View {
     private var isInbox: Bool { task.timeScope == .inbox }
 
     private func setProgress(_ state: TaskProgressState) {
+        InProgressTip.markLearned()
         guard state != progressState else { return }
         if state == .completed {
             HapticManager.shared.notification(.success)
@@ -2200,7 +2218,8 @@ struct TimelineTaskCard: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    if !isInbox {
+                    // Quick notes start at medium: show the mark only once a priority was chosen.
+                    if !isInbox || task.priority != .medium {
                         Image(systemName: task.priority.icon)
                             .foregroundColor(Color(hex: task.priority.color))
                             .font(.system(size: 12))
@@ -2290,6 +2309,7 @@ struct TimelineTaskCard: View {
                         }
                         if isInbox {
                             InboxSubtaskAddField(taskId: task.id)
+                            InboxPriorityRow(task: task)
                         }
                     }
                     .padding(.top, 2)
@@ -2367,17 +2387,22 @@ struct TimelineTaskCard: View {
                         isHorizontalSwipe = isDefinitelyHorizontal
                     }
                     guard isHorizontalSwipe else { return }
-                    let translation = value.translation.width
-                    if translation < 0 {
-                        dragOffset = max(translation, maxSwipeDistance)
-                    }
+                    // Follow the finger from where the card was (open or closed), so closing by
+                    // dragging right is as gradual as opening.
+                    let start = swipeStartOffset ?? dragOffset
+                    if swipeStartOffset == nil { swipeStartOffset = start }
+                    dragOffset = min(0, max(start + value.translation.width, maxSwipeDistance))
                 }
                 .onEnded { value in
-                    defer { isHorizontalSwipe = false }
+                    defer {
+                        isHorizontalSwipe = false
+                        swipeStartOffset = nil
+                    }
                     guard isHorizontalSwipe else { return }
-                    let translation = value.translation.width
-                    let velocity = value.velocity.width
-                    if translation < -60 || velocity < -500 {
+                    let start = swipeStartOffset ?? 0
+                    // Where a flick would carry the card: decides between open and closed.
+                    let projected = start + value.predictedEndTranslation.width
+                    if projected < -90 {
                         viewModel.setOpenSwipeTask(task.id)
                         withAnimation(.interpolatingSpring(stiffness: 400, damping: 30)) {
                             dragOffset = -180
@@ -2409,8 +2434,22 @@ struct TimelineTaskCard: View {
                 showingDetailView = true
             }
         }
-        .sheet(isPresented: $showingPlanSheet) {
-            PlanInboxItemSheet(task: task)
+        // One sheet at a time: "Altre opzioni" closes the plan sheet, then the full form opens.
+        .sheet(isPresented: $showingPlanSheet, onDismiss: {
+            if wantsFullPlanForm {
+                wantsFullPlanForm = false
+                showingFullPlanForm = true
+            }
+        }) {
+            PlanInboxItemSheet(task: task, onMoreOptions: {
+                wantsFullPlanForm = true
+                showingPlanSheet = false
+            })
+        }
+        .sheet(isPresented: $showingFullPlanForm) {
+            TaskFormView(initialTask: PlanInboxItemSheet.fullFormDraft(from: task), onSave: { updated in
+                Task { await TaskManager.shared.updateTask(updated) }
+            })
         }
         .sheet(isPresented: $showingEditSheet) {
             TaskFormView(initialTask: task, onSave: { updatedTask in
@@ -2751,6 +2790,7 @@ struct CompactTimelineTaskView: View {
             Picker("", selection: Binding(
                 get: { TaskManager.shared.progressState(of: task, on: viewModel.selectedDate) },
                 set: { state in
+                    InProgressTip.markLearned()
                     HapticManager.shared.selection()
                     TaskManager.shared.setProgressState(state, for: task.id, on: viewModel.selectedDate)
                 }

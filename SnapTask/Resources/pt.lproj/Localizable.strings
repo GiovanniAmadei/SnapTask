@@ -2164,3 +2164,6 @@
 "auto_in_progress_description" = "Marca a tarefa como “Em andamento” ao iniciar o cronômetro ou um Pomodoro, ou marcar a primeira subtarefa";
 "move_to_tomorrow" = "Mover para amanhã";
 "all_scope_history" = "Histórico";
+"inbox_plan_more_options" = "Mais opções";
+"tip_in_progress_title" = "Marcar “Em andamento”";
+"tip_in_progress_message" = "Toque e segure o círculo para escolher entre A fazer, Em andamento e Concluída.";

@@ -2093,3 +2093,6 @@
 "auto_in_progress_description" = "Markiert eine Aufgabe als „In Arbeit“, wenn du den Timer oder einen Pomodoro startest oder die erste Unteraufgabe abhakst";
 "move_to_tomorrow" = "Auf morgen verschieben";
 "all_scope_history" = "Verlauf";
+"inbox_plan_more_options" = "Weitere Optionen";
+"tip_in_progress_title" = "Als „In Arbeit“ markieren";
+"tip_in_progress_message" = "Halte den Kreis gedrückt, um zwischen Offen, In Arbeit und Erledigt zu wählen.";

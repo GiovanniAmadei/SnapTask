@@ -2198,3 +2198,6 @@
 "auto_in_progress_description" = "Segna l'attività “In corso” quando avvii il timer o un Pomodoro, o spunti la prima sottoattività";
 "move_to_tomorrow" = "Sposta a domani";
 "all_scope_history" = "Storico";
+"inbox_plan_more_options" = "Altre opzioni";
+"tip_in_progress_title" = "Segna un'attività “In corso”";
+"tip_in_progress_message" = "Tieni premuto il cerchio per scegliere tra Da fare, In corso e Completata.";
