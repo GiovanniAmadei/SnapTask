@@ -2091,3 +2091,5 @@
 "inbox_add_subitem" = "Eintrag hinzufügen";
 "auto_in_progress" = "„In Arbeit“ automatisch";
 "auto_in_progress_description" = "Markiert eine Aufgabe als „In Arbeit“, wenn du den Timer oder einen Pomodoro startest oder die erste Unteraufgabe abhakst";
+"move_to_tomorrow" = "Auf morgen verschieben";
+"all_scope_history" = "Verlauf";

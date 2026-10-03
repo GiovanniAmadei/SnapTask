@@ -2196,3 +2196,5 @@
 "inbox_add_subitem" = "Aggiungi voce";
 "auto_in_progress" = "“In corso” automatico";
 "auto_in_progress_description" = "Segna l'attività “In corso” quando avvii il timer o un Pomodoro, o spunti la prima sottoattività";
+"move_to_tomorrow" = "Sposta a domani";
+"all_scope_history" = "Storico";

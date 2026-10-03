@@ -2373,3 +2373,5 @@
 "inbox_add_subitem" = "Añadir elemento";
 "auto_in_progress" = "“En curso” automático";
 "auto_in_progress_description" = "Marca la tarea como “En curso” al iniciar el temporizador o un Pomodoro, o al marcar la primera subtarea";
+"move_to_tomorrow" = "Mover a mañana";
+"all_scope_history" = "Historial";

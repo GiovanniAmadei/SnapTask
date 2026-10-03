@@ -2163,3 +2163,5 @@
 "inbox_add_subitem" = "項目を追加";
 "auto_in_progress" = "「進行中」を自動設定";
 "auto_in_progress_description" = "タイマーやポモドーロを開始したとき、または最初のサブタスクにチェックしたときに「進行中」にします";
+"move_to_tomorrow" = "明日に移動";
+"all_scope_history" = "履歴";

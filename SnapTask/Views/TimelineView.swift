@@ -199,8 +199,10 @@ struct ViewControlBarView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 11, weight: .medium))
-                        Text("Storico")
+                        Text("all_scope_history".localized)
                             .font(.system(size: 11, weight: .semibold))
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                     .foregroundColor(viewModel.showAllHistory ? theme.backgroundColor : theme.primaryColor)
                     .padding(.horizontal, 9)
@@ -513,8 +515,10 @@ struct TimelineContentView: View {
                         Circle()
                             .fill(Color.white)
                             .frame(width: 6, height: 6)
-                        Text("Adesso")
+                        Text("task_in_progress_now".localized)
                             .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
@@ -2643,6 +2647,10 @@ struct CompactTimelineTaskView: View {
         return false
     }
     
+    private var isInProgress: Bool {
+        TaskManager.shared.progressState(of: task, on: viewModel.selectedDate) == .inProgress
+    }
+    
     private var subtaskProgress: (completed: Int, total: Int)? {
         guard !task.subtasks.isEmpty else { return nil }
         let completed = task.subtasks.filter { $0.isCompleted }.count
@@ -2666,8 +2674,8 @@ struct CompactTimelineTaskView: View {
                         .fill(isCompleted ? theme.primaryColor.opacity(0.2) : theme.surfaceColor)
                         .frame(width: 26, height: 26)
                     
-                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isCompleted ? theme.primaryColor : theme.secondaryTextColor)
+                    Image(systemName: isCompleted ? "checkmark.circle.fill" : (isInProgress ? "circle.lefthalf.filled" : "circle"))
+                        .foregroundColor(isCompleted ? theme.primaryColor : (isInProgress ? .blue : theme.secondaryTextColor))
                         .font(.system(size: 19, weight: .medium))
                 }
             }
@@ -2739,25 +2747,35 @@ struct CompactTimelineTaskView: View {
             showingDetailView = true
         }
         .contextMenu {
-            Button {
-                HapticManager.shared.selection()
-                viewModel.toggleTaskCompletion(task.id)
-            } label: {
-                Label(isCompleted ? "Segna da completare" : "Segna come completata", systemImage: isCompleted ? "circle" : "checkmark.circle")
+            // Same three states as the long press on the main card's circle.
+            Picker("", selection: Binding(
+                get: { TaskManager.shared.progressState(of: task, on: viewModel.selectedDate) },
+                set: { state in
+                    HapticManager.shared.selection()
+                    TaskManager.shared.setProgressState(state, for: task.id, on: viewModel.selectedDate)
+                }
+            )) {
+                Label("task_status_todo".localized, systemImage: "circle")
+                    .tag(TaskProgressState.todo)
+                Label("task_status_in_progress".localized, systemImage: "circle.lefthalf.filled")
+                    .tag(TaskProgressState.inProgress)
+                Label("task_status_completed".localized, systemImage: "checkmark.circle.fill")
+                    .tag(TaskProgressState.completed)
             }
+            .pickerStyle(.inline)
 
             Button {
                 HapticManager.shared.selection()
                 viewModel.moveTaskToTomorrow(task)
             } label: {
-                Label("Sposta a domani", systemImage: "arrow.right.circle")
+                Label("move_to_tomorrow".localized, systemImage: "arrow.right.circle")
             }
 
             Button {
                 HapticManager.shared.selection()
                 viewModel.duplicateTask(task)
             } label: {
-                Label("Duplica", systemImage: "plus.square.on.square")
+                Label("duplicate".localized, systemImage: "plus.square.on.square")
             }
 
             Divider()
@@ -2766,7 +2784,7 @@ struct CompactTimelineTaskView: View {
                 HapticManager.shared.impact(.medium)
                 viewModel.deleteTask(task)
             } label: {
-                Label("Elimina", systemImage: "trash")
+                Label("delete".localized, systemImage: "trash")
             }
         }
         .sheet(isPresented: $showingDetailView) {

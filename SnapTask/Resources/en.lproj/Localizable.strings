@@ -2237,3 +2237,5 @@
 "inbox_add_subitem" = "Add item";
 "auto_in_progress" = "Auto “In progress”";
 "auto_in_progress_description" = "Mark a task “In progress” when you start its timer or a Pomodoro, or tick the first subtask";
+"move_to_tomorrow" = "Move to tomorrow";
+"all_scope_history" = "History";

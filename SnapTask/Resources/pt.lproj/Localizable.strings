@@ -2162,3 +2162,5 @@
 "inbox_add_subitem" = "Adicionar item";
 "auto_in_progress" = "Marcar “Em andamento”";
 "auto_in_progress_description" = "Marca a tarefa como “Em andamento” ao iniciar o cronômetro ou um Pomodoro, ou marcar a primeira subtarefa";
+"move_to_tomorrow" = "Mover para amanhã";
+"all_scope_history" = "Histórico";
