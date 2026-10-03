@@ -1667,6 +1667,7 @@ struct TimelineTaskCard: View {
     @State private var deleteScale: CGFloat = 1.0
     @State private var isHorizontalSwipe = false
     @State private var swipeStartOffset: CGFloat?
+    @State private var swipeRecognitionX: CGFloat = 0
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCategoryGradients") private var gradientEnabled: Bool = true
@@ -2113,8 +2114,7 @@ struct TimelineTaskCard: View {
                     if task.timeScope == .inbox {
                         Button(action: {
                             UIApplication.shared.dismissKeyboard()
-                            showingPlanSheet = true
-                            resetSwipe()
+                            closeSwipe { showingPlanSheet = true }
                         }) {
                             VStack(spacing: 4) {
                                 RoundedRectangle(cornerRadius: 12)
@@ -2137,8 +2137,7 @@ struct TimelineTaskCard: View {
                         .buttonStyle(PlainButtonStyle())
                     } else {
                     Button(action: {
-                        showingTrackingModeSelection = true
-                        resetSwipe()
+                        closeSwipe { showingTrackingModeSelection = true }
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
@@ -2160,8 +2159,7 @@ struct TimelineTaskCard: View {
                     
                     Button(action: {
                         UIApplication.shared.dismissKeyboard()
-                        showingEditSheet = true
-                        resetSwipe()
+                        closeSwipe { showingEditSheet = true }
                     }) {
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
@@ -2387,28 +2385,40 @@ struct TimelineTaskCard: View {
                         isHorizontalSwipe = isDefinitelyHorizontal
                     }
                     guard isHorizontalSwipe else { return }
-                    // Follow the finger from where the card was (open or closed), so closing by
-                    // dragging right is as gradual as opening.
-                    let start = swipeStartOffset ?? dragOffset
-                    if swipeStartOffset == nil { swipeStartOffset = start }
-                    dragOffset = min(0, max(start + value.translation.width, maxSwipeDistance))
+                    // Follow the finger from where the card was (open or closed), measured from the
+                    // point where the swipe was recognised: a fast swipe is recognised 20-60pt in,
+                    // and starting from the raw translation made the card jump.
+                    if swipeStartOffset == nil {
+                        swipeStartOffset = dragOffset
+                        swipeRecognitionX = value.translation.width
+                    }
+                    let raw = (swipeStartOffset ?? 0) + value.translation.width - swipeRecognitionX
+                    dragOffset = rubberBanded(raw)
                 }
                 .onEnded { value in
                     defer {
                         isHorizontalSwipe = false
                         swipeStartOffset = nil
+                        swipeRecognitionX = 0
                     }
                     guard isHorizontalSwipe else { return }
-                    let start = swipeStartOffset ?? 0
                     // Where a flick would carry the card: decides between open and closed.
-                    let projected = start + value.predictedEndTranslation.width
-                    if projected < -90 {
-                        viewModel.setOpenSwipeTask(task.id)
-                        withAnimation(.interpolatingSpring(stiffness: 400, damping: 30)) {
-                            dragOffset = -180
+                    let projected = dragOffset + (value.predictedEndTranslation.width - value.translation.width)
+                    let target: CGFloat = projected < -90 ? -180 : 0
+                    // Carry the finger's speed into the settle animation instead of restarting from rest.
+                    let distance = target - dragOffset
+                    let velocity = abs(distance) > 1 ? value.velocity.width / distance : 0
+                    let spring = Animation.interpolatingSpring(mass: 1, stiffness: 300, damping: 32,
+                                                               initialVelocity: max(-20, min(20, velocity)))
+                    if target < 0 {
+                        withAnimation(spring) { dragOffset = target }
+                        // Tell the list (which closes any other open card) once the card has settled:
+                        // publishing it mid-animation redraws every row and made fast swipes stutter.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            if dragOffset < 0 { viewModel.setOpenSwipeTask(task.id) }
                         }
                     } else {
-                        resetSwipe()
+                        resetSwipe(animation: spring)
                     }
                 }
         )
@@ -2501,13 +2511,31 @@ struct TimelineTaskCard: View {
         }
     }
 
-    private func resetSwipe() {
-        if viewModel.isSwipeMenuOpen(for: task.id) {
-            viewModel.setOpenSwipeTask(nil)
-        }
-        withAnimation(.interpolatingSpring(stiffness: 400, damping: 35)) {
+    private func resetSwipe(animation: Animation = .interpolatingSpring(stiffness: 300, damping: 32)) {
+        withAnimation(animation) {
             dragOffset = 0
         }
+        // Update the shared "open card" state after the card has slid back: publishing it in the
+        // same frame redraws the whole list and cut the closing animation short.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            if viewModel.isSwipeMenuOpen(for: task.id) && dragOffset == 0 {
+                viewModel.setOpenSwipeTask(nil)
+            }
+        }
+    }
+
+    /// Closes the swipe actions smoothly, then runs the action (e.g. opening a sheet), so the
+    /// card is seen sliding back instead of jumping closed under the presentation.
+    private func closeSwipe(then action: @escaping () -> Void) {
+        resetSwipe()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: action)
+    }
+
+    /// Follows the finger up to the full actions width, then resists instead of stopping dead.
+    private func rubberBanded(_ x: CGFloat) -> CGFloat {
+        if x > 0 { return x * 0.15 }
+        guard x < maxSwipeDistance else { return x }
+        return maxSwipeDistance - (maxSwipeDistance - x) * 0.25
     }
 
     private func deleteTaskWithAnimation() {
