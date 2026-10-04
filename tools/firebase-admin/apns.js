@@ -1,8 +1,8 @@
 // Minimal APNs client (token-based auth, HTTP/2) with no extra dependencies.
 //
 // Env (all optional):
-//   APNS_KEY_PATH  path to the .p8 key   (default: <repo>/AuthKey_PSMPH8ZX35.p8, gitignored)
-//   APNS_KEY_ID    key id                 (default: PSMPH8ZX35)
+//   APNS_KEY_PATH  path to the .p8 key   (default: <repo>/AuthKey_QVFJN9UACT.p8, gitignored)
+//   APNS_KEY_ID    key id                 (default: QVFJN9UACT)
 //   APNS_TEAM_ID   Apple team id          (default: Y997848SS8)
 
 const crypto = require("crypto");
@@ -10,8 +10,8 @@ const fs = require("fs");
 const http2 = require("http2");
 const path = require("path");
 
-const KEY_PATH = process.env.APNS_KEY_PATH || path.resolve(__dirname, "../../AuthKey_PSMPH8ZX35.p8");
-const KEY_ID = process.env.APNS_KEY_ID || "PSMPH8ZX35";
+const KEY_PATH = process.env.APNS_KEY_PATH || path.resolve(__dirname, "../../AuthKey_QVFJN9UACT.p8");
+const KEY_ID = process.env.APNS_KEY_ID || "QVFJN9UACT";
 const TEAM_ID = process.env.APNS_TEAM_ID || "Y997848SS8";
 
 const HOSTS = {
