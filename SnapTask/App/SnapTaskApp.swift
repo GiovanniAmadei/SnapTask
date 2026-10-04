@@ -101,12 +101,10 @@ struct SnapTaskApp: App {
                         Task {
                             await quoteManager.checkAndUpdateQuote()
                         }
+                        // Fetches settings changed on other devices too. This device's settings are
+                        // uploaded when they change: pushing them on every launch overwrote newer
+                        // changes made elsewhere.
                         cloudKitService.syncNow()
-                        
-                        // Sync settings when app becomes active
-                        if cloudKitService.isCloudKitEnabled {
-                            settingsManager.syncSettings()
-                        }
 
                         // Reload tasks from App Group if modified by the widget
                         TaskManager.shared.reloadFromSharedIfAvailable()
@@ -219,20 +217,14 @@ struct SnapTaskApp: App {
         cloudKitService.syncNow()
         taskManager.startRegularSync()
         
-        // Initialize settings sync
-        if cloudKitService.isCloudKitEnabled {
-            settingsManager.syncSettings()
-        }
+
     }
     
     func registerForRemoteNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if granted {
-                DispatchQueue.main.async {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
-            }
-        }
+        // iCloud's silent pushes (another device changed something) need no permission: register
+        // even when the user declines alerts, or sync would only happen while the app is open.
+        UIApplication.shared.registerForRemoteNotifications()
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
     
     func initializeCloudKit() throws {
@@ -401,18 +393,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        // Handle CloudKit notifications
-        CloudKitService.shared.processRemoteNotification(userInfo)
-        
-        if let notification = CKNotification(fromRemoteNotificationDictionary: userInfo) {
-            if notification.subscriptionID == "SnapTaskZone-changes" {
-                print("📱 Received CloudKit sync notification")
-                completionHandler(.newData)
-                return
-            }
+        // iCloud push: sync before telling the system we're done, or it suspends the app first.
+        Task { @MainActor in
+            let handled = await CloudKitService.shared.handleRemoteNotification(userInfo)
+            completionHandler(handled ? .newData : .noData)
         }
-        
-        completionHandler(.noData)
     }
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

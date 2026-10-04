@@ -137,3 +137,32 @@ struct Reward: Identifiable, Codable, Equatable {
         lhs.archivedDate == rhs.archivedDate
     }
 }
+// MARK: - Sync
+
+extension Reward {
+    /// Two redemptions closer than this are the same redemption seen twice. iCloud stores
+    /// redemption dates to the whole second while devices kept fractions of a second, so one
+    /// redemption came back as two (and then three) after devices merged their copies.
+    static let duplicateRedemptionWindow: TimeInterval = 2
+
+    /// Redemptions rounded down to the second, each one counted once, oldest first.
+    static func normalizedRedemptions(_ dates: [Date]) -> [Date] {
+        var result: [Date] = []
+        for date in dates.sorted() {
+            let second = Date(timeIntervalSinceReferenceDate: date.timeIntervalSinceReferenceDate.rounded(.down))
+            if let last = result.last, second.timeIntervalSince(last) < duplicateRedemptionWindow {
+                continue
+            }
+            result.append(second)
+        }
+        return result
+    }
+
+    /// Combines two copies of the same reward: name, cost, archive state and the other fields
+    /// come from the copy edited last; redemptions from both, each counted once.
+    static func merged(local: Reward, remote: Reward) -> Reward {
+        var result = remote.lastModifiedDate > local.lastModifiedDate ? remote : local
+        result.redemptions = normalizedRedemptions(local.redemptions + remote.redemptions)
+        return result
+    }
+}

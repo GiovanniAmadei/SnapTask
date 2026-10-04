@@ -289,22 +289,8 @@ class CloudKitService: ObservableObject {
             print(" CloudKit sync is disabled")
             return
         }
-        
-        if isSyncing {
-            print(" Sync already in progress, skipping")
-            return
-        }
-        
-        let now = Date()
-        if now.timeIntervalSince(lastSyncTime) < minSyncInterval {
-            print(" Sync throttled - too frequent")
-            return
-        }
-        
-        activeSyncTask?.cancel()
-        activeSyncTask = Task {
-            await performFullSync()
-        }
+        // Requests made while a sync runs are merged into one more pass (see `syncAndWait`).
+        Task { await syncAndWait() }
     }
     
     func forceFullSync() {
@@ -322,10 +308,7 @@ class CloudKitService: ObservableObject {
         syncRetryCount = 0
         lastErrorTime = .distantPast
         
-        activeSyncTask?.cancel()
-        activeSyncTask = Task {
-            await performFullSync()
-        }
+        Task { await syncAndWait() }
     }
     
     func enableCloudKitSync() {
@@ -438,14 +421,19 @@ class CloudKitService: ObservableObject {
     }
     
     // MARK: - Category Operations
+    /// Categories saved here that iCloud has not confirmed yet.
+    private var pendingCategoryUploads: Set<UUID> = []
+    
     func saveCategory(_ category: Category) {
         guard isCloudKitEnabled else { return }
         if deletedItems.categories.contains(category.id.uuidString) {
             print(" Skipping CloudKit save for deleted category \(category.name)")
             return
         }
+        pendingCategoryUploads.insert(category.id)
         
         Task {
+            defer { pendingCategoryUploads.remove(category.id) }
             do {
                 let record = createCategoryRecord(from: category)
                 _ = try await saveOverwriting(record)
@@ -722,39 +710,52 @@ class CloudKitService: ObservableObject {
     }
     
     // MARK: - Sync Implementation
+    // One sync at a time. A request that arrives while one runs (a push from another device, the
+    // app coming to the foreground, a local save) is not dropped: one more pass runs right after.
+    private var syncInFlight = false
+    private var syncRequestedAgain = false
+    
+    /// Runs a sync and returns when it (and any pass requested meanwhile) has finished.
+    func syncAndWait() async {
+        guard isCloudKitEnabled else { return }
+        if syncInFlight {
+            syncRequestedAgain = true
+            while syncInFlight { try? await Task.sleep(nanoseconds: 100_000_000) }
+            return
+        }
+        syncInFlight = true
+        isSyncing = true
+        syncStatus = .syncing
+        repeat {
+            syncRequestedAgain = false
+            await performSyncPass()
+        } while syncRequestedAgain && isCloudKitEnabled
+        syncInFlight = false
+        isSyncing = false
+    }
+    
     private func performFullSync() async {
-        print(" Starting full sync")
-        
-        DispatchQueue.main.async {
-            self.isSyncing = true
-            self.syncStatus = .syncing
-        }
-        
+        await syncAndWait()
+    }
+    
+    private func performSyncPass() async {
         lastSyncTime = Date()
-        
-        defer {
-            DispatchQueue.main.async {
-                self.isSyncing = false
-            }
-        }
-        
         do {
-            let changes = try await fetchChanges()
+            let (changes, newToken) = try await fetchChanges()
             await processChanges(changes)
+            // Saved only once the changes are applied: if the app is closed halfway through,
+            // the next sync fetches them again instead of skipping them.
+            serverChangeToken = newToken
             
-            DispatchQueue.main.async {
-                self.syncStatus = .success
-                self.lastSyncDate = Date()
-                self.syncRetryCount = 0
-            }
-            
-            print(" Full sync completed successfully")
-            
+            syncStatus = .success
+            lastSyncDate = Date()
+            syncRetryCount = 0
         } catch {
             await handleSyncError(error)
         }
     }
     
+
     // MARK: - Initial Local Upload
     // Uploads all local tasks and rewards to CloudKit once, so existing data
     // on iPhone becomes visible on new devices (iPad, etc.).
@@ -923,232 +924,100 @@ class CloudKitService: ObservableObject {
             let id: String
         }
         var deletionMarkers: [DeletionMarkerEvent] = []
-        var deletedRecordIDs: [CKRecord.ID] = []
+        var deletedRecords: [(id: CKRecord.ID, type: String)] = []
     }
     
-    private func fetchChanges() async throws -> SyncChanges {
-        let operation = CKFetchRecordZoneChangesOperation(recordZoneIDs: [zoneID])
-        
+    /// Fetches everything that changed since the last sync, all pages of it (iCloud sends large
+    /// sets in several batches), and the token to store once the changes are applied.
+    private func fetchChanges() async throws -> (SyncChanges, CKServerChangeToken?) {
         var changes = SyncChanges()
+        var token = serverChangeToken
+        var moreComing = true
+        var restarts = 0
         
-        if let token = serverChangeToken {
-            operation.configurationsByRecordZoneID = [
-                zoneID: CKFetchRecordZoneChangesOperation.ZoneConfiguration(
-                    previousServerChangeToken: token
-                )
-            ]
-        }
-        
-        operation.recordChangedBlock = { [weak self] record in
-            guard let self = self else { return }
-            
-            self.rememberRecordType(record)
-            
-            switch record.recordType {
-            case self.taskRecordType:
-                if let task = self.createTask(from: record) {
-                    changes.tasks.append(task)
-                }
-            case self.categoryRecordType:
-                if let category = self.createCategory(from: record) {
-                    changes.categories.append(category)
-                }
-            case self.rewardRecordType:
-                if let reward = self.createReward(from: record) {
-                    changes.rewards.append(reward)
-                }
-            case self.pointsHistoryRecordType:
-                if let pointsEntry = self.createPointsHistory(from: record) {
-                    changes.pointsHistory.append(pointsEntry)
-                }
-            case self.settingsRecordType:
-                if let settings = self.createSettings(from: record) {
-                    changes.settings = settings
-                }
-            case self.trackingSessionRecordType:
-                if let session = self.createTrackingSession(from: record) {
-                    changes.trackingSessions.append(session)
-                }
-            case self.journalEntryRecordType:
-                if let entry = self.createJournalEntry(from: record) {
-                    changes.journalEntries.append(entry)
-                }
-            case self.financeEntryRecordType:
-                if let entry = self.createFinanceEntry(from: record) {
-                    changes.financeEntries.append(entry)
-                }
-            case self.financeBudgetRecordType:
-                if let budget = self.createFinanceBudget(from: record) {
-                    changes.financeBudgets.append(budget)
-                }
-            case self.financialGoalRecordType:
-                if let goal = self.createFinancialGoal(from: record) {
-                    changes.financialGoals.append(goal)
-                }
-            case self.customFinanceCategoryRecordType:
-                if let category = self.createCustomFinanceCategory(from: record) {
-                    changes.customFinanceCategories.append(category)
-                }
-            case self.taskListOrderRecordType:
-                if let order = self.createTaskListOrder(from: record) {
-                    changes.taskListOrders.append(order)
-                }
-            case self.deletionMarkerRecordType:
-                if let type = record["type"] as? String,
-                   let itemId = record["itemId"] as? String {
-                    changes.deletionMarkers.append(.init(type: type, id: itemId))
-                    print(" Deletion marker received (fresh) for \(type) \(itemId.prefix(8))…")
-                }
-            default:
-                break
-            }
-        }
-        
-        operation.recordWithIDWasDeletedBlock = { recordID, _ in
-            changes.deletedRecordIDs.append(recordID)
-        }
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            operation.recordZoneChangeTokensUpdatedBlock = { [weak self] _, token, _ in
-                self?.serverChangeToken = token
+        while moreComing {
+            let page: (modificationResultsByID: [CKRecord.ID: Result<CKDatabase.RecordZoneChange.Modification, Error>],
+                       deletions: [CKDatabase.RecordZoneChange.Deletion],
+                       changeToken: CKServerChangeToken,
+                       moreComing: Bool)
+            do {
+                page = try await privateDatabase.recordZoneChanges(inZoneWith: zoneID, since: token)
+            } catch let error as CKError where error.code == .changeTokenExpired && restarts < 2 {
+                print(" Change token expired, fetching everything again")
+                restarts += 1
+                token = nil
+                changes = SyncChanges()
+                continue
             }
             
-            operation.recordZoneFetchCompletionBlock = { [weak self] _, token, _, _, error in
-                if let error = error {
-                    if let ckError = error as? CKError, ckError.code == .changeTokenExpired {
-                        print(" Change token expired, clearing and retrying full sync")
-                        self?.serverChangeToken = nil
-                        Task {
-                            try? await Task.sleep(nanoseconds: 1_000_000_000) 
-                            do {
-                                let freshChanges = try await self?.fetchChangesWithoutToken()
-                                continuation.resume(returning: freshChanges ?? changes)
-                            } catch {
-                                continuation.resume(throwing: error)
-                            }
-                        }
-                        return
-                    }
-                    continuation.resume(throwing: error)
-                } else {
-                    self?.serverChangeToken = token
-                    continuation.resume(returning: changes)
+            for (_, result) in page.modificationResultsByID {
+                if case .success(let modification) = result {
+                    collect(modification.record, into: &changes)
                 }
             }
-            
-            self.privateDatabase.add(operation)
+            for deletion in page.deletions {
+                changes.deletedRecords.append((deletion.recordID, deletion.recordType))
+            }
+            token = page.changeToken
+            moreComing = page.moreComing
+        }
+        
+        // A record changed and then deleted within the same fetch must not come back.
+        if !changes.deletedRecords.isEmpty {
+            let deleted = Set(changes.deletedRecords.map { $0.id.recordName })
+            changes.tasks.removeAll { deleted.contains($0.id.uuidString) }
+            changes.categories.removeAll { deleted.contains($0.id.uuidString) }
+            changes.rewards.removeAll { deleted.contains($0.id.uuidString) }
+            changes.trackingSessions.removeAll { deleted.contains($0.id.uuidString) }
+        }
+        
+        return (changes, token)
+    }
+    
+    private func collect(_ record: CKRecord, into changes: inout SyncChanges) {
+        switch record.recordType {
+        case taskRecordType:
+            if let task = createTask(from: record) { changes.tasks.append(task) }
+        case categoryRecordType:
+            if let category = createCategory(from: record) { changes.categories.append(category) }
+        case rewardRecordType:
+            if let reward = createReward(from: record) { changes.rewards.append(reward) }
+        case pointsHistoryRecordType:
+            break // points are worked out on each device from tasks and redemptions
+        case settingsRecordType:
+            if let settings = createSettings(from: record) { changes.settings = settings }
+        case trackingSessionRecordType:
+            if let session = createTrackingSession(from: record) { changes.trackingSessions.append(session) }
+        case journalEntryRecordType:
+            if let entry = createJournalEntry(from: record) { changes.journalEntries.append(entry) }
+        case financeEntryRecordType:
+            if let entry = createFinanceEntry(from: record) { changes.financeEntries.append(entry) }
+        case financeBudgetRecordType:
+            if let budget = createFinanceBudget(from: record) { changes.financeBudgets.append(budget) }
+        case financialGoalRecordType:
+            if let goal = createFinancialGoal(from: record) { changes.financialGoals.append(goal) }
+        case customFinanceCategoryRecordType:
+            if let category = createCustomFinanceCategory(from: record) { changes.customFinanceCategories.append(category) }
+        case taskListOrderRecordType:
+            if let order = createTaskListOrder(from: record) { changes.taskListOrders.append(order) }
+        case deletionMarkerRecordType:
+            if let type = record["type"] as? String, let itemId = record["itemId"] as? String {
+                changes.deletionMarkers.append(.init(type: type, id: itemId))
+            }
+        default:
+            break
         }
     }
     
-    private func fetchChangesWithoutToken() async throws -> SyncChanges {
-        print(" Performing fresh sync without change token")
-        
-        let operation = CKFetchRecordZoneChangesOperation(recordZoneIDs: [zoneID])
-        
-        var changes = SyncChanges()
-        
-        operation.configurationsByRecordZoneID = [
-            zoneID: CKFetchRecordZoneChangesOperation.ZoneConfiguration()
-        ]
-        
-        operation.recordChangedBlock = { [weak self] record in
-            guard let self = self else { return }
-            
-            self.rememberRecordType(record)
-            
-            switch record.recordType {
-            case self.taskRecordType:
-                if let task = self.createTask(from: record) {
-                    changes.tasks.append(task)
-                }
-            case self.categoryRecordType:
-                if let category = self.createCategory(from: record) {
-                    changes.categories.append(category)
-                }
-            case self.rewardRecordType:
-                if let reward = self.createReward(from: record) {
-                    changes.rewards.append(reward)
-                }
-            case self.pointsHistoryRecordType:
-                if let pointsEntry = self.createPointsHistory(from: record) {
-                    changes.pointsHistory.append(pointsEntry)
-                }
-            case self.settingsRecordType:
-                if let settings = self.createSettings(from: record) {
-                    changes.settings = settings
-                }
-            case self.trackingSessionRecordType:
-                if let session = self.createTrackingSession(from: record) {
-                    changes.trackingSessions.append(session)
-                }
-            case self.journalEntryRecordType:
-                if let entry = self.createJournalEntry(from: record) {
-                    changes.journalEntries.append(entry)
-                }
-            case self.financeEntryRecordType:
-                if let entry = self.createFinanceEntry(from: record) {
-                    changes.financeEntries.append(entry)
-                }
-            case self.financeBudgetRecordType:
-                if let budget = self.createFinanceBudget(from: record) {
-                    changes.financeBudgets.append(budget)
-                }
-            case self.financialGoalRecordType:
-                if let goal = self.createFinancialGoal(from: record) {
-                    changes.financialGoals.append(goal)
-                }
-            case self.customFinanceCategoryRecordType:
-                if let category = self.createCustomFinanceCategory(from: record) {
-                    changes.customFinanceCategories.append(category)
-                }
-            case self.taskListOrderRecordType:
-                if let order = self.createTaskListOrder(from: record) {
-                    changes.taskListOrders.append(order)
-                }
-            case self.deletionMarkerRecordType:
-                if let type = record["type"] as? String,
-                   let itemId = record["itemId"] as? String {
-                    changes.deletionMarkers.append(.init(type: type, id: itemId))
-                    print(" Deletion marker received (fresh) for \(type) \(itemId.prefix(8))…")
-                }
-            default:
-                break
-            }
-        }
-        
-        operation.recordWithIDWasDeletedBlock = { recordID, _ in
-            changes.deletedRecordIDs.append(recordID)
-        }
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            operation.recordZoneChangeTokensUpdatedBlock = { [weak self] _, token, _ in
-                self?.serverChangeToken = token
-                print(" Fresh change token saved")
-            }
-            
-            operation.recordZoneFetchCompletionBlock = { [weak self] _, token, _, _, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    self?.serverChangeToken = token
-                    print(" Fresh full sync completed")
-                    continuation.resume(returning: changes)
-                }
-            }
-            
-            self.privateDatabase.add(operation)
-        }
-    }
-    
+
     private func processChanges(_ changes: SyncChanges) async {
         // First apply tombstones so we don't resurrect items in merge steps
         await processDeletionMarkers(changes.deletionMarkers)
-        await processDeletions(changes.deletedRecordIDs)
+        await processDeletions(changes.deletedRecords)
         
         await mergeTasks(changes.tasks)
         await mergeCategories(changes.categories)
         await mergeRewards(changes.rewards)
-        await mergePointsHistory(changes.pointsHistory)
         await mergeTrackingSessions(changes.trackingSessions)
         await mergeJournalEntries(changes.journalEntries)
         await mergeFinanceData(entries: changes.financeEntries, budgets: changes.financeBudgets, goals: changes.financialGoals, customCategories: changes.customFinanceCategories)
@@ -1158,42 +1027,21 @@ class CloudKitService: ObservableObject {
             await applySettings(changes.settings)
         }
         
+        // Points come from completed tasks and redemptions: bring them in line with what arrived.
+        let deletedTypes = Set(changes.deletedRecords.map(\.type))
+        let pointsSourcesChanged = !changes.tasks.isEmpty || !changes.rewards.isEmpty
+            || deletedTypes.contains(taskRecordType) || deletedTypes.contains(rewardRecordType)
+            || changes.deletionMarkers.contains { ["TodoTask", "Task", "Reward"].contains($0.type) }
+        if pointsSourcesChanged {
+            RewardManager.shared.recalculateDailyPointsFromSources()
+        }
+        
         NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
     }
     
-    private var knownRecordTypes: [String: String] {
-        get {
-            if let data = UserDefaults.standard.data(forKey: "cloudkit_known_record_types"),
-               let dict = try? JSONDecoder().decode([String: String].self, from: data) {
-                return dict
-            }
-            return [:]
-        }
-        set {
-            if let data = try? JSONEncoder().encode(newValue) {
-                UserDefaults.standard.set(data, forKey: "cloudkit_known_record_types")
-            }
-        }
-    }
-    
-    private func knownType(for recordID: CKRecord.ID) -> String? {
-        return knownRecordTypes[recordID.recordName]
-    }
-    
-    private func rememberRecordType(_ record: CKRecord) {
-        var map = knownRecordTypes
-        map[record.recordID.recordName] = record.recordType
-        knownRecordTypes = map
-    }
-    
-    private func processDeletions(_ deletedIDs: [CKRecord.ID]) async {
-        for recordID in deletedIDs {
+    private func processDeletions(_ deleted: [(id: CKRecord.ID, type: String)]) async {
+        for (recordID, type) in deleted {
             let idString = recordID.recordName
-            
-            guard let type = knownType(for: recordID) else {
-                print(" Skipping deletion for unknown type recordID: \(idString)")
-                continue
-            }
             
             guard let uuid = UUID(uuidString: idString) else {
                 print(" Skipping deletion for non-UUID recordID: \(idString)")
@@ -1418,13 +1266,14 @@ class CloudKitService: ObservableObject {
         guard !remoteTasks.isEmpty else { return }
         
         let localTasks = TaskManager.shared.tasks
-        let localMap = Dictionary(uniqueKeysWithValues: localTasks.map { ($0.id, $0) })
+        let localMap = Dictionary(localTasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let deleted = deletedItems.tasks
         
         var mergedTasks = localTasks
         var hasChanges = false
         
         for remoteTask in remoteTasks {
-            if deletedItems.tasks.contains(remoteTask.id.uuidString) {
+            if deleted.contains(remoteTask.id.uuidString) {
                 continue 
             }
             
@@ -1489,109 +1338,57 @@ class CloudKitService: ObservableObject {
     private func mergeCategories(_ remoteCategories: [Category]) async {
         guard !remoteCategories.isEmpty else { return }
         
-        let localCategories = CategoryManager.shared.categories
-        
-        var mergedCategories: [Category] = []
-        var processedIds = Set<UUID>()
-        var processedNames = Set<String>()
-        
-        for localCategory in localCategories {
-            let normalizedName = localCategory.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            if !processedIds.contains(localCategory.id) && !processedNames.contains(normalizedName) {
-                mergedCategories.append(localCategory)
-                processedIds.insert(localCategory.id)
-                processedNames.insert(normalizedName)
-            }
+        let deleted = deletedItems.categories
+        // A category edited here and still uploading must not be overwritten by the old copy.
+        let incoming = remoteCategories.filter {
+            !deleted.contains($0.id.uuidString) && !pendingCategoryUploads.contains($0.id)
         }
-        
-        var hasChanges = false
-        for remoteCategory in remoteCategories {
-            if deletedItems.categories.contains(remoteCategory.id.uuidString) {
-                continue 
-            }
-            
-            let normalizedName = remoteCategory.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            
-            if !processedIds.contains(remoteCategory.id) && !processedNames.contains(normalizedName) {
-                mergedCategories.append(remoteCategory)
-                processedIds.insert(remoteCategory.id)
-                processedNames.insert(normalizedName)
-                hasChanges = true
-                print(" Added category from remote: \(remoteCategory.name)")
-            }
-        }
-        
-        if hasChanges {
-            CategoryManager.shared.importCategories(mergedCategories)
-        }
+        CategoryManager.shared.applyRemoteCategories(incoming)
     }
     
     private func mergeRewards(_ remoteRewards: [Reward]) async {
         guard !remoteRewards.isEmpty else { return }
         
-        let localRewards = RewardManager.shared.rewards
-        let localMap = Dictionary(uniqueKeysWithValues: localRewards.map { ($0.id, $0) })
+        let deleted = deletedItems.rewards
+        let localMap = Dictionary(RewardManager.shared.rewards.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var incoming: [Reward] = []
+        var toUpload: [Reward] = []
         
-        var mergedRewards = localRewards
-        var hasChanges = false
-        
-        for remoteReward in remoteRewards {
-            if deletedItems.rewards.contains(remoteReward.id.uuidString) {
-                continue 
-            }
-            
-            if let localReward = localMap[remoteReward.id] {
-                let allRedemptions = Set(localReward.redemptions + remoteReward.redemptions)
-                var updatedReward = remoteReward
-                updatedReward.redemptions = Array(allRedemptions).sorted()
-                
-                if let index = mergedRewards.firstIndex(where: { $0.id == remoteReward.id }) {
-                    mergedRewards[index] = updatedReward
-                    hasChanges = true
-                }
-            } else {
-                mergedRewards.append(remoteReward)
-                hasChanges = true
+        for remoteReward in remoteRewards where !deleted.contains(remoteReward.id.uuidString) {
+            guard let localReward = localMap[remoteReward.id] else {
+                var added = remoteReward
+                added.redemptions = Reward.normalizedRedemptions(added.redemptions)
+                incoming.append(added)
                 print(" Added reward from remote: \(remoteReward.name)")
+                continue
             }
+            let merged = Reward.merged(local: localReward, remote: remoteReward)
+            if merged != localReward { incoming.append(merged) }
+            // iCloud is behind (a newer local edit, redemptions it lacks, or duplicates to clean):
+            // send the merged copy so every device ends up with the same reward.
+            if merged != remoteReward { toUpload.append(merged) }
         }
         
-        if hasChanges {
-            RewardManager.shared.importRewards(mergedRewards)
+        if !incoming.isEmpty {
+            RewardManager.shared.importRewards(incoming)
         }
-    }
-    
-    private func mergePointsHistory(_ remoteHistory: [PointsHistory]) async {
-        guard !remoteHistory.isEmpty else { return }
-        
-        var dailyPoints: [Date: Int] = [:]
-        
-        for entry in remoteHistory {
-            let startOfDay = Calendar.current.startOfDay(for: entry.date)
-            dailyPoints[startOfDay] = max(dailyPoints[startOfDay] ?? 0, entry.points)
+        for reward in toUpload {
+            saveReward(reward)
         }
-        
-        let existingPoints = RewardManager.shared.dailyPointsHistory
-        for (date, points) in dailyPoints {
-            if existingPoints[date] == nil {
-                RewardManager.shared.addPoints(points, on: date)
-            }
-        }
-        
-        print(" Synced \(remoteHistory.count) points history entries")
     }
     
     private func mergeTrackingSessions(_ remoteSessions: [TrackingSession]) async {
         guard !remoteSessions.isEmpty else { return }
         
         let localSessions = TaskManager.shared.getTrackingSessions()
-        let localMap = Dictionary(uniqueKeysWithValues: localSessions.map { ($0.id, $0) })
+        let localMap = Dictionary(localSessions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let deleted = deletedItems.trackingSessions
         
         var mergedSessions = localSessions
         var hasChanges = false
         
         for remoteSession in remoteSessions {
-            if deletedItems.trackingSessions.contains(remoteSession.id.uuidString) {
+            if deleted.contains(remoteSession.id.uuidString) {
                 continue 
             }
             
@@ -1619,22 +1416,19 @@ class CloudKitService: ObservableObject {
         guard !remoteEntries.isEmpty else { return }
         
         let localEntries = Array(JournalManager.shared.entriesByDay.values)
-        let localMap = Dictionary(uniqueKeysWithValues: localEntries.map { ($0.id, $0) })
+        let localMap = Dictionary(localEntries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         
         var hasChanges = false
         let mergeEpsilon: TimeInterval = 120
         
+        let deleted = deletedItems
         for remoteEntryRaw in remoteEntries {
             var remoteEntry = remoteEntryRaw
             
-            if !deletedItems.journalPhotos.isEmpty {
-                remoteEntry.photos.removeAll { deletedItems.journalPhotos.contains($0.id.uuidString) }
-            }
-            if !deletedItems.journalVoiceMemos.isEmpty {
-                remoteEntry.voiceMemos.removeAll { deletedItems.journalVoiceMemos.contains($0.id.uuidString) }
-            }
+            remoteEntry.photos.removeAll { deleted.journalPhotos.contains($0.id.uuidString) }
+            remoteEntry.voiceMemos.removeAll { deleted.journalVoiceMemos.contains($0.id.uuidString) }
             
-            if deletedItems.journalEntries.contains(remoteEntry.id.uuidString) {
+            if deleted.journalEntries.contains(remoteEntry.id.uuidString) {
                 continue 
             }
             
@@ -2704,14 +2498,18 @@ class CloudKitService: ObservableObject {
     
     // MARK: - Remote Notifications
     func processRemoteNotification(_ userInfo: [AnyHashable: Any]) {
-        guard isCloudKitEnabled else { return }
-        
-        if let notification = CKNotification(fromRemoteNotificationDictionary: userInfo) {
-            if notification.subscriptionID == subscriptionID {
-                print(" Received CloudKit notification")
-                syncNow()
-            }
-        }
+        Task { _ = await handleRemoteNotification(userInfo) }
+    }
+    
+    /// Syncs for a push sent by iCloud when another device changed something. Returns whether
+    /// it was ours; it waits for the sync so the system keeps the app awake until it is done.
+    func handleRemoteNotification(_ userInfo: [AnyHashable: Any]) async -> Bool {
+        guard isCloudKitEnabled,
+              let notification = CKNotification(fromRemoteNotificationDictionary: userInfo),
+              notification.subscriptionID == subscriptionID else { return false }
+        print(" Received CloudKit notification")
+        await syncAndWait()
+        return true
     }
     
     func clearDeletionMarkers() {
@@ -2888,18 +2686,17 @@ class CloudKitService: ObservableObject {
                     merged.tags = Array(Set(merged.tags + entry.tags)).sorted()
                     if entry.isWorthItHidden != remote.isWorthItHidden { merged.isWorthItHidden = entry.isWorthItHidden }
                     
-                    let photoMap = Dictionary(uniqueKeysWithValues: (merged.photos + entry.photos).map { ($0.id, $0) })
-                    var mergedPhotos = Array(photoMap.values).sorted { $0.createdAt > $1.createdAt }
-                    if !deletedItems.journalPhotos.isEmpty {
-                        mergedPhotos.removeAll { deletedItems.journalPhotos.contains($0.id.uuidString) }
-                    }
-                    merged.photos = mergedPhotos
+                    // The same photo or memo is usually in both copies: keep one of each.
+                    let deleted = deletedItems
+                    let photoMap = Dictionary((merged.photos + entry.photos).map { ($0.id, $0) }, uniquingKeysWith: { _, local in local })
+                    merged.photos = Array(photoMap.values)
+                        .filter { !deleted.journalPhotos.contains($0.id.uuidString) }
+                        .sorted { $0.createdAt > $1.createdAt }
                     
-                    let memoMap = Dictionary(uniqueKeysWithValues: (merged.voiceMemos + entry.voiceMemos).map { ($0.id, $0) })
-                    merged.voiceMemos = Array(memoMap.values).sorted { $0.createdAt > $1.createdAt }
-                    if !deletedItems.journalVoiceMemos.isEmpty {
-                        merged.voiceMemos.removeAll { deletedItems.journalVoiceMemos.contains($0.id.uuidString) }
-                    }
+                    let memoMap = Dictionary((merged.voiceMemos + entry.voiceMemos).map { ($0.id, $0) }, uniquingKeysWith: { _, local in local })
+                    merged.voiceMemos = Array(memoMap.values)
+                        .filter { !deleted.journalVoiceMemos.contains($0.id.uuidString) }
+                        .sorted { $0.createdAt > $1.createdAt }
                     
                     final = merged
                 }

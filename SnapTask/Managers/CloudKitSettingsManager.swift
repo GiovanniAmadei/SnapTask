@@ -86,11 +86,6 @@ class CloudKitSettingsManager: ObservableObject {
     private init() {
         loadLocalSettings()
         setupCloudKitObservers()
-        
-        // Sync settings when CloudKit becomes available
-        if CloudKitService.shared.isCloudKitEnabled {
-            syncSettings()
-        }
     }
     
     // MARK: - CloudKit Integration
@@ -109,7 +104,10 @@ class CloudKitSettingsManager: ObservableObject {
             .store(in: &cancellables)
         
         // Listen for CloudKit sync status changes
+        // Upload when the user turns sync on (not at launch, see `saveSettings`).
         CloudKitService.shared.$isCloudKitEnabled
+            .dropFirst()
+            .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] enabled in
                 if enabled {

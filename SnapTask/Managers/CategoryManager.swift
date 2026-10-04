@@ -134,6 +134,27 @@ class CategoryManager: ObservableObject {
         }
     }
     
+    /// Applies categories from other devices: edits to the ones already here (name, color,
+    /// icon) and new ones. A new category whose name is already taken here is skipped.
+    func applyRemoteCategories(_ remote: [Category]) {
+        guard !remote.isEmpty else { return }
+        func key(_ name: String) -> String { name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) }
+        var updated = categories
+        for category in remote {
+            if let index = updated.firstIndex(where: { $0.id == category.id }) {
+                updated[index] = category
+            } else if !updated.contains(where: { key($0.name) == key(category.name) }) {
+                updated.append(category)
+                print("CategoryManager: Added category from remote: \(category.name)")
+            }
+        }
+        guard updated != categories else { return }
+        isUpdatingFromSync = true
+        categories = updated
+        saveCategories()
+        isUpdatingFromSync = false
+    }
+    
     func importCategories(_ newCategories: [Category]) {
         isUpdatingFromSync = true
         

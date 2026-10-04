@@ -39,6 +39,14 @@ class RewardManager: ObservableObject {
             UserDefaults.standard.set(true, forKey: autoFixPointsHistoryKey)
         }
         
+        // 1.8: points are derived from tasks and redemptions on every device (no longer synced).
+        if !UserDefaults.standard.bool(forKey: "points_from_sources_v1_8")
+            || UserDefaults.standard.bool(forKey: Self.recalculatePointsOnLaunchKey) {
+            recalculateDailyPointsFromSources()
+            UserDefaults.standard.set(true, forKey: "points_from_sources_v1_8")
+            UserDefaults.standard.set(false, forKey: Self.recalculatePointsOnLaunchKey)
+        }
+        
         // Listen for CloudKit data changes
         NotificationCenter.default.publisher(for: .cloudKitDataChanged)
             .receive(on: DispatchQueue.main)
@@ -123,6 +131,9 @@ class RewardManager: ObservableObject {
     
     func updateReward(_ updatedReward: Reward) {
         if let index = rewards.firstIndex(where: { $0.id == updatedReward.id }) {
+            var updatedReward = updatedReward
+            // Lets sync keep the latest edit when two devices changed the same reward.
+            updatedReward.lastModifiedDate = Date()
             rewards[index] = updatedReward
             saveRewards()
             objectWillChange.send()
@@ -156,21 +167,19 @@ class RewardManager: ObservableObject {
         }
     }
     
+    /// Applies rewards coming from sync: replaces the ones already here (keeping their place in
+    /// the list) and adds the new ones at the end.
     func importRewards(_ newRewards: [Reward]) {
-        // Create a dictionary of existing rewards by ID for quick lookup
-        let existingRewardsDict = Dictionary(uniqueKeysWithValues: rewards.map { ($0.id, $0) })
-        
-        // Merge new rewards with existing ones, prioritizing new ones in case of conflict
-        var updatedRewards = existingRewardsDict
-        
+        var updated = rewards
         for reward in newRewards {
-            updatedRewards[reward.id] = reward
+            if let index = updated.firstIndex(where: { $0.id == reward.id }) {
+                updated[index] = reward
+            } else {
+                updated.append(reward)
+            }
         }
-        
-        // Convert back to array
-        rewards = Array(updatedRewards.values)
-        
-        // Save the updated rewards
+        guard updated != rewards else { return }
+        rewards = updated
         saveRewards()
     }
     
@@ -282,9 +291,9 @@ class RewardManager: ObservableObject {
         if reward.canRedeem(availablePoints: availablePoints) {
             deductPoints(cost: reward.pointsCost, for: reward.frequency, categoryId: reward.categoryId, on: date)
             
-            // Mark as redeemed
+            // Mark as redeemed (to the second, as iCloud stores it)
             var updatedReward = reward
-            updatedReward.redemptions.append(date)
+            updatedReward.redemptions = Reward.normalizedRedemptions(updatedReward.redemptions + [date])
             updateReward(updatedReward)
             
             objectWillChange.send()
@@ -677,6 +686,30 @@ class RewardManager: ObservableObject {
                 print("Error loading rewards: \(error)")
             }
         }
+        removeDuplicateRedemptions()
+    }
+    
+    static let recalculatePointsOnLaunchKey = "recalculate_points_after_dedupe"
+    
+    /// Cleans redemptions that sync had counted more than once, here and on iCloud.
+    private func removeDuplicateRedemptions() {
+        var cleaned: [Reward] = []
+        rewards = rewards.map { reward in
+            let normalized = Reward.normalizedRedemptions(reward.redemptions)
+            guard normalized != reward.redemptions else { return reward }
+            var fixed = reward
+            fixed.redemptions = normalized
+            cleaned.append(fixed)
+            return fixed
+        }
+        guard !cleaned.isEmpty else { return }
+        saveRewards()
+        print("🧹 Removed duplicate redemptions from \(cleaned.count) rewards")
+        // Balances were reduced once per duplicate: work them out again.
+        UserDefaults.standard.set(true, forKey: Self.recalculatePointsOnLaunchKey)
+        Task { @MainActor in
+            for reward in cleaned { CloudKitService.shared.saveReward(reward) }
+        }
     }
     
     private func saveDailyPointsHistory() {
@@ -691,9 +724,10 @@ class RewardManager: ObservableObject {
         }
     }
     
-    private func syncDailyPointsToCloudKit() {
-        CloudKitService.shared.syncPointsHistory(dailyPointsHistory)
-    }
+    /// Points are no longer uploaded: every device works them out from the completed tasks and
+    /// the redemptions, which sync on their own (`recalculateDailyPointsFromSources`). Uploading
+    /// the whole history on every change was slow and made devices disagree.
+    private func syncDailyPointsToCloudKit() {}
     
     private func loadDailyPointsHistory() {
         if let data = UserDefaults.standard.data(forKey: dailyPointsHistoryKey) {
@@ -778,11 +812,11 @@ class RewardManager: ObservableObject {
         print("🧮 Recalculating daily points from tasks and redemptions...")
         let calendar = Calendar.current
         
-        // Base: punti guadagnati dai task
+        // Base: punti guadagnati dai task (ogni completamento conta una volta)
         var newDaily: [Date: Int] = [:]
         for task in TaskManager.shared.tasks {
             guard task.hasRewardPoints, task.rewardPoints > 0 else { continue }
-            for completionDate in task.completionDates {
+            for completionDate in Set(task.completionDates) {
                 let day = calendar.startOfDay(for: completionDate)
                 newDaily[day, default: 0] += task.rewardPoints
             }
@@ -792,7 +826,7 @@ class RewardManager: ObservableObject {
         var newCategory: [UUID: [Date: Int]] = [:]
         for task in TaskManager.shared.tasks {
             guard task.hasRewardPoints, task.rewardPoints > 0, let categoryId = task.category?.id else { continue }
-            for completionDate in task.completionDates {
+            for completionDate in Set(task.completionDates) {
                 let day = calendar.startOfDay(for: completionDate)
                 var hist = newCategory[categoryId] ?? [:]
                 hist[day, default: 0] += task.rewardPoints
