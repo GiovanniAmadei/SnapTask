@@ -448,7 +448,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let record = createCategoryRecord(from: category)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Category saved: \(category.name)")
             } catch let error as CKError where category.icon != nil
                         && (error.code == .invalidArguments || error.code == .serverRejectedRequest) {
@@ -458,7 +458,7 @@ class CloudKitService: ObservableObject {
                 var withoutIcon = category
                 withoutIcon.icon = nil
                 do {
-                    _ = try await privateDatabase.save(createCategoryRecord(from: withoutIcon))
+                    _ = try await saveOverwriting(createCategoryRecord(from: withoutIcon))
                     print(" Category saved without icon: \(category.name)")
                 } catch let retryError as CKError {
                     await handleCloudKitError(retryError)
@@ -501,6 +501,19 @@ class CloudKitService: ObservableObject {
         }
     }
     
+    /// Saves a record built locally from the app's current state, creating it or replacing the
+    /// copy already on the server. A plain `save` of a new CKRecord fails with "record already
+    /// exists" for anything synced before, so edits (archived rewards, renamed categories,
+    /// updated sessions...) never reached iCloud.
+    @discardableResult
+    private func saveOverwriting(_ record: CKRecord) async throws -> CKRecord {
+        let (results, _) = try await privateDatabase.modifyRecords(
+            saving: [record], deleting: [], savePolicy: .allKeys, atomically: false
+        )
+        guard let result = results[record.recordID] else { return record }
+        return try result.get()
+    }
+    
     // MARK: - Reward Operations
     func saveReward(_ reward: Reward) {
         guard isCloudKitEnabled else { return }
@@ -508,14 +521,14 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let record = createRewardRecord(from: reward)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Reward saved: \(reward.name)")
             } catch let error as CKError where error.code == .invalidArguments || error.code == .serverRejectedRequest {
                 // Production schema without the 1.8 fields: save the old fields so the rest still syncs.
                 let record = createRewardRecord(from: reward)
                 for key in ["categoryId", "categoryName", "archivedDate"] { record[key] = nil }
                 do {
-                    _ = try await privateDatabase.save(record)
+                    _ = try await saveOverwriting(record)
                     print(" Reward saved without 1.8 fields: \(reward.name)")
                 } catch {
                     print(" Failed to save reward: \(error)")
@@ -568,7 +581,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let record = createPointsHistoryRecord(from: entry)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Points entry saved: \(entry.points) points")
             } catch {
                 print(" Failed to save points entry: \(error)")
@@ -598,6 +611,7 @@ class CloudKitService: ObservableObject {
                 for i in stride(from: 0, to: records.count, by: batchSize) {
                     let batch = Array(records[i..<min(i + batchSize, records.count)])
                     let operation = CKModifyRecordsOperation(recordsToSave: batch)
+                    operation.savePolicy = .allKeys // overwrite days already on the server
                     _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                         operation.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
                             if let error = error {
@@ -655,7 +669,7 @@ class CloudKitService: ObservableObject {
                 }
                 record["lastUpdated"] = Date()
                 
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print("✅ App settings saved (merged \(mergedSettings.count) keys)")
             } catch {
                 print("❌ Failed to save app settings: \(error)")
@@ -670,7 +684,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let record = createTrackingSessionRecord(from: session)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Tracking session saved: \(session.deviceDisplayInfo) - \(formatDuration(session.effectiveWorkTime))")
             } catch {
                 print(" Failed to save tracking session: \(error)")
@@ -2274,7 +2288,7 @@ class CloudKitService: ObservableObject {
     private func saveDeletionMarker(type: String, id: String) async {
         let record = createDeletionMarker(type: type, id: id)
         do {
-            _ = try await privateDatabase.save(record)
+            _ = try await saveOverwriting(record)
             print(" Saved deletion marker for \(type) \(id)")
         } catch {
             print(" Failed to save deletion marker for \(type) \(id): \(error)")
@@ -2992,7 +3006,7 @@ extension CloudKitService {
         Task {
             do {
                 let record = createFinanceEntryRecord(from: entry)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Finance entry saved: \(entry.name)")
             } catch {
                 print(" Failed to save finance entry: \(error)")
@@ -3023,7 +3037,7 @@ extension CloudKitService {
         Task {
             do {
                 let record = createFinanceBudgetRecord(from: budget)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Finance budget saved: \(budget.category.displayName)")
             } catch {
                 print(" Failed to save finance budget: \(error)")
@@ -3054,7 +3068,7 @@ extension CloudKitService {
         Task {
             do {
                 let record = createFinancialGoalRecord(from: goal)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Financial goal saved: \(goal.name)")
             } catch {
                 print(" Failed to save financial goal: \(error)")
@@ -3085,7 +3099,7 @@ extension CloudKitService {
         Task {
             do {
                 let record = createCustomFinanceCategoryRecord(from: category)
-                _ = try await privateDatabase.save(record)
+                _ = try await saveOverwriting(record)
                 print(" Custom finance category saved: \(category.name)")
             } catch {
                 print(" Failed to save custom finance category: \(error)")
