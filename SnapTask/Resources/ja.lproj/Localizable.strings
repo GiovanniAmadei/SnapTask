@@ -2190,7 +2190,6 @@
 "welcome_task2_step5" = "「リスト」から「時間」に切り替えて、1日を時間ごとに見る";
 "welcome_task2_step6" = "「編集」からこのタスクにカテゴリを設定する";
 "welcome_task2_step7" = "「+」で最初のタスクを作成する";
-"delete_task_sessions_title" = "記録されたセッション：%d件";
-"delete_task_sessions_message" = "このタスクのトラックとポモドーロのセッションはフォーカスタブにあります。タスクと一緒に削除しますか？";
+"delete_task_sessions_message" = "このタスクには、フォーカスタブにトラックとポモドーロのセッションが%d件あります。タスクと一緒に削除しますか？";
 "delete_task_and_sessions" = "セッションも削除";
 "delete_task_keep_sessions" = "タスクのみ削除";

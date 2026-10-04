@@ -2264,7 +2264,6 @@
 "welcome_task2_step5" = "Switch from List to Time to see your day hour by hour";
 "welcome_task2_step6" = "Give this task a category from Edit";
 "welcome_task2_step7" = "Create your first task with the +";
-"delete_task_sessions_title" = "Recorded sessions: %d";
-"delete_task_sessions_message" = "This task's Track and Pomodoro sessions are in the Focus tab. Delete them along with the task?";
+"delete_task_sessions_message" = "This task has %d Track and Pomodoro sessions in the Focus tab. Delete them along with the task?";
 "delete_task_and_sessions" = "Delete sessions too";
 "delete_task_keep_sessions" = "Delete only the task";

@@ -206,8 +206,6 @@ class TaskManager: ObservableObject {
         
         print("TaskManager iOS: Removing task with ID: \(task.id.uuidString)")
 
-        await notificationManager.cancelAllNotificationsForTask(task.id)
-        
         // Rimuovi i punti reward associati alla task se presente
         if task.hasRewardPoints {
             RewardManager.shared.removePointsFromTask(task)
@@ -229,6 +227,9 @@ class TaskManager: ObservableObject {
         // Delete from CloudKit
         CloudKitService.shared.deleteTask(task)
         
+        // Slow system cleanups run after the task has left the list, so the list can close the
+        // gap right away instead of showing an empty space while they finish.
+        await notificationManager.cancelAllNotificationsForTask(task.id)
         await calendarIntegrationManager.deleteTaskFromCalendar(task.id, isRecurring: task.recurrence != nil)
         
         print(" Task removed: \(task.name)")

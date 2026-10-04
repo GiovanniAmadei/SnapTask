@@ -2223,7 +2223,6 @@
 "welcome_task2_step5" = "Passa da Lista a Orario per vedere la giornata a ore";
 "welcome_task2_step6" = "Assegna una categoria a questa attività da Modifica";
 "welcome_task2_step7" = "Crea la tua prima attività con il +";
-"delete_task_sessions_title" = "Sessioni registrate: %d";
-"delete_task_sessions_message" = "Le sessioni di Traccia e Pomodoro di questa attività sono nella scheda Focus. Vuoi eliminarle insieme all'attività?";
+"delete_task_sessions_message" = "Questa attività ha %d sessioni di Traccia e Pomodoro nella scheda Focus. Vuoi eliminarle insieme all'attività?";
 "delete_task_and_sessions" = "Elimina anche le sessioni";
 "delete_task_keep_sessions" = "Elimina solo l'attività";

@@ -2118,7 +2118,6 @@
 "welcome_task2_step5" = "Wechsle von Liste zu Zeit, um den Tag stundenweise zu sehen";
 "welcome_task2_step6" = "Gib dieser Aufgabe unter Bearbeiten eine Kategorie";
 "welcome_task2_step7" = "Erstelle deine erste Aufgabe mit dem +";
-"delete_task_sessions_title" = "Aufgezeichnete Sitzungen: %d";
-"delete_task_sessions_message" = "Die Verfolgen- und Pomodoro-Sitzungen dieser Aufgabe sind im Tab Fokus. Zusammen mit der Aufgabe löschen?";
+"delete_task_sessions_message" = "Diese Aufgabe hat %d Verfolgen- und Pomodoro-Sitzungen im Tab Fokus. Zusammen mit der Aufgabe löschen?";
 "delete_task_and_sessions" = "Auch Sitzungen löschen";
 "delete_task_keep_sessions" = "Nur die Aufgabe löschen";

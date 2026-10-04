@@ -2106,7 +2106,6 @@
 "welcome_task2_step5" = "Passe de Liste à Heure pour voir ta journée heure par heure";
 "welcome_task2_step6" = "Donne une catégorie à cette tâche depuis Modifier";
 "welcome_task2_step7" = "Crée ta première tâche avec le +";
-"delete_task_sessions_title" = "Sessions enregistrées : %d";
-"delete_task_sessions_message" = "Les sessions Suivre et Pomodoro de cette tâche sont dans l'onglet Focus. Les supprimer avec la tâche ?";
+"delete_task_sessions_message" = "Cette tâche a %d sessions Suivre et Pomodoro dans l'onglet Focus. Les supprimer avec la tâche ?";
 "delete_task_and_sessions" = "Supprimer aussi les sessions";
 "delete_task_keep_sessions" = "Supprimer seulement la tâche";

@@ -2400,7 +2400,6 @@
 "welcome_task2_step5" = "Cambia de Lista a Hora para ver el día por horas";
 "welcome_task2_step6" = "Asigna una categoría a esta tarea desde Editar";
 "welcome_task2_step7" = "Crea tu primera tarea con el +";
-"delete_task_sessions_title" = "Sesiones registradas: %d";
-"delete_task_sessions_message" = "Las sesiones de Seguir y Pomodoro de esta tarea están en la pestaña Enfoque. ¿Eliminarlas junto con la tarea?";
+"delete_task_sessions_message" = "Esta tarea tiene %d sesiones de Seguir y Pomodoro en la pestaña Enfoque. ¿Eliminarlas junto con la tarea?";
 "delete_task_and_sessions" = "Eliminar también las sesiones";
 "delete_task_keep_sessions" = "Eliminar solo la tarea";

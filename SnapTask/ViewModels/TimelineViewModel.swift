@@ -231,7 +231,7 @@ class TimelineViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: .tasksDidUpdate)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                self?.refreshTasks()
+                self?.refreshTasks(animatingRemovals: true)
             }
             .store(in: &cancellables)
         
@@ -354,7 +354,7 @@ class TimelineViewModel: ObservableObject {
         currentYear = calendar.startOfYear(for: Date())
     }
     
-    private func refreshTasks() {
+    private func refreshTasks(animatingRemovals: Bool = false) {
         let refreshed = filteredTasksForScope()
             .sorted { task1, task2 in
                 // First, sort by start time
@@ -371,7 +371,16 @@ class TimelineViewModel: ObservableObject {
                 return task1.id.uuidString < task2.id.uuidString
             }
         // Skip identical results so repeated refreshes don't redraw the list.
-        if refreshed != tasks {
+        guard refreshed != tasks else { return }
+        // A task was deleted and nothing else changed: let the list close the gap smoothly
+        // instead of the cards below jumping up.
+        let remainingIds = Set(refreshed.map(\.id))
+        if animatingRemovals, refreshed.count < tasks.count,
+           tasks.filter({ remainingIds.contains($0.id) }) == refreshed {
+            withAnimation(.easeInOut(duration: 0.32)) {
+                tasks = refreshed
+            }
+        } else {
             tasks = refreshed
         }
     }

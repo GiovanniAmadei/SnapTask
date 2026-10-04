@@ -2189,7 +2189,6 @@
 "welcome_task2_step5" = "Mude de Lista para Hora para ver o dia hora a hora";
 "welcome_task2_step6" = "Dê uma categoria a esta tarefa em Editar";
 "welcome_task2_step7" = "Crie sua primeira tarefa com o +";
-"delete_task_sessions_title" = "Sessões registradas: %d";
-"delete_task_sessions_message" = "As sessões de Rastrear e Pomodoro desta tarefa estão na aba Foco. Excluí-las junto com a tarefa?";
+"delete_task_sessions_message" = "Esta tarefa tem %d sessões de Rastrear e Pomodoro na aba Foco. Excluí-las junto com a tarefa?";
 "delete_task_and_sessions" = "Excluir também as sessões";
 "delete_task_keep_sessions" = "Excluir só a tarefa";

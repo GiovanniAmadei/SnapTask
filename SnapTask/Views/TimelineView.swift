@@ -2371,9 +2371,10 @@ struct TimelineTaskCard: View {
                 }
             }
             .offset(x: dragOffset)
-            .scaleEffect(deleteScale)
-            .opacity(deleteOpacity)
         }
+        // Card and its swipe buttons fade out together where they are.
+        .scaleEffect(deleteScale)
+        .opacity(deleteOpacity)
         .id(task.id)
         .contentShape(Rectangle())
 
@@ -2555,16 +2556,23 @@ struct TimelineTaskCard: View {
         guard !isDeleting else { return }
         
         isDeleting = true
-        resetSwipe()
-        
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         
-        withAnimation(.interpolatingSpring(stiffness: 300, damping: 25)) {
-            deleteOpacity = 0.0
-            deleteScale = 0.85
+        // 1) the card fades and shrinks slightly in place (not sliding back while it fades),
+        // 2) then the row is removed and the list closes the gap with an animation.
+        // Started on the next run-loop turn: inside the List row's button action the change was
+        // applied without animation and the card vanished in a single frame.
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.25)) {
+                deleteOpacity = 0.0
+                deleteScale = 0.95
+            }
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.27) {
+            if viewModel.isSwipeMenuOpen(for: task.id) {
+                viewModel.setOpenSwipeTask(nil)
+            }
             Task {
                 await TaskManager.shared.removeTask(task, deletingSessions: deletingSessions)
             }
@@ -2913,15 +2921,16 @@ extension View {
     func deleteSessionsDialog(isPresented: Binding<Bool>, task: TodoTask, onDelete: @escaping (Bool) -> Void) -> some View {
         let count = TaskManager.shared.trackingSessionCount(for: task.id)
         return confirmationDialog(
-            String(format: "delete_task_sessions_title".localized, count),
+            "delete_task_and_sessions".localized,
             isPresented: isPresented,
-            titleVisibility: .visible
+            titleVisibility: .hidden
         ) {
             Button("delete_task_and_sessions".localized, role: .destructive) { onDelete(true) }
             Button("delete_task_keep_sessions".localized) { onDelete(false) }
             Button("cancel".localized, role: .cancel) {}
         } message: {
-            Text("delete_task_sessions_message".localized)
+            // The count lives in the message, which wraps freely; a title with it broke onto two lines.
+            Text(String(format: "delete_task_sessions_message".localized, count))
         }
     }
 }
