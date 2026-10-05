@@ -234,6 +234,12 @@ final class JournalManager: ObservableObject {
         let day = Calendar.current.startOfDay(for: entry.date)
         let mergeEpsilon: TimeInterval = 120
         
+        // This device's own save coming back from iCloud: nothing to do. (It used to be merged
+        // and sent again, which came back again: an endless loop once iCloud pushes arrive.)
+        if let existingEntry = entriesByDay[day], existingEntry.hasSameContent(as: entry) {
+            return
+        }
+        
         if let existingEntry = entriesByDay[day] {
             if existingEntry.isEmpty && !entry.isEmpty {
                 entriesByDay[day] = entry
@@ -324,7 +330,8 @@ final class JournalManager: ObservableObject {
                 
                 entriesByDay[day] = mergedEntry
                 save()
-                if !isEditing(day) {
+                // Sent only if the merge added something iCloud's copy lacks.
+                if !isEditing(day) && !mergedEntry.hasSameContent(as: entry) {
                     syncToCloudKit(mergedEntry)
                 }
                 print("📝 Near-simultaneous or equal timestamp, merged journal entries for \(day)")
@@ -384,4 +391,16 @@ final class JournalManager: ObservableObject {
 // MARK: - Notifications
 extension Notification.Name {
     static let journalEntriesChanged = Notification.Name("journalEntriesChanged")
+}
+
+extension JournalEntry {
+    /// Same text, mood, tags, photos and memos, whatever the dates or file locations.
+    func hasSameContent(as other: JournalEntry) -> Bool {
+        title == other.title && text == other.text && worthItText == other.worthItText
+            && isWorthItHidden == other.isWorthItHidden && mood == other.mood
+            && Set(tags) == Set(other.tags)
+            && Set(photos.map(\.id)) == Set(other.photos.map(\.id))
+            && Set(voiceMemos.map { "\($0.id.uuidString)=\($0.name ?? "")" })
+                == Set(other.voiceMemos.map { "\($0.id.uuidString)=\($0.name ?? "")" })
+    }
 }

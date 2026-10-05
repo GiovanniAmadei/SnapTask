@@ -1044,7 +1044,7 @@ extension FinanceManager {
         guard !remoteEntries.isEmpty else { return false }
         
         var hasChanges = false
-        let localMap = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
+        let localMap = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         
         for remoteEntry in remoteEntries {
             if let localEntry = localMap[remoteEntry.id] {
@@ -1074,16 +1074,14 @@ extension FinanceManager {
         guard !remoteBudgets.isEmpty else { return false }
         
         var hasChanges = false
-        let localMap = Dictionary(uniqueKeysWithValues: budgets.map { ($0.id, $0) })
         
+        // Budgets have no edit date: a copy that changed on iCloud is an edit made on another
+        // device (edits still uploading from here are filtered out by CloudKitService).
         for remoteBudget in remoteBudgets {
-            if let localBudget = localMap[remoteBudget.id] {
-                // Use the newer version based on creationDate as proxy
-                if remoteBudget.creationDate > localBudget.creationDate {
-                    if let index = budgets.firstIndex(where: { $0.id == remoteBudget.id }) {
-                        budgets[index] = remoteBudget
-                        hasChanges = true
-                    }
+            if let index = budgets.firstIndex(where: { $0.id == remoteBudget.id }) {
+                if budgets[index] != remoteBudget {
+                    budgets[index] = remoteBudget
+                    hasChanges = true
                 }
             } else {
                 budgets.append(remoteBudget)
@@ -1103,7 +1101,7 @@ extension FinanceManager {
         guard !remoteGoals.isEmpty else { return false }
         
         var hasChanges = false
-        let localMap = Dictionary(uniqueKeysWithValues: financialGoals.map { ($0.id, $0) })
+        let localMap = Dictionary(financialGoals.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         
         for remoteGoal in remoteGoals {
             if let localGoal = localMap[remoteGoal.id] {
@@ -1132,10 +1130,15 @@ extension FinanceManager {
         guard !remoteCategories.isEmpty else { return false }
         
         var hasChanges = false
-        let localMap = Dictionary(uniqueKeysWithValues: customCategories.map { ($0.id, $0) })
         
+        // Edits made on another device are applied too, not only new categories.
         for remoteCategory in remoteCategories {
-            if localMap[remoteCategory.id] == nil {
+            if let index = customCategories.firstIndex(where: { $0.id == remoteCategory.id }) {
+                if customCategories[index] != remoteCategory {
+                    customCategories[index] = remoteCategory
+                    hasChanges = true
+                }
+            } else {
                 customCategories.append(remoteCategory)
                 hasChanges = true
             }

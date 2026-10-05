@@ -88,7 +88,10 @@ struct TrackingSession: Identifiable, Codable {
         self.lastModifiedDate = Date()
     }
     
-    init(id: UUID, taskId: UUID?, taskName: String?, mode: TrackingMode, categoryId: UUID?, categoryName: String?, startTime: Date, elapsedTime: TimeInterval, isRunning: Bool, isPaused: Bool) {
+    /// `deviceType`, `deviceName` and the dates are passed for sessions coming from iCloud, so they
+    /// keep the device they were recorded on and their real dates.
+    init(id: UUID, taskId: UUID?, taskName: String?, mode: TrackingMode, categoryId: UUID?, categoryName: String?, startTime: Date, elapsedTime: TimeInterval, isRunning: Bool, isPaused: Bool,
+         deviceType: DeviceType = .current, deviceName: String? = nil, creationDate: Date? = nil, lastModifiedDate: Date? = nil) {
         self.id = id
         self.taskId = taskId
         self.taskName = taskName
@@ -99,10 +102,10 @@ struct TrackingSession: Identifiable, Codable {
         self.elapsedTime = elapsedTime
         self.isRunning = isRunning
         self.isPaused = isPaused
-        self.deviceType = DeviceType.current
-        self.deviceName = Self.getCurrentDeviceName()
-        self.creationDate = Date()
-        self.lastModifiedDate = Date()
+        self.deviceType = deviceType
+        self.deviceName = deviceName ?? Self.getCurrentDeviceName()
+        self.creationDate = creationDate ?? Date()
+        self.lastModifiedDate = lastModifiedDate ?? self.creationDate
     }
     
     var effectiveWorkTime: TimeInterval {

@@ -10,6 +10,9 @@ struct TaskCompletion: Codable, Equatable, Hashable {
     var notes: String?          // User notes/comments about this completion
     /// Started but not finished ("In corso"). Cleared when the occurrence is completed.
     var isInProgress: Bool
+    /// When this occurrence last changed on any device. Sync keeps, day by day, the most recent
+    /// change: completing Monday on one device and Tuesday on another keeps both.
+    var modifiedAt: Date?
     
     init(
         isCompleted: Bool = false, 
@@ -40,6 +43,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         case completionDate
         case notes
         case isInProgress
+        case modifiedAt
     }
     
     init(from decoder: Decoder) throws {
@@ -61,6 +65,7 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         completionDate = try container.decodeIfPresent(Date.self, forKey: .completionDate)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         isInProgress = try container.decodeIfPresent(Bool.self, forKey: .isInProgress) ?? false
+        modifiedAt = try container.decodeIfPresent(Date.self, forKey: .modifiedAt)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -80,6 +85,14 @@ struct TaskCompletion: Codable, Equatable, Hashable {
         if isInProgress {
             try container.encode(true, forKey: .isInProgress)
         }
+        try container.encodeIfPresent(modifiedAt, forKey: .modifiedAt)
+    }
+    
+    /// Same content, whenever it was changed.
+    func hasSameContent(as other: TaskCompletion?) -> Bool {
+        guard var other else { return false }
+        other.modifiedAt = modifiedAt
+        return self == other
     }
     
     var hasRatings: Bool {

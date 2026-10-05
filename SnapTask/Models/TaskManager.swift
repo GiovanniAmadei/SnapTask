@@ -16,6 +16,10 @@ class TaskManager: ObservableObject {
     private let trackingSessionsKey = "trackingSessions"
     
     private var isUpdatingFromSync = false
+    /// Completions as last saved, to tell which occurrences changed (see `stampChangedCompletions`).
+    private var completionSnapshot: [UUID: [Date: TaskCompletion]] = [:]
+    /// Ids of tasks the widget changed in the shared container (written by ToggleTaskCompletionIntent).
+    static let widgetChangesKey = "widgetChangedTaskIDs"
     private var cancellables: Set<AnyCancellable> = []
     private var saveTaskDebounceTimers: [UUID: Timer] = [:]
 
@@ -843,7 +847,9 @@ class TaskManager: ObservableObject {
         saveTaskDebounceTimers[task.id]?.invalidate()
         
         saveTaskDebounceTimers[task.id] = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
-            CloudKitService.shared.saveTask(task)
+            // Latest version: later edits within the second, and the change times set on save.
+            let latest = self?.tasks.first { $0.id == task.id } ?? task
+            CloudKitService.shared.saveTask(latest)
             self?.saveTaskDebounceTimers.removeValue(forKey: task.id)
         }
     }
@@ -853,6 +859,13 @@ class TaskManager: ObservableObject {
     }
     
     private func saveTasks() {
+        // Taken in before writing, or this save would overwrite what the widget just changed.
+        absorbWidgetChanges()
+        if isUpdatingFromSync {
+            completionSnapshot = Dictionary(tasks.map { ($0.id, $0.completions) }, uniquingKeysWith: { first, _ in first })
+        } else {
+            stampChangedCompletions()
+        }
         do {
             let data = try JSONEncoder().encode(tasks)
             UserDefaults.standard.set(data, forKey: tasksKey)
@@ -910,6 +923,7 @@ class TaskManager: ObservableObject {
             do {
                 tasks = try JSONDecoder().decode([TodoTask].self, from: data)
                 migrateTaskDataIfNeeded()
+                completionSnapshot = Dictionary(tasks.map { ($0.id, $0.completions) }, uniquingKeysWith: { first, _ in first })
                 
                 // Mantieni i due store allineati
                 saveTasks()
@@ -920,22 +934,63 @@ class TaskManager: ObservableObject {
         }
     }
 
-    /// Ricarica le task dall'App Group se diverse da quelle in memoria (es. modificate dal Widget)
+    /// Takes in the tasks changed from the widget (see `absorbWidgetChanges`).
     func reloadFromSharedIfAvailable() {
-        guard let data = appGroupUserDefaults?.data(forKey: tasksKey) else { return }
-        do {
-            // Confronta con lo stato corrente per evitare reload inutili
-            let current = try? JSONEncoder().encode(tasks)
-            if current == data { return }
-            let sharedTasks = try JSONDecoder().decode([TodoTask].self, from: data)
-            tasks = sharedTasks
-            // Allinea e notifica UI
-            saveTasks()
-            notifyTasksUpdated()
-            objectWillChange.send()
-            print("🔄 Reloaded tasks from shared App Group (widget changes applied)")
-        } catch {
-            print("Error reloading tasks from shared App Group: \(error)")
+        guard appGroupUserDefaults?.stringArray(forKey: Self.widgetChangesKey)?.isEmpty == false else { return }
+        saveTasks()
+        notifyTasksUpdated()
+        objectWillChange.send()
+    }
+    
+    /// Tasks completed or reopened from the widget are written by the widget straight into the
+    /// shared container. They are taken into the app here and sent to iCloud; before, the app's
+    /// next save overwrote them, or they stayed on this device without reaching the others.
+    private func absorbWidgetChanges() {
+        guard let shared = appGroupUserDefaults,
+              let ids = shared.stringArray(forKey: Self.widgetChangesKey), !ids.isEmpty else { return }
+        shared.removeObject(forKey: Self.widgetChangesKey)
+        guard let data = shared.data(forKey: tasksKey),
+              let sharedTasks = try? JSONDecoder().decode([TodoTask].self, from: data) else { return }
+        
+        let now = Date(timeIntervalSinceReferenceDate: Date().timeIntervalSinceReferenceDate.rounded(.down))
+        var changed: [TodoTask] = []
+        for id in Set(ids) {
+            guard var fromWidget = sharedTasks.first(where: { $0.id.uuidString == id }),
+                  let index = tasks.firstIndex(where: { $0.id == fromWidget.id }) else { continue }
+            let current = tasks[index]
+            for (key, completion) in fromWidget.completions where !completion.hasSameContent(as: current.completions[key]) {
+                fromWidget.completions[key]?.modifiedAt = now
+            }
+            fromWidget.lastModifiedDate = now
+            fromWidget.notificationId = current.notificationId
+            tasks[index] = fromWidget
+            changed.append(fromWidget)
+        }
+        guard !changed.isEmpty else { return }
+        print("🔄 Took in \(changed.count) task(s) changed from the widget")
+        for task in changed {
+            completionSnapshot[task.id] = task.completions
+            CloudKitService.shared.saveTask(task)
+        }
+        // The widget doesn't award points: work them out again.
+        DispatchQueue.main.async {
+            RewardManager.shared.recalculateDailyPointsFromSources()
+        }
+    }
+    
+    /// Marks the occurrences changed since the last save with the time of the change, so sync
+    /// can keep the newest change for each day (`TodoTask.mergedCompletions`). Done here, where
+    /// every local change ends up, instead of in each of the places that edit completions.
+    private func stampChangedCompletions() {
+        // To the second, as iCloud stores it: otherwise the copy coming back from iCloud looks
+        // older than this one and would be sent again, over and over.
+        let now = Date(timeIntervalSinceReferenceDate: Date().timeIntervalSinceReferenceDate.rounded(.down))
+        for index in tasks.indices {
+            let before = completionSnapshot[tasks[index].id] ?? [:]
+            for (key, completion) in tasks[index].completions where !completion.hasSameContent(as: before[key]) {
+                tasks[index].completions[key]?.modifiedAt = now
+            }
+            completionSnapshot[tasks[index].id] = tasks[index].completions
         }
     }
     

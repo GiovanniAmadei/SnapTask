@@ -34,9 +34,14 @@ struct ToggleTaskCompletionIntent: AppIntent {
                 } else {
                     task.completionDates.removeAll { $0 == completionDate }
                 }
+                task.lastModifiedDate = Date()
                 tasks[idx] = task
                 let newData = try JSONEncoder().encode(tasks)
                 suite?.set(newData, forKey: key)
+                // Tells the app to take this change in and send it to iCloud (TaskManager.absorbWidgetChanges).
+                var changed = suite?.stringArray(forKey: "widgetChangedTaskIDs") ?? []
+                changed.append(taskIdString)
+                suite?.set(changed, forKey: "widgetChangedTaskIDs")
                 suite?.synchronize()
                 WidgetCenter.shared.reloadAllTimelines()
             }

@@ -59,8 +59,8 @@ class StatisticsViewModel: ObservableObject {
         let startOfStartDate = calendar.startOfDay(for: startDate)
         let endOfEndDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate))!
 
-        let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
-        let taskMetadata = UserDefaults.standard.dictionary(forKey: "taskMetadata") as? [String: [String: String]] ?? [:]
+        let timeTrackingData = TimeTrackingStats.combined()
+        let taskMetadata = TimeTrackingStats.combinedMetadata()
 
         // Pre-aggregate time tracking within date range in ONE fast dictionary pass
         var trackedHoursByCategory: [String: Double] = [:]
@@ -915,7 +915,7 @@ class StatisticsViewModel: ObservableObject {
         }
 
         var sessionHours = 0.0
-        let timeTrackingData = UserDefaults.standard.dictionary(forKey: "timeTracking") as? [String: [String: Double]] ?? [:]
+        let timeTrackingData = TimeTrackingStats.combined()
         let key = "category_\(categoryId.uuidString)"
         for (dateKey, dayData) in timeTrackingData {
             guard let date = Self.isoFormatter.date(from: dateKey), date >= start, date < endExclusive,

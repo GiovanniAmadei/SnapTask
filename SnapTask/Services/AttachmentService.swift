@@ -50,6 +50,28 @@ enum AttachmentService {
         }
     }
     
+    /// Saves a photo that came from iCloud under its own id, so the same photo always has the
+    /// same file on every device (and is not written again on the next sync).
+    static func addPhoto(for taskId: UUID, imageData: Data, id: UUID, createdAt: Date) -> TaskPhoto? {
+        guard let original = UIImage(data: imageData) else { return nil }
+        let scaled = downscale(image: original, maxDimension: 1600)
+        guard let jpeg = scaled.jpegData(compressionQuality: 0.85) else { return nil }
+        let thumb = downscale(image: scaled, maxDimension: 200)
+        guard let thumbJpeg = thumb.jpegData(compressionQuality: 0.8) else { return nil }
+        
+        let folder = taskFolder(for: taskId)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let photoURL = folder.appendingPathComponent("photo_\(id.uuidString).jpg")
+            let thumbURL = folder.appendingPathComponent("thumb_\(id.uuidString).jpg")
+            try jpeg.write(to: photoURL, options: .atomic)
+            try thumbJpeg.write(to: thumbURL, options: .atomic)
+            return TaskPhoto(id: id, photoPath: photoURL.path, thumbnailPath: thumbURL.path, createdAt: createdAt)
+        } catch {
+            return nil
+        }
+    }
+    
     static func addPhoto(for taskId: UUID, imageData: Data) -> TaskPhoto? {
         guard let original = UIImage(data: imageData) else { return nil }
         let scaled = downscale(image: original, maxDimension: 1600)

@@ -27,6 +27,8 @@ class CloudKitService: ObservableObject {
     private let financialGoalRecordType = "FinancialGoal"
     private let customFinanceCategoryRecordType = "CustomFinanceCategory"
     private let taskListOrderRecordType = "TaskListOrder"
+    /// Each device's tracked-time statistics (see `TimeTrackingStats`), added in 1.8.
+    private let deviceTimeTrackingRecordType = "DeviceTimeTracking"
     
     // Subscription IDs
     private let subscriptionID = "SnapTaskZone-changes"
@@ -356,42 +358,26 @@ class CloudKitService: ObservableObject {
         guard isCloudKitEnabled else { return }
         
         Task {
+            let record = createTaskRecord(from: task)
             do {
-                let record = createTaskRecord(from: task)
-                
-                let operation = CKModifyRecordsOperation(recordsToSave: [record])
-                operation.savePolicy = .allKeys // Write all fields so creation works even if record doesn't exist yet
-                operation.isAtomic = false // Allow partial success
-                
-                let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CKRecord], Error>) in
-                    operation.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
-                        if let error = error {
-                            continuation.resume(throwing: error)
-                        } else {
-                            continuation.resume(returning: savedRecords ?? [])
-                        }
-                    }
-                    privateDatabase.add(operation)
-                }
-                
+                try await saveOverwriting(record)
+                markUploaded([record])
                 print(" Task saved to CloudKit: \(task.name)")
-                
-                DispatchQueue.main.async {
-                    self.syncStatus = .success
-                    self.lastSyncDate = Date()
+                syncStatus = .success
+                lastSyncDate = Date()
+            } catch let error as CKError where error.code == .invalidArguments || error.code == .serverRejectedRequest {
+                // Production schema without the 1.8 task fields: sync everything else.
+                let fallback = createTaskRecord(from: task, includeFields18: false)
+                do {
+                    try await saveOverwriting(fallback)
+                    markUploaded([fallback])
+                    print(" Task saved without 1.8 fields: \(task.name)")
+                } catch let retryError as CKError {
+                    await handleCloudKitError(retryError)
+                } catch {
+                    await handleSyncError(error)
                 }
             } catch let error as CKError {
-                if error.code == .serverRecordChanged && retryCount < 3 {
-                    print(" Concurrent write detected for \(task.name), retrying...")
-                    
-                    // Wait with exponential backoff
-                    try? await Task.sleep(nanoseconds: UInt64(pow(2.0, Double(retryCount)) * 500_000_000))
-                    
-                    // Fetch and merge
-                    await resolveConflictAndRetry(task: task, retryCount: retryCount + 1)
-                    return
-                }
-                
                 print(" CloudKit error saving task: \(error.localizedDescription)")
                 await handleCloudKitError(error)
             } catch {
@@ -409,7 +395,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 print(" Task deleted: \(task.name)")
             } catch let error as CKError where error.code == .unknownItem {
                 print(" Task already deleted from CloudKit: \(task.name)")
@@ -423,6 +409,12 @@ class CloudKitService: ObservableObject {
     // MARK: - Category Operations
     /// Categories saved here that iCloud has not confirmed yet.
     private var pendingCategoryUploads: Set<UUID> = []
+    /// Other records (by name) saved here that iCloud has not confirmed yet.
+    var pendingUploads: Set<String> = []
+    /// Attachment signatures sent with saves still in flight, and the ones iCloud holds (see the
+    /// Attachments extension).
+    var mediaAwaitingUpload: [String: String?] = [:]
+    var knownMediaCache: [String: String]?
     
     func saveCategory(_ category: Category) {
         guard isCloudKitEnabled else { return }
@@ -471,7 +463,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 await saveDeletionMarker(type: "Category", id: category.id.uuidString)
                 print(" Category deleted: \(category.name)")
             } catch let error as CKError {
@@ -495,11 +487,33 @@ class CloudKitService: ObservableObject {
     /// updated sessions...) never reached iCloud.
     @discardableResult
     private func saveOverwriting(_ record: CKRecord) async throws -> CKRecord {
-        let (results, _) = try await privateDatabase.modifyRecords(
-            saving: [record], deleting: [], savePolicy: .allKeys, atomically: false
-        )
-        guard let result = results[record.recordID] else { return record }
-        return try result.get()
+        do {
+            let (results, _) = try await privateDatabase.modifyRecords(
+                saving: [record], deleting: [], savePolicy: .allKeys, atomically: false
+            )
+            let saved = try results[record.recordID]?.get() ?? record
+            outboxDidSave(record.recordID.recordName)
+            return saved
+        } catch {
+            // Offline or iCloud busy: keep it and send it on the next sync.
+            if Self.isRetryable(error) { outboxQueueSave(record) }
+            throw error
+        }
+    }
+    
+    /// Deletes a record, keeping the deletion for the next sync if iCloud can't be reached.
+    private func deleteRecordQueued(_ recordID: CKRecord.ID) async throws {
+        do {
+            try await deleteRecordQueued(recordID)
+            outboxDidDelete(recordID.recordName)
+        } catch {
+            if let ckError = error as? CKError, ckError.code == .unknownItem {
+                outboxDidDelete(recordID.recordName)
+            } else if Self.isRetryable(error) {
+                outboxQueueDelete(recordID.recordName)
+            }
+            throw error
+        }
     }
     
     // MARK: - Reward Operations
@@ -535,7 +549,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: reward.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 await saveDeletionMarker(type: "Reward", id: reward.id.uuidString)
                 print(" Reward deleted: \(reward.name)")
             } catch let error as CKError where error.code == .unknownItem {
@@ -553,7 +567,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 // Record con nome fisso per lista: .allKeys lo sovrascrive senza conflitti
-                try await batchSaveRecords([createTaskListOrderRecord(from: order)])
+                try await saveOverwriting(createTaskListOrderRecord(from: order))
                 print(" Task list order saved: \(order.listKey)")
             } catch {
                 // Senza il tipo TaskListOrder nello schema di produzione l'ordine resta solo locale
@@ -688,7 +702,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: session.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 print(" Tracking session deleted: \(session.deviceDisplayInfo)")
             } catch let error as CKError where error.code == .unknownItem {
                 print(" Tracking session already deleted")
@@ -740,12 +754,15 @@ class CloudKitService: ObservableObject {
     
     private func performSyncPass() async {
         lastSyncTime = Date()
+        await flushOutbox()
         do {
             let (changes, newToken) = try await fetchChanges()
             await processChanges(changes)
             // Saved only once the changes are applied: if the app is closed halfway through,
             // the next sync fetches them again instead of skipping them.
             serverChangeToken = newToken
+            persistKnownMedia()
+            await uploadTimeTrackingStatsIfNeeded()
             
             syncStatus = .success
             lastSyncDate = Date()
@@ -756,6 +773,31 @@ class CloudKitService: ObservableObject {
     }
     
 
+    // MARK: - Tracked Time Statistics
+    private static let uploadedTimeTrackingKey = "cloudkit_uploaded_time_tracking"
+    
+    /// Sends this device's tracked-time statistics when they changed since the last upload.
+    private func uploadTimeTrackingStatsIfNeeded() async {
+        guard let hours = try? JSONSerialization.data(withJSONObject: TimeTrackingStats.local, options: [.sortedKeys]),
+              let metadata = try? JSONSerialization.data(withJSONObject: TimeTrackingStats.localMetadata, options: [.sortedKeys]) else { return }
+        let fingerprint = hours + metadata
+        guard UserDefaults.standard.data(forKey: Self.uploadedTimeTrackingKey) != fingerprint else { return }
+        
+        let deviceId = TimeTrackingStats.deviceId
+        let recordID = CKRecord.ID(recordName: "timetracking-\(deviceId)", zoneID: zoneID)
+        let record = CKRecord(recordType: deviceTimeTrackingRecordType, recordID: recordID)
+        record["deviceId"] = deviceId
+        record["hours"] = hours
+        record["metadata"] = metadata
+        do {
+            try await saveOverwriting(record)
+            UserDefaults.standard.set(fingerprint, forKey: Self.uploadedTimeTrackingKey)
+        } catch {
+            // Until the record type is in the production schema the statistics stay per device.
+            print(" Tracked time statistics not uploaded: \(error.localizedDescription)")
+        }
+    }
+    
     // MARK: - Initial Local Upload
     // Uploads all local tasks and rewards to CloudKit once, so existing data
     // on iPhone becomes visible on new devices (iPad, etc.).
@@ -903,6 +945,7 @@ class CloudKitService: ObservableObject {
                 }
                 self.privateDatabase.add(operation)
             }
+            markUploaded(batch)
         }
     }
     
@@ -919,6 +962,7 @@ class CloudKitService: ObservableObject {
         var financialGoals: [FinancialGoal] = []
         var customFinanceCategories: [CustomFinanceCategory] = []
         var taskListOrders: [TaskListOrder] = []
+        var deviceTimeTracking: [(deviceId: String, hours: TimeTrackingStats.Hours, metadata: TimeTrackingStats.Metadata)] = []
         struct DeletionMarkerEvent {
             let type: String
             let id: String
@@ -1000,6 +1044,13 @@ class CloudKitService: ObservableObject {
             if let category = createCustomFinanceCategory(from: record) { changes.customFinanceCategories.append(category) }
         case taskListOrderRecordType:
             if let order = createTaskListOrder(from: record) { changes.taskListOrders.append(order) }
+        case deviceTimeTrackingRecordType:
+            if let deviceId = record["deviceId"] as? String,
+               let hoursData = record["hours"] as? Data,
+               let hours = (try? JSONSerialization.jsonObject(with: hoursData)) as? TimeTrackingStats.Hours {
+                let metadata = (record["metadata"] as? Data).flatMap { (try? JSONSerialization.jsonObject(with: $0)) as? TimeTrackingStats.Metadata } ?? [:]
+                changes.deviceTimeTracking.append((deviceId, hours, metadata))
+            }
         case deletionMarkerRecordType:
             if let type = record["type"] as? String, let itemId = record["itemId"] as? String {
                 changes.deletionMarkers.append(.init(type: type, id: itemId))
@@ -1022,6 +1073,13 @@ class CloudKitService: ObservableObject {
         await mergeJournalEntries(changes.journalEntries)
         await mergeFinanceData(entries: changes.financeEntries, budgets: changes.financeBudgets, goals: changes.financialGoals, customCategories: changes.customFinanceCategories)
         TaskOrderManager.shared.mergeRemote(changes.taskListOrders)
+        
+        if !changes.deviceTimeTracking.isEmpty {
+            for copy in changes.deviceTimeTracking {
+                TimeTrackingStats.applyRemote(deviceId: copy.deviceId, hours: copy.hours, metadata: copy.metadata)
+            }
+            NotificationCenter.default.post(name: .timeTrackingUpdated, object: nil)
+        }
         
         if !changes.settings.isEmpty {
             await applySettings(changes.settings)
@@ -1271,6 +1329,7 @@ class CloudKitService: ObservableObject {
         
         var mergedTasks = localTasks
         var hasChanges = false
+        var toUpload: [TodoTask] = []
         
         for remoteTask in remoteTasks {
             if deleted.contains(remoteTask.id.uuidString) {
@@ -1278,44 +1337,32 @@ class CloudKitService: ObservableObject {
             }
             
             if let localTask = localMap[remoteTask.id] {
-                var mergedTask: TodoTask
-                
-                if remoteTask.lastModifiedDate > localTask.lastModifiedDate {
-                    mergedTask = remoteTask
-                    // Preserva notifiche locali se il record remoto non ne ha (es. sincronizzato da client precedente)
-                    if localTask.hasNotification && !remoteTask.hasNotification {
-                        mergedTask.hasNotification = localTask.hasNotification
-                    }
-                    if mergedTask.notificationId == nil {
-                        mergedTask.notificationId = localTask.notificationId
-                    }
-                    print(" Remote task is newer for \(remoteTask.name)")
-                } else if localTask.lastModifiedDate > remoteTask.lastModifiedDate {
-                    mergedTask = localTask
-                    print(" Local task is newer for \(localTask.name)")
-                } else {
-                    mergedTask = remoteTask
-                    // Stesso timestamp: unisci impostazioni notifiche
-                    mergedTask.hasNotification = localTask.hasNotification || remoteTask.hasNotification
-                    if mergedTask.notificationId == nil {
-                        mergedTask.notificationId = localTask.notificationId
-                    }
-                    
-                    var mergedCompletions = remoteTask.completions
-                    
-                    for (date, localCompletion) in localTask.completions {
-                        if mergedCompletions[date] == nil {
-                            mergedCompletions[date] = localCompletion
-                        }
-                    }
-                    
-                    mergedTask.completions = mergedCompletions
-                    let allCompletionDates = Set(localTask.completionDates + remoteTask.completionDates)
-                    mergedTask.completionDates = Array(allCompletionDates).sorted()
-                    print(" Same timestamp, merged completions for \(remoteTask.name)")
+                // Fields from the copy edited last; completions day by day (newest change wins).
+                // iCloud keeps dates to the millisecond: this device's own copy coming back is
+                // the same edit, not an older one.
+                let remoteWins = remoteTask.lastModifiedDate >= localTask.lastModifiedDate.addingTimeInterval(-0.002)
+                var mergedTask = remoteWins ? remoteTask : localTask
+                let completions = TodoTask.mergedCompletions(local: localTask, remote: remoteTask, preferRemote: remoteWins)
+                mergedTask.completions = completions.completions
+                mergedTask.completionDates = completions.completionDates
+                // Notifications are scheduled per device: keep this device's.
+                if localTask.hasNotification && !remoteTask.hasNotification && remoteWins {
+                    mergedTask.hasNotification = true
                 }
+                mergedTask.notificationId = localTask.notificationId ?? mergedTask.notificationId
                 
                 syncSubtaskCompletionStates(&mergedTask)
+                // Files of photos/memos the kept version no longer has (removed on the other
+                // device, or downloaded for a copy that lost).
+                removeAttachments(of: localTask, notIn: mergedTask)
+                removeAttachments(of: remoteTask, notIn: mergedTask)
+                // iCloud lacks something this device has (a day completed here, a newer edit):
+                // send the combined copy so the other devices get it too.
+                // (Edits to the other fields are sent by the save that made them, or the outbox.)
+                if mergedTask.completions != remoteTask.completions
+                    || Set(mergedTask.completionDates) != Set(remoteTask.completionDates) {
+                    toUpload.append(mergedTask)
+                }
                 
                 if let index = mergedTasks.firstIndex(where: { $0.id == remoteTask.id }) {
                     mergedTasks[index] = mergedTask
@@ -1332,6 +1379,9 @@ class CloudKitService: ObservableObject {
         
         if hasChanges {
             TaskManager.shared.updateAllTasks(mergedTasks)
+        }
+        for task in toUpload {
+            saveTask(task)
         }
     }
     
@@ -1471,6 +1521,13 @@ class CloudKitService: ObservableObject {
     private func mergeFinanceData(entries: [FinanceEntry], budgets: [FinanceBudget], goals: [FinancialGoal], customCategories: [CustomFinanceCategory]) async {
         guard !entries.isEmpty || !budgets.isEmpty || !goals.isEmpty || !customCategories.isEmpty else { return }
         
+        // Deleted here, or edited here and still uploading: iCloud's older copy must not win.
+        let deleted = deletedItems
+        let entries = entries.filter { !deleted.financeEntries.contains($0.id.uuidString) && !pendingUploads.contains($0.id.uuidString) }
+        let budgets = budgets.filter { !deleted.financeBudgets.contains($0.id.uuidString) && !pendingUploads.contains($0.id.uuidString) }
+        let goals = goals.filter { !deleted.financialGoals.contains($0.id.uuidString) && !pendingUploads.contains($0.id.uuidString) }
+        let customCategories = customCategories.filter { !deleted.customFinanceCategories.contains($0.id.uuidString) && !pendingUploads.contains($0.id.uuidString) }
+        
         let hasEntryChanges = FinanceManager.shared.mergeEntriesFromCloud(entries)
         let hasBudgetChanges = FinanceManager.shared.mergeBudgetsFromCloud(budgets)
         let hasGoalChanges = FinanceManager.shared.mergeGoalsFromCloud(goals)
@@ -1491,7 +1548,10 @@ class CloudKitService: ObservableObject {
     }
     
     // MARK: - Record Creation
-    private func createTaskRecord(from task: TodoTask) -> CKRecord {
+    /// Task fields added in 1.8: left out when the production schema does not have them yet.
+    private static let taskFields18 = ["photosMeta", "totalTrackedTime", "lastTrackedDate", "domainId", "goalId"]
+    
+    private func createTaskRecord(from task: TodoTask, includeFields18: Bool = true) -> CKRecord {
         let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
         let record = CKRecord(recordType: taskRecordType, recordID: recordID)
         
@@ -1515,6 +1575,12 @@ class CloudKitService: ObservableObject {
         record["scopeStartDate"] = task.scopeStartDate
         record["scopeEndDate"] = task.scopeEndDate
         record["autoCarryOver"] = task.autoCarryOver
+        if includeFields18 {
+            record["totalTrackedTime"] = task.totalTrackedTime
+            record["lastTrackedDate"] = task.lastTrackedDate
+            record["domainId"] = task.domainId?.uuidString
+            record["goalId"] = task.goalId?.uuidString
+        }
         
         do {
             let encoder = JSONEncoder()
@@ -1530,31 +1596,7 @@ class CloudKitService: ObservableObject {
             print(" Error encoding complex objects for task: \(error)")
         }
         
-        if let photoPath = task.photoPath {
-            let url = URL(fileURLWithPath: photoPath)
-            if FileManager.default.fileExists(atPath: url.path) {
-                record["photo"] = CKAsset(fileURL: url)
-            } else {
-                record["photo"] = nil
-            }
-        } else {
-            record["photo"] = nil
-        }
-        
-        let photoAssets: [CKAsset] = task.photos.compactMap { p in
-            let url = URL(fileURLWithPath: p.photoPath)
-            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
-        }
-        if !photoAssets.isEmpty {
-            record["photos"] = photoAssets
-            if record["photo"] == nil {
-                record["photo"] = photoAssets.first
-            }
-        } else {
-            record["photos"] = nil
-        }
-        
-        setVoiceMemos(on: record, for: task)
+        setTaskMedia(on: record, for: task, includeFields18: includeFields18)
         
         return record
     }
@@ -1626,49 +1668,12 @@ class CloudKitService: ObservableObject {
         task.creationDate = creationDate ?? Date()
         task.lastModifiedDate = lastModifiedDate ?? Date()
         
-        if let asset = record["photo"] as? CKAsset, let fileURL = asset.fileURL {
-            if let data = try? Data(contentsOf: fileURL), let result = AttachmentService.savePhoto(for: uuid, imageData: data) {
-                task.photoPath = result.photoPath
-                task.photoThumbnailPath = result.thumbnailPath
-            }
-        }
+        task.totalTrackedTime = record["totalTrackedTime"] as? TimeInterval ?? 0
+        task.lastTrackedDate = record["lastTrackedDate"] as? Date
+        task.domainId = (record["domainId"] as? String).flatMap(UUID.init(uuidString:))
+        task.goalId = (record["goalId"] as? String).flatMap(UUID.init(uuidString:))
         
-        if let assets = record["photos"] as? [CKAsset], !assets.isEmpty {
-            var imported: [TaskPhoto] = []
-            for asset in assets {
-                if let url = asset.fileURL,
-                   let data = try? Data(contentsOf: url),
-                   let added = AttachmentService.addPhoto(for: uuid, imageData: data) {
-                    imported.append(added)
-                }
-            }
-            if !imported.isEmpty {
-                task.photos = imported
-                if task.photoPath == nil, let first = imported.first {
-                    task.photoPath = first.photoPath
-                    task.photoThumbnailPath = first.thumbnailPath
-                }
-            }
-        }
-        
-        if let metaData = record["voiceMemosMeta"] as? Data,
-           let assets = record["voiceMemosAssets"] as? [CKAsset],
-           let metas = try? JSONDecoder().decode([CloudVoiceMemoMeta].self, from: metaData),
-           !assets.isEmpty, !metas.isEmpty {
-            var memos: [TaskVoiceMemo] = []
-            let count = min(assets.count, metas.count)
-            for i in 0..<count {
-                if let fileURL = assets[i].fileURL,
-                   let data = try? Data(contentsOf: fileURL) {
-                    if let memo = saveVoiceMemoData(taskId: uuid, data: data, id: metas[i].id, duration: metas[i].duration, createdAt: metas[i].createdAt, name: metas[i].name) {
-                        memos.append(memo)
-                    }
-                }
-            }
-            if !memos.isEmpty {
-                task.voiceMemos = memos.sorted { $0.createdAt > $1.createdAt }
-            }
-        }
+        importTaskMedia(from: record, into: &task)
         
         syncSubtaskCompletionStates(&task)
         
@@ -1694,23 +1699,6 @@ class CloudKitService: ObservableObject {
         let duration: TimeInterval
         let createdAt: Date
         let name: String?
-    }
-    
-    private func setVoiceMemos(on record: CKRecord, for task: TodoTask) {
-        let assets: [CKAsset] = task.voiceMemos.compactMap { memo in
-            let url = URL(fileURLWithPath: memo.audioPath)
-            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
-        }
-        if !assets.isEmpty {
-            record["voiceMemosAssets"] = assets
-            let metas = task.voiceMemos.map { CloudVoiceMemoMeta(id: $0.id, duration: $0.duration, createdAt: $0.createdAt, name: $0.name) }
-            if let data = try? JSONEncoder().encode(metas) {
-                record["voiceMemosMeta"] = data
-            }
-        } else {
-            record["voiceMemosAssets"] = nil
-            record["voiceMemosMeta"] = nil
-        }
     }
     
     private func saveVoiceMemoData(taskId: UUID, data: Data, id: UUID, duration: TimeInterval, createdAt: Date, name: String? = nil) -> TaskVoiceMemo? {
@@ -1902,46 +1890,6 @@ class CloudKitService: ObservableObject {
         return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
     
-    private func createJournalEntryRecord(from entry: JournalEntry) -> CKRecord {
-        let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
-        let record = CKRecord(recordType: journalEntryRecordType, recordID: recordID)
-        
-        record["date"] = entry.date
-        record["title"] = entry.title
-        record["text"] = entry.text
-        record["worthItText"] = entry.worthItText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : entry.worthItText
-        record["isWorthItHidden"] = entry.isWorthItHidden ? entry.isWorthItHidden : nil
-        record["entryCreatedAt"] = entry.createdAt
-        record["entryUpdatedAt"] = entry.updatedAt
-        
-        if let mood = entry.mood {
-            record["mood"] = mood.rawValue
-        }
-        
-        if !entry.tags.isEmpty {
-            record["tags"] = entry.tags
-        }
-        
-        let photoAssets: [CKAsset] = entry.photos.compactMap { photo in
-            let url = URL(fileURLWithPath: photo.photoPath)
-            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
-        }
-        record["photos"] = photoAssets.isEmpty ? nil : photoAssets
-        
-        if !photoAssets.isEmpty {
-            let metas = entry.photos.map { CloudJournalPhotoMeta(id: $0.id, createdAt: $0.createdAt) }
-            if let data = try? JSONEncoder().encode(metas) {
-                record["journalPhotosMeta"] = data
-            }
-        } else {
-            record["journalPhotosMeta"] = nil
-        }
-        
-        setJournalVoiceMemos(on: record, for: entry)
-        
-        return record
-    }
-    
     private func createJournalEntry(from record: CKRecord) -> JournalEntry? {
         guard let date = record["date"] as? Date,
               let uuid = UUID(uuidString: record.recordID.recordName) else {
@@ -1962,45 +1910,7 @@ class CloudKitService: ObservableObject {
         
         let tags = record["tags"] as? [String] ?? []
         
-        var photos: [JournalPhoto] = []
-        if let assets = record["photos"] as? [CKAsset], !assets.isEmpty {
-            if let metaData = record["journalPhotosMeta"] as? Data,
-               let metas = try? JSONDecoder().decode([CloudJournalPhotoMeta].self, from: metaData),
-               !metas.isEmpty {
-                let count = min(assets.count, metas.count)
-                for i in 0..<count {
-                    if let url = assets[i].fileURL,
-                       let data = try? Data(contentsOf: url),
-                       let photo = saveJournalPhotoData(entryId: uuid, data: data, id: metas[i].id, createdAt: metas[i].createdAt) {
-                        photos.append(photo)
-                    }
-                }
-            } else {
-                for asset in assets {
-                    if let url = asset.fileURL,
-                       let data = try? Data(contentsOf: url),
-                       let photo = saveJournalPhotoData(entryId: uuid, data: data) {
-                        photos.append(photo)
-                    }
-                }
-            }
-        }
-        
-        var voiceMemos: [JournalVoiceMemo] = []
-        if let metaData = record["journalVoiceMemosMeta"] as? Data,
-           let assets = record["journalVoiceMemosAssets"] as? [CKAsset],
-           let metas = try? JSONDecoder().decode([CloudJournalVoiceMemoMeta].self, from: metaData),
-           !assets.isEmpty, !metas.isEmpty {
-            let count = min(assets.count, metas.count)
-            for i in 0..<count {
-                if let fileURL = assets[i].fileURL,
-                   let data = try? Data(contentsOf: fileURL) {
-                    if let memo = saveJournalVoiceMemoData(entryId: uuid, data: data, id: metas[i].id, duration: metas[i].duration, createdAt: metas[i].createdAt, name: metas[i].name) {
-                        voiceMemos.append(memo)
-                    }
-                }
-            }
-        }
+        let (photos, voiceMemos) = importJournalMedia(from: record, entryId: uuid)
         
         return JournalEntry(
             id: uuid,
@@ -2023,23 +1933,6 @@ class CloudKitService: ObservableObject {
         let duration: TimeInterval
         let createdAt: Date
         let name: String?
-    }
-    
-    private func setJournalVoiceMemos(on record: CKRecord, for entry: JournalEntry) {
-        let assets: [CKAsset] = entry.voiceMemos.compactMap { memo in
-            let url = URL(fileURLWithPath: memo.audioPath)
-            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
-        }
-        if !assets.isEmpty {
-            record["journalVoiceMemosAssets"] = assets
-            let metas = entry.voiceMemos.map { CloudJournalVoiceMemoMeta(id: $0.id, duration: $0.duration, createdAt: $0.createdAt, name: $0.name) }
-            if let data = try? JSONEncoder().encode(metas) {
-                record["journalVoiceMemosMeta"] = data
-            }
-        } else {
-            record["journalVoiceMemosAssets"] = nil
-            record["journalVoiceMemosMeta"] = nil
-        }
     }
     
     private func saveJournalPhotoData(entryId: UUID, data: Data) -> JournalPhoto? {
@@ -2158,7 +2051,11 @@ class CloudKitService: ObservableObject {
             startTime: startTime,
             elapsedTime: elapsedTime,
             isRunning: isRunning,
-            isPaused: isPaused
+            isPaused: isPaused,
+            deviceType: deviceType,
+            deviceName: deviceName,
+            creationDate: creationDate,
+            lastModifiedDate: lastModifiedDate
         )
         
         session.totalDuration = totalDuration
@@ -2371,131 +2268,6 @@ class CloudKitService: ObservableObject {
         return message.isEmpty ? "sync_error".localized : message
     }
     
-    private func resolveConflictAndRetry(task: TodoTask, retryCount: Int) async {
-        do {
-            let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: zoneID)
-            let serverRecord = try await privateDatabase.record(for: recordID)
-            
-            guard let currentTask = createTask(from: serverRecord) else {
-                print(" Could not parse current task from CloudKit")
-                return
-            }
-            
-            let mergedTask = mergeTaskConflict(local: task, remote: currentTask)
-            
-            let updatedRecord = updateTaskRecord(serverRecord, with: mergedTask)
-            
-            let operation = CKModifyRecordsOperation(recordsToSave: [updatedRecord])
-            operation.savePolicy = CKModifyRecordsOperation.RecordSavePolicy.changedKeys
-            operation.isAtomic = false
-            
-            _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CKRecord], Error>) in
-                operation.modifyRecordsCompletionBlock = { (savedRecords: [CKRecord]?, deletedRecordIDs: [CKRecord.ID]?, error: Error?) in
-                    if let error = error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(returning: savedRecords ?? [])
-                    }
-                }
-                self.privateDatabase.add(operation)
-            }
-            
-            print(" Conflict resolved and task updated: \(mergedTask.name)")
-            
-        } catch {
-            print(" Failed to resolve conflict for \(task.name): \(error)")
-            if retryCount < 3 {
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                saveTask(task, retryCount: retryCount + 1)
-            }
-        }
-    }
-    
-    private func updateTaskRecord(_ existingRecord: CKRecord, with task: TodoTask) -> CKRecord {
-        existingRecord["name"] = task.name.isEmpty ? "untitled_task".localized : task.name
-        existingRecord["taskDescription"] = task.description
-        existingRecord["startTime"] = task.startTime
-        existingRecord["hasSpecificTime"] = task.hasSpecificTime
-        existingRecord["hasNotification"] = task.hasNotification
-        existingRecord["notificationLeadTimeMinutes"] = task.notificationLeadTimeMinutes
-        existingRecord["duration"] = max(0, task.duration) 
-        existingRecord["hasDuration"] = task.hasDuration
-        existingRecord["icon"] = task.icon.isEmpty ? "circle.fill" : task.icon
-        existingRecord["priority"] = task.priority.rawValue
-        existingRecord["hasRewardPoints"] = task.hasRewardPoints
-        existingRecord["rewardPoints"] = max(0, task.rewardPoints) 
-        existingRecord["taskCreationDate"] = task.creationDate
-        existingRecord["taskLastModifiedDate"] = task.lastModifiedDate
-        existingRecord["timeScope"] = task.timeScope.rawValue
-        existingRecord["scopeStartDate"] = task.scopeStartDate
-        existingRecord["scopeEndDate"] = task.scopeEndDate
-        existingRecord["autoCarryOver"] = task.autoCarryOver
-        
-        encodeToRecord(existingRecord, key: "category", value: task.category)
-        encodeToRecord(existingRecord, key: "location", value: task.location)
-        encodeToRecord(existingRecord, key: "recurrence", value: task.recurrence)
-        encodeToRecord(existingRecord, key: "pomodoroSettings", value: task.pomodoroSettings)
-        encodeToRecord(existingRecord, key: "subtasks", value: task.subtasks)
-        encodeToRecord(existingRecord, key: "completions", value: task.completions)
-        encodeToRecord(existingRecord, key: "completionDates", value: task.completionDates)
-        
-        if let photoPath = task.photoPath {
-            let url = URL(fileURLWithPath: photoPath)
-            if FileManager.default.fileExists(atPath: url.path) {
-                existingRecord["photo"] = CKAsset(fileURL: url)
-            } else {
-                existingRecord["photo"] = nil
-            }
-        } else {
-            existingRecord["photo"] = nil
-        }
-        
-        let photoAssets: [CKAsset] = task.photos.compactMap { p in
-            let url = URL(fileURLWithPath: p.photoPath)
-            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
-        }
-        if !photoAssets.isEmpty {
-            existingRecord["photos"] = photoAssets
-            if existingRecord["photo"] == nil {
-                existingRecord["photo"] = photoAssets.first
-            }
-        } else {
-            existingRecord["photos"] = nil
-        }
-        
-        setVoiceMemos(on: existingRecord, for: task)
-        
-        return existingRecord
-    }
-    
-    private func mergeTaskConflict(local: TodoTask, remote: TodoTask) -> TodoTask {
-        var merged = remote
-        
-        merged.hasNotification = local.hasNotification || remote.hasNotification
-        if merged.notificationId == nil {
-            merged.notificationId = local.notificationId
-        }
-        
-        var mergedCompletions = remote.completions
-        
-        for (date, localCompletion) in local.completions {
-            if mergedCompletions[date] == nil {
-                mergedCompletions[date] = localCompletion
-            }
-        }
-        merged.completions = mergedCompletions
-        
-        let allCompletionDates = Set(local.completionDates + remote.completionDates)
-        merged.completionDates = Array(allCompletionDates).sorted()
-        
-        merged.lastModifiedDate = max(local.lastModifiedDate, remote.lastModifiedDate)
-        
-        syncSubtaskCompletionStates(&merged)
-        
-        print(" Merged conflict for task: \(merged.name) (using \(local.lastModifiedDate > remote.lastModifiedDate ? "local" : "remote") completion state)")
-        return merged
-    }
-    
     // MARK: - Remote Notifications
     func processRemoteNotification(_ userInfo: [AnyHashable: Any]) {
         Task { _ = await handleRemoteNotification(userInfo) }
@@ -2568,45 +2340,21 @@ class CloudKitService: ObservableObject {
         guard isCloudKitEnabled else { return }
         
         Task {
+            // Built from this device's copy and written over iCloud's: no need to download the
+            // day (with all its photos and memos) before saving it. Edits made on two devices
+            // are reconciled when they are fetched (`mergeJournalEntries`).
+            let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
+            let record = CKRecord(recordType: journalEntryRecordType, recordID: recordID)
+            applyJournalEntry(entry, to: record)
             do {
-                let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
-                
-                let record: CKRecord
-                do {
-                    record = try await privateDatabase.record(for: recordID)
-                } catch let error as CKError where error.code == .unknownItem {
-                    record = CKRecord(recordType: journalEntryRecordType, recordID: recordID)
-                }
-                
-                applyJournalEntry(entry, to: record)
-                
-                let op = CKModifyRecordsOperation(recordsToSave: [record])
-                op.savePolicy = .changedKeys
-                op.isAtomic = false
-                
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    op.modifyRecordsCompletionBlock = { _, _, error in
-                        if let error = error {
-                            continuation.resume(throwing: error)
-                        } else {
-                            continuation.resume(returning: ())
-                        }
-                    }
-                    self.privateDatabase.add(op)
-                }
-                
-                DispatchQueue.main.async {
-                    self.syncStatus = .success
-                    self.lastSyncDate = Date()
-                }
-            } catch let ckError as CKError {
-                if ckError.code == .serverRecordChanged {
-                    await self.resolveJournalConflictAndSave(entry)
-                } else {
-                    await self.handleCloudKitError(ckError)
-                }
+                try await saveOverwriting(record)
+                markUploaded([record])
+                syncStatus = .success
+                lastSyncDate = Date()
+            } catch let error as CKError {
+                await handleCloudKitError(error)
             } catch {
-                await self.handleSyncError(error)
+                await handleSyncError(error)
             }
         }
     }
@@ -2619,7 +2367,7 @@ class CloudKitService: ObservableObject {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 await saveDeletionMarker(type: "JournalEntry", id: entry.id.uuidString)
             } catch let error as CKError {
                 if error.code == .unknownItem {
@@ -2650,80 +2398,7 @@ class CloudKitService: ObservableObject {
         
         record["tags"] = entry.tags.isEmpty ? nil : entry.tags
         
-        let photoAssets: [CKAsset] = entry.photos.compactMap { photo in
-            let url = URL(fileURLWithPath: photo.photoPath)
-            return FileManager.default.fileExists(atPath: url.path) ? CKAsset(fileURL: url) : nil
-        }
-        record["photos"] = photoAssets.isEmpty ? nil : photoAssets
-        
-        if !photoAssets.isEmpty {
-            let metas = entry.photos.map { CloudJournalPhotoMeta(id: $0.id, createdAt: $0.createdAt) }
-            if let data = try? JSONEncoder().encode(metas) {
-                record["journalPhotosMeta"] = data
-            }
-        } else {
-            record["journalPhotosMeta"] = nil
-        }
-        
-        setJournalVoiceMemos(on: record, for: entry)
-    }
-    
-    private func resolveJournalConflictAndSave(_ entry: JournalEntry) async {
-        do {
-            let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
-            let serverRecord = try await privateDatabase.record(for: recordID)
-            
-            if let remote = createJournalEntry(from: serverRecord) {
-                var final = entry
-                if remote.updatedAt > entry.updatedAt {
-                    final = remote
-                } else if remote.updatedAt == entry.updatedAt {
-                    var merged = remote
-                    if !entry.text.isEmpty && remote.text.isEmpty { merged.text = entry.text }
-                    if !entry.title.isEmpty && remote.title.isEmpty { merged.title = entry.title }
-                    if !entry.worthItText.isEmpty && remote.worthItText.isEmpty { merged.worthItText = entry.worthItText }
-                    if merged.mood == nil, let m = entry.mood { merged.mood = m }
-                    merged.tags = Array(Set(merged.tags + entry.tags)).sorted()
-                    if entry.isWorthItHidden != remote.isWorthItHidden { merged.isWorthItHidden = entry.isWorthItHidden }
-                    
-                    // The same photo or memo is usually in both copies: keep one of each.
-                    let deleted = deletedItems
-                    let photoMap = Dictionary((merged.photos + entry.photos).map { ($0.id, $0) }, uniquingKeysWith: { _, local in local })
-                    merged.photos = Array(photoMap.values)
-                        .filter { !deleted.journalPhotos.contains($0.id.uuidString) }
-                        .sorted { $0.createdAt > $1.createdAt }
-                    
-                    let memoMap = Dictionary((merged.voiceMemos + entry.voiceMemos).map { ($0.id, $0) }, uniquingKeysWith: { _, local in local })
-                    merged.voiceMemos = Array(memoMap.values)
-                        .filter { !deleted.journalVoiceMemos.contains($0.id.uuidString) }
-                        .sorted { $0.createdAt > $1.createdAt }
-                    
-                    final = merged
-                }
-                
-                applyJournalEntry(final, to: serverRecord)
-                
-                let op = CKModifyRecordsOperation(recordsToSave: [serverRecord])
-                op.savePolicy = .changedKeys
-                op.isAtomic = false
-                
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    op.modifyRecordsCompletionBlock = { _, _, error in
-                        if let error = error {
-                            continuation.resume(throwing: error)
-                        } else {
-                            continuation.resume(returning: ())
-                        }
-                    }
-                    self.privateDatabase.add(op)
-                }
-            } else {
-                let newRecord = createJournalEntryRecord(from: entry)
-                _ = try await privateDatabase.save(newRecord)
-            }
-        } catch {
-            await handleSyncError(error)
-        }
+        setJournalMedia(on: record, for: entry)
     }
     
     func clearAllPointsHistory() async {
@@ -2799,8 +2474,11 @@ extension CloudKitService {
     
     func saveFinanceEntry(_ entry: FinanceEntry) {
         guard isCloudKitEnabled else { return }
+        let recordName = entry.id.uuidString
+        pendingUploads.insert(recordName)
         
         Task {
+            defer { pendingUploads.remove(recordName) }
             do {
                 let record = createFinanceEntryRecord(from: entry)
                 _ = try await saveOverwriting(record)
@@ -2817,7 +2495,7 @@ extension CloudKitService {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: entry.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 await saveDeletionMarker(type: "FinanceEntry", id: entry.id.uuidString)
                 print(" Finance entry deleted: \(entry.name)")
             } catch let error as CKError where error.code == .unknownItem {
@@ -2830,8 +2508,11 @@ extension CloudKitService {
     
     func saveFinanceBudget(_ budget: FinanceBudget) {
         guard isCloudKitEnabled else { return }
+        let recordName = budget.id.uuidString
+        pendingUploads.insert(recordName)
         
         Task {
+            defer { pendingUploads.remove(recordName) }
             do {
                 let record = createFinanceBudgetRecord(from: budget)
                 _ = try await saveOverwriting(record)
@@ -2848,7 +2529,7 @@ extension CloudKitService {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: budget.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 await saveDeletionMarker(type: "FinanceBudget", id: budget.id.uuidString)
                 print(" Finance budget deleted: \(budget.category.displayName)")
             } catch let error as CKError where error.code == .unknownItem {
@@ -2861,8 +2542,11 @@ extension CloudKitService {
     
     func saveFinancialGoal(_ goal: FinancialGoal) {
         guard isCloudKitEnabled else { return }
+        let recordName = goal.id.uuidString
+        pendingUploads.insert(recordName)
         
         Task {
+            defer { pendingUploads.remove(recordName) }
             do {
                 let record = createFinancialGoalRecord(from: goal)
                 _ = try await saveOverwriting(record)
@@ -2879,7 +2563,7 @@ extension CloudKitService {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: goal.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 await saveDeletionMarker(type: "FinancialGoal", id: goal.id.uuidString)
                 print(" Financial goal deleted: \(goal.name)")
             } catch let error as CKError where error.code == .unknownItem {
@@ -2892,8 +2576,11 @@ extension CloudKitService {
     
     func saveCustomFinanceCategory(_ category: CustomFinanceCategory) {
         guard isCloudKitEnabled else { return }
+        let recordName = category.id.uuidString
+        pendingUploads.insert(recordName)
         
         Task {
+            defer { pendingUploads.remove(recordName) }
             do {
                 let record = createCustomFinanceCategoryRecord(from: category)
                 _ = try await saveOverwriting(record)
@@ -2910,7 +2597,7 @@ extension CloudKitService {
         Task {
             do {
                 let recordID = CKRecord.ID(recordName: category.id.uuidString, zoneID: zoneID)
-                _ = try await privateDatabase.deleteRecord(withID: recordID)
+                try await deleteRecordQueued(recordID)
                 await saveDeletionMarker(type: "CustomFinanceCategory", id: category.id.uuidString)
                 print(" Custom finance category deleted: \(category.name)")
             } catch let error as CKError where error.code == .unknownItem {
@@ -3104,5 +2791,384 @@ extension CloudKitService {
             isExpenseCategory: isExpenseCategory,
             creationDate: creationDate
         )
+    }
+}
+// MARK: - Attachments (photos and voice memos)
+// Files go to iCloud only when the set of photos/memos of a task or journal day changes. Before,
+// every save (even ticking a task off) uploaded all its files again, and every device wrote
+// them to disk again under new names on each sync.
+extension CloudKitService {
+    private static let knownMediaKey = "cloudkit_known_media_v1"
+    
+    private struct CloudTaskPhotoMeta: Codable {
+        let id: UUID
+        let createdAt: Date
+    }
+    
+    /// What iCloud holds for a record's files, as last uploaded or fetched (nil: unknown).
+    private func knownMedia(for recordName: String) -> String? {
+        if knownMediaCache == nil {
+            knownMediaCache = UserDefaults.standard.dictionary(forKey: Self.knownMediaKey) as? [String: String] ?? [:]
+        }
+        return knownMediaCache?[recordName]
+    }
+    
+    private func setKnownMedia(_ signature: String?, for recordName: String) {
+        _ = knownMedia(for: recordName)
+        knownMediaCache?[recordName] = signature
+    }
+    
+    func persistKnownMedia() {
+        guard let cache = knownMediaCache else { return }
+        UserDefaults.standard.set(cache, forKey: Self.knownMediaKey)
+    }
+    
+    /// Called once iCloud confirmed the save of these records.
+    func markUploaded(_ records: [CKRecord]) {
+        var changed = false
+        for record in records {
+            let name = record.recordID.recordName
+            if let signature = mediaAwaitingUpload.removeValue(forKey: name) {
+                setKnownMedia(signature, for: name)
+                changed = true
+            }
+        }
+        if changed { persistKnownMedia() }
+    }
+    
+    private static func mediaSignature(photoIDs: [UUID], memos: [(id: UUID, name: String?)]) -> String {
+        let photos = photoIDs.map(\.uuidString).joined(separator: ",")
+        let memoPart = memos.map { "\($0.id.uuidString)=\($0.name ?? "")" }.joined(separator: ",")
+        return "p:\(photos)|m:\(memoPart)"
+    }
+    
+    // MARK: Tasks
+    
+    func setTaskMedia(on record: CKRecord, for task: TodoTask, includeFields18: Bool) {
+        let photos = task.photos.map { ($0, AttachmentService.resolveFilePath($0.photoPath)) }
+        let memos = task.voiceMemos.map { ($0, AttachmentService.resolveFilePath($0.audioPath)) }
+        let legacyPath = task.photos.isEmpty ? task.photoPath : nil
+        let legacyFile = legacyPath.flatMap(AttachmentService.resolveFilePath)
+        
+        // A file this device can't find (moved, or never downloaded): leave iCloud's copy alone
+        // instead of deleting it there.
+        guard !photos.contains(where: { $0.1 == nil }), !memos.contains(where: { $0.1 == nil }),
+              legacyPath == nil || legacyFile != nil else { return }
+        
+        let name = record.recordID.recordName
+        // Single photo saved by old versions: no id to compare, so it is always sent.
+        let signature = legacyFile == nil
+            ? Self.mediaSignature(photoIDs: photos.map(\.0.id), memos: memos.map { ($0.0.id, $0.0.name) })
+            : nil
+        if let signature, knownMedia(for: name) == signature { return }
+        
+        record["photos"] = photos.isEmpty ? nil : photos.map { CKAsset(fileURL: URL(fileURLWithPath: $0.1!)) }
+        if includeFields18 {
+            record["photosMeta"] = photos.isEmpty ? nil
+                : try? JSONEncoder().encode(photos.map { CloudTaskPhotoMeta(id: $0.0.id, createdAt: $0.0.createdAt) })
+        }
+        record["photo"] = legacyFile.map { CKAsset(fileURL: URL(fileURLWithPath: $0)) }
+        record["voiceMemosAssets"] = memos.isEmpty ? nil : memos.map { CKAsset(fileURL: URL(fileURLWithPath: $0.1!)) }
+        record["voiceMemosMeta"] = memos.isEmpty ? nil
+            : try? JSONEncoder().encode(memos.map { CloudVoiceMemoMeta(id: $0.0.id, duration: $0.0.duration, createdAt: $0.0.createdAt, name: $0.0.name) })
+        mediaAwaitingUpload[name] = signature
+    }
+    
+    /// Reads a task's files from its record, reusing the ones this device already has.
+    func importTaskMedia(from record: CKRecord, into task: inout TodoTask) {
+        let local = TaskManager.shared.tasks.first { $0.id == task.id }
+        var signatureKnown = true
+        var photoIDs: [UUID] = []
+        var memoKeys: [(id: UUID, name: String?)] = []
+        
+        if let assets = record["photos"] as? [CKAsset], !assets.isEmpty {
+            let metas = (record["photosMeta"] as? Data).flatMap { try? JSONDecoder().decode([CloudTaskPhotoMeta].self, from: $0) }
+            if let metas, metas.count == assets.count {
+                task.photos = zip(assets, metas).compactMap { asset, meta in
+                    if let existing = local?.photos.first(where: { $0.id == meta.id }),
+                       let path = AttachmentService.resolveFilePath(existing.photoPath) {
+                        let thumb = AttachmentService.resolveFilePath(existing.thumbnailPath) ?? existing.thumbnailPath
+                        return TaskPhoto(id: meta.id, photoPath: path, thumbnailPath: thumb, createdAt: meta.createdAt)
+                    }
+                    guard let url = asset.fileURL, let data = try? Data(contentsOf: url) else { return nil }
+                    return AttachmentService.addPhoto(for: task.id, imageData: data, id: meta.id, createdAt: meta.createdAt)
+                }
+                photoIDs = metas.map(\.id)
+            } else {
+                // Saved by a version without photo ids: keep this device's copies if it has them all.
+                signatureKnown = false
+                if let local, local.photos.count == assets.count,
+                   local.photos.allSatisfy({ AttachmentService.resolveFilePath($0.photoPath) != nil }) {
+                    task.photos = local.photos
+                } else {
+                    task.photos = assets.compactMap { asset in
+                        guard let url = asset.fileURL, let data = try? Data(contentsOf: url) else { return nil }
+                        return AttachmentService.addPhoto(for: task.id, imageData: data)
+                    }
+                }
+            }
+            task.photoPath = task.photos.first?.photoPath
+            task.photoThumbnailPath = task.photos.first?.thumbnailPath
+        } else if let asset = record["photo"] as? CKAsset {
+            signatureKnown = false
+            if let local, let path = local.photoPath.flatMap(AttachmentService.resolveFilePath) {
+                task.photoPath = path
+                task.photoThumbnailPath = local.photoThumbnailPath.flatMap(AttachmentService.resolveFilePath) ?? local.photoThumbnailPath
+            } else if let url = asset.fileURL, let data = try? Data(contentsOf: url),
+                      let saved = AttachmentService.savePhoto(for: task.id, imageData: data) {
+                task.photoPath = saved.photoPath
+                task.photoThumbnailPath = saved.thumbnailPath
+            }
+        }
+        
+        if let assets = record["voiceMemosAssets"] as? [CKAsset], !assets.isEmpty,
+           let metaData = record["voiceMemosMeta"] as? Data,
+           let metas = try? JSONDecoder().decode([CloudVoiceMemoMeta].self, from: metaData) {
+            // Older versions could list more memos than files: the pairs may be off, re-send later.
+            if metas.count != assets.count { signatureKnown = false }
+            task.voiceMemos = zip(assets, metas).compactMap { asset, meta in
+                if let existing = local?.voiceMemos.first(where: { $0.id == meta.id }),
+                   let path = AttachmentService.resolveFilePath(existing.audioPath) {
+                    return TaskVoiceMemo(id: meta.id, audioPath: path, duration: meta.duration, createdAt: meta.createdAt, name: meta.name)
+                }
+                guard let url = asset.fileURL, let data = try? Data(contentsOf: url) else { return nil }
+                return saveVoiceMemoData(taskId: task.id, data: data, id: meta.id, duration: meta.duration, createdAt: meta.createdAt, name: meta.name)
+            }.sorted { $0.createdAt > $1.createdAt }
+            memoKeys = metas.map { ($0.id, $0.name) }
+        }
+        
+        setKnownMedia(signatureKnown ? Self.mediaSignature(photoIDs: photoIDs, memos: memoKeys) : nil,
+                      for: record.recordID.recordName)
+    }
+    
+    /// Deletes the files of `old`'s photos and memos that `new` no longer has.
+    func removeAttachments(of old: TodoTask, notIn new: TodoTask) {
+        let keptPhotos = Set(new.photos.map(\.id))
+        for photo in old.photos where !keptPhotos.contains(photo.id) {
+            let stillUsed = new.photos.contains { $0.photoPath == photo.photoPath }
+            if !stillUsed { AttachmentService.deletePhoto(for: old.id, photo: photo) }
+        }
+        let keptMemos = Set(new.voiceMemos.map(\.id))
+        for memo in old.voiceMemos where !keptMemos.contains(memo.id) {
+            if !new.voiceMemos.contains(where: { $0.audioPath == memo.audioPath }) {
+                try? FileManager.default.removeItem(atPath: memo.audioPath)
+            }
+        }
+    }
+    
+    // MARK: Journal
+    
+    func setJournalMedia(on record: CKRecord, for entry: JournalEntry) {
+        let photos = entry.photos.map { ($0, AttachmentService.resolveFilePath($0.photoPath)) }
+        let memos = entry.voiceMemos.map { ($0, AttachmentService.resolveFilePath($0.audioPath)) }
+        guard !photos.contains(where: { $0.1 == nil }), !memos.contains(where: { $0.1 == nil }) else { return }
+        
+        let name = record.recordID.recordName
+        let signature = Self.mediaSignature(photoIDs: photos.map(\.0.id), memos: memos.map { ($0.0.id, $0.0.name) })
+        if knownMedia(for: name) == signature { return }
+        
+        record["photos"] = photos.isEmpty ? nil : photos.map { CKAsset(fileURL: URL(fileURLWithPath: $0.1!)) }
+        record["journalPhotosMeta"] = photos.isEmpty ? nil
+            : try? JSONEncoder().encode(photos.map { CloudJournalPhotoMeta(id: $0.0.id, createdAt: $0.0.createdAt) })
+        record["journalVoiceMemosAssets"] = memos.isEmpty ? nil : memos.map { CKAsset(fileURL: URL(fileURLWithPath: $0.1!)) }
+        record["journalVoiceMemosMeta"] = memos.isEmpty ? nil
+            : try? JSONEncoder().encode(memos.map { CloudJournalVoiceMemoMeta(id: $0.0.id, duration: $0.0.duration, createdAt: $0.0.createdAt, name: $0.0.name) })
+        mediaAwaitingUpload[name] = signature
+    }
+    
+    func importJournalMedia(from record: CKRecord, entryId: UUID) -> (photos: [JournalPhoto], memos: [JournalVoiceMemo]) {
+        let local = JournalManager.shared.entriesByDay.values.first { $0.id == entryId }
+        var signatureKnown = true
+        var photos: [JournalPhoto] = []
+        var memos: [JournalVoiceMemo] = []
+        var photoIDs: [UUID] = []
+        var memoKeys: [(id: UUID, name: String?)] = []
+        
+        if let assets = record["photos"] as? [CKAsset], !assets.isEmpty {
+            let metas = (record["journalPhotosMeta"] as? Data).flatMap { try? JSONDecoder().decode([CloudJournalPhotoMeta].self, from: $0) }
+            if let metas, metas.count == assets.count {
+                photos = zip(assets, metas).compactMap { asset, meta in
+                    if let existing = local?.photos.first(where: { $0.id == meta.id }),
+                       let path = AttachmentService.resolveFilePath(existing.photoPath) {
+                        let thumb = AttachmentService.resolveFilePath(existing.thumbnailPath) ?? existing.thumbnailPath
+                        return JournalPhoto(id: meta.id, photoPath: path, thumbnailPath: thumb, createdAt: meta.createdAt)
+                    }
+                    guard let url = asset.fileURL, let data = try? Data(contentsOf: url) else { return nil }
+                    return saveJournalPhotoData(entryId: entryId, data: data, id: meta.id, createdAt: meta.createdAt)
+                }
+                photoIDs = metas.map(\.id)
+            } else {
+                signatureKnown = false
+                if let local, local.photos.count == assets.count,
+                   local.photos.allSatisfy({ AttachmentService.resolveFilePath($0.photoPath) != nil }) {
+                    photos = local.photos
+                } else {
+                    photos = assets.compactMap { asset in
+                        guard let url = asset.fileURL, let data = try? Data(contentsOf: url) else { return nil }
+                        return saveJournalPhotoData(entryId: entryId, data: data)
+                    }
+                }
+            }
+        }
+        
+        if let assets = record["journalVoiceMemosAssets"] as? [CKAsset], !assets.isEmpty,
+           let metaData = record["journalVoiceMemosMeta"] as? Data,
+           let metas = try? JSONDecoder().decode([CloudJournalVoiceMemoMeta].self, from: metaData) {
+            if metas.count != assets.count { signatureKnown = false }
+            memos = zip(assets, metas).compactMap { asset, meta in
+                if let existing = local?.voiceMemos.first(where: { $0.id == meta.id }),
+                   let path = AttachmentService.resolveFilePath(existing.audioPath) {
+                    return JournalVoiceMemo(id: meta.id, audioPath: path, duration: meta.duration, createdAt: meta.createdAt, name: meta.name)
+                }
+                guard let url = asset.fileURL, let data = try? Data(contentsOf: url) else { return nil }
+                return saveJournalVoiceMemoData(entryId: entryId, data: data, id: meta.id, duration: meta.duration, createdAt: meta.createdAt, name: meta.name)
+            }
+            memoKeys = metas.map { ($0.id, $0.name) }
+        }
+        
+        setKnownMedia(signatureKnown ? Self.mediaSignature(photoIDs: photoIDs, memos: memoKeys) : nil,
+                      for: record.recordID.recordName)
+        return (photos, memos)
+    }
+}
+
+// MARK: - Outbox
+// Changes that could not reach iCloud (offline, iCloud busy, not signed in yet) are kept by
+// record name and sent again at the start of every sync, rebuilt from the current local data.
+// Before, a failed save or deletion was simply lost until the same item changed again.
+extension CloudKitService {
+    private static let outboxKey = "cloudkit_outbox_v1"
+    
+    private struct Outbox: Codable {
+        var saves: [String: String] = [:]   // record name → record type
+        var deletes: Set<String> = []
+    }
+    
+    private var outbox: Outbox {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: Self.outboxKey) else { return Outbox() }
+            return (try? JSONDecoder().decode(Outbox.self, from: data)) ?? Outbox()
+        }
+        set {
+            if newValue.saves.isEmpty && newValue.deletes.isEmpty {
+                UserDefaults.standard.removeObject(forKey: Self.outboxKey)
+            } else if let data = try? JSONEncoder().encode(newValue) {
+                UserDefaults.standard.set(data, forKey: Self.outboxKey)
+            }
+        }
+    }
+    
+    static func isRetryable(_ error: Error) -> Bool {
+        guard let ckError = error as? CKError else { return false }
+        switch ckError.code {
+        case .invalidArguments, .serverRejectedRequest, .permissionFailure, .unknownItem,
+             .constraintViolation, .incompatibleVersion, .badContainer, .missingEntitlement,
+             .assetFileNotFound, .assetFileModified:
+            return false
+        default:
+            return true
+        }
+    }
+    
+    func outboxQueueSave(_ record: CKRecord) {
+        var box = outbox
+        box.saves[record.recordID.recordName] = record.recordType
+        box.deletes.remove(record.recordID.recordName)
+        outbox = box
+    }
+    
+    func outboxQueueDelete(_ recordName: String) {
+        var box = outbox
+        box.saves.removeValue(forKey: recordName)
+        box.deletes.insert(recordName)
+        outbox = box
+    }
+    
+    func outboxDidSave(_ recordName: String) {
+        guard UserDefaults.standard.data(forKey: Self.outboxKey) != nil else { return }
+        var box = outbox
+        guard box.saves.removeValue(forKey: recordName) != nil else { return }
+        outbox = box
+    }
+    
+    func outboxDidDelete(_ recordName: String) {
+        guard UserDefaults.standard.data(forKey: Self.outboxKey) != nil else { return }
+        var box = outbox
+        guard box.deletes.remove(recordName) != nil else { return }
+        outbox = box
+    }
+    
+    /// Sends what is waiting in the outbox. Items deleted locally in the meantime are dropped.
+    func flushOutbox() async {
+        let box = outbox
+        guard !box.saves.isEmpty || !box.deletes.isEmpty else { return }
+        print(" Outbox: \(box.saves.count) saves, \(box.deletes.count) deletions to send")
+        
+        for name in box.deletes {
+            do {
+                try await deleteRecordQueued(CKRecord.ID(recordName: name, zoneID: zoneID))
+            } catch {
+                if Self.isRetryable(error) { return } // still offline: try again next sync
+            }
+        }
+        for (name, type) in box.saves {
+            guard let record = currentRecord(type: type, name: name) else {
+                outboxDidSave(name) // no longer here (deleted), or rebuilt on its own
+                continue
+            }
+            do {
+                try await saveOverwriting(record)
+                markUploaded([record])
+            } catch {
+                if Self.isRetryable(error) { return }
+                // A task rejected by a production schema without the 1.8 fields: send the rest.
+                if type == taskRecordType,
+                   let task = TaskManager.shared.tasks.first(where: { $0.id.uuidString == name }) {
+                    let fallback = createTaskRecord(from: task, includeFields18: false)
+                    if (try? await saveOverwriting(fallback)) != nil { markUploaded([fallback]) }
+                }
+                outboxDidSave(name) // rejected for good: don't retry forever
+            }
+        }
+    }
+    
+    /// The record for an item as it is on this device now.
+    private func currentRecord(type: String, name: String) -> CKRecord? {
+        let uuid = UUID(uuidString: name)
+        switch type {
+        case taskRecordType:
+            return TaskManager.shared.tasks.first { $0.id == uuid }.map { createTaskRecord(from: $0) }
+        case categoryRecordType:
+            return CategoryManager.shared.categories.first { $0.id == uuid }.map { createCategoryRecord(from: $0) }
+        case rewardRecordType:
+            return RewardManager.shared.rewards.first { $0.id == uuid }.map { createRewardRecord(from: $0) }
+        case trackingSessionRecordType:
+            return TaskManager.shared.getTrackingSessions().first { $0.id == uuid }.map { createTrackingSessionRecord(from: $0) }
+        case journalEntryRecordType:
+            guard let entry = JournalManager.shared.entriesByDay.values.first(where: { $0.id == uuid }) else { return nil }
+            let record = CKRecord(recordType: journalEntryRecordType, recordID: CKRecord.ID(recordName: name, zoneID: zoneID))
+            applyJournalEntry(entry, to: record)
+            return record
+        case financeEntryRecordType:
+            return FinanceManager.shared.entries.first { $0.id == uuid }.map { createFinanceEntryRecord(from: $0) }
+        case financeBudgetRecordType:
+            return FinanceManager.shared.budgets.first { $0.id == uuid }.map { createFinanceBudgetRecord(from: $0) }
+        case financialGoalRecordType:
+            return FinanceManager.shared.financialGoals.first { $0.id == uuid }.map { createFinancialGoalRecord(from: $0) }
+        case customFinanceCategoryRecordType:
+            return FinanceManager.shared.customCategories.first { $0.id == uuid }.map { createCustomFinanceCategoryRecord(from: $0) }
+        case taskListOrderRecordType:
+            let listKey = String(name.dropFirst("order-".count))
+            return TaskOrderManager.shared.orders[listKey].map { createTaskListOrderRecord(from: $0) }
+        case deletionMarkerRecordType:
+            // Named "<type>-<id>": the id is the last five dash-separated parts (a UUID).
+            let parts = name.split(separator: "-")
+            guard parts.count > 5 else { return nil }
+            let id = parts.suffix(5).joined(separator: "-")
+            let markerType = parts.dropLast(5).joined(separator: "-")
+            return createDeletionMarker(type: markerType, id: id)
+        default:
+            return nil // settings and statistics are re-sent on their own
+        }
     }
 }
