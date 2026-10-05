@@ -82,7 +82,7 @@ struct NewFeedbackView: View {
                                     .foregroundColor(.green)
                                     .font(.title3)
                                 
-                                Text("Title")
+                                Text("feedback_title_label".localized)
                                     .font(.headline)
                                     .fontWeight(.semibold)
                             }
@@ -109,7 +109,7 @@ struct NewFeedbackView: View {
                                     .foregroundColor(.orange)
                                     .font(.title3)
                                 
-                                Text("Description")
+                                Text("description".localized)
                                     .font(.headline)
                                     .fontWeight(.semibold)
                             }

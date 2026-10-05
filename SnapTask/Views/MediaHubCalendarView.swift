@@ -2020,9 +2020,8 @@ private struct CalendarTaskCard: View {
                         taskManager.toggleTaskCompletion(task.id, on: date)
                     }
                 }) {
-                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isCompleted ? .green : theme.secondaryTextColor.opacity(0.5))
-                        .font(.title2)
+                    TaskStatusIcon(state: isCompleted ? .completed : .todo,
+                                   idleColor: theme.secondaryTextColor.opacity(0.5), size: 22)
                 }
                 .buttonStyle(.plain)
             }
@@ -2435,9 +2434,8 @@ private struct CalendarScopeTaskCard: View {
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isCompleted ? .green : theme.secondaryTextColor.opacity(0.5))
-                    .font(.title2)
+                TaskStatusIcon(state: isCompleted ? .completed : .todo,
+                               idleColor: theme.secondaryTextColor.opacity(0.5), size: 22)
             }
             
             // Row 2: Badges

@@ -578,7 +578,7 @@
 "sort_by_time_description" = "Aufgaben nach geplanter Zeit sortieren";
 "group_by_category_description" = "Aufgaben nach Kategorie gruppieren";
 "group_by_priority_description" = "Aufgaben nach Priorität gruppieren";
-"group_by_urgency_importance_description" = "Aufgaben nach Dringlichkeit und Wichtigkeit gruppieren (Eisenhower-Matrix)";
+"group_by_urgency_importance_description" = "Aufgaben nach Dringlichkeit und Wichtigkeit gruppieren";
 "filter_sort_by_time_description" = "Aufgaben nach ihrer geplanten Zeit sortieren";
 "filter_group_by_category_description" = "Aufgaben unter ihren Kategorien gruppieren";
 "filter_group_by_priority_description" = "Aufgaben nach Prioritätsstufe gruppieren";
@@ -1070,7 +1070,7 @@
 "weekly_overview" = "Wochenübersicht";
 "week_pts" = "Woche: {points} Pkt";
 "focus_time" = "Fokuszeit";
-"mark_incomplete" = "Unvollständig";
+"mark_incomplete" = "Offen";
 "mark_complete" = "Als vollständig markieren";
 "recurring_task" = "Wiederkehrende Aufgabe";
 "has_duration" = "Hat Dauer";
@@ -1374,7 +1374,7 @@
 
 // Eisenhower-Einstellungen (Dringlichkeit anpassen)
 "eisenhower_settings_title" = "Eisenhower-Matrix";
-"eisenhower_today_require_specific_time_title" = "Spezifische Uhrzeit erforderlich (Heute)";
+"eisenhower_today_require_specific_time_title" = "Nur mit Uhrzeit";
 "eisenhower_today_require_specific_time_desc" = "Nur heutige Aufgaben mit festgelegter Uhrzeit als dringend betrachten.";
 "eisenhower_today_urgent_hours_title" = "Dringlichkeitsschwelle Heute (Stunden)";
 "eisenhower_week_urgent_hours_title" = "Dringlichkeitsschwelle Woche (Stunden)";
@@ -2095,7 +2095,7 @@
 "all_scope_history" = "Verlauf";
 "inbox_plan_more_options" = "Weitere Optionen";
 "tip_in_progress_title" = "Als „In Arbeit“ markieren";
-"tip_in_progress_message" = "Halte den Kreis gedrückt, um zwischen Offen, In Arbeit und Erledigt zu wählen.";
+"tip_in_progress_message" = "Halte den Kreis gedrückt, um eine Aufgabe als „In Arbeit“ zu markieren. Noch einmal, um es aufzuheben.";
 
 // Welcome content and task deletion
 "starter_category_work" = "Arbeit";
@@ -2162,3 +2162,41 @@
 "budget_daily_allowance" = "etwa %@ pro Tag";
 "visible" = "Sichtbar";
 "hidden" = "Ausgeblendet";
+
+"delete_all_data_success_title" = "Daten gelöscht";
+"delete_all_data_success_message" = "Alle Daten der App wurden gelöscht.";
+
+// Previously hardcoded texts
+"notification_advance_notice" = "Vorlauf";
+"task_no_performance_data_period" = "Für diese Aufgabe gibt es im gewählten Zeitraum keine Leistungsdaten.";
+"available_data" = "Verfügbare Daten:";
+"completions_since_format" = "%d Abschlüsse seit %@";
+"try_all_time" = "Alles zeigen";
+"try_year" = "Jahr zeigen";
+"feedback_title_label" = "Titel";
+"no_coordinates_available" = "Keine Koordinaten verfügbar";
+
+// Eisenhower settings & status filter
+"eisenhower_settings_intro" = "Aufgaben werden nach Wichtigkeit (ihrer Priorität) und Dringlichkeit (wie nah die Frist ist) eingeteilt.";
+"eisenhower_importance_section" = "Wichtigkeit";
+"eisenhower_medium_important_title" = "Mittlere Priorität zählt";
+"eisenhower_medium_important_desc" = "An: Auch Aufgaben mit mittlerer Priorität gelten als wichtig. Aus: nur hohe Priorität.";
+"eisenhower_urgency_section" = "Dringlichkeit";
+"eisenhower_urgent_within_format" = "Dringend ab %@ vor der Frist";
+"eisenhower_only_overdue" = "Erst dringend, wenn überfällig";
+"status_filter_title" = "Anzeigen";
+"status_filter_empty" = "Keine Aufgaben für diesen Filter";
+"status_filter_show_all" = "Alle Aufgaben anzeigen";
+"status_filter_all" = "Alle";
+"status_filter_todo" = "Offen";
+"status_filter_in_progress" = "In Arbeit";
+"status_filter_completed" = "Erledigt";
+"by_status" = "Nach Status";
+"group_by_status_description" = "In Arbeit, offen und erledigt gruppieren";
+"status_visibility_footer" = "Wähle, welche Aufgaben angezeigt werden: ein, zwei oder alle drei Status.";
+"eisenhower_axis_urgent" = "Dringend";
+"eisenhower_axis_not_urgent" = "Nicht dringend";
+"eisenhower_axis_important" = "Wichtig";
+"eisenhower_axis_not_important" = "Nicht wichtig";
+"days_per_week_format" = "%d Tage pro Woche";
+"days_per_month_format" = "%d Tage pro Monat";

@@ -589,7 +589,7 @@
 "sort_by_time_description" = "Ordina le attività per orario";
 "group_by_category_description" = "Raggruppa per categoria";
 "group_by_priority_description" = "Raggruppa per priorità";
-"group_by_urgency_importance_description" = "Raggruppa per urgenza e importanza (Matrice di Eisenhower)";
+"group_by_urgency_importance_description" = "Raggruppa per urgenza e importanza";
 "filter_sort_by_time_description" = "Ordina le attività per orario programmato";
 "filter_group_by_category_description" = "Raggruppa le attività nelle loro categorie";
 "filter_group_by_priority_description" = "Raggruppa le attività per livello di priorità";
@@ -1418,7 +1418,7 @@
 
 // Impostazioni Eisenhower (personalizzazione urgenza)
 "eisenhower_settings_title" = "Matrice di Eisenhower";
-"eisenhower_today_require_specific_time_title" = "Richiedi orario specifico (Oggi)";
+"eisenhower_today_require_specific_time_title" = "Solo task con orario";
 "eisenhower_today_require_specific_time_desc" = "Considera urgenti solo le attività di Oggi con orario definito.";
 "eisenhower_today_urgent_hours_title" = "Soglia urgenza Oggi (ore)";
 "eisenhower_week_urgent_hours_title" = "Soglia urgenza Settimana (ore)";
@@ -2200,7 +2200,7 @@
 "all_scope_history" = "Storico";
 "inbox_plan_more_options" = "Altre opzioni";
 "tip_in_progress_title" = "Segna un'attività “In corso”";
-"tip_in_progress_message" = "Tieni premuto il cerchio per scegliere tra Da fare, In corso e Completata.";
+"tip_in_progress_message" = "Tieni premuto il cerchio per segnare un'attività “In corso”. Rifallo per toglierlo.";
 
 // Welcome content and task deletion
 "starter_category_work" = "Lavoro";
@@ -2267,3 +2267,41 @@
 "budget_daily_allowance" = "circa %@ al giorno";
 "visible" = "Visibile";
 "hidden" = "Nascosta";
+
+"delete_all_data_success_title" = "Dati eliminati";
+"delete_all_data_success_message" = "Tutti i dati dell'app sono stati eliminati.";
+
+// Previously hardcoded texts
+"notification_advance_notice" = "Preavviso";
+"task_no_performance_data_period" = "Questa task non ha dati di andamento nel periodo selezionato.";
+"available_data" = "Dati disponibili:";
+"completions_since_format" = "%d completamenti dal %@";
+"try_all_time" = "Mostra tutto";
+"try_year" = "Mostra anno";
+"feedback_title_label" = "Titolo";
+"no_coordinates_available" = "Coordinate non disponibili";
+
+// Eisenhower settings & status filter
+"eisenhower_settings_intro" = "Le task vengono divise per importanza (la loro priorità) e urgenza (quanto è vicina la scadenza).";
+"eisenhower_importance_section" = "Importanza";
+"eisenhower_medium_important_title" = "Anche la priorità media";
+"eisenhower_medium_important_desc" = "Se attivo, conta come importante anche la priorità media; altrimenti solo l'alta.";
+"eisenhower_urgency_section" = "Urgenza";
+"eisenhower_urgent_within_format" = "Urgente da %@ prima della scadenza";
+"eisenhower_only_overdue" = "Urgente solo quando è scaduta";
+"status_filter_title" = "Mostra";
+"status_filter_empty" = "Nessuna task con questo filtro";
+"status_filter_show_all" = "Mostra tutte le task";
+"status_filter_all" = "Tutte";
+"status_filter_todo" = "Da fare";
+"status_filter_in_progress" = "In corso";
+"status_filter_completed" = "Completate";
+"by_status" = "Per stato";
+"group_by_status_description" = "Raggruppa in corso, da fare e completate";
+"status_visibility_footer" = "Scegli quali task vedere: uno, due o tutti e tre gli stati.";
+"eisenhower_axis_urgent" = "Urgente";
+"eisenhower_axis_not_urgent" = "Non urgente";
+"eisenhower_axis_important" = "Importante";
+"eisenhower_axis_not_important" = "Non importante";
+"days_per_week_format" = "%d giorni a settimana";
+"days_per_month_format" = "%d giorni al mese";

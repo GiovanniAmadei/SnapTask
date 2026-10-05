@@ -13,6 +13,7 @@ struct TaskDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
+    @AppStorage("showCategoryGradients") private var categoryGradientsEnabled: Bool = true
     @ObservedObject private var taskManager = TaskManager.shared
     @StateObject private var taskNotificationManager = TaskNotificationManager.shared
     @State private var localTask: TodoTask?
@@ -74,7 +75,7 @@ struct TaskDetailView: View {
                 Button("close".localized) {
                     dismiss()
                 }
-                .themedPrimary()
+                .foregroundColor(accentColor)
             }
         }
         .onAppear {
@@ -342,6 +343,7 @@ struct TaskDetailView: View {
                 VStack(spacing: 0) {
                     headerSection(task)
                     detailsSection(task)
+                        .environment(\.detailCategoryColor, task.category.map { Color(hex: $0.color) })
                 }
             }
             
@@ -357,11 +359,11 @@ struct TaskDetailView: View {
             HStack(spacing: 16) {
                 Image(systemName: task.icon)
                     .font(.system(size: 32))
-                    .themedPrimary()
+                    .foregroundColor(accentColor)
                     .frame(width: 60, height: 60)
                     .background(
                         Circle()
-                            .fill(theme.primaryColor.opacity(0.1))
+                            .fill(accentColor.opacity(0.12))
                     )
                 
                 VStack(alignment: .leading, spacing: 4) {
@@ -412,14 +414,40 @@ struct TaskDetailView: View {
     }
     
     private var completionStatus: some View {
-        Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 24))
-            .foregroundColor(isCompleted ? .green : theme.secondaryTextColor)
+        let completion = localTask?.completions[completionKey]
+        let state: TaskProgressState = isCompleted ? .completed : (completion?.isInProgress == true ? .inProgress : .todo)
+        return TaskStatusIcon(state: state, idleColor: theme.secondaryTextColor, size: 24)
     }
     
     private var headerBackground: some View {
         RoundedRectangle(cornerRadius: 20)
             .fill(theme.surfaceColor)
+            .overlay {
+                if let categoryColor = headerCategoryColor {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: categoryColor.opacity(0.22), location: 0),
+                                    .init(color: categoryColor.opacity(0.10), location: 0.35),
+                                    .init(color: categoryColor.opacity(0.03), location: 0.7),
+                                    .init(color: .clear, location: 1)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [categoryColor.opacity(0.35), categoryColor.opacity(0.08)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+            }
             .shadow(
                 color: theme.shadowColor,
                 radius: colorScheme == .dark ? 0.5 : 12,
@@ -536,7 +564,7 @@ struct TaskDetailView: View {
                 
                 if task.hasNotification, task.hasSpecificTime {
                     HStack {
-                        Text("Preavviso")
+                        Text("notification_advance_notice".localized)
                             .font(.subheadline.weight(.medium))
                             .themedSecondaryText()
                         Spacer()
@@ -1048,12 +1076,7 @@ struct TaskDetailView: View {
         Button(action: {
             showingTrackingModeSelection = true
         }) {
-            HStack(spacing: 8) {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 16, weight: .medium))
-                Text("track".localized)
-                    .font(.headline)
-            }
+            actionLabel(icon: "play.fill", text: "track".localized)
             .themedButtonText()
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
@@ -1073,16 +1096,8 @@ struct TaskDetailView: View {
         Button(action: {
             TaskManager.shared.toggleTaskCompletion(task.id, on: fixedDate)
         }) {
-            HStack(spacing: 8) {
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 16, weight: .medium))
-                Text(isCompleted ? "mark_incomplete".localized : "done".localized)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .allowsTightening(true)
-                    .truncationMode(.tail)
-            }
+            actionLabel(icon: isCompleted ? "arrow.uturn.backward.circle.fill" : "circle",
+                        text: isCompleted ? "mark_incomplete".localized : "done".localized)
             .themedButtonText()
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
@@ -1102,21 +1117,64 @@ struct TaskDetailView: View {
         Button(action: {
             showingEditSheet = true
         }) {
-            HStack(spacing: 8) {
-                Image(systemName: "pencil")
-                    .font(.system(size: 16, weight: .medium))
-                Text("edit".localized)
-                    .font(.headline)
-            }
-            .themedButtonText()
+            actionLabel(icon: "pencil", text: "edit".localized)
+            .foregroundColor(accentButtonTextColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(theme.gradient)
+            .background {
+                if localTask?.category != nil {
+                    LinearGradient(colors: [accentColor, accentColor.opacity(0.8)], startPoint: .top, endPoint: .bottom)
+                } else {
+                    theme.gradient
+                }
+            }
             .cornerRadius(16)
-            .shadow(color: theme.primaryColor.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
     
+    // MARK: - Category accent
+
+    /// The task's category color, so the detail continues the look of its timeline card.
+    private var accentColor: Color {
+        localTask?.category.map { Color(hex: $0.color) } ?? theme.primaryColor
+    }
+
+    /// Header tint, following the same "category gradients" setting as the timeline cards.
+    private var headerCategoryColor: Color? {
+        guard categoryGradientsEnabled, let category = localTask?.category else { return nil }
+        return Color(hex: category.color)
+    }
+
+    /// Same contrast rule as the theme's button text.
+    private var accentButtonTextColor: Color {
+        guard localTask?.category != nil else { return theme.buttonTextColor }
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(accentColor).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue < 0.5 ? .white : .black
+    }
+
+    /// Icon and text when they fit the (third-of-the-screen) button; otherwise the text alone,
+    /// and as a last resort the icon: never cut or shrunk in any language.
+    private func actionLabel(icon: String, text: String) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                Text(text)
+                    .font(.headline)
+                    .lineLimit(1)
+            }
+            Text(text)
+                .font(.headline)
+                .lineLimit(1)
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .accessibilityLabel(text)
+        }
+        .padding(.horizontal, 8)
+    }
+
     private func formatDuration(_ duration: TimeInterval) -> String {
         let hours = Int(duration) / 3600
         let minutes = Int(duration) % 3600 / 60
@@ -1129,15 +1187,15 @@ struct TaskDetailView: View {
     private func recurrenceDescription(_ recurrence: Recurrence) -> String {
         switch recurrence.type {
         case .daily:
-            return "Daily"
+            return "daily".localized
         case .weekly(let days):
-            return days.count == 7 ? "Daily" : "\(days.count) days/week"
+            return days.count == 7 ? "daily".localized : String(format: "days_per_week_format".localized, days.count)
         case .monthly(let days):
-            return "\(days.count) days/month"
+            return String(format: "days_per_month_format".localized, days.count)
         case .monthlyOrdinal(let patterns):
-            return patterns.isEmpty ? "Monthly Patterns" : patterns.map { $0.displayText }.joined(separator: ", ")
+            return patterns.isEmpty ? "monthly".localized : patterns.map { $0.displayText }.joined(separator: ", ")
         case .yearly:
-            return "Yearly"
+            return "yearly".localized
         }
     }
     
@@ -1949,6 +2007,18 @@ private struct WaveformWithProgress: View {
     }
 }
 
+/// Category color of the task being shown: the detail cards' borders follow it.
+private struct DetailCategoryColorKey: EnvironmentKey {
+    static let defaultValue: Color? = nil
+}
+
+private extension EnvironmentValues {
+    var detailCategoryColor: Color? {
+        get { self[DetailCategoryColorKey.self] }
+        set { self[DetailCategoryColorKey.self] = newValue }
+    }
+}
+
 private struct DetailCard<Content: View>: View {
     let icon: String
     let title: String
@@ -1956,6 +2026,7 @@ private struct DetailCard<Content: View>: View {
     let content: Content
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.theme) private var theme
+    @Environment(\.detailCategoryColor) private var categoryColor
     
     init(icon: String, title: String, color: Color, @ViewBuilder content: () -> Content) {
         self.icon = icon
@@ -1979,7 +2050,15 @@ private struct DetailCard<Content: View>: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity)
-        .themedCard()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(categoryColor?.opacity(0.4) ?? theme.borderColor, lineWidth: 1)
+                )
+                .shadow(color: theme.shadowColor, radius: 4, x: 0, y: 2)
+        )
     }
 }
 
@@ -1996,6 +2075,15 @@ private struct TaskPerformanceChartView: View {
         case month = "Month"
         case year = "Year"
         case all = "All Time"
+
+        var displayName: String {
+            switch self {
+            case .week: return "week".localized
+            case .month: return "month".localized
+            case .year: return "year".localized
+            case .all: return "all_time".localized
+            }
+        }
         
         func filterCompletions(_ completions: [StatisticsViewModel.TaskCompletionAnalytics]) -> [StatisticsViewModel.TaskCompletionAnalytics] {
             let calendar = Calendar.current
@@ -2126,7 +2214,7 @@ private struct TaskPerformanceChartView: View {
                             selectedTimeRange = range
                         }
                     }) {
-                        Text(range.rawValue)
+                        Text(range.displayName)
                             .font(.system(.caption, design: .rounded, weight: selectedTimeRange == range ? .semibold : .medium))
                             .foregroundColor(selectedTimeRange == range ? theme.primaryColor : theme.textColor)
                             .padding(.horizontal, 8)
@@ -2212,7 +2300,7 @@ private struct TaskPerformanceChartView: View {
                 .font(.title3.bold())
             
             VStack(spacing: 8) {
-                Text("This task has no performance data for the selected time period.")
+                Text("task_no_performance_data_period".localized)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
@@ -2222,11 +2310,11 @@ private struct TaskPerformanceChartView: View {
                     
                     if let oldestDate = oldestCompletion {
                         VStack(spacing: 4) {
-                            Text("Available data:")
+                            Text("available_data".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
-                            Text("\(totalCompletions) completions since \(oldestDate.formatted(.dateTime.month().day().year()))")
+                            Text(String(format: "completions_since_format".localized, totalCompletions, oldestDate.formatted(.dateTime.month().day().year())))
                                 .font(.caption.bold())
                                 .foregroundColor(.blue)
                         }
@@ -2236,7 +2324,7 @@ private struct TaskPerformanceChartView: View {
             }
             
             HStack(spacing: 12) {
-                Button("Try All Time") {
+                Button("try_all_time".localized) {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         selectedTimeRange = .all
                     }
@@ -2250,7 +2338,7 @@ private struct TaskPerformanceChartView: View {
                         .fill(Color.blue)
                 )
                 
-                Button("Try Year") {
+                Button("try_year".localized) {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         selectedTimeRange = .year
                     }
@@ -2417,7 +2505,7 @@ private struct TaskPerformanceChartView: View {
                 .chartYAxisLabel("quality_rating".localized, position: .leading)
             } else {
                 VStack(spacing: 8) {
-                    Text("no_quality_ratings_in_period".localized("\(selectedTimeRange.rawValue)"))
+                    Text("no_quality_ratings_in_period".localized("\(selectedTimeRange.displayName)"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -2495,7 +2583,7 @@ private struct TaskPerformanceChartView: View {
                 .chartYAxisLabel("difficulty_rating".localized, position: .leading)
             } else {
                 VStack(spacing: 8) {
-                    Text("no_difficulty_ratings_in_period".localized("\(selectedTimeRange.rawValue)"))
+                    Text("no_difficulty_ratings_in_period".localized("\(selectedTimeRange.displayName)"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -2547,7 +2635,7 @@ private struct TaskPerformanceChartView: View {
             HStack {
                 Image(systemName: "list.bullet")
                     .foregroundColor(.blue)
-                Text("completions_period".localized("\(selectedTimeRange.rawValue)"))
+                Text("completions_period".localized("\(selectedTimeRange.displayName)"))
                     .font(.headline)
                     .themedPrimaryText()
                 Spacer()
@@ -2555,7 +2643,7 @@ private struct TaskPerformanceChartView: View {
             
             if analytics.completions.isEmpty {
                 VStack(spacing: 8) {
-                    Text("no_completions_in_period".localized("\(selectedTimeRange.rawValue)"))
+                    Text("no_completions_in_period".localized("\(selectedTimeRange.displayName)"))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     

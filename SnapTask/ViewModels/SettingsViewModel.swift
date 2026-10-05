@@ -66,7 +66,15 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
+    /// Off by default: only high-priority tasks count as important.
+    @Published var eisenhowerMediumIsImportant: Bool {
+        didSet {
+            UserDefaults.standard.set(eisenhowerMediumIsImportant, forKey: "eisenhowerMediumIsImportant")
+        }
+    }
+    
     func resetEisenhowerUrgencyDefaults() {
+        eisenhowerMediumIsImportant = false
         eisenhowerTodayRequireSpecificTime = true
         eisenhowerTodayUrgentHours = 4
         eisenhowerWeekUrgentHours = 24
@@ -88,6 +96,8 @@ class SettingsViewModel: ObservableObject {
             self.showCategoryGradients = true
             UserDefaults.standard.set(true, forKey: "showCategoryGradients")
         }
+        
+        self.eisenhowerMediumIsImportant = UserDefaults.standard.bool(forKey: "eisenhowerMediumIsImportant")
         
         if UserDefaults.standard.objectExists(forKey: "eisenhowerTodayRequireSpecificTime") {
             self.eisenhowerTodayRequireSpecificTime = UserDefaults.standard.bool(forKey: "eisenhowerTodayRequireSpecificTime")

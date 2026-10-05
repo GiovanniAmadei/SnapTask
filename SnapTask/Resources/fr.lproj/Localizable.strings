@@ -445,7 +445,7 @@
 
 // Eisenhower Matrix
 "eisenhower_matrix" = "Matrice d'Eisenhower";
-"eisenhower_do_now" = "FAIRE MAINTENANT";
+"eisenhower_do_now" = "FAIRE";
 "eisenhower_schedule" = "PLANIFIER";
 "eisenhower_delegate" = "DÉLÉGUER";
 "eisenhower_eliminate" = "ÉLIMINER";
@@ -578,7 +578,7 @@
 "sort_by_time_description" = "Trier les tâches par heure programmée";
 "group_by_category_description" = "Grouper les tâches par catégorie";
 "group_by_priority_description" = "Grouper les tâches par niveau de priorité";
-"group_by_urgency_importance_description" = "Grouper les tâches par urgence et importance (Matrice d'Eisenhower)";
+"group_by_urgency_importance_description" = "Grouper les tâches par urgence et importance";
 "filter_sort_by_time_description" = "Trier les tâches par leur heure programmée";
 "filter_group_by_category_description" = "Grouper les tâches sous leurs catégories";
 "filter_group_by_priority_description" = "Grouper les tâches par niveau de priorité";
@@ -1363,7 +1363,7 @@
 
 // Réglages Eisenhower (personnalisation de l'urgence)
 "eisenhower_settings_title" = "Matrice d’Eisenhower";
-"eisenhower_today_require_specific_time_title" = "Exiger une heure précise (Aujourd’hui)";
+"eisenhower_today_require_specific_time_title" = "Seulement avec heure";
 "eisenhower_today_require_specific_time_desc" = "Considérer urgentes uniquement les tâches d’aujourd’hui avec une heure définie.";
 "eisenhower_today_urgent_hours_title" = "Seuil d’urgence Aujourd’hui (heures)";
 "eisenhower_week_urgent_hours_title" = "Seuil d’urgence Semaine (heures)";
@@ -2083,7 +2083,7 @@
 "all_scope_history" = "Historique";
 "inbox_plan_more_options" = "Plus d'options";
 "tip_in_progress_title" = "Passer une tâche « En cours »";
-"tip_in_progress_message" = "Maintiens le cercle appuyé pour choisir entre À faire, En cours et Terminée.";
+"tip_in_progress_message" = "Maintiens le cercle appuyé pour passer une tâche « En cours ». Recommence pour l'enlever.";
 
 // Welcome content and task deletion
 "starter_category_work" = "Travail";
@@ -2150,3 +2150,41 @@
 "budget_daily_allowance" = "environ %@ par jour";
 "visible" = "Visible";
 "hidden" = "Masquée";
+
+"delete_all_data_success_title" = "Données supprimées";
+"delete_all_data_success_message" = "Toutes les données de l'app ont été supprimées.";
+
+// Previously hardcoded texts
+"notification_advance_notice" = "Préavis";
+"task_no_performance_data_period" = "Cette tâche n'a pas de données de performance sur la période choisie.";
+"available_data" = "Données disponibles :";
+"completions_since_format" = "%d réalisations depuis le %@";
+"try_all_time" = "Tout afficher";
+"try_year" = "Voir l'année";
+"feedback_title_label" = "Titre";
+"no_coordinates_available" = "Coordonnées indisponibles";
+
+// Eisenhower settings & status filter
+"eisenhower_settings_intro" = "Les tâches sont classées selon leur importance (leur priorité) et leur urgence (la proximité de l'échéance).";
+"eisenhower_importance_section" = "Importance";
+"eisenhower_medium_important_title" = "Priorité moyenne incluse";
+"eisenhower_medium_important_desc" = "Activé : les tâches de priorité moyenne comptent aussi comme importantes. Désactivé : seulement la haute.";
+"eisenhower_urgency_section" = "Urgence";
+"eisenhower_urgent_within_format" = "Urgente %@ avant l'échéance";
+"eisenhower_only_overdue" = "Urgente seulement une fois en retard";
+"status_filter_title" = "Afficher";
+"status_filter_empty" = "Aucune tâche pour ce filtre";
+"status_filter_show_all" = "Afficher toutes les tâches";
+"status_filter_all" = "Toutes";
+"status_filter_todo" = "À faire";
+"status_filter_in_progress" = "En cours";
+"status_filter_completed" = "Terminées";
+"by_status" = "Par statut";
+"group_by_status_description" = "Regrouper en cours, à faire et terminées";
+"status_visibility_footer" = "Choisissez les tâches à afficher : un, deux ou les trois statuts.";
+"eisenhower_axis_urgent" = "Urgent";
+"eisenhower_axis_not_urgent" = "Non urgent";
+"eisenhower_axis_important" = "Important";
+"eisenhower_axis_not_important" = "Non important";
+"days_per_week_format" = "%d jours par semaine";
+"days_per_month_format" = "%d jours par mois";

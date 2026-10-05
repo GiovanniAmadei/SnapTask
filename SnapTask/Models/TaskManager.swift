@@ -1287,6 +1287,15 @@ extension TaskManager {
     /// Sets the state of one occurrence. Completing or un-completing goes through
     /// `toggleTaskCompletion`, so points, confetti, statistics and calendar sync behave
     /// exactly as with the checkbox.
+    /// Press and hold on the task circle: "In progress" on, or off again if it already is.
+    /// Reads the live task, so a row showing a stale copy still flips the right way.
+    func toggleInProgress(for taskId: UUID, on date: Date) {
+        guard let task = tasks.first(where: { $0.id == taskId }) else { return }
+        let next: TaskProgressState = progressState(of: task, on: date) == .inProgress ? .todo : .inProgress
+        HapticManager.shared.impact(next == .inProgress ? .heavy : .light)
+        setProgressState(next, for: taskId, on: date)
+    }
+
     func setProgressState(_ state: TaskProgressState, for taskId: UUID, on date: Date) {
         guard !isUpdatingFromSync,
               let task = tasks.first(where: { $0.id == taskId }) else { return }

@@ -28,9 +28,11 @@ struct SettingsView: View {
     @State private var notificationPermissionStatus = UNAuthorizationStatus.notDetermined
     private enum SettingsAlertItem: Identifiable {
         case deleteConfirmation
-        case resetAndSeedConfirmation
         case deleteSuccess
+        #if DEBUG
+        case resetAndSeedConfirmation
         case seedSuccess
+        #endif
         case permission
         case taskPermission
         case emailNotAvailable
@@ -39,9 +41,11 @@ struct SettingsView: View {
         var id: String {
             switch self {
             case .deleteConfirmation: return "deleteConfirmation"
-            case .resetAndSeedConfirmation: return "resetAndSeedConfirmation"
             case .deleteSuccess: return "deleteSuccess"
+            #if DEBUG
+            case .resetAndSeedConfirmation: return "resetAndSeedConfirmation"
             case .seedSuccess: return "seedSuccess"
+            #endif
             case .permission: return "permission"
             case .taskPermission: return "taskPermission"
             case .emailNotAvailable: return "emailNotAvailable"
@@ -52,9 +56,11 @@ struct SettingsView: View {
         var title: String {
             switch self {
             case .deleteConfirmation: return "delete_all_data_confirmation_title".localized
+            case .deleteSuccess: return "delete_all_data_success_title".localized
+            #if DEBUG
             case .resetAndSeedConfirmation: return "Ripristina e Popola?"
-            case .deleteSuccess: return "Dati Eliminati"
             case .seedSuccess: return "Dati di Esempio Caricati!"
+            #endif
             case .permission: return "enable_notifications".localized
             case .taskPermission: return "notification_permission_required".localized
             case .emailNotAvailable: return "email_client_not_available".localized
@@ -65,9 +71,11 @@ struct SettingsView: View {
         var message: String {
             switch self {
             case .deleteConfirmation: return "delete_all_data_confirmation_message".localized
+            case .deleteSuccess: return "delete_all_data_success_message".localized
+            #if DEBUG
             case .resetAndSeedConfirmation: return "Verranno eliminati tutti i dati attuali e sostituiti con un set completo di dati di esempio."
-            case .deleteSuccess: return "Tutti i dati dell'applicazione sono stati cancellati con successo."
             case .seedSuccess: return "Task con orari distribuiti, ricorrenze, premi, categorie, finanze e statistiche sono pronti!"
+            #endif
             case .permission: return "notification_permission_message".localized
             case .taskPermission: return "notification_permission_denied_message".localized
             case .emailNotAvailable: return "email_client_not_available_message".localized
@@ -875,11 +883,15 @@ struct SettingsView: View {
                         performDeleteAllData()
                     }
                     Button("cancel".localized, role: .cancel) { }
+                #if DEBUG
                 case .resetAndSeedConfirmation:
                     Button("Ripristina e Popola", role: .destructive) {
                         seedData(replace: true)
                     }
                     Button("Annulla", role: .cancel) { }
+                case .seedSuccess:
+                    Button("OK", role: .cancel) { }
+                #endif
                 case .permission:
                     Button("settings".localized) {
                         openAppSettings()
@@ -899,8 +911,8 @@ struct SettingsView: View {
                     Button("keep_current_theme".localized, role: .cancel) {
                         appearanceMode = "system"
                     }
-                case .seedSuccess, .deleteSuccess:
-                    Button("OK", role: .cancel) { }
+                case .deleteSuccess:
+                    Button("ok".localized, role: .cancel) { }
                 }
             } message: { item in
                 Text(item.message)
@@ -1336,7 +1348,8 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - DEBUG_PRE_RELEASE_REMOVE
+    // MARK: - Demo data (debug builds only)
+    #if DEBUG
     private func seedData(replace: Bool) {
         guard !isSeeding else { return }
         isSeeding = true
@@ -1356,7 +1369,8 @@ struct SettingsView: View {
             }
         }
     }
-    
+    #endif
+
     private func openEmailClient() {
         let email = "giovannisebastianoamadei@gmail.com"
         let subject = "SnapTask - " + "contact_support".localized

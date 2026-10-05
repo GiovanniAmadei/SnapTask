@@ -71,7 +71,7 @@ struct LocationMapView: View {
                         VStack(spacing: 8) {
                             ProgressView()
                                 .scaleEffect(0.8)
-                            Text("Loading map...")
+                            Text("loading_map".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -80,7 +80,7 @@ struct LocationMapView: View {
                             Image(systemName: "location.slash")
                                 .font(.system(size: 24))
                                 .foregroundColor(.secondary)
-                            Text("No coordinates available")
+                            Text("no_coordinates_available".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

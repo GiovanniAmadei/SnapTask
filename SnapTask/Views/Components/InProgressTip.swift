@@ -1,7 +1,7 @@
 import SwiftUI
 import TipKit
 
-/// One-time hint: the "In corso" state is behind a press and hold on the task circle.
+/// One-time hint: press and hold the task circle to switch "In corso" on and off.
 struct InProgressTip: Tip {
     var title: Text { Text("tip_in_progress_title".localized) }
     var message: Text? { Text("tip_in_progress_message".localized) }
@@ -17,7 +17,7 @@ struct InProgressTip: Tip {
         try? Tips.configure([.displayFrequency(.immediate)])
     }
 
-    /// The user found the state menu: no need to show the hint any more.
+    /// The user found the gesture: no need to show the hint any more.
     static func markLearned() {
         InProgressTip().invalidate(reason: .actionPerformed)
     }

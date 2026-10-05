@@ -54,7 +54,7 @@ struct AppIconSelectionView: View {
         }
         .themedBackground()
         .scrollContentBackground(.hidden)
-        .navigationTitle("Icona app")
+        .navigationTitle("app_icon".localized)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             appIconManager.refresh()

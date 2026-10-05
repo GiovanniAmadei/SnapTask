@@ -367,7 +367,7 @@ struct VersionSection: View {
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Version \(version)")
+                        Text("\("version".localized) \(version)")
                             .font(.system(size: 20, weight: .bold))
                             .themedPrimaryText()
                         

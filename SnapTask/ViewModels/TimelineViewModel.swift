@@ -22,10 +22,51 @@ enum TimelineViewMode: String, CaseIterable {
     }
 }
 
+/// A task's state on the day/period being viewed: used to group ("By status") and to choose
+/// which tasks are visible.
+enum TaskStatusFilter: String, CaseIterable {
+    case inProgress
+    case todo
+    case completed
+
+    var displayName: String {
+        switch self {
+        case .todo: return "status_filter_todo".localized
+        case .inProgress: return "status_filter_in_progress".localized
+        case .completed: return "status_filter_completed".localized
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .todo: return "circle"
+        case .inProgress: return "circle.lefthalf.filled"
+        case .completed: return "checkmark.circle.fill"
+        }
+    }
+
+    var colorHex: String {
+        switch self {
+        case .todo: return "#8E8E93"
+        case .inProgress: return "#3B82F6"
+        case .completed: return "#22C55E"
+        }
+    }
+
+    init(_ state: TaskProgressState) {
+        switch state {
+        case .todo: self = .todo
+        case .inProgress: self = .inProgress
+        case .completed: self = .completed
+        }
+    }
+}
+
 enum TimelineOrganization: String, CaseIterable {
     case time = "time"
     case category = "category" 
     case priority = "priority"
+    case status = "status"
     case eisenhower = "eisenhower"
     case none = "none"
     
@@ -34,6 +75,7 @@ enum TimelineOrganization: String, CaseIterable {
         case .time: return "by_time".localized
         case .category: return "by_category".localized
         case .priority: return "by_priority".localized
+        case .status: return "by_status".localized
         case .eisenhower: return "eisenhower_matrix".localized
         case .none: return "default_view".localized
         }
@@ -44,6 +86,7 @@ enum TimelineOrganization: String, CaseIterable {
         case .time: return "clock"
         case .category: return "folder"
         case .priority: return "exclamationmark.triangle"
+        case .status: return "circle.lefthalf.filled"
         case .eisenhower: return "square.grid.2x2"
         case .none: return "list.bullet"
         }
@@ -75,11 +118,30 @@ class TimelineViewModel: ObservableObject {
     private let viewModeKey = "timeline_viewMode"
     private let organizationKey = "timeline_organization"
     private let timeSortOrderKey = "timeline_timeSortOrder"
+    private let statusFilterKey = "timeline_visibleStatuses"
     
     // New view mode and organization properties
     @Published var viewMode: TimelineViewMode = .list
     @Published var organization: TimelineOrganization = .time
     @Published var timeSortOrder: TimeSortOrder = .ascending
+    /// States the user wants to see; all three by default.
+    @Published var visibleStatuses: Set<TaskStatusFilter> = Set(TaskStatusFilter.allCases)
+
+    var isFilteringStatus: Bool { visibleStatuses.count < TaskStatusFilter.allCases.count }
+
+    /// Shows or hides one state; the last visible one can't be hidden.
+    func toggleVisibleStatus(_ status: TaskStatusFilter) {
+        if visibleStatuses.contains(status) {
+            guard visibleStatuses.count > 1 else { return }
+            visibleStatuses.remove(status)
+        } else {
+            visibleStatuses.insert(status)
+        }
+    }
+
+    func showAllStatuses() {
+        visibleStatuses = Set(TaskStatusFilter.allCases)
+    }
     @Published var showingFilterSheet = false
     @Published var showingTimelineView = false
     
@@ -103,8 +165,36 @@ class TimelineViewModel: ObservableObject {
     }
     
     /// Il riordino a mano c'è solo nella vista predefinita: le altre ordinano per orario, categoria o priorità.
+    /// A filtered list hides tasks: moving the visible ones would scramble the hidden ones' order.
     var canReorderTasks: Bool {
-        effectiveOrganization == .none && manualOrderListKey != nil
+        effectiveOrganization == .none && manualOrderListKey != nil && !isFilteringStatus
+    }
+
+    // MARK: - Status filter
+
+    /// The date a task's completion and "in progress" state are read from in the current view
+    /// (same rule as the timeline cards).
+    func progressDate(for task: TodoTask) -> Date {
+        let scope = selectedTimeScope == .all ? task.timeScope : selectedTimeScope
+        switch scope {
+        case .today: return selectedDate
+        case .week: return currentWeek
+        case .month: return currentMonth
+        case .year: return currentYear
+        case .longTerm, .inbox: return Calendar.current.startOfDay(for: task.startTime)
+        case .all: return Calendar.current.startOfDay(for: Date())
+        }
+    }
+
+    func progressState(of task: TodoTask) -> TaskProgressState {
+        let completion = task.completions[task.completionKey(for: progressDate(for: task))]
+        if completion?.isCompleted == true { return .completed }
+        return completion?.isInProgress == true ? .inProgress : .todo
+    }
+
+    func applyingStatusFilter(_ source: [TodoTask]) -> [TodoTask] {
+        guard isFilteringStatus else { return source }
+        return source.filter { visibleStatuses.contains(TaskStatusFilter(progressState(of: $0))) }
     }
     
     func moveTasks(fromOffsets source: IndexSet, toOffset destination: Int) {
@@ -295,6 +385,11 @@ class TimelineViewModel: ObservableObject {
            let saved = TimeSortOrder(rawValue: raw) {
             timeSortOrder = saved
         }
+
+        if let raw = defaults.string(forKey: statusFilterKey) {
+            let saved = Set(raw.split(separator: ",").compactMap { TaskStatusFilter(rawValue: String($0)) })
+            if !saved.isEmpty { visibleStatuses = saved }
+        }
     }
 
     private func normalizeSelectionsForCurrentScope() {
@@ -337,6 +432,16 @@ class TimelineViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
+        $visibleStatuses
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newValue in
+                guard let self else { return }
+                let raw = TaskStatusFilter.allCases.filter(newValue.contains).map(\.rawValue).joined(separator: ",")
+                UserDefaults.standard.set(raw, forKey: self.statusFilterKey)
+            }
+            .store(in: &cancellables)
+
         $timeSortOrder
             .dropFirst()
             .receive(on: RunLoop.main)
@@ -916,7 +1021,7 @@ class TimelineViewModel: ObservableObject {
     
     func organizedTasksForSelectedDate() -> OrganizedTasks {
         // Use already filtered tasks for the current scope
-        let scopedTasks = tasks
+        let scopedTasks = applyingStatusFilter(tasks)
         
         // Special grouping when viewing "All" scope: split by each task's own time scope
         if selectedTimeScope == .all {
@@ -946,6 +1051,8 @@ class TimelineViewModel: ObservableObject {
             return organizeByCategory(scopedTasks)
         case .priority:
             return organizeByPriority(scopedTasks)
+        case .status:
+            return organizeByStatus(scopedTasks)
         case .eisenhower:
             let (q1, q2, q3, q4) = eisenhowerQuadrants(scopedTasks)
             let sections: [TaskSection] = [
@@ -961,11 +1068,25 @@ class TimelineViewModel: ObservableObject {
         }
     }
     
+    /// The scope's tasks as shown in the hourly view (status filter applied).
     func tasksForSelectedDate() -> [TodoTask] {
-        // Simply return the already filtered tasks for the current scope
-        return tasks
+        applyingStatusFilter(tasks)
     }
     
+    /// In progress, to do, completed: each section in time order, empty ones left out.
+    private func organizeByStatus(_ tasks: [TodoTask]) -> OrganizedTasks {
+        let grouped = Dictionary(grouping: tasks) { TaskStatusFilter(progressState(of: $0)) }
+        let sections = TaskStatusFilter.allCases.compactMap { status -> TaskSection? in
+            guard let tasks = grouped[status], !tasks.isEmpty else { return nil }
+            let sorted = tasks.sorted { lhs, rhs in
+                lhs.startTime != rhs.startTime ? lhs.startTime < rhs.startTime : lhs.creationDate < rhs.creationDate
+            }
+            return TaskSection(id: "status_\(status.rawValue)", title: status.displayName,
+                               color: status.colorHex, icon: status.icon, tasks: sorted)
+        }
+        return OrganizedTasks.sections(sections)
+    }
+
     private func organizeByCategory(_ tasks: [TodoTask]) -> OrganizedTasks {
         let grouped = Dictionary(grouping: tasks) { task in
             task.category?.name ?? "no_category".localized
@@ -1060,6 +1181,7 @@ class TimelineViewModel: ObservableObject {
         organization = .time
         timeSortOrder = .ascending
         viewMode = .list
+        showAllStatuses()
     }
     
     var organizationStatusText: String {
@@ -1070,6 +1192,8 @@ class TimelineViewModel: ObservableObject {
             return "by_category".localized
         case .priority:
             return "by_priority".localized
+        case .status:
+            return "by_status".localized
         case .eisenhower:
             return "eisenhower_matrix".localized
         case .none:
@@ -1264,7 +1388,8 @@ class TimelineViewModel: ObservableObject {
     }
     
     private func isImportant(_ task: TodoTask) -> Bool {
-        return task.priority == .high
+        task.priority == .high
+            || (task.priority == .medium && SettingsViewModel.shared.eisenhowerMediumIsImportant)
     }
 
     private func dueDate(for task: TodoTask) -> Date? {

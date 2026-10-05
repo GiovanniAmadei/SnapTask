@@ -302,17 +302,17 @@ struct TaskFormView: View {
                                     Spacer()
 
                                     Menu {
-                                        Button("Copia") {
+                                        Button("copy".localized) {
                                             copyDescription()
                                         }
                                         .disabled(viewModel.description.isEmpty)
 
-                                        Button("Taglia") {
+                                        Button("cut".localized) {
                                             cutDescription()
                                         }
                                         .disabled(viewModel.description.isEmpty)
 
-                                        Button("Incolla") {
+                                        Button("paste".localized) {
                                             pasteIntoDescription()
                                         }
                                         .disabled((clipboardString ?? "").isEmpty)
@@ -1286,7 +1286,7 @@ struct TaskFormView: View {
                 #if os(iOS)
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Fine") {
+                    Button("done".localized) {
                         focusedField = nil
                     }
                 }

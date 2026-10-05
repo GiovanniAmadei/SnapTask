@@ -262,6 +262,18 @@ struct ViewControlBarView: View {
                         Circle()
                             .fill(theme.primaryColor.opacity(0.08))
                     )
+                    // A status filter hides tasks: keep it visible from the header.
+                    .overlay(alignment: .topTrailing) {
+                        if viewModel.isFilteringStatus {
+                            Circle()
+                                .fill(theme.primaryColor)
+                                .frame(width: 9, height: 9)
+                                .overlay(Circle().strokeBorder(theme.backgroundColor, lineWidth: 1.5))
+                                .offset(x: -2, y: 2)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .animation(.smooth(duration: 0.25), value: viewModel.isFilteringStatus)
             }
             
         }
@@ -1222,6 +1234,10 @@ struct TaskListView: View {
                                     )
                                 }
                             }
+
+                            if viewModel.isFilteringStatus && viewModel.applyingStatusFilter(viewModel.tasks).isEmpty {
+                                statusFilterEmptyState
+                            }
                         }
                         .sheet(isPresented: $showingMandalaSheet) {
                             MandalaHubView()
@@ -1283,6 +1299,36 @@ struct TaskListView: View {
         }
     }
     
+    /// Shown when the status filter hides every task of the day/period.
+    private var statusFilterEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 34))
+                .foregroundColor(theme.secondaryTextColor.opacity(0.6))
+            Text("status_filter_empty".localized)
+                .font(.headline)
+                .foregroundColor(theme.textColor)
+                .multilineTextAlignment(.center)
+            Button {
+                HapticManager.shared.impact(.light)
+                withAnimation(.smooth(duration: 0.25)) {
+                    viewModel.showAllStatuses()
+                }
+            } label: {
+                Text("status_filter_show_all".localized)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(theme.primaryColor)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(theme.primaryColor.opacity(0.12)))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+        .transition(.opacity)
+    }
+
     /// Mandala is an experiment planned for the next version: hidden in 1.8.
     private static let isMandalaEnabled = false
 
@@ -1811,19 +1857,6 @@ struct TimelineTaskCard: View {
     /// Inbox items use a lighter card: no priority mark, and a tap opens them in place.
     private var isInbox: Bool { task.timeScope == .inbox }
 
-    private func setProgress(_ state: TaskProgressState) {
-        InProgressTip.markLearned()
-        guard state != progressState else { return }
-        if state == .completed {
-            HapticManager.shared.notification(.success)
-        } else {
-            HapticManager.shared.impact(.light)
-        }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            TaskManager.shared.setProgressState(state, for: task.id, on: targetDateForScope)
-        }
-    }
-
     private var completionProgress: Double {
         guard !task.subtasks.isEmpty else { return isCompleted ? 1.0 : 0.0 }
         let completionDate = task.completionKey(for: targetDateForScope)
@@ -2254,52 +2287,42 @@ struct TimelineTaskCard: View {
                         .buttonStyle(BorderlessButtonStyle())
                     }
                     
-                    // Tap completes as always; press and hold picks the state (to do, in progress, done).
-                    Menu {
-                        Picker("", selection: Binding(get: { progressState }, set: { setProgress($0) })) {
-                            Label("task_status_todo".localized, systemImage: "circle")
-                                .tag(TaskProgressState.todo)
-                            Label("task_status_in_progress".localized, systemImage: "circle.lefthalf.filled")
-                                .tag(TaskProgressState.inProgress)
-                            Label("task_status_completed".localized, systemImage: "checkmark.circle.fill")
-                                .tag(TaskProgressState.completed)
-                        }
-                        .pickerStyle(.inline)
-                    } label: {
-                        ZStack {
+                    // Tap completes (or un-completes); press and hold switches "In progress" on and off.
+                    ZStack {
+                        Circle()
+                            .stroke(theme.borderColor, lineWidth: 2)
+                            .frame(width: 32, height: 32)
+                        
+                        if !task.subtasks.isEmpty {
                             Circle()
-                                .stroke(theme.borderColor, lineWidth: 2)
+                                .trim(from: 0, to: completionProgress)
+                                .stroke(theme.primaryColor, lineWidth: 3)
                                 .frame(width: 32, height: 32)
-                            
-                            if !task.subtasks.isEmpty {
-                                Circle()
-                                    .trim(from: 0, to: completionProgress)
-                                    .stroke(theme.primaryColor, lineWidth: 3)
-                                    .frame(width: 32, height: 32)
-                                    .rotationEffect(.degrees(-90))
-                                    .animation(.easeInOut(duration: 0.35), value: completionProgress)
-                            }
-                            
-                            Image(systemName: isCompleted ? "checkmark.circle.fill" : (isInProgress ? "circle.lefthalf.filled" : "circle"))
-                                .foregroundColor(isCompleted ? .green : (isInProgress ? .blue : theme.secondaryTextColor))
-                                .font(.title2)
+                                .rotationEffect(.degrees(-90))
+                                .animation(.easeInOut(duration: 0.35), value: completionProgress)
                         }
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                    } primaryAction: {
-                        if isCompleted {
-                            HapticManager.shared.impact(.light)
-                        } else {
-                            HapticManager.shared.notification(.success)
-                        }
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            onToggleComplete()
-                        }
+                        
+                        TaskStatusIcon(state: progressState, idleColor: theme.secondaryTextColor, size: 22)
                     }
-                    .menuStyle(.button)
-                    .buttonStyle(BorderlessButtonStyle())
-                    .menuIndicator(.hidden)
                     .frame(width: 44, height: 44)
+                    .taskStatusGestures(
+                        onTap: {
+                            if isCompleted {
+                                HapticManager.shared.impact(.light)
+                            } else {
+                                HapticManager.shared.notification(.success)
+                            }
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                onToggleComplete()
+                            }
+                        },
+                        onLongPress: {
+                            InProgressTip.markLearned()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                TaskManager.shared.toggleInProgress(for: task.id, on: targetDateForScope)
+                            }
+                        }
+                    )
                 }
                 .padding(Self.contentInset)
                 
@@ -2756,27 +2779,36 @@ struct CompactTimelineTaskView: View {
     
     var body: some View {
         HStack(spacing: 10) {
-            Button(action: {
-                if !isCompleted {
-                    HapticManager.shared.notification(.success)
-                } else {
-                    HapticManager.shared.selection()
-                }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    viewModel.toggleTaskCompletion(task.id)
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(isCompleted ? theme.primaryColor.opacity(0.2) : theme.surfaceColor)
-                        .frame(width: 26, height: 26)
-                    
-                    Image(systemName: isCompleted ? "checkmark.circle.fill" : (isInProgress ? "circle.lefthalf.filled" : "circle"))
-                        .foregroundColor(isCompleted ? theme.primaryColor : (isInProgress ? .blue : theme.secondaryTextColor))
-                        .font(.system(size: 19, weight: .medium))
-                }
+            ZStack {
+                Circle()
+                    .fill(isCompleted ? theme.primaryColor.opacity(0.2) : theme.surfaceColor)
+                    .frame(width: 26, height: 26)
+                
+                TaskStatusIcon(
+                    state: isCompleted ? .completed : (isInProgress ? .inProgress : .todo),
+                    idleColor: theme.secondaryTextColor,
+                    completedColor: theme.primaryColor,
+                    size: 19
+                )
             }
-            .buttonStyle(BorderlessButtonStyle())
+            .taskStatusGestures(
+                onTap: {
+                    if !isCompleted {
+                        HapticManager.shared.notification(.success)
+                    } else {
+                        HapticManager.shared.selection()
+                    }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        viewModel.toggleTaskCompletion(task.id)
+                    }
+                },
+                onLongPress: {
+                    InProgressTip.markLearned()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        TaskManager.shared.toggleInProgress(for: task.id, on: viewModel.selectedDate)
+                    }
+                }
+            )
             
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {

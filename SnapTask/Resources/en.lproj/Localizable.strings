@@ -585,7 +585,7 @@
 "sort_by_time_description" = "Sort tasks by scheduled time";
 "group_by_category_description" = "Group tasks by category";
 "group_by_priority_description" = "Group tasks by priority level";
-"group_by_urgency_importance_description" = "Group tasks by urgency and importance (Eisenhower matrix)";
+"group_by_urgency_importance_description" = "Group tasks by urgency and importance";
 "filter_sort_by_time_description" = "Sort tasks by their scheduled time";
 "filter_group_by_category_description" = "Group tasks under their categories";
 "filter_group_by_priority_description" = "Group tasks by priority level";
@@ -1460,7 +1460,7 @@
 
 // Eisenhower Settings (Urgency customization)
 "eisenhower_settings_title" = "Eisenhower Matrix";
-"eisenhower_today_require_specific_time_title" = "Require specific time (Today)";
+"eisenhower_today_require_specific_time_title" = "Only tasks with a time";
 "eisenhower_today_require_specific_time_desc" = "Consider urgent only Today tasks with a defined time.";
 "eisenhower_today_urgent_hours_title" = "Today urgency threshold (hours)";
 "eisenhower_week_urgent_hours_title" = "Week urgency threshold (hours)";
@@ -2241,7 +2241,7 @@
 "all_scope_history" = "History";
 "inbox_plan_more_options" = "More options";
 "tip_in_progress_title" = "Mark a task “In progress”";
-"tip_in_progress_message" = "Press and hold the circle to choose To do, In progress or Completed.";
+"tip_in_progress_message" = "Press and hold the circle to mark a task “In progress”. Do it again to take it off.";
 
 // Welcome content and task deletion
 "starter_category_work" = "Work";
@@ -2308,3 +2308,41 @@
 "budget_daily_allowance" = "about %@ a day";
 "visible" = "Visible";
 "hidden" = "Hidden";
+
+"delete_all_data_success_title" = "Data Deleted";
+"delete_all_data_success_message" = "All your app data has been deleted.";
+
+// Previously hardcoded texts
+"notification_advance_notice" = "Advance notice";
+"task_no_performance_data_period" = "This task has no performance data for the selected period.";
+"available_data" = "Available data:";
+"completions_since_format" = "%d completions since %@";
+"try_all_time" = "Show all time";
+"try_year" = "Show year";
+"feedback_title_label" = "Title";
+"no_coordinates_available" = "No coordinates available";
+
+// Eisenhower settings & status filter
+"eisenhower_settings_intro" = "Tasks are sorted by importance (their priority) and urgency (how close their deadline is).";
+"eisenhower_importance_section" = "Importance";
+"eisenhower_medium_important_title" = "Include medium priority";
+"eisenhower_medium_important_desc" = "On: medium-priority tasks count as important too. Off: only high priority.";
+"eisenhower_urgency_section" = "Urgency";
+"eisenhower_urgent_within_format" = "Urgent from %@ before the deadline";
+"eisenhower_only_overdue" = "Urgent only once overdue";
+"status_filter_title" = "Show";
+"status_filter_empty" = "No tasks match this filter";
+"status_filter_show_all" = "Show all tasks";
+"status_filter_all" = "All";
+"status_filter_todo" = "To do";
+"status_filter_in_progress" = "In progress";
+"status_filter_completed" = "Completed";
+"by_status" = "By status";
+"group_by_status_description" = "Group into in progress, to do and completed";
+"status_visibility_footer" = "Choose which tasks to show: one, two or all three states.";
+"eisenhower_axis_urgent" = "Urgent";
+"eisenhower_axis_not_urgent" = "Not urgent";
+"eisenhower_axis_important" = "Important";
+"eisenhower_axis_not_important" = "Not important";
+"days_per_week_format" = "%d days a week";
+"days_per_month_format" = "%d days a month";

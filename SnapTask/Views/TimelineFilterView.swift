@@ -116,6 +116,8 @@ struct TimelineFilterView: View {
             return "filter_group_by_category_description".localized
         case .priority:
             return "filter_group_by_priority_description".localized
+        case .status:
+            return "group_by_status_description".localized
         case .eisenhower:
             return "filter_group_by_eisenhower_description".localized
         case .none:

@@ -215,7 +215,7 @@ struct ThemesAndCustomizationView: View {
                             Text("eisenhower_threshold_desc".localized)
                                 .font(.caption)
                                 .themedSecondaryText()
-                                .lineLimit(1)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer()
                     }
@@ -404,139 +404,86 @@ struct EisenhowerSettingsView: View {
     @ObservedObject var viewModel: SettingsViewModel
     @Environment(\.theme) private var theme
 
-    private let todayHours = Array(0...24)
-    private let weekHours = Array(0...168)
-    private let monthDays = Array(0...31)
-    private let yearDays = Array(0...60)
-
     var body: some View {
         List {
             Section {
-                HStack(alignment: .top) {
-                    Image(systemName: "clock.badge.checkmark")
-                        .foregroundColor(.red)
-                        .frame(width: 24)
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("eisenhower_today_require_specific_time_title".localized)
-                                .themedPrimaryText()
-                            Spacer()
-                            Toggle("", isOn: $viewModel.eisenhowerTodayRequireSpecificTime)
-                                .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
-                        }
-                        Text("eisenhower_today_require_specific_time_desc".localized)
-                            .font(.caption)
-                            .themedSecondaryText()
-                    }
-                }
+                legend
+            } footer: {
+                Text("eisenhower_settings_intro".localized)
+                    .themedSecondaryText()
             }
             .listRowBackground(theme.surfaceColor)
 
             Section {
-                // Today (hours)
-                HStack(spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sun.max.fill")
-                            .foregroundColor(.yellow)
-                            .frame(width: 24)
-                        Text("eisenhower_today_urgent_hours_title".localized)
-                            .themedPrimaryText()
-                    }
-                    Spacer()
-                    Picker("", selection: $viewModel.eisenhowerTodayUrgentHours) {
-                        ForEach(todayHours, id: \.self) { h in
-                            Text("\(h)h").tag(h)
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle(isOn: $viewModel.eisenhowerMediumIsImportant) {
+                        Label {
+                            Text("eisenhower_medium_important_title".localized)
+                                .themedPrimaryText()
+                        } icon: {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(Color(hex: "#EF4444"))
                         }
                     }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(width: 90, height: 100)
-                    .clipped()
+                    .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                    Text("eisenhower_medium_important_desc".localized)
+                        .font(.caption)
+                        .themedSecondaryText()
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .listRowBackground(theme.surfaceColor)
-
-                // Week (hours)
-                HStack(spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "calendar.badge.clock")
-                            .foregroundColor(.blue)
-                            .frame(width: 24)
-                        Text("eisenhower_week_urgent_hours_title".localized)
-                            .themedPrimaryText()
-                    }
-                    Spacer()
-                    Picker("", selection: $viewModel.eisenhowerWeekUrgentHours) {
-                        ForEach(weekHours, id: \.self) { h in
-                            Text("\(h)h").tag(h)
-                        }
-                    }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(width: 90, height: 100)
-                    .clipped()
-                }
-                .listRowBackground(theme.surfaceColor)
-
-                // Month (days)
-                HStack(spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "calendar")
-                            .foregroundColor(.orange)
-                            .frame(width: 24)
-                        Text("eisenhower_month_urgent_days_title".localized)
-                            .themedPrimaryText()
-                    }
-                    Spacer()
-                    Picker("", selection: $viewModel.eisenhowerMonthUrgentDays) {
-                        ForEach(monthDays, id: \.self) { d in
-                            Text("\(d)d").tag(d)
-                        }
-                    }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(width: 90, height: 100)
-                    .clipped()
-                }
-                .listRowBackground(theme.surfaceColor)
-
-                // Year (days)
-                HStack(spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "calendar")
-                            .foregroundColor(.purple)
-                            .frame(width: 24)
-                        Text("eisenhower_year_urgent_days_title".localized)
-                            .themedPrimaryText()
-                    }
-                    Spacer()
-                    Picker("", selection: $viewModel.eisenhowerYearUrgentDays) {
-                        ForEach(yearDays, id: \.self) { d in
-                            Text("\(d)d").tag(d)
-                        }
-                    }
-                    .pickerStyle(WheelPickerStyle())
-                    .frame(width: 90, height: 100)
-                    .clipped()
-                }
-                .listRowBackground(theme.surfaceColor)
             } header: {
-                Text("eisenhower_settings_title".localized)
+                Text("eisenhower_importance_section".localized)
                     .themedSecondaryText()
             }
+            .listRowBackground(theme.surfaceColor)
 
             Section {
-                Button {
-                    viewModel.resetEisenhowerUrgencyDefaults()
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.counterclockwise")
-                            .foregroundColor(theme.accentColor)
-                            .frame(width: 24)
-                        Text("reset_to_defaults".localized)
-                            .themedPrimary()
-                        Spacer()
+                thresholdRow(
+                    title: "today".localized, icon: "sun.max.fill", color: .orange,
+                    value: $viewModel.eisenhowerTodayUrgentHours, range: 0...24, step: 1, unit: .hour
+                )
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle(isOn: $viewModel.eisenhowerTodayRequireSpecificTime) {
+                        Text("eisenhower_today_require_specific_time_title".localized)
+                            .themedPrimaryText()
                     }
+                    .toggleStyle(SwitchToggleStyle(tint: theme.accentColor))
+                    Text("eisenhower_today_require_specific_time_desc".localized)
+                        .font(.caption)
+                        .themedSecondaryText()
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.leading, 36)
+                thresholdRow(
+                    title: "week".localized, icon: "calendar.badge.clock", color: .blue,
+                    value: $viewModel.eisenhowerWeekUrgentHours, range: 0...168, step: 6, unit: .hour
+                )
+                thresholdRow(
+                    title: "month".localized, icon: "calendar", color: .green,
+                    value: $viewModel.eisenhowerMonthUrgentDays, range: 0...31, step: 1, unit: .day
+                )
+                thresholdRow(
+                    title: "year".localized, icon: "calendar.circle.fill", color: .purple,
+                    value: $viewModel.eisenhowerYearUrgentDays, range: 0...60, step: 1, unit: .day
+                )
+            } header: {
+                Text("eisenhower_urgency_section".localized)
+                    .themedSecondaryText()
             } footer: {
                 Text("eisenhower_threshold_desc".localized)
                     .themedSecondaryText()
+            }
+            .listRowBackground(theme.surfaceColor)
+
+            Section {
+                Button {
+                    withAnimation(.smooth(duration: 0.3)) {
+                        viewModel.resetEisenhowerUrgencyDefaults()
+                    }
+                } label: {
+                    Label("reset_to_defaults".localized, systemImage: "arrow.counterclockwise")
+                        .foregroundColor(theme.accentColor)
+                }
             }
             .listRowBackground(theme.surfaceColor)
         }
@@ -544,6 +491,76 @@ struct EisenhowerSettingsView: View {
         .scrollContentBackground(.hidden)
         .navigationTitle("eisenhower_settings_title".localized)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// The four quadrants at a glance, with the axis they come from.
+    private var legend: some View {
+        let quadrants: [(String, String, String)] = [
+            ("eisenhower_do_now", "flame.fill", "#EF4444"),
+            ("eisenhower_schedule", "calendar", "#3B82F6"),
+            ("eisenhower_delegate", "person.2.fill", "#F59E0B"),
+            ("eisenhower_eliminate", "trash.fill", "#8E8E93")
+        ]
+        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            ForEach(quadrants, id: \.0) { key, icon, hex in
+                HStack(spacing: 8) {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(hex: hex))
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(Color(hex: hex).opacity(0.16)))
+                    Text(key.localized)
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .foregroundColor(Color(hex: hex))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(hex: hex).opacity(0.08))
+                )
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func thresholdRow(title: String, icon: String, color: Color, value: Binding<Int>,
+                              range: ClosedRange<Int>, step: Int, unit: NSCalendar.Unit) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .themedPrimaryText()
+                Text(Self.thresholdDescription(value.wrappedValue, unit: unit))
+                    .font(.caption)
+                    .themedSecondaryText()
+                    .contentTransition(.numericText())
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Stepper("", value: value, in: range, step: step)
+                .labelsHidden()
+                .fixedSize()
+        }
+        .animation(.smooth(duration: 0.2), value: value.wrappedValue)
+    }
+
+    /// "Urgent from 1 day, 12 hours before the deadline", written in the user's language.
+    static func thresholdDescription(_ amount: Int, unit: NSCalendar.Unit) -> String {
+        guard amount > 0 else { return "eisenhower_only_overdue".localized }
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .full
+        formatter.maximumUnitCount = 2
+        formatter.allowedUnits = unit == .hour ? [.day, .hour] : [.day]
+        var calendar = Calendar.current
+        calendar.locale = Locale(identifier: LanguageManager.shared.actualLanguageCode)
+        formatter.calendar = calendar
+        let seconds = TimeInterval(amount) * (unit == .hour ? 3600 : 86400)
+        let duration = formatter.string(from: seconds) ?? "\(amount)"
+        return String(format: "eisenhower_urgent_within_format".localized, duration)
     }
 }
 

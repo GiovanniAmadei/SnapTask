@@ -86,6 +86,73 @@ struct TimelineOrganizationView: View {
                         )
                         .padding(.horizontal, 16)
                         
+                        // Status filter: which tasks to show
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("status_filter_title".localized)
+                                .font(.system(size: 18, weight: .semibold))
+                                .themedPrimaryText()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            VStack(spacing: 8) {
+                                ForEach(TaskStatusFilter.allCases, id: \.self) { status in
+                                    let isVisible = viewModel.visibleStatuses.contains(status)
+                                    let isLastVisible = isVisible && viewModel.visibleStatuses.count == 1
+                                    Button(action: {
+                                        if isLastVisible {
+                                            HapticManager.shared.notification(.warning)
+                                        } else {
+                                            HapticManager.shared.impact(.light)
+                                            withAnimation(.smooth(duration: 0.25)) {
+                                                viewModel.toggleVisibleStatus(status)
+                                            }
+                                        }
+                                    }) {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: status.icon)
+                                                .font(.system(size: 16))
+                                                .foregroundColor(Color(hex: status.colorHex))
+                                                .frame(width: 24)
+                                            Text(status.displayName)
+                                                .font(.body)
+                                                .themedPrimaryText()
+                                            Spacer()
+                                            Image(systemName: isVisible ? "checkmark.circle.fill" : "circle")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(isVisible ? theme.primaryColor : theme.secondaryTextColor.opacity(0.5))
+                                        }
+                                        .padding()
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(isVisible ? theme.primaryColor.opacity(0.1) : theme.surfaceColor)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .strokeBorder(isVisible ? theme.primaryColor : theme.borderColor,
+                                                                      lineWidth: isVisible ? 2 : 1)
+                                                )
+                                        )
+                                        .opacity(isLastVisible ? 0.8 : 1)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+
+                            Text("status_visibility_footer".localized)
+                                .font(.caption)
+                                .themedSecondaryText()
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(theme.backgroundColor)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .strokeBorder(theme.borderColor, lineWidth: 1)
+                                )
+                        )
+                        .padding(.horizontal, 16)
+
                         // Time Sort Order (only when organizing by time and Today scope)
                         if viewModel.selectedTimeScope == .today && viewModel.organization == .time {
                             VStack(alignment: .leading, spacing: 16) {
@@ -211,6 +278,8 @@ struct TimelineOrganizationView: View {
             return "group_by_category_description".localized
         case .priority:
             return "group_by_priority_description".localized
+        case .status:
+            return "group_by_status_description".localized
         case .eisenhower:
             return "group_by_urgency_importance_description".localized
         case .none:

@@ -583,7 +583,7 @@
 "sort_by_time_description" = "スケジュールされた時間でタスクを並べ替え";
 "group_by_category_description" = "カテゴリでタスクをグループ化";
 "group_by_priority_description" = "優先度レベルでタスクをグループ化";
-"group_by_urgency_importance_description" = "緊急度と重要度でタスクをグループ化（アイゼンハワーマトリックス）";
+"group_by_urgency_importance_description" = "緊急度と重要度でタスクをグループ化";
 "filter_sort_by_time_description" = "スケジュールされた時間でタスクを並べ替える";
 "filter_group_by_category_description" = "カテゴリの下にタスクをグループ化";
 "filter_group_by_priority_description" = "優先度レベルでタスクをグループ化";
@@ -1447,7 +1447,7 @@
 
 // アイゼンハワー設定（緊急度のカスタマイズ）
 "eisenhower_settings_title" = "アイゼンハワー・マトリックス";
-"eisenhower_today_require_specific_time_title" = "特定の時刻が必要（今日）";
+"eisenhower_today_require_specific_time_title" = "時刻指定ありのみ";
 "eisenhower_today_require_specific_time_desc" = "今日のタスクのうち、時刻が設定されているものだけを緊急として扱う。";
 "eisenhower_today_urgent_hours_title" = "今日の緊急しきい値（時間）";
 "eisenhower_week_urgent_hours_title" = "週の緊急しきい値（時間）";
@@ -2167,7 +2167,7 @@
 "all_scope_history" = "履歴";
 "inbox_plan_more_options" = "その他のオプション";
 "tip_in_progress_title" = "タスクを「進行中」にする";
-"tip_in_progress_message" = "円を長押しすると、未着手・進行中・完了から選べます。";
+"tip_in_progress_message" = "円を長押しするとタスクが「進行中」になります。もう一度長押しで解除できます。";
 
 // Welcome content and task deletion
 "starter_category_work" = "仕事";
@@ -2234,3 +2234,41 @@
 "budget_daily_allowance" = "1日あたり約%@";
 "visible" = "表示";
 "hidden" = "非表示";
+
+"delete_all_data_success_title" = "データを削除しました";
+"delete_all_data_success_message" = "アプリのすべてのデータを削除しました。";
+
+// Previously hardcoded texts
+"notification_advance_notice" = "事前通知";
+"task_no_performance_data_period" = "選択した期間にこのタスクのパフォーマンスデータはありません。";
+"available_data" = "利用可能なデータ：";
+"completions_since_format" = "%2$@以降に%1$d回完了";
+"try_all_time" = "全期間を表示";
+"try_year" = "年を表示";
+"feedback_title_label" = "タイトル";
+"no_coordinates_available" = "座標がありません";
+
+// Eisenhower settings & status filter
+"eisenhower_settings_intro" = "タスクは重要度（優先度）と緊急度（期限までの近さ）で分類されます。";
+"eisenhower_importance_section" = "重要度";
+"eisenhower_medium_important_title" = "優先度「中」も含める";
+"eisenhower_medium_important_desc" = "オンにすると優先度「中」のタスクも重要になります。オフでは「高」のみです。";
+"eisenhower_urgency_section" = "緊急度";
+"eisenhower_urgent_within_format" = "期限の%@前から緊急";
+"eisenhower_only_overdue" = "期限切れになってから緊急";
+"status_filter_title" = "表示";
+"status_filter_empty" = "このフィルタに合うタスクはありません";
+"status_filter_show_all" = "すべてのタスクを表示";
+"status_filter_all" = "すべて";
+"status_filter_todo" = "未着手";
+"status_filter_in_progress" = "進行中";
+"status_filter_completed" = "完了";
+"by_status" = "ステータス別";
+"group_by_status_description" = "進行中・未着手・完了に分類";
+"status_visibility_footer" = "表示するタスクを選べます：1つ、2つ、または3つすべての状態。";
+"eisenhower_axis_urgent" = "緊急";
+"eisenhower_axis_not_urgent" = "緊急でない";
+"eisenhower_axis_important" = "重要";
+"eisenhower_axis_not_important" = "重要でない";
+"days_per_week_format" = "週%d日";
+"days_per_month_format" = "月%d日";
