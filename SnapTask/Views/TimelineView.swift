@@ -1161,7 +1161,7 @@ struct TaskListView: View {
             } else if viewModel.tasks.isEmpty {
                 // Empty state
                 VStack(spacing: 20) {
-                    if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
+                    if showsMandalaBanner {
                         mandalaBannerCard
                             .padding(.top, 8)
                     }
@@ -1199,7 +1199,7 @@ struct TaskListView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
+                            if showsMandalaBanner {
                                 mandalaBannerCard
                             }
                             
@@ -1283,6 +1283,14 @@ struct TaskListView: View {
         }
     }
     
+    /// Mandala is an experiment planned for the next version: hidden in 1.8.
+    private static let isMandalaEnabled = false
+
+    private var showsMandalaBanner: Bool {
+        Self.isMandalaEnabled
+            && (viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm)
+    }
+
     private var mandalaBannerCard: some View {
         Button(action: {
             showingMandalaSheet = true
@@ -1417,7 +1425,7 @@ struct TaskListView: View {
     /// ha scorrimento automatico, animazioni e vibrazione di sistema.
     private var reorderableTaskList: some View {
         List {
-            if viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm {
+            if showsMandalaBanner {
                 mandalaBannerCard
                     .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
                     .listRowBackground(Color.clear)
