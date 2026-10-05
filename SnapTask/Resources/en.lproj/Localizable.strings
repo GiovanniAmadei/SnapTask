@@ -2267,3 +2267,44 @@
 "delete_task_sessions_message" = "This task has %d Track and Pomodoro sessions in the Focus tab. Delete them along with the task?";
 "delete_task_and_sessions" = "Delete sessions too";
 "delete_task_keep_sessions" = "Delete only the task";
+
+// Finance — review pass
+"financial_goals" = "Savings Goals";
+"add_financial_goal" = "Add Goal";
+"edit_financial_goal" = "Edit Goal";
+"new_financial_goal" = "New Goal";
+"goal_target_amount" = "Target Amount";
+"goal_saved_amount" = "Saved So Far";
+"goal_has_deadline" = "Set a Deadline";
+"goal_completed" = "Goal reached";
+"goal_to_go" = "%@ to go";
+"goal_save_per_month" = "Save %@ per month";
+"recurring_has_end" = "Set an End Date";
+"recurring_starts" = "Starts";
+"next_charge" = "Next: %@";
+"recurring_ends_on" = "Ends %@";
+"budget_spent" = "spent";
+"delete_entry_title" = "Delete this entry?";
+"reset_finance_confirm_title" = "Reset all finance data?";
+"reset_finance_confirm_message" = "Movements, budgets, goals, categories and settings will be permanently deleted, also from iCloud.";
+"search_entries" = "Search movements";
+"all_entries" = "All Movements";
+"budget_no_categories_left" = "Every category already has a budget";
+"delete_category_reassign_note" = "Its movements will move to “Other” and its budget will be removed.";
+
+// Finance — charts & card order
+"finance_trend" = "Trend";
+"finance_cards_layout" = "Card Order";
+"finance_customize_cards" = "Customize cards";
+"finance_cards_footer" = "Drag to reorder. Tap the eye to hide or show a card. Some cards only appear when they have something to show.";
+"period_previous" = "Previous period";
+"period_next" = "Next period";
+"last_n_days" = "Last %d days";
+"last_n_weeks" = "Last %d weeks";
+"last_n_months" = "Last %d months";
+"last_n_years" = "Last %d years";
+"amount_left" = "%@ left";
+"amount_over" = "%@ over";
+"budget_daily_allowance" = "about %@ a day";
+"visible" = "Visible";
+"hidden" = "Hidden";

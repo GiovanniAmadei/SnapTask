@@ -2226,3 +2226,44 @@
 "delete_task_sessions_message" = "Questa attività ha %d sessioni di Traccia e Pomodoro nella scheda Focus. Vuoi eliminarle insieme all'attività?";
 "delete_task_and_sessions" = "Elimina anche le sessioni";
 "delete_task_keep_sessions" = "Elimina solo l'attività";
+
+// Finance — review pass
+"financial_goals" = "Obiettivi di Risparmio";
+"add_financial_goal" = "Aggiungi Obiettivo";
+"edit_financial_goal" = "Modifica Obiettivo";
+"new_financial_goal" = "Nuovo Obiettivo";
+"goal_target_amount" = "Importo da Raggiungere";
+"goal_saved_amount" = "Risparmiato Finora";
+"goal_has_deadline" = "Imposta una Scadenza";
+"goal_completed" = "Obiettivo raggiunto";
+"goal_to_go" = "Mancano %@";
+"goal_save_per_month" = "Metti da parte %@ al mese";
+"recurring_has_end" = "Imposta una Data di Fine";
+"recurring_starts" = "Inizio";
+"next_charge" = "Prossimo: %@";
+"recurring_ends_on" = "Termina il %@";
+"budget_spent" = "spesi";
+"delete_entry_title" = "Eliminare questo movimento?";
+"reset_finance_confirm_title" = "Azzerare tutti i dati finanziari?";
+"reset_finance_confirm_message" = "Movimenti, budget, obiettivi, categorie e impostazioni verranno eliminati definitivamente, anche da iCloud.";
+"search_entries" = "Cerca movimenti";
+"all_entries" = "Tutti i Movimenti";
+"budget_no_categories_left" = "Ogni categoria ha già un budget";
+"delete_category_reassign_note" = "I suoi movimenti passeranno in «Altro» e il suo budget verrà rimosso.";
+
+// Finance — charts & card order
+"finance_trend" = "Andamento";
+"finance_cards_layout" = "Ordine delle Schede";
+"finance_customize_cards" = "Personalizza schede";
+"finance_cards_footer" = "Trascina per riordinare. Tocca l'occhio per nascondere o mostrare una scheda. Alcune schede compaiono solo quando hanno qualcosa da mostrare.";
+"period_previous" = "Periodo precedente";
+"period_next" = "Periodo successivo";
+"last_n_days" = "Ultimi %d giorni";
+"last_n_weeks" = "Ultime %d settimane";
+"last_n_months" = "Ultimi %d mesi";
+"last_n_years" = "Ultimi %d anni";
+"amount_left" = "%@ rimasti";
+"amount_over" = "%@ oltre il limite";
+"budget_daily_allowance" = "circa %@ al giorno";
+"visible" = "Visibile";
+"hidden" = "Nascosta";

@@ -1,15 +1,23 @@
 import SwiftUI
 
 struct FinanceSettingsView: View {
-    @StateObject private var financeManager = FinanceManager.shared
+    @ObservedObject private var financeManager = FinanceManager.shared
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     
-    @State private var balanceText: String = ""
-    @State private var budgetText: String = ""
-    @State private var savingsText: String = ""
-    @State private var savingsIsPercent: Bool = true
-    @State private var incomeText: String = ""
+    private enum SettingsField: Hashable {
+        case balance, budget, savings, income
+    }
+    
+    @FocusState private var focusedField: SettingsField?
+    @State private var balanceText: String
+    @State private var budgetText: String
+    @State private var savingsText: String
+    @State private var savingsIsPercent: Bool
+    @State private var incomeText: String
+    @State private var showingResetConfirm = false
+    @State private var editingGoal: FinancialGoal? = nil
+    @State private var showingAddGoal = false
     @State private var showingAddCategory = false
     @State private var newCategoryIsExpense: Bool = true
     @State private var editingCategory: CustomFinanceCategory? = nil
@@ -21,6 +29,22 @@ struct FinanceSettingsView: View {
     @State private var showingDeleteCustomAlert = false
     @State private var editingBudget: FinanceBudget? = nil
     @State private var showingEditBudget = false
+    
+    /// The fields are filled in here (not in `onAppear`) so that setting the savings mode does not
+    /// trigger the mode-change handler and overwrite the stored goal.
+    init() {
+        let manager = FinanceManager.shared
+        func text(_ value: Double, digits: Int = 2) -> String {
+            value != 0 ? FinanceNumber.editableText(value, fractionDigits: digits) : ""
+        }
+        _balanceText = State(initialValue: text(manager.startingBalance))
+        _budgetText = State(initialValue: text(manager.monthlyBudgetTarget))
+        _incomeText = State(initialValue: text(manager.monthlyIncomeGoal))
+        _savingsIsPercent = State(initialValue: manager.savingsGoalIsPercent)
+        _savingsText = State(initialValue: manager.savingsGoalIsPercent
+            ? text(manager.savingsGoalPercent, digits: 1)
+            : text(manager.savingsGoalAmount))
+    }
     
     private var currencySymbol: String {
         financeManager.selectedCurrency.symbol
@@ -36,6 +60,20 @@ struct FinanceSettingsView: View {
     
     var body: some View {
         Form {
+            // Order of the cards on the Finance screen
+            Section {
+                NavigationLink(destination: FinanceCardLayoutView()) {
+                    HStack {
+                        Image(systemName: "rectangle.3.group")
+                            .foregroundColor(theme.primaryColor)
+                            .frame(width: 24)
+                        Text("finance_cards_layout".localized)
+                            .themedPrimaryText()
+                    }
+                }
+                .listRowBackground(theme.surfaceColor)
+            }
+            
             // Currency
             Section {
                 Picker("currency".localized, selection: Binding(
@@ -62,10 +100,11 @@ struct FinanceSettingsView: View {
                     Text(currencySymbol)
                         .font(.title3.weight(.semibold))
                         .foregroundColor(theme.secondaryTextColor)
-                    TextField("0.00", text: $balanceText)
+                    TextField(FinanceNumber.placeholder, text: $balanceText)
                         .keyboardType(.decimalPad)
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .themedPrimaryText()
+                        .focused($focusedField, equals: .balance)
                 }
                 .listRowBackground(theme.surfaceColor)
             } header: {
@@ -82,10 +121,11 @@ struct FinanceSettingsView: View {
                     Text(currencySymbol)
                         .font(.title3.weight(.semibold))
                         .foregroundColor(theme.secondaryTextColor)
-                    TextField("0.00", text: $budgetText)
+                    TextField(FinanceNumber.placeholder, text: $budgetText)
                         .keyboardType(.decimalPad)
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .themedPrimaryText()
+                        .focused($focusedField, equals: .budget)
                 }
                 .listRowBackground(theme.surfaceColor)
                 
@@ -114,8 +154,11 @@ struct FinanceSettingsView: View {
                     Text(isPercent ? "percentage".localized : "fixed_amount".localized)
                 }
                 .listRowBackground(theme.surfaceColor)
-                .onChange(of: savingsIsPercent) { _, newValue in
+                .onChange(of: savingsIsPercent) { oldValue, newValue in
+                    // Keep what was typed for the previous mode, then show the stored value of the new one.
+                    commitSavings(isPercent: oldValue)
                     financeManager.setSavingsGoalIsPercent(newValue)
+                    savingsText = savingsFieldText(isPercent: newValue)
                 }
                 
                 if savingsIsPercent {
@@ -124,6 +167,7 @@ struct FinanceSettingsView: View {
                             .keyboardType(.decimalPad)
                             .font(.title3.weight(.semibold).monospacedDigit())
                             .themedPrimaryText()
+                            .focused($focusedField, equals: .savings)
                         Text("%")
                             .font(.title3.weight(.semibold))
                             .foregroundColor(theme.secondaryTextColor)
@@ -134,10 +178,11 @@ struct FinanceSettingsView: View {
                         Text(currencySymbol)
                             .font(.title3.weight(.semibold))
                             .foregroundColor(theme.secondaryTextColor)
-                        TextField("0.00", text: $savingsText)
+                        TextField(FinanceNumber.placeholder, text: $savingsText)
                             .keyboardType(.decimalPad)
                             .font(.title3.weight(.semibold).monospacedDigit())
                             .themedPrimaryText()
+                            .focused($focusedField, equals: .savings)
                     }
                     .listRowBackground(theme.surfaceColor)
                 }
@@ -148,7 +193,7 @@ struct FinanceSettingsView: View {
                             .themedPrimaryText()
                         Spacer()
                         if savingsIsPercent {
-                            Text(String(format: "%.1f%%", financeManager.monthlySavingsRate * 100))
+                            Text(financeManager.formatPercent(financeManager.monthlySavingsRate, maxFractionDigits: 1))
                                 .font(.subheadline.weight(.medium).monospacedDigit())
                                 .foregroundColor(financeManager.monthlySavingsRate * 100 >= financeManager.savingsGoalPercent ? .green : .orange)
                         } else {
@@ -174,10 +219,11 @@ struct FinanceSettingsView: View {
                     Text(currencySymbol)
                         .font(.title3.weight(.semibold))
                         .foregroundColor(theme.secondaryTextColor)
-                    TextField("0.00", text: $incomeText)
+                    TextField(FinanceNumber.placeholder, text: $incomeText)
                         .keyboardType(.decimalPad)
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .themedPrimaryText()
+                        .focused($focusedField, equals: .income)
                 }
                 .listRowBackground(theme.surfaceColor)
                 
@@ -439,10 +485,9 @@ struct FinanceSettingsView: View {
                         
                         let usage = financeManager.budgetUsage(for: budget)
                         if usage > 0 {
-                            Text(String(format: "%.0f%%", usage * 100))
+                            Text(financeManager.formatPercent(usage))
                                 .font(.caption.weight(.bold).monospacedDigit())
                                 .foregroundColor(usage > 1 ? .red : usage > 0.8 ? .orange : .green)
-                                .frame(width: 44)
                         }
                         
                         // Swipe hint indicator
@@ -490,14 +535,68 @@ struct FinanceSettingsView: View {
                 .themedSecondaryText()
             }
             
+            // Savings goals
+            Section {
+                ForEach(financeManager.financialGoals) { goal in
+                    HStack {
+                        Image(systemName: goal.type.icon)
+                            .foregroundColor(theme.primaryColor)
+                            .frame(width: 24)
+                        Text(goal.name)
+                            .themedPrimaryText()
+                        Spacer()
+                        Text(financeManager.formatPercent(goal.progress))
+                            .font(.caption.weight(.bold).monospacedDigit())
+                            .foregroundColor(goal.isCompleted ? .green : theme.secondaryTextColor)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { editingGoal = goal }
+                    .listRowBackground(theme.surfaceColor)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            financeManager.removeFinancialGoal(goal)
+                        } label: {
+                            Label("delete".localized, systemImage: "trash")
+                        }
+                        Button {
+                            editingGoal = goal
+                        } label: {
+                            Label("edit".localized, systemImage: "pencil")
+                        }
+                        .tint(theme.primaryColor)
+                    }
+                }
+                
+                Button {
+                    showingAddGoal = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(theme.primaryColor)
+                        Text("add_financial_goal".localized)
+                            .foregroundColor(theme.primaryColor)
+                    }
+                }
+                .listRowBackground(theme.surfaceColor)
+            } header: {
+                Text("financial_goals".localized)
+                    .themedSecondaryText()
+            } footer: {
+                if !financeManager.financialGoals.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left")
+                            .font(.caption2)
+                        Text("swipe_to_edit_delete".localized)
+                            .font(.caption)
+                    }
+                    .themedSecondaryText()
+                }
+            }
+            
             // Reset
             Section {
                 Button(role: .destructive) {
-                    financeManager.resetAll()
-                    balanceText = ""
-                    budgetText = ""
-                    savingsText = ""
-                    incomeText = ""
+                    showingResetConfirm = true
                 } label: {
                     HStack {
                         Image(systemName: "trash")
@@ -509,22 +608,37 @@ struct FinanceSettingsView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .themedBackground()
-        .navigationTitle("finance_settings".localized)
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            balanceText = financeManager.startingBalance > 0 ? String(format: "%.2f", financeManager.startingBalance) : ""
-            budgetText = financeManager.monthlyBudgetTarget > 0 ? String(format: "%.2f", financeManager.monthlyBudgetTarget) : ""
-            savingsIsPercent = financeManager.savingsGoalIsPercent
-            if financeManager.savingsGoalIsPercent {
-                savingsText = financeManager.savingsGoalPercent > 0 ? String(format: "%.0f", financeManager.savingsGoalPercent) : ""
-            } else {
-                savingsText = financeManager.savingsGoalAmount > 0 ? String(format: "%.2f", financeManager.savingsGoalAmount) : ""
+        .financeNavigationTitle("finance_settings".localized)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("done".localized) { focusedField = nil }
             }
-            incomeText = financeManager.monthlyIncomeGoal > 0 ? String(format: "%.2f", financeManager.monthlyIncomeGoal) : ""
+        }
+        .onChange(of: focusedField) { oldField, _ in
+            // A value is saved as soon as its field is left, not only when the screen closes.
+            if let oldField { commit(oldField) }
         }
         .onDisappear {
             saveAll()
+        }
+        .sheet(isPresented: $showingAddGoal) {
+            NavigationStack {
+                FinancialGoalFormView(goal: nil)
+            }
+        }
+        .sheet(item: $editingGoal) { goal in
+            NavigationStack {
+                FinancialGoalFormView(goal: goal)
+            }
+        }
+        .alert("reset_finance_confirm_title".localized, isPresented: $showingResetConfirm) {
+            Button("cancel".localized, role: .cancel) {}
+            Button("reset".localized, role: .destructive) { resetEverything() }
+        } message: {
+            Text("reset_finance_confirm_message".localized)
         }
         .sheet(isPresented: $showingAddCategory) {
             NavigationStack {
@@ -563,49 +677,76 @@ struct FinanceSettingsView: View {
             Button("cancel".localized, role: .cancel) { customCategoryToDelete = nil }
             Button("delete".localized, role: .destructive) {
                 if let cat = customCategoryToDelete {
-                    financeManager.removeCustomCategory(cat)
+                    financeManager.removeCustomCategory(cat, reassignEntries: true)
                 }
                 customCategoryToDelete = nil
             }
         } message: {
             if let cat = customCategoryToDelete {
-                Text("delete_category_message".localized + " '\(cat.name)'?")
+                Text("delete_category_message".localized + " '\(cat.name)'?\n" + "delete_category_reassign_note".localized)
             }
         }
+    }
+    
+    /// An emptied field means "no value": the goal is cleared instead of silently keeping the old one.
+    private func commit(_ field: SettingsField) {
+        switch field {
+        case .balance:
+            let value = FinanceNumber.parse(balanceText) ?? 0
+            if value != financeManager.startingBalance { financeManager.setStartingBalance(value) }
+        case .budget:
+            let value = max(FinanceNumber.parse(budgetText) ?? 0, 0)
+            if value != financeManager.monthlyBudgetTarget { financeManager.setMonthlyBudgetTarget(value) }
+        case .savings:
+            commitSavings(isPercent: savingsIsPercent)
+        case .income:
+            let value = max(FinanceNumber.parse(incomeText) ?? 0, 0)
+            if value != financeManager.monthlyIncomeGoal { financeManager.setMonthlyIncomeGoal(value) }
+        }
+    }
+    
+    private func commitSavings(isPercent: Bool) {
+        let value = max(FinanceNumber.parse(savingsText) ?? 0, 0)
+        if isPercent {
+            let clamped = min(value, 100)
+            if clamped != financeManager.savingsGoalPercent { financeManager.setSavingsGoalPercent(clamped) }
+        } else if value != financeManager.savingsGoalAmount {
+            financeManager.setSavingsGoalAmount(value)
+        }
+    }
+    
+    private func savingsFieldText(isPercent: Bool) -> String {
+        let value = isPercent ? financeManager.savingsGoalPercent : financeManager.savingsGoalAmount
+        guard value != 0 else { return "" }
+        return FinanceNumber.editableText(value, fractionDigits: isPercent ? 1 : 2)
     }
     
     private func saveAll() {
-        if let val = Double(balanceText.replacingOccurrences(of: ",", with: ".")) {
-            financeManager.setStartingBalance(val)
-        }
-        if let val = Double(budgetText.replacingOccurrences(of: ",", with: ".")) {
-            financeManager.setMonthlyBudgetTarget(val)
-        }
-        if let val = Double(savingsText.replacingOccurrences(of: ",", with: ".")) {
-            if savingsIsPercent {
-                financeManager.setSavingsGoalPercent(val)
-            } else {
-                financeManager.setSavingsGoalAmount(val)
-            }
-        }
-        if let val = Double(incomeText.replacingOccurrences(of: ",", with: ".")) {
-            financeManager.setMonthlyIncomeGoal(val)
-        }
+        commit(.balance)
+        commit(.budget)
+        commit(.savings)
+        commit(.income)
+    }
+    
+    private func resetEverything() {
+        focusedField = nil
+        financeManager.resetAll(syncToCloud: true)
+        balanceText = ""
+        budgetText = ""
+        savingsText = ""
+        incomeText = ""
+        savingsIsPercent = true
     }
     
     private func formatCurrency(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = financeManager.selectedCurrency.rawValue
-        formatter.currencySymbol = financeManager.selectedCurrency.symbol
-        return formatter.string(from: NSNumber(value: amount)) ?? "\(currencySymbol)0.00"
+        financeManager.formatCurrency(amount)
     }
 }
 
 // MARK: - Add Category Budget View
 
 struct AddCategoryBudgetView: View {
-    @StateObject private var financeManager = FinanceManager.shared
+    @ObservedObject private var financeManager = FinanceManager.shared
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     
@@ -619,7 +760,23 @@ struct AddCategoryBudgetView: View {
     
     private var availableBuiltInCategories: [FinanceCategory] {
         let existing = Set(financeManager.budgets.filter { $0.customCategoryId == nil }.map { $0.category })
-        return FinanceCategory.allCases.filter { !$0.isIncomeCategory && !existing.contains($0) }
+        return FinanceCategory.allCases.filter { !$0.isIncomeCategory && !existing.contains($0) && !financeManager.isHidden($0) }
+    }
+    
+    private var hasAvailableCategory: Bool {
+        !availableBuiltInCategories.isEmpty || !availableCustomCategories.isEmpty
+    }
+    
+    private var parsedLimit: Double {
+        FinanceNumber.parse(limitText) ?? 0
+    }
+    
+    private var canSave: Bool {
+        guard hasAvailableCategory, parsedLimit > 0 else { return false }
+        switch selectedCategory {
+        case .builtIn(let cat): return availableBuiltInCategories.contains(cat)
+        case .custom(let id): return availableCustomCategories.contains { $0.id == id }
+        }
     }
     
     private var availableCustomCategories: [CustomFinanceCategory] {
@@ -631,29 +788,35 @@ struct AddCategoryBudgetView: View {
     var body: some View {
         Form {
             Section {
-                Picker("category".localized, selection: $selectedCategory) {
-                    ForEach(availableBuiltInCategories) { cat in
-                        HStack {
-                            Image(systemName: financeManager.icon(for: cat))
-                            Text(financeManager.displayName(for: cat))
+                if hasAvailableCategory {
+                    Picker("category".localized, selection: $selectedCategory) {
+                        ForEach(availableBuiltInCategories) { cat in
+                            HStack {
+                                Image(systemName: financeManager.icon(for: cat))
+                                Text(financeManager.displayName(for: cat))
+                            }
+                            .tag(BudgetCategorySelection.builtIn(cat))
                         }
-                        .tag(BudgetCategorySelection.builtIn(cat))
-                    }
-                    ForEach(availableCustomCategories) { custom in
-                        HStack {
-                            Image(systemName: custom.icon)
-                            Text(custom.name)
+                        ForEach(availableCustomCategories) { custom in
+                            HStack {
+                                Image(systemName: custom.icon)
+                                Text(custom.name)
+                            }
+                            .tag(BudgetCategorySelection.custom(custom.id))
                         }
-                        .tag(BudgetCategorySelection.custom(custom.id))
                     }
+                    .listRowBackground(theme.surfaceColor)
+                } else {
+                    Text("budget_no_categories_left".localized)
+                        .themedSecondaryText()
+                        .listRowBackground(theme.surfaceColor)
                 }
-                .listRowBackground(theme.surfaceColor)
                 
                 HStack {
                     Text(financeManager.selectedCurrency.symbol)
                         .font(.title3.weight(.semibold))
                         .foregroundColor(theme.secondaryTextColor)
-                    TextField("0.00", text: $limitText)
+                    TextField(FinanceNumber.placeholder, text: $limitText)
                         .keyboardType(.decimalPad)
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .themedPrimaryText()
@@ -666,25 +829,23 @@ struct AddCategoryBudgetView: View {
         }
         .scrollContentBackground(.hidden)
         .themedBackground()
-        .navigationTitle("add_category_budget".localized)
-        .navigationBarTitleDisplayMode(.inline)
+        .financeNavigationTitle("add_category_budget".localized)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("save".localized) {
-                    if let val = Double(limitText.replacingOccurrences(of: ",", with: ".")), val > 0 {
-                        let budget: FinanceBudget
-                        switch selectedCategory {
-                        case .builtIn(let cat):
-                            budget = FinanceBudget(category: cat, monthlyLimit: val)
-                        case .custom(let id):
-                            budget = FinanceBudget(category: .other, customCategoryId: id, monthlyLimit: val)
-                        }
-                        financeManager.addBudget(budget)
-                        dismiss()
+                    guard canSave else { return }
+                    let budget: FinanceBudget
+                    switch selectedCategory {
+                    case .builtIn(let cat):
+                        budget = FinanceBudget(category: cat, monthlyLimit: parsedLimit)
+                    case .custom(let id):
+                        budget = FinanceBudget(category: .other, customCategoryId: id, monthlyLimit: parsedLimit)
                     }
+                    financeManager.addBudget(budget)
+                    dismiss()
                 }
                 .fontWeight(.semibold)
-                .disabled(Double(limitText.replacingOccurrences(of: ",", with: ".")) ?? 0 <= 0)
+                .disabled(!canSave)
             }
         }
         .onAppear {
@@ -700,7 +861,7 @@ struct AddCategoryBudgetView: View {
 // MARK: - Edit Category Budget View
 
 struct EditCategoryBudgetView: View {
-    @StateObject private var financeManager = FinanceManager.shared
+    @ObservedObject private var financeManager = FinanceManager.shared
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     
@@ -729,7 +890,7 @@ struct EditCategoryBudgetView: View {
                     Text(currencySymbol)
                         .font(.title3.weight(.semibold))
                         .foregroundColor(theme.secondaryTextColor)
-                    TextField("0.00", text: $limitText)
+                    TextField(FinanceNumber.placeholder, text: $limitText)
                         .keyboardType(.decimalPad)
                         .font(.title3.weight(.semibold).monospacedDigit())
                         .themedPrimaryText()
@@ -742,8 +903,7 @@ struct EditCategoryBudgetView: View {
         }
         .scrollContentBackground(.hidden)
         .themedBackground()
-        .navigationTitle("edit_budget".localized)
-        .navigationBarTitleDisplayMode(.inline)
+        .financeNavigationTitle("edit_budget".localized)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("cancel".localized) { dismiss() }
@@ -751,19 +911,19 @@ struct EditCategoryBudgetView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("save".localized) {
-                    if let val = Double(limitText.replacingOccurrences(of: ",", with: ".")), val > 0, var existingBudget = budget {
+                    if let val = FinanceNumber.parse(limitText), val > 0, var existingBudget = budget {
                         existingBudget.monthlyLimit = val
                         financeManager.updateBudget(existingBudget)
                         dismiss()
                     }
                 }
                 .fontWeight(.semibold)
-                .disabled(Double(limitText.replacingOccurrences(of: ",", with: ".")) ?? 0 <= 0)
+                .disabled((FinanceNumber.parse(limitText) ?? 0) <= 0)
             }
         }
         .onAppear {
             if let b = budget {
-                limitText = String(format: "%.2f", b.monthlyLimit)
+                limitText = FinanceNumber.editableText(b.monthlyLimit)
             }
         }
     }
@@ -772,7 +932,7 @@ struct EditCategoryBudgetView: View {
 // MARK: - Custom Category Form View
 
 struct CustomCategoryFormView: View {
-    @StateObject private var financeManager = FinanceManager.shared
+    @ObservedObject private var financeManager = FinanceManager.shared
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     
@@ -784,24 +944,7 @@ struct CustomCategoryFormView: View {
     @State private var selectedColorHex: String = "#3B82F6"
     @State private var isExpenseCategory: Bool = true
     
-    private let availableIcons = [
-        "tag.fill", "cart.fill", "bag.fill", "creditcard.fill",
-        "house.fill", "car.fill", "airplane", "bus.fill",
-        "fork.knife", "cup.and.saucer.fill", "wineglass.fill",
-        "heart.fill", "cross.case.fill", "pills.fill",
-        "book.fill", "graduationcap.fill", "music.note",
-        "gamecontroller.fill", "tv.fill", "film.fill",
-        "tshirt.fill", "eyeglasses", "gift.fill",
-        "wrench.fill", "hammer.fill", "paintbrush.fill",
-        "leaf.fill", "pawprint.fill", "figure.run",
-        "dumbbell.fill", "bicycle", "fuelpump.fill",
-        "wifi", "phone.fill", "envelope.fill",
-        "dollarsign.circle.fill", "banknote.fill", "chart.line.uptrend.xyaxis",
-        "briefcase.fill", "building.2.fill", "storefront.fill",
-        "stethoscope", "bed.double.fill", "washer.fill",
-        "lightbulb.fill", "bolt.fill", "drop.fill",
-        "flame.fill", "snowflake", "sun.max.fill"
-    ]
+    private let availableIcons = FinanceIconCatalog.icons
     
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
@@ -867,8 +1010,7 @@ struct CustomCategoryFormView: View {
         }
         .scrollContentBackground(.hidden)
         .themedBackground()
-        .navigationTitle(editingCategory != nil ? "edit_category".localized : "new_category".localized)
-        .navigationBarTitleDisplayMode(.inline)
+        .financeNavigationTitle(editingCategory != nil ? "edit_category".localized : "new_category".localized)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("cancel".localized) { dismiss() }
@@ -918,7 +1060,7 @@ struct CustomCategoryFormView: View {
 // MARK: - Built-in Category Edit View
 
 struct BuiltInCategoryFormView: View {
-    @StateObject private var financeManager = FinanceManager.shared
+    @ObservedObject private var financeManager = FinanceManager.shared
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
     
@@ -928,24 +1070,7 @@ struct BuiltInCategoryFormView: View {
     @State private var selectedIcon: String = ""
     @State private var selectedColorHex: String = "#3B82F6"
     
-    private let availableIcons = [
-        "tag.fill", "cart.fill", "bag.fill", "creditcard.fill",
-        "house.fill", "car.fill", "airplane", "bus.fill",
-        "fork.knife", "cup.and.saucer.fill", "wineglass.fill",
-        "heart.fill", "cross.case.fill", "pills.fill",
-        "book.fill", "graduationcap.fill", "music.note",
-        "gamecontroller.fill", "tv.fill", "film.fill",
-        "tshirt.fill", "eyeglasses", "gift.fill",
-        "wrench.fill", "hammer.fill", "paintbrush.fill",
-        "leaf.fill", "pawprint.fill", "figure.run",
-        "dumbbell.fill", "bicycle", "fuelpump.fill",
-        "wifi", "phone.fill", "envelope.fill",
-        "dollarsign.circle.fill", "banknote.fill", "chart.line.uptrend.xyaxis",
-        "briefcase.fill", "building.2.fill", "storefront.fill",
-        "stethoscope", "bed.double.fill", "washer.fill",
-        "lightbulb.fill", "bolt.fill", "drop.fill",
-        "flame.fill", "snowflake", "sun.max.fill"
-    ]
+    private let availableIcons = FinanceIconCatalog.icons
     
     private var hasChanges: Bool {
         let currentName = financeManager.override(for: category)?.customName ?? category.displayName
@@ -1023,8 +1148,7 @@ struct BuiltInCategoryFormView: View {
         }
         .scrollContentBackground(.hidden)
         .themedBackground()
-        .navigationTitle("edit_category".localized)
-        .navigationBarTitleDisplayMode(.inline)
+        .financeNavigationTitle("edit_category".localized)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("cancel".localized) { dismiss() }
@@ -1057,5 +1181,287 @@ struct BuiltInCategoryFormView: View {
         let colorNilIfDefault = selectedColorHex == baseColor ? nil : selectedColorHex
         financeManager.setCategoryOverride(category, customName: nameNilIfDefault, customIcon: iconNilIfDefault, customColorHex: colorNilIfDefault)
         dismiss()
+    }
+}
+
+
+// MARK: - Financial Goal Form View
+
+struct FinancialGoalFormView: View {
+    @ObservedObject private var financeManager = FinanceManager.shared
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
+    
+    let goal: FinancialGoal?
+    
+    @State private var name: String
+    @State private var type: FinancialGoalType
+    @State private var targetText: String
+    @State private var currentText: String
+    @State private var hasDeadline: Bool
+    @State private var deadline: Date
+    @State private var showingDeleteConfirm = false
+    
+    private enum Field: Hashable {
+        case name, target, current
+    }
+    
+    init(goal: FinancialGoal?) {
+        self.goal = goal
+        _name = State(initialValue: goal?.name ?? "")
+        _type = State(initialValue: goal?.type ?? .savings)
+        _targetText = State(initialValue: goal.map { FinanceNumber.editableText($0.targetAmount) } ?? "")
+        _currentText = State(initialValue: goal.map { $0.currentAmount != 0 ? FinanceNumber.editableText($0.currentAmount) : "" } ?? "")
+        _hasDeadline = State(initialValue: goal?.targetDate != nil)
+        _deadline = State(initialValue: goal?.targetDate
+            ?? Calendar.current.date(byAdding: .month, value: 6, to: Date()) ?? Date())
+    }
+    
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && (FinanceNumber.parse(targetText) ?? 0) > 0
+    }
+    
+    var body: some View {
+        Form {
+            Section {
+                TextField("goal_name".localized, text: $name)
+                    .themedPrimaryText()
+                    .focused($focusedField, equals: .name)
+                    .listRowBackground(theme.surfaceColor)
+                
+                Picker("type".localized, selection: $type) {
+                    ForEach(FinancialGoalType.allCases) { goalType in
+                        Label(goalType.displayName, systemImage: goalType.icon).tag(goalType)
+                    }
+                }
+                .listRowBackground(theme.surfaceColor)
+            } header: {
+                Text("goal_name".localized)
+                    .themedSecondaryText()
+            }
+            
+            Section {
+                amountRow(text: $targetText, field: .target)
+            } header: {
+                Text("goal_target_amount".localized)
+                    .themedSecondaryText()
+            }
+            
+            Section {
+                amountRow(text: $currentText, field: .current)
+            } header: {
+                Text("goal_saved_amount".localized)
+                    .themedSecondaryText()
+            }
+            
+            Section {
+                Toggle("goal_has_deadline".localized, isOn: $hasDeadline.animation(.easeInOut(duration: 0.2)))
+                    .tint(theme.primaryColor)
+                    .themedPrimaryText()
+                    .listRowBackground(theme.surfaceColor)
+                
+                if hasDeadline {
+                    DatePicker("deadline".localized, selection: $deadline, in: Date()..., displayedComponents: .date)
+                        .themedPrimaryText()
+                        .listRowBackground(theme.surfaceColor)
+                }
+            }
+            
+            if goal != nil {
+                Section {
+                    Button(role: .destructive) {
+                        showingDeleteConfirm = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("delete".localized)
+                        }
+                    }
+                    .listRowBackground(theme.surfaceColor)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .themedBackground()
+        .financeNavigationTitle((goal == nil ? "new_financial_goal" : "edit_financial_goal").localized)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("cancel".localized) { dismiss() }
+                    .themedSecondaryText()
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("save".localized) { save() }
+                    .fontWeight(.semibold)
+                    .disabled(!canSave)
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("done".localized) { focusedField = nil }
+            }
+        }
+        .confirmationDialog(goal?.name ?? "", isPresented: $showingDeleteConfirm, titleVisibility: .visible) {
+            Button("delete".localized, role: .destructive) {
+                if let goal { financeManager.removeFinancialGoal(goal) }
+                dismiss()
+            }
+            Button("cancel".localized, role: .cancel) {}
+        }
+    }
+    
+    private func amountRow(text: Binding<String>, field: Field) -> some View {
+        HStack {
+            Text(financeManager.selectedCurrency.symbol)
+                .font(.title3.weight(.semibold))
+                .foregroundColor(theme.secondaryTextColor)
+            TextField(FinanceNumber.placeholder, text: text)
+                .keyboardType(.decimalPad)
+                .font(.title3.weight(.semibold).monospacedDigit())
+                .themedPrimaryText()
+                .focused($focusedField, equals: field)
+        }
+        .listRowBackground(theme.surfaceColor)
+    }
+    
+    private func save() {
+        guard canSave, let target = FinanceNumber.parse(targetText) else { return }
+        let current = max(FinanceNumber.parse(currentText) ?? 0, 0)
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let targetDate: Date? = hasDeadline ? deadline : nil
+        
+        if var existing = goal {
+            existing.name = trimmedName
+            existing.type = type
+            existing.targetAmount = target
+            existing.currentAmount = current
+            existing.targetDate = targetDate
+            financeManager.updateFinancialGoal(existing)
+        } else {
+            financeManager.addFinancialGoal(FinancialGoal(
+                name: trimmedName,
+                targetAmount: target,
+                currentAmount: current,
+                targetDate: targetDate,
+                type: type
+            ))
+        }
+        dismiss()
+    }
+}
+
+
+// MARK: - Card Layout View
+
+/// Reorder (drag) and show / hide the cards of the Finance screen.
+struct FinanceCardLayoutView: View {
+    @AppStorage(FinanceCardLayout.storageKey) private var layoutRaw = ""
+    @Environment(\.theme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    
+    var showsDoneButton = false
+    
+    private var layout: FinanceCardLayout {
+        FinanceCardLayout(rawValue: layoutRaw)
+    }
+    
+    var body: some View {
+        List {
+            Section {
+                ForEach(layout.order) { card in
+                    let isVisible = !layout.hidden.contains(card)
+                    HStack(spacing: 12) {
+                        Image(systemName: card.icon)
+                            .foregroundColor(isVisible ? theme.primaryColor : theme.secondaryTextColor.opacity(0.4))
+                            .frame(width: 24)
+                        Text(card.title)
+                            .themedPrimaryText()
+                            .opacity(isVisible ? 1 : 0.45)
+                        Spacer()
+                        // A borderless button keeps working while the list is in reorder mode (a Toggle does not).
+                        Button {
+                            setVisible(!isVisible, for: card)
+                        } label: {
+                            Image(systemName: isVisible ? "eye.fill" : "eye.slash")
+                                .font(.body.weight(.medium))
+                                .foregroundColor(isVisible ? theme.primaryColor : theme.secondaryTextColor.opacity(0.6))
+                                .frame(width: 36, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(card.title)
+                        .accessibilityValue((isVisible ? "visible" : "hidden").localized)
+                    }
+                    .listRowBackground(theme.surfaceColor)
+                }
+                .onMove { source, destination in
+                    var updated = layout
+                    updated.order.move(fromOffsets: source, toOffset: destination)
+                    layoutRaw = updated.rawValue
+                }
+            } footer: {
+                Text("finance_cards_footer".localized)
+                    .themedSecondaryText()
+            }
+            
+            Section {
+                Button {
+                    withAnimation { layoutRaw = "" }
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.uturn.backward")
+                        Text("reset_to_default".localized)
+                    }
+                    .foregroundColor(theme.primaryColor)
+                }
+                .disabled(layout == .default)
+                .listRowBackground(theme.surfaceColor)
+            }
+        }
+        .environment(\.editMode, .constant(.active))
+        .scrollContentBackground(.hidden)
+        .themedBackground()
+        .financeNavigationTitle("finance_cards_layout".localized)
+        .toolbar {
+            if showsDoneButton {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("done".localized) { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+    
+    private func setVisible(_ isVisible: Bool, for card: FinanceDashboardCard) {
+        var updated = layout
+        if isVisible {
+            updated.hidden.remove(card)
+        } else {
+            updated.hidden.insert(card)
+        }
+        withAnimation(.easeInOut(duration: 0.2)) { layoutRaw = updated.rawValue }
+    }
+}
+
+
+// MARK: - Title that never truncates
+
+extension View {
+    /// Inline navigation title that shrinks a little instead of ending in "…" when the
+    /// toolbar buttons leave little room (long translations such as German or French).
+    func financeNavigationTitle(_ title: String) -> some View {
+        navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(title)
+                        .font(.headline)
+                        .themedPrimaryText()
+                        .lineLimit(1)
+                        .allowsTightening(true)
+                        .minimumScaleFactor(0.55)
+                        .accessibilityAddTraits(.isHeader)
+                }
+            }
     }
 }

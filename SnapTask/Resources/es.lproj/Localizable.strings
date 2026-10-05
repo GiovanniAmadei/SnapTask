@@ -2403,3 +2403,44 @@
 "delete_task_sessions_message" = "Esta tarea tiene %d sesiones de Seguir y Pomodoro en la pestaña Enfoque. ¿Eliminarlas junto con la tarea?";
 "delete_task_and_sessions" = "Eliminar también las sesiones";
 "delete_task_keep_sessions" = "Eliminar solo la tarea";
+
+// Finance — review pass
+"financial_goals" = "Metas de Ahorro";
+"add_financial_goal" = "Añadir Meta";
+"edit_financial_goal" = "Editar Meta";
+"new_financial_goal" = "Nueva Meta";
+"goal_target_amount" = "Monto Objetivo";
+"goal_saved_amount" = "Ahorrado Hasta Ahora";
+"goal_has_deadline" = "Fijar una Fecha Límite";
+"goal_completed" = "Meta alcanzada";
+"goal_to_go" = "Faltan %@";
+"goal_save_per_month" = "Ahorra %@ al mes";
+"recurring_has_end" = "Fijar una Fecha de Fin";
+"recurring_starts" = "Inicio";
+"next_charge" = "Próximo: %@";
+"recurring_ends_on" = "Termina el %@";
+"budget_spent" = "gastado";
+"delete_entry_title" = "¿Eliminar este movimiento?";
+"reset_finance_confirm_title" = "¿Restablecer todos los datos financieros?";
+"reset_finance_confirm_message" = "Los movimientos, presupuestos, metas, categorías y ajustes se eliminarán de forma permanente, también de iCloud.";
+"search_entries" = "Buscar movimientos";
+"all_entries" = "Todos los Movimientos";
+"budget_no_categories_left" = "Todas las categorías ya tienen un presupuesto";
+"delete_category_reassign_note" = "Sus movimientos pasarán a «Otros» y su presupuesto se eliminará.";
+
+// Finance — charts & card order
+"finance_trend" = "Tendencia";
+"finance_cards_layout" = "Orden de Tarjetas";
+"finance_customize_cards" = "Personalizar tarjetas";
+"finance_cards_footer" = "Arrastra para reordenar. Toca el ojo para ocultar o mostrar una tarjeta. Algunas tarjetas solo aparecen cuando tienen algo que mostrar.";
+"period_previous" = "Periodo anterior";
+"period_next" = "Periodo siguiente";
+"last_n_days" = "Últimos %d días";
+"last_n_weeks" = "Últimas %d semanas";
+"last_n_months" = "Últimos %d meses";
+"last_n_years" = "Últimos %d años";
+"amount_left" = "Quedan %@";
+"amount_over" = "%@ por encima";
+"budget_daily_allowance" = "unos %@ al día";
+"visible" = "Visible";
+"hidden" = "Oculta";

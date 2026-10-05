@@ -2193,3 +2193,44 @@
 "delete_task_sessions_message" = "このタスクには、フォーカスタブにトラックとポモドーロのセッションが%d件あります。タスクと一緒に削除しますか？";
 "delete_task_and_sessions" = "セッションも削除";
 "delete_task_keep_sessions" = "タスクのみ削除";
+
+// Finance — review pass
+"financial_goals" = "貯蓄目標";
+"add_financial_goal" = "目標を追加";
+"edit_financial_goal" = "目標を編集";
+"new_financial_goal" = "新しい目標";
+"goal_target_amount" = "目標金額";
+"goal_saved_amount" = "現在の貯蓄額";
+"goal_has_deadline" = "期限を設定";
+"goal_completed" = "目標達成";
+"goal_to_go" = "あと%@";
+"goal_save_per_month" = "月%@の貯蓄が必要";
+"recurring_has_end" = "終了日を設定";
+"recurring_starts" = "開始";
+"next_charge" = "次回: %@";
+"recurring_ends_on" = "%@に終了";
+"budget_spent" = "支出";
+"delete_entry_title" = "この取引を削除しますか？";
+"reset_finance_confirm_title" = "すべての家計データをリセットしますか？";
+"reset_finance_confirm_message" = "取引、予算、目標、カテゴリ、設定は iCloud からも完全に削除されます。";
+"search_entries" = "取引を検索";
+"all_entries" = "すべての取引";
+"budget_no_categories_left" = "すべてのカテゴリに予算が設定済みです";
+"delete_category_reassign_note" = "この取引は「その他」に移動し、予算は削除されます。";
+
+// Finance — charts & card order
+"finance_trend" = "推移";
+"finance_cards_layout" = "カードの並び順";
+"finance_customize_cards" = "カードをカスタマイズ";
+"finance_cards_footer" = "ドラッグして並べ替えます。目のアイコンをタップするとカードの表示・非表示を切り替えられます。表示する内容があるときだけ現れるカードもあります。";
+"period_previous" = "前の期間";
+"period_next" = "次の期間";
+"last_n_days" = "過去%d日間";
+"last_n_weeks" = "過去%d週間";
+"last_n_months" = "過去%dか月";
+"last_n_years" = "過去%d年間";
+"amount_left" = "残り%@";
+"amount_over" = "%@超過";
+"budget_daily_allowance" = "1日あたり約%@";
+"visible" = "表示";
+"hidden" = "非表示";

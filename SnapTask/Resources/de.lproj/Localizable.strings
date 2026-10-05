@@ -2121,3 +2121,44 @@
 "delete_task_sessions_message" = "Diese Aufgabe hat %d Verfolgen- und Pomodoro-Sitzungen im Tab Fokus. Zusammen mit der Aufgabe löschen?";
 "delete_task_and_sessions" = "Auch Sitzungen löschen";
 "delete_task_keep_sessions" = "Nur die Aufgabe löschen";
+
+// Finance — review pass
+"financial_goals" = "Sparziele";
+"add_financial_goal" = "Ziel hinzufügen";
+"edit_financial_goal" = "Ziel bearbeiten";
+"new_financial_goal" = "Neues Ziel";
+"goal_target_amount" = "Zielbetrag";
+"goal_saved_amount" = "Bisher gespart";
+"goal_has_deadline" = "Frist festlegen";
+"goal_completed" = "Ziel erreicht";
+"goal_to_go" = "Noch %@";
+"goal_save_per_month" = "%@ pro Monat sparen";
+"recurring_has_end" = "Enddatum festlegen";
+"recurring_starts" = "Beginn";
+"next_charge" = "Nächste: %@";
+"recurring_ends_on" = "Endet am %@";
+"budget_spent" = "ausgegeben";
+"delete_entry_title" = "Diesen Eintrag löschen?";
+"reset_finance_confirm_title" = "Alle Finanzdaten zurücksetzen?";
+"reset_finance_confirm_message" = "Buchungen, Budgets, Ziele, Kategorien und Einstellungen werden endgültig gelöscht, auch aus iCloud.";
+"search_entries" = "Buchungen durchsuchen";
+"all_entries" = "Alle Buchungen";
+"budget_no_categories_left" = "Jede Kategorie hat bereits ein Budget";
+"delete_category_reassign_note" = "Die Buchungen wechseln zu „Sonstiges“, das Budget wird entfernt.";
+
+// Finance — charts & card order
+"finance_trend" = "Verlauf";
+"finance_cards_layout" = "Kartenreihenfolge";
+"finance_customize_cards" = "Karten anpassen";
+"finance_cards_footer" = "Zum Neuordnen ziehen. Tippe auf das Auge, um eine Karte aus- oder einzublenden. Manche Karten erscheinen nur, wenn es etwas zu zeigen gibt.";
+"period_previous" = "Vorheriger Zeitraum";
+"period_next" = "Nächster Zeitraum";
+"last_n_days" = "Letzte %d Tage";
+"last_n_weeks" = "Letzte %d Wochen";
+"last_n_months" = "Letzte %d Monate";
+"last_n_years" = "Letzte %d Jahre";
+"amount_left" = "Noch %@";
+"amount_over" = "%@ überschritten";
+"budget_daily_allowance" = "etwa %@ pro Tag";
+"visible" = "Sichtbar";
+"hidden" = "Ausgeblendet";

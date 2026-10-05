@@ -3,7 +3,7 @@ import SwiftUI
 struct FinanceEntryFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var theme
-    @StateObject private var financeManager = FinanceManager.shared
+    @ObservedObject private var financeManager = FinanceManager.shared
     @FocusState private var focusedField: Field?
     
     var editingEntry: FinanceEntry?
@@ -17,19 +17,46 @@ struct FinanceEntryFormView: View {
     @State private var notes: String = ""
     @State private var isRecurring: Bool = false
     @State private var recurringFrequency: SubscriptionFrequency = .monthly
+    @State private var hasEndDate: Bool = false
+    @State private var endDate: Date = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
+    @State private var showingDeleteConfirm = false
     
     private enum Field: Hashable {
         case name, amount, notes
     }
     
+    /// The form state is seeded here (not in `onAppear`) so that filling it in does not fire
+    /// the `onChange` handlers, which would reset the category of the entry being edited.
+    init(editingEntry: FinanceEntry?) {
+        self.editingEntry = editingEntry
+        guard let entry = editingEntry else { return }
+        _name = State(initialValue: entry.name)
+        _amount = State(initialValue: FinanceNumber.editableText(entry.amount))
+        _isExpense = State(initialValue: entry.type.isOutflow)
+        _category = State(initialValue: entry.category)
+        _selectedCustomCategoryId = State(initialValue: entry.customCategoryId)
+        _date = State(initialValue: entry.date)
+        _notes = State(initialValue: entry.notes ?? "")
+        _isRecurring = State(initialValue: entry.isRecurring)
+        _recurringFrequency = State(initialValue: entry.recurringFrequency ?? .monthly)
+        _hasEndDate = State(initialValue: entry.recurringEndDate != nil)
+        _endDate = State(initialValue: entry.recurringEndDate
+            ?? Calendar.current.date(byAdding: .year, value: 1, to: entry.date) ?? entry.date)
+    }
+    
     private var resolvedType: FinanceEntryType {
+        // Entries created elsewhere (saving, investment, debt) keep their type while the direction is unchanged.
+        if let original = editingEntry?.type, original.isOutflow == isExpense,
+           ![.income, .expense, .subscription].contains(original) {
+            return original
+        }
         if isRecurring && isExpense { return .subscription }
         return isExpense ? .expense : .income
     }
     
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        (Double(amount.replacingOccurrences(of: ",", with: ".")) ?? 0) > 0
+        (FinanceNumber.parse(amount) ?? 0) > 0
     }
     
     var body: some View {
@@ -66,8 +93,7 @@ struct FinanceEntryFormView: View {
                     focusedField = nil
                 }
         )
-        .navigationTitle(editingEntry != nil ? "edit_entry".localized : "new_entry".localized)
-        .navigationBarTitleDisplayMode(.inline)
+        .financeNavigationTitle(editingEntry != nil ? "edit_entry".localized : "new_entry".localized)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("cancel".localized) { dismiss() }
@@ -79,27 +105,27 @@ struct FinanceEntryFormView: View {
                     .themedPrimary()
                     .disabled(!canSave)
             }
-        }
-        .onAppear {
-            if let entry = editingEntry {
-                name = entry.name
-                amount = String(format: "%.2f", entry.amount)
-                isExpense = entry.type.isOutflow
-                category = entry.category
-                selectedCustomCategoryId = entry.customCategoryId
-                date = entry.date
-                notes = entry.notes ?? ""
-                isRecurring = entry.isRecurring
-                recurringFrequency = entry.recurringFrequency ?? .monthly
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("done".localized) { focusedField = nil }
             }
+        }
+        .confirmationDialog("delete_entry_title".localized, isPresented: $showingDeleteConfirm, titleVisibility: .visible) {
+            Button("delete".localized, role: .destructive) { deleteEntry() }
+            Button("cancel".localized, role: .cancel) {}
         }
         .onChange(of: isExpense) { _, _ in
-            selectedCustomCategoryId = nil
-            if isExpense && category.isIncomeCategory {
-                category = .other
-            } else if !isExpense && !category.isIncomeCategory {
-                category = .salary
+            // Keep the category coherent with the direction the user just picked.
+            if let id = selectedCustomCategoryId,
+               financeManager.customCategory(for: id)?.isExpenseCategory != isExpense {
+                selectedCustomCategoryId = nil
             }
+            if selectedCustomCategoryId == nil && !filteredCategories.contains(category) {
+                category = isExpense ? .other : (filteredCategories.first ?? .salary)
+            }
+        }
+        .onChange(of: date) { _, newDate in
+            if endDate < newDate { endDate = newDate }
         }
     }
     
@@ -195,7 +221,7 @@ struct FinanceEntryFormView: View {
                             .font(.title3.weight(.semibold))
                             .foregroundColor(isExpense ? .red : .green)
                         
-                        TextField("0.00", text: $amount)
+                        TextField(FinanceNumber.placeholder, text: $amount)
                             .textFieldStyle(PlainTextFieldStyle())
                             .keyboardType(.decimalPad)
                             .font(.title3.weight(.semibold).monospacedDigit())
@@ -220,7 +246,7 @@ struct FinanceEntryFormView: View {
                 
                 // Date and time
                 HStack {
-                    Text("date_and_time".localized)
+                    Text((isRecurring ? "recurring_starts" : "date_and_time").localized)
                         .font(.subheadline.weight(.medium))
                         .themedPrimaryText()
                     Spacer()
@@ -332,6 +358,30 @@ struct FinanceEntryFormView: View {
                         
                         ThemedSegmentedPicker(selection: $recurringFrequency, options: Array(SubscriptionFrequency.allCases)) { freq in
                             Text(freq.displayName)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                        }
+                        
+                        HStack {
+                            Text("recurring_has_end".localized)
+                                .font(.subheadline.weight(.medium))
+                                .themedPrimaryText()
+                            Spacer()
+                            Toggle("", isOn: $hasEndDate)
+                                .labelsHidden()
+                                .tint(theme.primaryColor)
+                        }
+                        
+                        if hasEndDate {
+                            HStack {
+                                Text("end_date".localized)
+                                    .font(.subheadline.weight(.medium))
+                                    .themedPrimaryText()
+                                Spacer()
+                                DatePicker("", selection: $endDate, in: date..., displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                            .transition(.opacity)
                         }
                     }
                     .transition(.asymmetric(
@@ -341,6 +391,7 @@ struct FinanceEntryFormView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: isRecurring)
+            .animation(.easeInOut(duration: 0.2), value: hasEndDate)
         }
     }
     
@@ -376,7 +427,7 @@ struct FinanceEntryFormView: View {
         HStack(spacing: 12) {
             // Delete button (only when editing)
             if editingEntry != nil {
-                Button(action: { deleteEntry() }) {
+                Button(action: { showingDeleteConfirm = true }) {
                     HStack {
                         Image(systemName: "trash")
                             .font(.system(size: 16, weight: .medium))
@@ -438,7 +489,8 @@ struct FinanceEntryFormView: View {
     }
     
     private func save() {
-        guard let amountValue = Double(amount.replacingOccurrences(of: ",", with: ".")), amountValue > 0 else { return }
+        guard let amountValue = FinanceNumber.parse(amount), amountValue > 0 else { return }
+        let resolvedEndDate: Date? = (isRecurring && hasEndDate) ? endDate : nil
         
         if var existing = editingEntry {
             existing.name = name.trimmingCharacters(in: .whitespaces)
@@ -447,9 +499,10 @@ struct FinanceEntryFormView: View {
             existing.category = category
             existing.customCategoryId = selectedCustomCategoryId
             existing.date = date
-            existing.notes = notes.isEmpty ? nil : notes
+            existing.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
             existing.isRecurring = isRecurring
             existing.recurringFrequency = isRecurring ? recurringFrequency : nil
+            existing.recurringEndDate = resolvedEndDate
             financeManager.updateEntry(existing)
         } else {
             let entry = FinanceEntry(
@@ -459,9 +512,10 @@ struct FinanceEntryFormView: View {
                 category: category,
                 customCategoryId: selectedCustomCategoryId,
                 date: date,
-                notes: notes.isEmpty ? nil : notes,
+                notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes,
                 isRecurring: isRecurring,
-                recurringFrequency: isRecurring ? recurringFrequency : nil
+                recurringFrequency: isRecurring ? recurringFrequency : nil,
+                recurringEndDate: resolvedEndDate
             )
             financeManager.addEntry(entry)
         }

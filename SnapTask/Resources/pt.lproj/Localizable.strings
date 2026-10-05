@@ -2192,3 +2192,44 @@
 "delete_task_sessions_message" = "Esta tarefa tem %d sessões de Rastrear e Pomodoro na aba Foco. Excluí-las junto com a tarefa?";
 "delete_task_and_sessions" = "Excluir também as sessões";
 "delete_task_keep_sessions" = "Excluir só a tarefa";
+
+// Finance — review pass
+"financial_goals" = "Metas de Poupança";
+"add_financial_goal" = "Adicionar Meta";
+"edit_financial_goal" = "Editar Meta";
+"new_financial_goal" = "Nova Meta";
+"goal_target_amount" = "Valor Alvo";
+"goal_saved_amount" = "Poupado Até Agora";
+"goal_has_deadline" = "Definir um Prazo";
+"goal_completed" = "Meta alcançada";
+"goal_to_go" = "Faltam %@";
+"goal_save_per_month" = "Poupe %@ por mês";
+"recurring_has_end" = "Definir uma Data de Término";
+"recurring_starts" = "Início";
+"next_charge" = "Próximo: %@";
+"recurring_ends_on" = "Termina em %@";
+"budget_spent" = "gasto";
+"delete_entry_title" = "Excluir este lançamento?";
+"reset_finance_confirm_title" = "Redefinir todos os dados financeiros?";
+"reset_finance_confirm_message" = "Lançamentos, orçamentos, metas, categorias e ajustes serão excluídos permanentemente, inclusive do iCloud.";
+"search_entries" = "Buscar lançamentos";
+"all_entries" = "Todos os Lançamentos";
+"budget_no_categories_left" = "Todas as categorias já têm um orçamento";
+"delete_category_reassign_note" = "Os lançamentos passarão para «Outros» e o orçamento será removido.";
+
+// Finance — charts & card order
+"finance_trend" = "Tendência";
+"finance_cards_layout" = "Ordem dos Cartões";
+"finance_customize_cards" = "Personalizar cartões";
+"finance_cards_footer" = "Arraste para reordenar. Toque no olho para ocultar ou mostrar um cartão. Alguns cartões só aparecem quando têm algo para mostrar.";
+"period_previous" = "Período anterior";
+"period_next" = "Próximo período";
+"last_n_days" = "Últimos %d dias";
+"last_n_weeks" = "Últimas %d semanas";
+"last_n_months" = "Últimos %d meses";
+"last_n_years" = "Últimos %d anos";
+"amount_left" = "Restam %@";
+"amount_over" = "%@ acima";
+"budget_daily_allowance" = "cerca de %@ por dia";
+"visible" = "Visível";
+"hidden" = "Oculto";

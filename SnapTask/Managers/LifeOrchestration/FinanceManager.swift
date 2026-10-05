@@ -241,7 +241,26 @@ class FinanceManager: ObservableObject {
         CloudKitService.shared.saveCustomFinanceCategory(category)
     }
     
-    func removeCustomCategory(_ category: CustomFinanceCategory) {
+    /// Removes a custom category. With `reassignEntries` the movements that used it fall back to
+    /// "Other" and its budgets are dropped, so nothing is left pointing to a category that no longer exists.
+    func removeCustomCategory(_ category: CustomFinanceCategory, reassignEntries: Bool = false) {
+        if reassignEntries {
+            let now = Date()
+            var moved: [FinanceEntry] = []
+            for index in entries.indices where entries[index].customCategoryId == category.id {
+                entries[index].customCategoryId = nil
+                entries[index].category = .other
+                entries[index].lastModifiedDate = now
+                moved.append(entries[index])
+            }
+            if !moved.isEmpty {
+                saveEntries()
+                moved.forEach { CloudKitService.shared.saveFinanceEntry($0) }
+            }
+            for budget in budgets where budget.customCategoryId == category.id {
+                removeBudget(budget)
+            }
+        }
         customCategories.removeAll { $0.id == category.id }
         saveCustomCategories()
         notifyFinanceChanged()
@@ -414,8 +433,11 @@ class FinanceManager: ObservableObject {
         return icon(for: budget.category)
     }
     
+    /// Starting balance plus everything that already happened, counting every repetition of
+    /// recurring entries (and ignoring movements dated in the future).
     var currentBalance: Double {
-        let totalFlow = entries.reduce(0.0) { $0 + $1.signedAmount }
+        let allTime = DateInterval(start: .distantPast, end: Date())
+        let totalFlow = realizedOccurrences(in: allTime).reduce(0.0) { $0 + $1.entry.signedAmount }
         return startingBalance + totalFlow
     }
     
@@ -437,6 +459,25 @@ class FinanceManager: ObservableObject {
         saveEntries()
         notifyFinanceChanged()
         CloudKitService.shared.saveFinanceEntry(updated)
+    }
+    
+    /// Adds a copy of `entry` dated now (recurring entries keep their repetition).
+    func duplicateEntry(_ entry: FinanceEntry) {
+        let now = Date()
+        let keepsEndDate = (entry.recurringEndDate ?? .distantPast) > now
+        addEntry(FinanceEntry(
+            name: entry.name,
+            amount: entry.amount,
+            type: entry.type,
+            category: entry.category,
+            customCategoryId: entry.customCategoryId,
+            date: now,
+            notes: entry.notes,
+            isRecurring: entry.isRecurring,
+            recurringFrequency: entry.recurringFrequency,
+            recurringEndDate: keepsEndDate ? entry.recurringEndDate : nil,
+            tags: entry.tags
+        ))
     }
     
     func removeEntry(_ entry: FinanceEntry) {
@@ -523,18 +564,82 @@ class FinanceManager: ObservableObject {
         }
     }
     
+    // MARK: - Occurrences (recurring entries expanded into dated movements)
+    
+    /// Dates on which `entry` happens inside `period` (start included, end excluded).
+    /// One-off entries happen once; recurring entries repeat from their date until their end date.
+    func occurrenceDates(of entry: FinanceEntry, in period: DateInterval) -> [Date] {
+        guard entry.isRecurring, let frequency = entry.recurringFrequency else {
+            return (entry.date >= period.start && entry.date < period.end) ? [entry.date] : []
+        }
+        
+        let calendar = Calendar.current
+        let step = frequency.calendarStep
+        var limit = period.end
+        if let endDate = entry.recurringEndDate,
+           let dayAfterEnd = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate)) {
+            limit = min(limit, dayAfterEnd)
+        }
+        guard entry.date < limit else { return [] }
+        
+        // Skip straight to the first repetition that can fall inside the period.
+        var index = 0
+        if period.start > entry.date {
+            let parts = calendar.dateComponents([step.component], from: entry.date, to: period.start)
+            let elapsed: Int
+            switch step.component {
+            case .day: elapsed = parts.day ?? 0
+            case .month: elapsed = parts.month ?? 0
+            default: elapsed = parts.year ?? 0
+            }
+            index = max(elapsed / step.value - 1, 0)
+        }
+        
+        var dates: [Date] = []
+        while index < 10_000,
+              let date = calendar.date(byAdding: step.component, value: step.value * index, to: entry.date),
+              date < limit {
+            if date >= period.start { dates.append(date) }
+            index += 1
+        }
+        return dates
+    }
+    
+    /// Every dated movement inside `period`, oldest first.
+    func occurrences(in period: DateInterval) -> [FinanceOccurrence] {
+        entries
+            .flatMap { entry in
+                occurrenceDates(of: entry, in: period).map { FinanceOccurrence(entry: entry, date: $0) }
+            }
+            .sorted { $0.date < $1.date }
+    }
+    
+    /// Same as `occurrences(in:)` but only what already happened (up to now).
+    func realizedOccurrences(in period: DateInterval) -> [FinanceOccurrence] {
+        let now = Date()
+        guard period.start < now else { return [] }
+        return occurrences(in: DateInterval(start: period.start, end: min(period.end, now)))
+    }
+    
+    /// Next time a recurring entry will be charged/received.
+    func nextOccurrence(of entry: FinanceEntry, after date: Date = Date()) -> Date? {
+        guard entry.isRecurring else { return nil }
+        let horizon = Calendar.current.date(byAdding: .year, value: 2, to: date) ?? date.addingTimeInterval(2 * 365 * 86_400)
+        return occurrenceDates(of: entry, in: DateInterval(start: date, end: horizon)).first
+    }
+    
     // MARK: - Calculations: Period
     
     func totalIncome(for period: DateInterval) -> Double {
-        entries(for: period)
-            .filter { !$0.type.isOutflow }
-            .reduce(0) { $0 + $1.amount }
+        realizedOccurrences(in: period)
+            .filter { !$0.entry.type.isOutflow }
+            .reduce(0) { $0 + $1.entry.amount }
     }
     
     func totalExpenses(for period: DateInterval) -> Double {
-        entries(for: period)
-            .filter { $0.type.isOutflow }
-            .reduce(0) { $0 + $1.amount }
+        realizedOccurrences(in: period)
+            .filter { $0.entry.type.isOutflow }
+            .reduce(0) { $0 + $1.entry.amount }
     }
     
     func netFlow(for period: DateInterval) -> Double {
@@ -558,22 +663,14 @@ class FinanceManager: ObservableObject {
         return DateInterval(start: start, end: end)
     }
     
+    /// Income received so far this month (recurring entries count when they actually come in).
     var monthlyIncome: Double {
-        let recurring = entries.filter { $0.isRecurring && !$0.type.isOutflow }
-            .reduce(0) { $0 + $1.monthlyEquivalent }
-        let oneTime = entries(for: currentMonthPeriod())
-            .filter { !$0.type.isOutflow && !$0.isRecurring }
-            .reduce(0) { $0 + $1.amount }
-        return recurring + oneTime
+        totalIncome(for: currentMonthPeriod())
     }
 
+    /// Money spent so far this month (recurring entries count when they are actually charged).
     var monthlyExpenses: Double {
-        let recurring = entries.filter { $0.isRecurring && $0.type.isOutflow }
-            .reduce(0) { $0 + $1.monthlyEquivalent }
-        let oneTime = entries(for: currentMonthPeriod())
-            .filter { $0.type.isOutflow && !$0.isRecurring }
-            .reduce(0) { $0 + $1.amount }
-        return recurring + oneTime
+        totalExpenses(for: currentMonthPeriod())
     }
     
     var monthlySubscriptionCost: Double {
@@ -782,7 +879,8 @@ class FinanceManager: ObservableObject {
     // MARK: - Budget Tracking
 
     private func _spentAmount(for budget: FinanceBudget, in period: DateInterval) -> Double {
-        entries(for: period)
+        realizedOccurrences(in: period)
+            .map(\.entry)
             .filter {
                 guard $0.type.isOutflow else { return false }
                 if let customId = budget.customCategoryId {
@@ -814,7 +912,7 @@ class FinanceManager: ObservableObject {
     // MARK: - Expense Breakdown
 
     func expenseBreakdownDetailed(for period: DateInterval) -> [(FinanceExpenseBreakdownKey, Double)] {
-        let expenseEntries = entries(for: period).filter { $0.type.isOutflow }
+        let expenseEntries = realizedOccurrences(in: period).map(\.entry).filter { $0.type.isOutflow }
         var breakdown: [FinanceExpenseBreakdownKey: Double] = [:]
 
         for entry in expenseEntries {
@@ -856,7 +954,7 @@ class FinanceManager: ObservableObject {
     }
 
     func expenseBreakdown(for period: DateInterval) -> [(FinanceCategory, Double)] {
-        let expenseEntries = entries(for: period).filter { $0.type.isOutflow }
+        let expenseEntries = realizedOccurrences(in: period).map(\.entry).filter { $0.type.isOutflow }
         var breakdown: [FinanceCategory: Double] = [:]
 
         for entry in expenseEntries {
@@ -885,6 +983,47 @@ class FinanceManager: ObservableObject {
             monthlyBurnRate: monthlyBurnRate,
             runwayMonths: runwayMonths
         )
+    }
+    
+    // MARK: - Formatting
+    
+    private var formatterCache: [String: NumberFormatter] = [:]
+    
+    /// Amount in the selected currency. `showCents: false` drops the decimals for compact spots
+    /// (summaries, gauges); currencies without minor units (JPY, KRW) never show them.
+    func formatCurrency(_ amount: Double, showCents: Bool = true) -> String {
+        let currency = selectedCurrency
+        let naturalDigits = (currency == .jpy || currency == .krw) ? 0 : 2
+        let digits = showCents ? naturalDigits : 0
+        let key = "\(currency.rawValue)-\(digits)-\(Locale.current.identifier)"
+        let formatter: NumberFormatter
+        if let cached = formatterCache[key] {
+            formatter = cached
+        } else {
+            formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = currency.rawValue
+            formatter.currencySymbol = currency.symbol
+            formatter.minimumFractionDigits = digits
+            formatter.maximumFractionDigits = digits
+            formatterCache[key] = formatter
+        }
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(currency.symbol)\(amount)"
+    }
+    
+    /// "67,2%" / "67.2%" following the device locale. `fraction` is 0...1.
+    func formatPercent(_ fraction: Double, maxFractionDigits: Int = 0) -> String {
+        fraction.formatted(.percent.precision(.fractionLength(0...maxFractionDigits)))
+    }
+    
+    /// "5 Oct" in the language chosen inside the app (adds the year for dates outside the current year).
+    func formatShortDate(_ date: Date) -> String {
+        let locale = Locale(identifier: LanguageManager.shared.actualLanguageCode)
+        let sameYear = Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year)
+        let style = sameYear
+            ? Date.FormatStyle().locale(locale).day().month(.abbreviated)
+            : Date.FormatStyle().locale(locale).day().month(.abbreviated).year()
+        return date.formatted(style)
     }
     
     // MARK: - Persistence
@@ -965,7 +1104,13 @@ class FinanceManager: ObservableObject {
         }
     }
     
-    func resetAll() {
+    func resetAll(syncToCloud: Bool = false) {
+        if syncToCloud {
+            entries.forEach { CloudKitService.shared.deleteFinanceEntry($0) }
+            budgets.forEach { CloudKitService.shared.deleteFinanceBudget($0) }
+            financialGoals.forEach { CloudKitService.shared.deleteFinancialGoal($0) }
+            customCategories.forEach { CloudKitService.shared.deleteCustomFinanceCategory($0) }
+        }
         entries.removeAll()
         budgets.removeAll()
         financialGoals.removeAll()
@@ -992,6 +1137,7 @@ class FinanceManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: hiddenBuiltInCategoriesKey)
         objectWillChange.send()
         notifyFinanceChanged()
+        if syncToCloud { syncFinanceSettingsToCloud() }
     }
     
     private func notifyFinanceChanged() {
