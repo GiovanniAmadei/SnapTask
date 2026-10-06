@@ -504,7 +504,7 @@ class CloudKitService: ObservableObject {
     /// Deletes a record, keeping the deletion for the next sync if iCloud can't be reached.
     private func deleteRecordQueued(_ recordID: CKRecord.ID) async throws {
         do {
-            try await deleteRecordQueued(recordID)
+            try await privateDatabase.deleteRecord(withID: recordID)
             outboxDidDelete(recordID.recordName)
         } catch {
             if let ckError = error as? CKError, ckError.code == .unknownItem {
