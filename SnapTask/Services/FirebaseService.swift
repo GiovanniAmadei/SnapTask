@@ -1,5 +1,6 @@
 import Foundation
 import Firebase
+import FirebaseAuth
 import FirebaseFirestore
 import Combine
 
@@ -270,8 +271,9 @@ class FirebaseService: ObservableObject {
         // IMPROVED: Check both old and new user IDs for authorization
         let oldUserId = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
         let newUserId = userId
+        let localId = UserDefaults.standard.string(forKey: userIdKey) ?? ""
         
-        let isAuthorized = feedback.authorId == oldUserId || feedback.authorId == newUserId
+        let isAuthorized = feedback.authorId == oldUserId || feedback.authorId == newUserId || feedback.authorId == localId
         
         print("🗑️ [FIREBASE DELETE] Old user ID: \(oldUserId)")
         print("🗑️ [FIREBASE DELETE] New user ID: \(newUserId)")
@@ -511,13 +513,78 @@ class FirebaseService: ObservableObject {
         }
     }
     
+    /// The id this device writes feedback, votes and likes under: its anonymous Firebase account
+    /// once signed in, otherwise the old local id (kept until the move below has run).
     private func getOrCreateAnonymousUserId() -> String {
+        if let uid = Auth.auth().currentUser?.uid {
+            return uid
+        }
         if let existingId = UserDefaults.standard.string(forKey: userIdKey) {
             return existingId
         } else {
             let newId = UUID().uuidString
             UserDefaults.standard.set(newId, forKey: userIdKey)
             return newId
+        }
+    }
+    
+    // MARK: - Anonymous account
+    
+    private let movedToAccountKey = "feedback_moved_to_account_v1"
+    
+    /// Signs the device in with an anonymous Firebase account (no screen, no login), then moves
+    /// what it wrote under its old local id: feedback, votes and likes.
+    func signInAnonymouslyIfNeeded() async {
+        if Auth.auth().currentUser == nil {
+            do {
+                _ = try await Auth.auth().signInAnonymously()
+                print("✅ Signed in anonymously")
+            } catch {
+                print("❌ Anonymous sign-in failed: \(error.localizedDescription)")
+                return
+            }
+        }
+        await moveLocalIdentityToAccount()
+    }
+    
+    /// Once per device. Rewrites the author of this device's feedback and moves its votes and likes
+    /// from "<old id>_<feedback>" to "<account id>_<feedback>", so counts and ownership stay the same.
+    private func moveLocalIdentityToAccount() async {
+        guard !UserDefaults.standard.bool(forKey: movedToAccountKey) else { return }
+        // No old id yet: this device has written nothing under one, so there is nothing to move.
+        // Not marked as done, so the check runs again on a later launch.
+        guard let uid = Auth.auth().currentUser?.uid,
+              let legacyId = UserDefaults.standard.string(forKey: userIdKey) else { return }
+        guard legacyId != uid else {
+            UserDefaults.standard.set(true, forKey: movedToAccountKey)
+            return
+        }
+        do {
+            let feedbacks = try await db.collection(feedbackCollection)
+                .whereField("authorId", isEqualTo: legacyId)
+                .getDocuments()
+            for doc in feedbacks.documents {
+                try await doc.reference.updateData(["authorId": uid])
+            }
+            
+            for collection in [votesCollection, likesCollection] {
+                let docs = try await db.collection(collection)
+                    .whereField("userId", isEqualTo: legacyId)
+                    .getDocuments()
+                for doc in docs.documents {
+                    guard let feedbackId = doc.data()["feedbackId"] as? String else { continue }
+                    let createdAt = doc.data()["createdAt"] as? Timestamp ?? Timestamp(date: Date())
+                    try await db.collection(collection)
+                        .document("\(uid)_\(feedbackId)")
+                        .setData(["userId": uid, "feedbackId": feedbackId, "createdAt": createdAt])
+                    try await doc.reference.delete()
+                }
+            }
+            UserDefaults.standard.set(true, forKey: movedToAccountKey)
+            print("✅ Moved \(feedbacks.documents.count) feedback to the account")
+        } catch {
+            // Tried again at the next launch: nothing is marked done until it all went through.
+            print("❌ Moving the local identity failed: \(error.localizedDescription)")
         }
     }
     

@@ -40,6 +40,8 @@ struct SnapTaskApp: App {
 
         SnapTaskAppShortcuts.updateAppShortcutParameters()
         
+        Task { await FirebaseService.shared.signInAnonymouslyIfNeeded() }
+        
         // Initialize Watch Connectivity
         _ = WatchConnectivityHandler.shared
         print("⌚ Watch Connectivity initialized")

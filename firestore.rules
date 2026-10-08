@@ -1,0 +1,130 @@
+rules_version = '2';
+
+// Regole di SnapTask, scritte per l'app così com'è (senza login): l'utente è un UUID locale,
+// quindi qui non si può verificare chi scrive. Quello che si può fare è:
+//  - bloccare tutto ciò che l'app non usa;
+//  - tenere `app_updates` in sola lettura;
+//  - impedire di cambiare il contenuto dei feedback altrui, di cancellare le risposte e di
+//    creare feedback con voti o like già assegnati.
+// Restano aperti: la cancellazione dei feedback, e voti/like falsi. Si chiudono con l'accesso
+// anonimo di Firebase nell'app (vedi la task "Chiudere le regole Firestore").
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isText(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function isCount(value) {
+      return value is int && value >= 0;
+    }
+
+    function isTime(value) {
+      return value is timestamp;
+    }
+
+    function validReply(reply) {
+      return reply is map
+        && reply.keys().hasOnly(['id', 'content', 'authorId', 'authorName', 'creationDate', 'isFromDeveloper', 'likes'])
+        && isText(reply.id, 64)
+        && isText(reply.content, 2000)
+        && isText(reply.authorId, 128)
+        && isText(reply.authorName, 100)
+        && isTime(reply.creationDate)
+        && reply.isFromDeveloper is bool
+        && isCount(reply.likes);
+    }
+
+    function validFeedback(data) {
+      return data.keys().hasOnly(['id', 'title', 'description', 'category', 'status', 'creationDate',
+                                  'authorId', 'authorName', 'votes', 'likes', 'replies'])
+        && data.keys().hasAll(['id', 'title', 'description', 'category', 'status', 'creationDate',
+                               'authorId', 'authorName', 'votes', 'likes', 'replies'])
+        && isText(data.id, 64)
+        && isText(data.title, 200)
+        && isText(data.description, 5000)
+        && isText(data.category, 50)
+        && isText(data.status, 50)
+        && isTime(data.creationDate)
+        && isText(data.authorId, 128)
+        && isText(data.authorName, 100)
+        && isCount(data.votes)
+        && isCount(data.likes)
+        && data.replies is list
+        && data.replies.size() <= 500;
+    }
+
+    // Feedback: lettura libera (la lista pubblica). Creazione con contatori a zero e stato iniziale.
+    // Aggiornamento solo di voti, like e risposte: il testo e l'autore restano quelli scritti.
+    // Le risposte si aggiungono e non si tolgono.
+    match /feedback/{feedbackId} {
+      allow read: if true;
+
+      allow create: if validFeedback(request.resource.data)
+        && request.resource.data.id == feedbackId
+        && request.resource.data.votes == 0
+        && request.resource.data.likes == 0
+        && request.resource.data.replies.size() == 0
+        && request.resource.data.status == 'pending';
+
+      allow update: if (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes', 'likes', 'replies'])
+          && request.resource.data.id == resource.data.id
+          && isCount(request.resource.data.votes)
+          && isCount(request.resource.data.likes)
+          && request.resource.data.replies is list
+          && request.resource.data.replies.size() >= resource.data.replies.size()
+          && request.resource.data.replies.size() <= 500
+          && request.resource.data.replies.hasAll(resource.data.replies))
+        // TEMPORANEA (passaggio ai conti anonimi, build 8): un utente con account può rivendicare
+        // come proprio un feedback scritto prima. Va tolta appena la build 8 è diffusa.
+        // Conseguenza: per questo periodo chiunque con un account può rivendicare un feedback altrui.
+        || (request.auth != null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorId'])
+          && request.resource.data.authorId == request.auth.uid);
+      // Nota: le regole non possono scorrere la lista per controllare la forma di ogni nuova risposta,
+      // quindi quella forma non è verificata qui (la controlla solo l'app).
+
+      // L'app cancella il proprio feedback con i suoi voti e like (vedi deleteFeedback).
+      // Qui non si può sapere chi è l'autore: resta aperta finché non c'è l'accesso anonimo.
+      allow delete: if true;
+    }
+
+    // Voti: un documento per utente e feedback, con id "<utente>_<feedback>".
+    match /votes/{voteId} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly(['userId', 'feedbackId', 'createdAt'])
+        && isText(request.resource.data.userId, 128)
+        && isText(request.resource.data.feedbackId, 64)
+        && isTime(request.resource.data.createdAt)
+        && voteId == request.resource.data.userId + '_' + request.resource.data.feedbackId;
+
+      allow delete: if true;
+      allow update: if false;
+    }
+
+    // Like: stessa forma dei voti.
+    match /likes/{likeId} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly(['userId', 'feedbackId', 'createdAt'])
+        && isText(request.resource.data.userId, 128)
+        && isText(request.resource.data.feedbackId, 64)
+        && isTime(request.resource.data.createdAt)
+        && likeId == request.resource.data.userId + '_' + request.resource.data.feedbackId;
+
+      allow delete: if true;
+      allow update: if false;
+    }
+
+    // Novità mostrate nell'app: l'app legge soltanto. Si scrive dalla console o con l'Admin SDK.
+    match /app_updates/{updateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Tutto il resto (users, tasks, rewards, analytics, feedback_replies, reply_likes...) non è
+    // raggiungibile dai client: nessuna regola = accesso negato.
+  }
+}
