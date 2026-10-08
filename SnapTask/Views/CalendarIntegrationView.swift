@@ -71,6 +71,9 @@ struct CalendarIntegrationView: View {
                     var settings = integrationManager.settings
                     settings.isEnabled = newValue
                     integrationManager.updateSettings(settings)
+                    if newValue && settings.provider == .apple {
+                        Task { await ensureAppleAccess() }
+                    }
                 }
             ))
             .tint(themeManager.currentTheme.accentColor)
@@ -114,7 +117,7 @@ struct CalendarIntegrationView: View {
     private var calendarSelectionSection: some View {
         Section(header: Text("calendar_selection".localized).themedPrimaryText()) {
             Button(action: {
-                showingCalendarPicker = true
+                openCalendarPicker()
             }) {
                 HStack {
                     Text("selected_calendar".localized)
@@ -260,6 +263,26 @@ struct CalendarIntegrationView: View {
         }
     }
     
+    private func openCalendarPicker() {
+        Task {
+            if integrationManager.settings.provider == .apple {
+                guard await ensureAppleAccess() else { return }
+            }
+            showingCalendarPicker = true
+        }
+    }
+    
+    /// Asks for Apple Calendar access if needed; when it was already denied, offers to open iOS Settings.
+    @discardableResult
+    private func ensureAppleAccess() async -> Bool {
+        appleService.checkAuthorizationStatus()
+        if appleService.authorizationStatus == .denied || appleService.authorizationStatus == .restricted {
+            showingSettingsAlert = true
+            return false
+        }
+        return await appleService.requestAccess()
+    }
+    
     private func selectProvider(_ provider: CalendarProvider) {
         Task {
             isLoading = true
@@ -279,7 +302,11 @@ struct CalendarIntegrationView: View {
                     print("📅 Request result: \(granted), final status: \(appleService.authorizationStatus.rawValue)")
                     
                     if !granted {
-                        errorMessage = "calendar_access_denied_message".localized
+                        if appleService.authorizationStatus == .denied || appleService.authorizationStatus == .restricted {
+                            showingSettingsAlert = true
+                        } else {
+                            errorMessage = "calendar_access_denied_message".localized
+                        }
                     }
                 case .google:
                     if !googleService.isAuthenticated {
