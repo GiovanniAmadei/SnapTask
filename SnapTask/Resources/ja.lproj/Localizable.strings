@@ -334,6 +334,9 @@
 "syncing" = "同期中...";
 "connected" = "接続済み";
 "not_connected" = "未接続";
+"calendar_status_access_needed" = "アクセス未許可";
+"calendar_status_access_denied" = "アクセス拒否";
+"calendar_status_restricted" = "iOSで制限中";
 "select_calendar" = "カレンダーを選択";
 
 // Calendar Integration Alerts
