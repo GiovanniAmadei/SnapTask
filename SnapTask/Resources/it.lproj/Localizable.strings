@@ -340,6 +340,9 @@
 "syncing" = "Sincronizzazione...";
 "connected" = "Connesso";
 "not_connected" = "Non connesso";
+"calendar_status_access_needed" = "Serve l'accesso";
+"calendar_status_access_denied" = "Accesso negato";
+"calendar_status_restricted" = "Limitato da iOS";
 "select_calendar" = "Seleziona calendario";
 
 // Calendar Integration Alerts

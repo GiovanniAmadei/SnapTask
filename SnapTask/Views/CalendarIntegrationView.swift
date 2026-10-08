@@ -239,6 +239,16 @@ struct CalendarIntegrationView: View {
         }
     }
     
+    /// Why Apple Calendar is not connected, from the iOS permission status.
+    private var appleDisconnectedReason: String {
+        switch appleService.authorizationStatus {
+        case .notDetermined: return "calendar_status_access_needed".localized
+        case .denied: return "calendar_status_access_denied".localized
+        case .restricted: return "calendar_status_restricted".localized
+        default: return "not_connected".localized
+        }
+    }
+    
     private var statusIndicator: some View {
         Group {
             switch integrationManager.settings.provider {
@@ -248,7 +258,7 @@ struct CalendarIntegrationView: View {
                     Circle()
                         .fill(isConnected ? themeManager.currentTheme.accentColor : .red)
                         .frame(width: 8, height: 8)
-                    Text(isConnected ? "connected".localized : "not_connected".localized)
+                    Text(isConnected ? "connected".localized : appleDisconnectedReason)
                         .themedSecondaryText()
                 }
             case .google:
