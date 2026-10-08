@@ -1,0 +1,14 @@
+{
+  "name": "snaptask-firestore-rules",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --project snaptask-50855 --only firestore \"node --test test/rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.10.0",
+    "firebase-tools": "^14.0.0"
+  }
+}
