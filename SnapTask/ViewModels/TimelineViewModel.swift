@@ -62,6 +62,11 @@ enum TaskStatusFilter: String, CaseIterable {
     }
 }
 
+/// Identifies the task shown in the timeline's detail sheet.
+struct TaskDetailRequest: Identifiable, Equatable {
+    let id: UUID
+}
+
 enum TimelineOrganization: String, CaseIterable {
     case time = "time"
     case category = "category" 
@@ -253,6 +258,11 @@ class TimelineViewModel: ObservableObject {
     @Published var currentYear: Date = Date()
     
     @Published var openSwipeTaskId: UUID? = nil
+
+    /// Task whose detail sheet is open. TimelineView presents it, not the card: a sheet
+    /// hosted inside a row of the reorderable List is rebuilt every time the List updates,
+    /// which reset TaskDetailView (scroll back to the top, unsaved edits lost).
+    @Published var detailTask: TaskDetailRequest? = nil
 
     @Published var showAllHistory: Bool = false
     
@@ -460,6 +470,11 @@ class TimelineViewModel: ObservableObject {
     }
     
     private func refreshTasks(animatingRemovals: Bool = false) {
+        // The detail sheet used to close with its card when the task was deleted
+        // (e.g. from another device): keep that now that the sheet lives outside the card.
+        if let open = detailTask, !taskManager.tasks.contains(where: { $0.id == open.id }) {
+            detailTask = nil
+        }
         let refreshed = filteredTasksForScope()
             .sorted { task1, task2 in
                 // First, sort by start time

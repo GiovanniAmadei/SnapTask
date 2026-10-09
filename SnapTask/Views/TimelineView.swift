@@ -90,6 +90,14 @@ struct TimelineView: View {
             .sheet(isPresented: $viewModel.showingFilterSheet) {
                 TimelineOrganizationView(viewModel: viewModel)
             }
+            // Task details live here, outside the task List (see TimelineViewModel.detailTask).
+            .sheet(item: $viewModel.detailTask) { request in
+                NavigationStack {
+                    TaskDetailView(taskId: request.id, targetDate: viewModel.selectedDate)
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
             .onChange(of: viewModel.selectedTimeScope) { newScope in
                 // Ensure timeline (hourly) view is only used for Today scope
                 if newScope != .today {
@@ -1707,7 +1715,6 @@ struct TimelineTaskCard: View {
     @State private var subtasksHeight: CGFloat = 0
     @State private var showingPomodoro = false
     @State private var showingEditSheet = false
-    @State private var showingDetailView = false
     @State private var showingPlanSheet = false
     @State private var showingDeleteSessionsDialog = false
     @State private var wantsFullPlanForm = false
@@ -2474,7 +2481,7 @@ struct TimelineTaskCard: View {
                 }
             } else {
                 UIApplication.shared.dismissKeyboard()
-                showingDetailView = true
+                viewModel.detailTask = TaskDetailRequest(id: task.id)
             }
         }
         .deleteSessionsDialog(isPresented: $showingDeleteSessionsDialog, task: task) { deletingSessions in
@@ -2508,13 +2515,6 @@ struct TimelineTaskCard: View {
             NavigationStack {
                 PomodoroTabView()
             }
-        }
-        .sheet(isPresented: $showingDetailView) {
-            NavigationStack {
-                TaskDetailView(taskId: task.id, targetDate: viewModel.selectedDate)
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingTrackingModeSelection) {
             TrackingModeSelectionView(task: task) { mode in
