@@ -90,6 +90,18 @@ struct TimelineView: View {
             .sheet(isPresented: $viewModel.showingFilterSheet) {
                 TimelineOrganizationView(viewModel: viewModel)
             }
+            .sheet(item: $viewModel.calendarEventToAdd) { event in
+                TaskFormView(
+                    initialDate: event.startDate,
+                    initialTimeScope: .today,
+                    initialName: event.title,
+                    preserveTime: !event.isAllDay,
+                    onSave: { task in
+                        viewModel.addTask(task)
+                        CalendarEventsFeed.shared.markAdded(event)
+                    }
+                )
+            }
             .onChange(of: viewModel.selectedTimeScope) { newScope in
                 // Ensure timeline (hourly) view is only used for Today scope
                 if newScope != .today {
@@ -1147,6 +1159,7 @@ struct TaskListView: View {
     @State private var selectedSessionId: UUID?
     @State private var isRefreshing = false
     @State private var showingMandalaSheet = false
+    @StateObject private var calendarFeed = CalendarEventsFeed.shared
     @Environment(\.theme) private var theme
     
     var body: some View {
@@ -1175,6 +1188,11 @@ struct TaskListView: View {
                 VStack(spacing: 20) {
                     if showsMandalaBanner {
                         mandalaBannerCard
+                            .padding(.top, 8)
+                    }
+                    
+                    if showsCalendarEvents {
+                        calendarEventsCard
                             .padding(.top, 8)
                     }
                     
@@ -1217,6 +1235,10 @@ struct TaskListView: View {
                             
                             if viewModel.selectedTimeScope == .today {
                                 TipView(InProgressTip())
+                            }
+                            
+                            if showsCalendarEvents {
+                                calendarEventsCard
                             }
 
                             
@@ -1297,6 +1319,12 @@ struct TaskListView: View {
                 .presentationDragIndicator(.visible)
             }
         }
+        .onAppear {
+            calendarFeed.load(for: viewModel.selectedDate)
+        }
+        .onChange(of: viewModel.selectedDate) { _, newDate in
+            calendarFeed.load(for: newDate)
+        }
     }
     
     /// Shown when the status filter hides every task of the day/period.
@@ -1332,6 +1360,16 @@ struct TaskListView: View {
     /// Mandala is an experiment planned for the next version: hidden in 1.8.
     private static let isMandalaEnabled = false
 
+    private var showsCalendarEvents: Bool {
+        viewModel.selectedTimeScope == .today && calendarFeed.isEnabled && !calendarFeed.events.isEmpty
+    }
+    
+    private var calendarEventsCard: some View {
+        CalendarEventsSection(feed: calendarFeed) { event in
+            viewModel.calendarEventToAdd = event
+        }
+    }
+    
     private var showsMandalaBanner: Bool {
         Self.isMandalaEnabled
             && (viewModel.selectedTimeScope == .year || viewModel.selectedTimeScope == .longTerm)
@@ -1482,6 +1520,13 @@ struct TaskListView: View {
             if viewModel.selectedTimeScope == .today {
                 // One-time hint for the state menu; disappears once used or closed.
                 TipView(InProgressTip())
+                    .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            
+            if showsCalendarEvents {
+                calendarEventsCard
                     .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)

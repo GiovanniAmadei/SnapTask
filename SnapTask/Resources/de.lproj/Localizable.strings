@@ -2203,3 +2203,12 @@
 "eisenhower_axis_not_important" = "Nicht wichtig";
 "days_per_week_format" = "%d Tage pro Woche";
 "days_per_month_format" = "%d Tage pro Monat";
+
+/* Calendar events in the day list */
+"calendar_events_section_title" = "Aus dem Kalender";
+"calendar_events_feed_header" = "Termine in SnapTask";
+"show_calendar_events" = "Kalendertermine anzeigen";
+"show_calendar_events_footer" = "Geburtstage, Feiertage und Termine aus dem Apple Kalender erscheinen in der Liste jedes Tages. Tippe auf +, um einen als Aufgabe hinzuzufügen.";
+"visible_calendars" = "Sichtbare Kalender";
+"calendar_event_add_as_task" = "Als Aufgabe hinzufügen";
+"calendar_event_added" = "Bereits hinzugefügt";

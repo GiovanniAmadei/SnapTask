@@ -6,6 +6,7 @@ struct CalendarIntegrationView: View {
     @StateObject private var appleService = AppleCalendarService.shared
     @StateObject private var googleService = GoogleCalendarService.shared
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var calendarFeed = CalendarEventsFeed.shared
     
     @State private var showingCalendarPicker = false
     @State private var showingGoogleAuth = false
@@ -17,6 +18,9 @@ struct CalendarIntegrationView: View {
     var body: some View {
         Form {
             enabledSection
+            
+            // Independent of the toggle above, which only writes tasks to the calendar.
+            calendarEventsSection
             
             if integrationManager.settings.isEnabled {
                 providerSection
@@ -83,6 +87,46 @@ struct CalendarIntegrationView: View {
                 .themedPrimaryText()
         } footer: {
             Text("sync_tasks_calendar_automatically".localized)
+                .themedSecondaryText()
+        }
+    }
+    
+    private var calendarEventsSection: some View {
+        Section {
+            Toggle("show_calendar_events".localized, isOn: Binding(
+                // Off when access was revoked in iOS Settings: turning it on asks again.
+                get: { calendarFeed.isEnabled && appleService.canReadEvents },
+                set: { newValue in
+                    guard newValue else {
+                        calendarFeed.isEnabled = false
+                        return
+                    }
+                    Task {
+                        if await appleService.requestFullAccess() {
+                            calendarFeed.isEnabled = true
+                        } else {
+                            showingSettingsAlert = true
+                        }
+                    }
+                }
+            ))
+            .tint(themeManager.currentTheme.accentColor)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
+            
+            if calendarFeed.isEnabled && appleService.canReadEvents {
+                NavigationLink {
+                    VisibleCalendarsView()
+                } label: {
+                    Text("visible_calendars".localized)
+                        .themedPrimaryText()
+                }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
+            }
+        } header: {
+            Text("calendar_events_feed_header".localized)
+                .themedPrimaryText()
+        } footer: {
+            Text("show_calendar_events_footer".localized)
                 .themedSecondaryText()
         }
     }
@@ -479,4 +523,61 @@ struct CalendarSelectionView: View {
 
 #Preview {
     CalendarIntegrationView()
+}
+
+/// Which Apple calendars appear in the day list (Birthdays, Holidays and subscriptions included).
+struct VisibleCalendarsView: View {
+    @StateObject private var calendarFeed = CalendarEventsFeed.shared
+    @StateObject private var appleService = AppleCalendarService.shared
+    @StateObject private var themeManager = ThemeManager.shared
+    @State private var calendars: [EKCalendar] = []
+    
+    var body: some View {
+        List {
+            ForEach(calendars, id: \.calendarIdentifier) { calendar in
+                HStack {
+                    Circle()
+                        .fill(Color(cgColor: calendar.cgColor))
+                        .frame(width: 12, height: 12)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(calendar.title)
+                            .font(.body)
+                            .themedPrimaryText()
+                        Text(calendar.source.title)
+                            .font(.caption)
+                            .themedSecondaryText()
+                    }
+                    
+                    Spacer()
+                    
+                    if !calendarFeed.hiddenCalendarIds.contains(calendar.calendarIdentifier) {
+                        Image(systemName: "checkmark")
+                            .themedAccent()
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    toggle(calendar)
+                }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(themeManager.currentTheme.backgroundColor)
+        .navigationTitle("visible_calendars".localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            calendars = appleService.allEventCalendars()
+        }
+    }
+    
+    private func toggle(_ calendar: EKCalendar) {
+        let id = calendar.calendarIdentifier
+        if calendarFeed.hiddenCalendarIds.contains(id) {
+            calendarFeed.hiddenCalendarIds.remove(id)
+        } else {
+            calendarFeed.hiddenCalendarIds.insert(id)
+        }
+    }
 }

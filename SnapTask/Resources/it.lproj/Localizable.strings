@@ -2308,3 +2308,12 @@
 "eisenhower_axis_not_important" = "Non importante";
 "days_per_week_format" = "%d giorni a settimana";
 "days_per_month_format" = "%d giorni al mese";
+
+/* Calendar events in the day list */
+"calendar_events_section_title" = "Dal calendario";
+"calendar_events_feed_header" = "Eventi in SnapTask";
+"show_calendar_events" = "Mostra eventi del calendario";
+"show_calendar_events_footer" = "Compleanni, festività ed eventi del Calendario Apple compaiono nella lista di ogni giorno. Tocca + per aggiungerne uno come attività.";
+"visible_calendars" = "Calendari visibili";
+"calendar_event_add_as_task" = "Aggiungi come attività";
+"calendar_event_added" = "Già aggiunto";

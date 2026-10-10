@@ -2275,3 +2275,12 @@
 "eisenhower_axis_not_important" = "重要でない";
 "days_per_week_format" = "週%d日";
 "days_per_month_format" = "月%d日";
+
+/* Calendar events in the day list */
+"calendar_events_section_title" = "カレンダーから";
+"calendar_events_feed_header" = "SnapTaskに表示する予定";
+"show_calendar_events" = "カレンダーの予定を表示";
+"show_calendar_events_footer" = "Appleカレンダーの誕生日、祝日、予定が毎日のリストに表示されます。+をタップするとタスクとして追加できます。";
+"visible_calendars" = "表示するカレンダー";
+"calendar_event_add_as_task" = "タスクとして追加";
+"calendar_event_added" = "追加済み";

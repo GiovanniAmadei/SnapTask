@@ -27,7 +27,7 @@
 		</dict>
 	</array>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>SnapTask needs full access to your calendar to create, update, and remove calendar events linked to your tasks.</string>
+	<string>SnapTask needs full access to your calendar to create, update, and remove calendar events linked to your tasks, and to show your events and birthdays in your daily list.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Snaptask needs calendar access to sync your tasks and create calendar events automatically.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>

@@ -254,6 +254,10 @@ class TimelineViewModel: ObservableObject {
     
     @Published var openSwipeTaskId: UUID? = nil
 
+    /// Calendar event being added as a task. TimelineView presents its form, outside the
+    /// task List, so List updates can't rebuild the form while it is being filled in.
+    @Published var calendarEventToAdd: CalendarFeedEvent? = nil
+
     @Published var showAllHistory: Bool = false
     
     private let tasksKey = "saved_tasks"

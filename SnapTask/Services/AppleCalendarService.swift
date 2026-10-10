@@ -92,7 +92,45 @@ class AppleCalendarService: ObservableObject {
         availableCalendars = eventStore.calendars(for: .event)
             .filter { $0.allowsContentModifications }
     }
-    
+
+    // MARK: - Reading events
+
+    /// Reading events needs full access; write-only access is not enough.
+    var canReadEvents: Bool {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        return status == .fullAccess || status == .authorized
+    }
+
+    /// Asks for full access (also upgrades a write-only permission).
+    func requestFullAccess() async -> Bool {
+        if canReadEvents { return true }
+        let granted: Bool
+        if #available(iOS 17.0, *) {
+            granted = (try? await eventStore.requestFullAccessToEvents()) ?? false
+        } else {
+            granted = (try? await eventStore.requestAccess(to: .event)) ?? false
+        }
+        authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        if granted { loadCalendars() }
+        return granted && canReadEvents
+    }
+
+    /// Every calendar the user can see, read-only ones included (Birthdays, Holidays, subscriptions).
+    func allEventCalendars() -> [EKCalendar] {
+        guard canReadEvents else { return [] }
+        return eventStore.calendars(for: .event)
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    /// The events of one day in the given calendars.
+    func events(on day: Date, in calendars: [EKCalendar]) -> [EKEvent] {
+        guard canReadEvents, !calendars.isEmpty else { return [] }
+        let start = Calendar.current.startOfDay(for: day)
+        guard let end = Calendar.current.date(byAdding: .day, value: 1, to: start) else { return [] }
+        let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: calendars)
+        return eventStore.events(matching: predicate)
+    }
+
     func createEvent(from task: TodoTask, in calendarId: String) async throws -> String? {
         guard authorizationStatus == .authorized || authorizationStatus == .fullAccess || authorizationStatus == .writeOnly else {
             print("❌ Current authorization status: \(authorizationStatus.rawValue) (\(authorizationStatusString))")
