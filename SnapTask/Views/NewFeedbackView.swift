@@ -283,15 +283,9 @@ struct NewFeedbackView: View {
         }
     }
     
+    /// Same id as FeedbackManager and the push token, so replies reach the author.
     private func getCurrentUserId() -> String {
-        let userIdKey = "firebase_user_id"
-        if let existingId = UserDefaults.standard.string(forKey: userIdKey) {
-            return existingId
-        } else {
-            let newId = UUID().uuidString
-            UserDefaults.standard.set(newId, forKey: userIdKey)
-            return newId
-        }
+        FeedbackManager.shared.currentUserId()
     }
 }
 

@@ -77,10 +77,11 @@ final class FeedbackReplyNotifier {
         isChecking = true
         defer { isChecking = false }
 
-        let userId = FeedbackManager.shared.currentUserId()
-        let items: [FeedbackItem]
+        var items: [FeedbackItem] = []
         do {
-            items = try await FirebaseService.shared.fetchFeedback(authoredBy: userId)
+            for userId in FeedbackManager.shared.allUserIds() {
+                items += try await FirebaseService.shared.fetchFeedback(authoredBy: userId)
+            }
         } catch {
             print("❌ [FeedbackReplies] fetch failed: \(error)")
             return false
@@ -151,24 +152,27 @@ final class FeedbackReplyNotifier {
     /// Uploads the token only for feedback authors, and only when it changed.
     func registerPushTokenIfNeeded(force: Bool = false) async {
         guard let token = UserDefaults.standard.string(forKey: tokenKey) else { return }
-        let userId = FeedbackManager.shared.currentUserId()
-        let signature = "\(userId)|\(token)|\(apnsEnvironment)"
+        // Saved under every id the user wrote feedback with, so the reply script finds it.
+        let userIds = FeedbackManager.shared.allUserIds()
+        let signature = "\(userIds.joined(separator: ","))|\(token)|\(apnsEnvironment)"
         if !force, UserDefaults.standard.string(forKey: registeredTokenKey) == signature { return }
 
         if !force {
-            let isAuthor = FeedbackManager.shared.feedbackItems.contains { $0.authorId == userId }
+            let isAuthor = FeedbackManager.shared.feedbackItems.contains { $0.isAuthoredByCurrentUser }
                 || UserDefaults.standard.array(forKey: seenKey) != nil
             guard isAuthor else { return }
         }
 
         do {
-            try await FirebaseService.shared.savePushToken(userId: userId, data: [
-                "token": token,
-                "environment": apnsEnvironment,
-                "bundleId": Bundle.main.bundleIdentifier ?? "",
-                "language": LanguageManager.shared.actualLanguageCode,
-                "platform": "ios"
-            ])
+            for userId in userIds {
+                try await FirebaseService.shared.savePushToken(userId: userId, data: [
+                    "token": token,
+                    "environment": apnsEnvironment,
+                    "bundleId": Bundle.main.bundleIdentifier ?? "",
+                    "language": LanguageManager.shared.actualLanguageCode,
+                    "platform": "ios"
+                ])
+            }
             UserDefaults.standard.set(signature, forKey: registeredTokenKey)
             print("✅ [FeedbackReplies] push token registered")
         } catch {

@@ -36,8 +36,7 @@ class FeedbackManager: ObservableObject {
                 await MainActor.run {
                     self.feedbackItems = remoteFeedback.sorted { $0.votes > $1.votes }
                     // Replies visible in the list don't need a notification later.
-                    let userId = self.getCurrentUserId()
-                    FeedbackReplyNotifier.shared.markRepliesSeen(in: remoteFeedback.filter { $0.authorId == userId })
+                    FeedbackReplyNotifier.shared.markRepliesSeen(in: remoteFeedback.filter { $0.isAuthoredByCurrentUser })
                     self.saveLocalFeedback() // Cache locally
                     self.isLoading = false
                     print("🔄 [LOAD] UI updated with \(self.feedbackItems.count) items")
@@ -224,6 +223,14 @@ class FeedbackManager: ObservableObject {
     
     func currentUserId() -> String {
         getCurrentUserId()
+    }
+    
+    /// Every id this install may have written feedback with: older versions saved new
+    /// feedback with `firebase_user_id` while the rest of the app used `anonymous_user_id`.
+    func allUserIds() -> [String] {
+        let current = getCurrentUserId()
+        let legacy = UserDefaults.standard.string(forKey: "firebase_user_id") ?? ""
+        return legacy.isEmpty || legacy == current ? [current] : [current, legacy]
     }
     
     private func getCurrentUserId() -> String {
