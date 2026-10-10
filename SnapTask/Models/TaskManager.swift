@@ -185,6 +185,10 @@ class TaskManager: ObservableObject {
         objectWillChange.send()
 
         applyCarryOverIfNeeded(force: false)
+
+        Task {
+            await TaskNotificationManager.shared.syncTaskReminders(tasks: self.tasks)
+        }
     }
     
     func updateAllTasks(_ newTasks: [TodoTask]) {

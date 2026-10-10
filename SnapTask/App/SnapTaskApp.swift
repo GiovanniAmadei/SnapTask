@@ -263,8 +263,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         
         try? BGTaskScheduler.shared.submit(request)
         
-        // Mark task as completed
-        task.setTaskCompleted(success: true)
+        // Refills the reminders of the days ahead even if the app isn't opened.
+        Task { @MainActor in
+            await TaskNotificationManager.shared.syncTaskReminders(tasks: TaskManager.shared.tasks)
+            await TaskNotificationManager.shared.waitForReminderSync()
+            task.setTaskCompleted(success: true)
+        }
     }
     
     // Handle notification when app is in foreground
@@ -396,6 +400,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // iCloud push: sync before telling the system we're done, or it suspends the app first.
         Task { @MainActor in
             let handled = await CloudKitService.shared.handleRemoteNotification(userInfo)
+            // The task reminders the sync changed must be in place before the app is suspended.
+            if handled {
+                await TaskNotificationManager.shared.syncTaskReminders(tasks: TaskManager.shared.tasks)
+                await TaskNotificationManager.shared.waitForReminderSync()
+            }
             completionHandler(handled ? .newData : .noData)
         }
     }

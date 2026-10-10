@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import Combine
+import UIKit
 
 class TaskNotificationManager: NSObject, ObservableObject {
     static let shared = TaskNotificationManager()
@@ -14,7 +15,9 @@ class TaskNotificationManager: NSObject, ObservableObject {
     private let recurringWindowDays: Int = 30
     private let maxRecurringNotificationsPerTask: Int = 30
 
-    private static var lastRollingRescheduleTime: Date = .distantPast
+    /// Set while `syncTaskReminders` runs; a call made meanwhile leaves its tasks here.
+    private var isSyncingReminders = false
+    private var tasksForNextReminderSync: [TodoTask]?
     
     static let taskReminderCategoryIdentifier = "TASK_REMINDER_CATEGORY"
     static let actionMarkCompletedIdentifier = "TASK_ACTION_MARK_COMPLETED"
@@ -105,8 +108,9 @@ class TaskNotificationManager: NSObject, ObservableObject {
             print("🔇 Master mute ON: cancelled all task notifications")
         } else {
             print("🔔 Master mute OFF: task notifications re-enabled")
-            // Nota: non ripianifichiamo automaticamente qui.
-            // Le notifiche verranno ripianificate quando le task vengono modificate/create
+            Task { @MainActor in
+                await self.syncTaskReminders(tasks: TaskManager.shared.tasks)
+            }
         }
     }
     
@@ -292,6 +296,20 @@ class TaskNotificationManager: NSObject, ObservableObject {
         return dates.sorted()
     }
     
+    /// Same look for one-off, recurring and snoozed reminders.
+    private func reminderContent(for task: TodoTask) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        // The task name is the title: it is the only bold line iOS shows.
+        content.title = task.name
+        content.body = "task_notification_title".localized
+        content.sound = .default
+        content.categoryIdentifier = TaskNotificationManager.taskReminderCategoryIdentifier
+        if let category = task.category {
+            content.subtitle = category.name
+        }
+        return content
+    }
+    
     func scheduleNotification(for task: TodoTask) async -> String? {
         let status = await refreshAuthorizationStatus()
         guard areTaskNotificationsEnabled,
@@ -313,15 +331,7 @@ class TaskNotificationManager: NSObject, ObservableObject {
         
         let identifier = "task_\(task.id.uuidString)"
         
-        let content = UNMutableNotificationContent()
-        // The task name is the title: it is the only bold line iOS shows.
-        content.title = task.name
-        content.body = "task_notification_title".localized
-        content.sound = .default
-        content.categoryIdentifier = TaskNotificationManager.taskReminderCategoryIdentifier
-        if let category = task.category {
-            content.subtitle = category.name
-        }
+        let content = reminderContent(for: task)
         
         let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
@@ -465,15 +475,7 @@ class TaskNotificationManager: NSObject, ObservableObject {
 
                         let identifier = "task_\(task.id.uuidString)_\(notificationDate.timeIntervalSince1970)"
 
-                        let content = UNMutableNotificationContent()
-                        // The task name is the title: it is the only bold line iOS shows.
-                        content.title = task.name
-                        content.body = "task_notification_title".localized
-                        content.sound = .default
-                        content.categoryIdentifier = TaskNotificationManager.taskReminderCategoryIdentifier
-                        if let category = task.category {
-                            content.subtitle = category.name
-                        }
+                        let content = reminderContent(for: task)
 
                         let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: notificationDate)
                         let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
@@ -503,41 +505,133 @@ class TaskNotificationManager: NSObject, ObservableObject {
     }
 
     func rescheduleRecurringNotificationsRollingWindow(tasks: [TodoTask]) async {
-        let now = Date()
-        if now.timeIntervalSince(Self.lastRollingRescheduleTime) < 30 {
+        await syncTaskReminders(tasks: tasks)
+    }
+
+    // MARK: - Keeping reminders in step with the tasks
+
+    /// Makes the pending task reminders match `tasks`: the soonest ones, one-off and every
+    /// occurrence of recurring tasks, up to the iOS limit. It never clears everything first:
+    /// only reminders no longer wanted are removed and only missing or changed ones are added,
+    /// so if iOS suspends the app half way (it does, after a background iCloud sync) the
+    /// reminders already in place stay. Calls made while one runs are merged into one more run
+    /// with the newest tasks.
+    @MainActor
+    func syncTaskReminders(tasks: [TodoTask]) async {
+        guard !isSyncingReminders else {
+            // The running sync does one more pass with these tasks: return only once it's done,
+            // so callers (e.g. a background wake-up) can rely on the reminders being in place.
+            tasksForNextReminderSync = tasks
+            await waitForReminderSync()
             return
         }
-        Self.lastRollingRescheduleTime = now
-
-        let status = await refreshAuthorizationStatus()
-        guard areTaskNotificationsEnabled, status == .authorized else {
-            print("⚠️ Skip rolling reschedule | enabled=\(areTaskNotificationsEnabled) status=\(status.rawValue)")
-            return
+        isSyncingReminders = true
+        let background = BackgroundTime(name: "TaskReminders")
+        var next: [TodoTask]? = tasks
+        while let current = next {
+            tasksForNextReminderSync = nil
+            await applyTaskReminders(for: current)
+            next = tasksForNextReminderSync
         }
+        background.end()
+        isSyncingReminders = false
+    }
 
-        let eligibleTasks = tasks.filter { $0.hasNotification && $0.hasSpecificTime && $0.recurrence != nil }
-        guard !eligibleTasks.isEmpty else { return }
-
-        for task in eligibleTasks {
-            await cancelAllNotificationsForTask(task.id)
-        }
-
-        let eligiblePrefixes = Set(eligibleTasks.map { "task_\($0.id.uuidString)" })
-        let allPending = await center.pendingNotificationRequests()
-        let nonEligiblePendingCount = allPending.filter { req in
-            !eligiblePrefixes.contains(where: { req.identifier.hasPrefix($0) })
-        }.count
-
-        let remainingBudget = max(0, maxPendingNotificationsBudget - nonEligiblePendingCount)
-        let fairPerTask = max(1, remainingBudget / eligibleTasks.count)
-        let perTaskCap = min(maxRecurringNotificationsPerTask, fairPerTask)
-        print("🧮 Rolling reschedule budget | eligible=\(eligibleTasks.count) otherPending=\(nonEligiblePendingCount) remaining=\(remainingBudget) perTask=\(perTaskCap)")
-
-        for task in eligibleTasks {
-            _ = await scheduleRecurringNotifications(for: task, maxCount: perTaskCap)
+    /// Waits for a reminder sync started elsewhere, so a background wake-up doesn't end first.
+    @MainActor
+    func waitForReminderSync() async {
+        while isSyncingReminders {
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
     }
-    
+
+    @MainActor
+    private func applyTaskReminders(for tasks: [TodoTask]) async {
+        let status = await refreshAuthorizationStatus()
+        // Muted or no permission: nothing can be scheduled, and nothing is touched.
+        guard areTaskNotificationsEnabled, status == .authorized else {
+            print("⚠️ Skip task reminders sync | enabled=\(areTaskNotificationsEnabled) status=\(status.rawValue)")
+            return
+        }
+
+        let now = Date()
+        var wanted: [(id: String, date: Date, task: TodoTask)] = []
+        for task in tasks where task.hasNotification && task.hasSpecificTime {
+            if task.recurrence != nil {
+                let dates = Self.computeRecurringNotificationDates(
+                    for: task,
+                    now: now,
+                    windowDays: recurringWindowDays,
+                    maxCount: maxRecurringNotificationsPerTask
+                )
+                for date in dates {
+                    wanted.append(("task_\(task.id.uuidString)_\(date.timeIntervalSince1970)", date, task))
+                }
+            } else {
+                let date = task.startTime.addingTimeInterval(-TimeInterval(task.notificationLeadTimeMinutes) * 60)
+                if date > now {
+                    wanted.append(("task_\(task.id.uuidString)", date, task))
+                }
+            }
+        }
+
+        let pending = await center.pendingNotificationRequests()
+        // Snoozes ("Remind me in 1 hour", "Tomorrow") are kept as they are.
+        let pendingReminders = pending.filter { $0.identifier.hasPrefix("task_") && !Self.isSnooze($0.identifier) }
+        let budget = max(0, maxPendingNotificationsBudget - (pending.count - pendingReminders.count))
+
+        var seen = Set<String>()
+        let kept = wanted
+            .sorted { $0.date < $1.date }
+            .filter { seen.insert($0.id).inserted }
+            .prefix(budget)
+        let keptIds = Set(kept.map(\.id))
+
+        // 1. Remove what is no longer wanted: deleted tasks, changed or past times, beyond the limit.
+        let stale = pendingReminders.map(\.identifier).filter { !keptIds.contains($0) }
+        if !stale.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: stale)
+        }
+
+        // 2. Add what is missing or changed (same identifier = the old request is replaced).
+        let pendingById = Dictionary(pendingReminders.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
+        let calendar = Calendar.current
+        var added = 0
+        for item in kept {
+            let content = reminderContent(for: item.task)
+            let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.date)
+            if let existing = pendingById[item.id], Self.request(existing, matches: content, at: components) {
+                continue
+            }
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            do {
+                try await center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
+                added += 1
+            } catch {
+                print("❌ Error scheduling task reminder: \(error)")
+            }
+        }
+
+        print("🔔 Task reminders synced | wanted=\(wanted.count) scheduled=\(kept.count) added=\(added) removed=\(stale.count)")
+    }
+
+    /// "task_<UUID>_<whole seconds>" is a snooze; recurring reminders end with a decimal timestamp.
+    private static func isSnooze(_ identifier: String) -> Bool {
+        let parts = identifier.components(separatedBy: "_")
+        return parts.count == 3 && !parts[2].contains(".")
+    }
+
+    private static func request(_ request: UNNotificationRequest, matches content: UNNotificationContent, at components: DateComponents) -> Bool {
+        guard let trigger = request.trigger as? UNCalendarNotificationTrigger else { return false }
+        let existing = trigger.dateComponents
+        return existing.year == components.year && existing.month == components.month && existing.day == components.day
+            && existing.hour == components.hour && existing.minute == components.minute
+            && request.content.title == content.title
+            && request.content.subtitle == content.subtitle
+            && request.content.body == content.body
+            && request.content.categoryIdentifier == content.categoryIdentifier
+    }
+
     func cancelNotification(withIdentifier identifier: String) {
         center.removePendingNotificationRequests(withIdentifiers: [identifier])
         print("🗑️ Cancelled notification with identifier: \(identifier)")
@@ -643,15 +737,7 @@ class TaskNotificationManager: NSObject, ObservableObject {
     }
     
     func scheduleCustomSnoozeNotification(for task: TodoTask, at fireDate: Date) async {
-        let content = UNMutableNotificationContent()
-        // The task name is the title: it is the only bold line iOS shows.
-        content.title = task.name
-        content.body = "task_notification_title".localized
-        content.sound = .default
-        content.categoryIdentifier = TaskNotificationManager.taskReminderCategoryIdentifier
-        if let category = task.category {
-            content.subtitle = category.name
-        }
+        let content = reminderContent(for: task)
         
         let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
@@ -776,4 +862,23 @@ extension TaskNotificationManager: UNUserNotificationCenterDelegate {
 extension Notification.Name {
     static let openTaskFromNotification = Notification.Name("openTaskFromNotification")
     static let openJournalFromNotification = Notification.Name("openJournalFromNotification")
+}
+
+/// Asks iOS for a little time to finish when the app goes to the background meanwhile.
+private final class BackgroundTime {
+    private var identifier: UIBackgroundTaskIdentifier = .invalid
+
+    @MainActor
+    init(name: String) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            self?.end()
+        }
+    }
+
+    @MainActor
+    func end() {
+        guard identifier != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
+    }
 }
