@@ -89,8 +89,9 @@ final class WatchTaskNotificationManager: NSObject, ObservableObject {
 
     private func notificationContent(for task: TodoTask) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = "task_notification_title".localized
-        content.body = String(format: "task_notification_body".localized, task.name)
+        // The task name is the title: it is the only bold line iOS shows.
+        content.title = task.name
+        content.body = "task_notification_title".localized
         content.sound = .default
         if let category = task.category {
             content.subtitle = category.name
