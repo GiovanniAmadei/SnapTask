@@ -755,8 +755,10 @@ class CloudKitService: ObservableObject {
     private func performSyncPass() async {
         lastSyncTime = Date()
         await flushOutbox()
+        await sweepMissedDeletionsOnce()
         do {
             let (changes, newToken) = try await fetchChanges()
+            await resendMissedDeletions(changes)
             await processChanges(changes)
             // Saved only once the changes are applied: if the app is closed halfway through,
             // the next sync fetches them again instead of skipping them.
@@ -3170,5 +3172,141 @@ extension CloudKitService {
         default:
             return nil // settings and statistics are re-sent on their own
         }
+    }
+}
+
+// MARK: - Deletions iCloud missed
+// An item deleted here whose deletion never reached iCloud (the call failed for good, or build 6,
+// whose deletion called itself in a loop) stayed in iCloud for ever: merging only skipped it, so
+// it lived on there, was shown by anything else reading iCloud and came back on a new device.
+// Each sync now sends such deletions again, and once per device every past one is sent.
+
+extension CloudKitService {
+    private static let missedDeletionsSweepKey = "cloudkit_missed_deletions_sweep_v1"
+    
+    /// Ids of the items this device holds now, per record type: an id it once deleted and holds
+    /// again (a restored backup) is no deletion to send.
+    private func localIDs() -> [String: Set<String>] {
+        func ids<S: Sequence>(_ items: S, _ id: (S.Element) -> UUID) -> Set<String> {
+            Set(items.map { id($0).uuidString })
+        }
+        let finance = FinanceManager.shared
+        return [
+            taskRecordType: ids(TaskManager.shared.tasks) { $0.id },
+            categoryRecordType: ids(CategoryManager.shared.categories) { $0.id },
+            rewardRecordType: ids(RewardManager.shared.rewards) { $0.id },
+            trackingSessionRecordType: ids(TaskManager.shared.getTrackingSessions()) { $0.id },
+            journalEntryRecordType: ids(JournalManager.shared.entriesByDay.values) { $0.id },
+            financeEntryRecordType: ids(finance.entries) { $0.id },
+            financeBudgetRecordType: ids(finance.budgets) { $0.id },
+            financialGoalRecordType: ids(finance.financialGoals) { $0.id },
+            customFinanceCategoryRecordType: ids(finance.customCategories) { $0.id },
+        ]
+    }
+    
+    /// What this device deleted, per record type.
+    private func deletedIDs() -> [String: Set<String>] {
+        let d = deletedItems
+        return [
+            taskRecordType: d.tasks,
+            categoryRecordType: d.categories,
+            rewardRecordType: d.rewards,
+            trackingSessionRecordType: d.trackingSessions,
+            journalEntryRecordType: d.journalEntries,
+            financeEntryRecordType: d.financeEntries,
+            financeBudgetRecordType: d.financeBudgets,
+            financialGoalRecordType: d.financialGoals,
+            customFinanceCategoryRecordType: d.customFinanceCategories,
+        ]
+    }
+    
+    /// Forgets the deletion of items this device holds again, so syncing treats them as live.
+    private func forgetDeletions(of names: Set<String>) {
+        guard !names.isEmpty else { return }
+        var tracker = deletedItems
+        tracker.tasks.subtract(names)
+        tracker.categories.subtract(names)
+        tracker.rewards.subtract(names)
+        tracker.trackingSessions.subtract(names)
+        tracker.journalEntries.subtract(names)
+        tracker.financeEntries.subtract(names)
+        tracker.financeBudgets.subtract(names)
+        tracker.financialGoals.subtract(names)
+        tracker.customFinanceCategories.subtract(names)
+        deletedItems = tracker
+    }
+    
+    /// Records that arrived from iCloud although this device deleted them: deletes them again.
+    /// Runs before merging, which skips them either way.
+    func resendMissedDeletions(_ changes: SyncChanges) async {
+        var arrived: [String: [String]] = [:]
+        arrived[taskRecordType] = changes.tasks.map(\.id.uuidString)
+        arrived[categoryRecordType] = changes.categories.map(\.id.uuidString)
+        arrived[rewardRecordType] = changes.rewards.map(\.id.uuidString)
+        arrived[trackingSessionRecordType] = changes.trackingSessions.map(\.id.uuidString)
+        arrived[journalEntryRecordType] = changes.journalEntries.map(\.id.uuidString)
+        arrived[financeEntryRecordType] = changes.financeEntries.map(\.id.uuidString)
+        arrived[financeBudgetRecordType] = changes.financeBudgets.map(\.id.uuidString)
+        arrived[financialGoalRecordType] = changes.financialGoals.map(\.id.uuidString)
+        arrived[customFinanceCategoryRecordType] = changes.customFinanceCategories.map(\.id.uuidString)
+        
+        let deleted = deletedIDs()
+        let local = localIDs()
+        var ghosts: [String] = []
+        var heldAgain: Set<String> = []
+        for (type, names) in arrived {
+            for name in names where deleted[type]?.contains(name) == true {
+                if local[type]?.contains(name) == true { heldAgain.insert(name) } else { ghosts.append(name) }
+            }
+        }
+        forgetDeletions(of: heldAgain)
+        await deleteMissed(ghosts)
+    }
+    
+    /// Once per device: sends again every deletion it ever made, for the records iCloud kept
+    /// without them ever arriving here again (a sync only brings what changed).
+    func sweepMissedDeletionsOnce() async {
+        guard !UserDefaults.standard.bool(forKey: Self.missedDeletionsSweepKey) else { return }
+        let local = localIDs()
+        var names: [String] = []
+        var heldAgain: Set<String> = []
+        for (type, ids) in deletedIDs() {
+            for name in ids {
+                if local[type]?.contains(name) == true { heldAgain.insert(name) } else { names.append(name) }
+            }
+        }
+        forgetDeletions(of: heldAgain)
+        if await deleteMissed(names) {
+            UserDefaults.standard.set(true, forKey: Self.missedDeletionsSweepKey)
+        }
+    }
+    
+    /// Deletes these records, 200 at a time; one already gone counts as deleted.
+    /// - Returns: false when iCloud could not be reached, so the work is tried again later.
+    @discardableResult
+    private func deleteMissed(_ names: [String]) async -> Bool {
+        guard !names.isEmpty else { return true }
+        let ids = names.map { CKRecord.ID(recordName: $0, zoneID: zoneID) }
+        var sent = 0
+        for start in stride(from: 0, to: ids.count, by: 200) {
+            let batch = Array(ids[start..<min(start + 200, ids.count)])
+            do {
+                let (_, results) = try await privateDatabase.modifyRecords(saving: [], deleting: batch, savePolicy: .changedKeys, atomically: false)
+                for (id, result) in results {
+                    switch result {
+                    case .success:
+                        sent += 1
+                    case .failure(let error):
+                        if let ckError = error as? CKError, ckError.code == .unknownItem { continue }
+                        print(" Missed deletion of \(id.recordName.prefix(8))… still failing: \(error.localizedDescription)")
+                    }
+                }
+            } catch {
+                print(" Missed deletions not sent: \(error.localizedDescription)")
+                return !Self.isRetryable(error)
+            }
+        }
+        if sent > 0 { print(" Sent \(sent) deletion(s) iCloud had missed") }
+        return true
     }
 }
