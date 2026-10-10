@@ -314,8 +314,9 @@ class TaskNotificationManager: NSObject, ObservableObject {
         let identifier = "task_\(task.id.uuidString)"
         
         let content = UNMutableNotificationContent()
-        content.title = "task_notification_title".localized
-        content.body = String(format: "task_notification_body".localized, task.name)
+        // The task name is the title: it is the only bold line iOS shows.
+        content.title = task.name
+        content.body = "task_notification_title".localized
         content.sound = .default
         content.categoryIdentifier = TaskNotificationManager.taskReminderCategoryIdentifier
         if let category = task.category {
@@ -465,8 +466,9 @@ class TaskNotificationManager: NSObject, ObservableObject {
                         let identifier = "task_\(task.id.uuidString)_\(notificationDate.timeIntervalSince1970)"
 
                         let content = UNMutableNotificationContent()
-                        content.title = "task_notification_title".localized
-                        content.body = String(format: "task_notification_body".localized, task.name)
+                        // The task name is the title: it is the only bold line iOS shows.
+                        content.title = task.name
+                        content.body = "task_notification_title".localized
                         content.sound = .default
                         content.categoryIdentifier = TaskNotificationManager.taskReminderCategoryIdentifier
                         if let category = task.category {
@@ -642,8 +644,9 @@ class TaskNotificationManager: NSObject, ObservableObject {
     
     func scheduleCustomSnoozeNotification(for task: TodoTask, at fireDate: Date) async {
         let content = UNMutableNotificationContent()
-        content.title = "task_notification_title".localized
-        content.body = String(format: "task_notification_body".localized, task.name)
+        // The task name is the title: it is the only bold line iOS shows.
+        content.title = task.name
+        content.body = "task_notification_title".localized
         content.sound = .default
         content.categoryIdentifier = TaskNotificationManager.taskReminderCategoryIdentifier
         if let category = task.category {
