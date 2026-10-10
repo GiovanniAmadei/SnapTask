@@ -338,6 +338,9 @@
 "syncing" = "Syncing...";
 "connected" = "Connected";
 "not_connected" = "Not Connected";
+"calendar_status_access_needed" = "Access needed";
+"calendar_status_access_denied" = "Access denied";
+"calendar_status_restricted" = "Restricted by iOS";
 "select_calendar" = "Select Calendar";
 
 // Calendar Integration Alerts
@@ -2346,3 +2349,12 @@
 "eisenhower_axis_not_important" = "Not important";
 "days_per_week_format" = "%d days a week";
 "days_per_month_format" = "%d days a month";
+
+/* Calendar events in the day list */
+"calendar_events_section_title" = "From your calendar";
+"calendar_events_feed_header" = "Events in SnapTask";
+"show_calendar_events" = "Show calendar events";
+"show_calendar_events_footer" = "Birthdays, holidays and events from Apple Calendar appear in each day's list. Tap + to add one as a task.";
+"visible_calendars" = "Visible calendars";
+"calendar_event_add_as_task" = "Add as task";
+"calendar_event_added" = "Already added";

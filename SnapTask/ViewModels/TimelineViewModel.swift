@@ -263,6 +263,9 @@ class TimelineViewModel: ObservableObject {
     /// hosted inside a row of the reorderable List is rebuilt every time the List updates,
     /// which reset TaskDetailView (scroll back to the top, unsaved edits lost).
     @Published var detailTask: TaskDetailRequest? = nil
+    /// Calendar event being added as a task. TimelineView presents its form, outside the
+    /// task List, so List updates can't rebuild the form while it is being filled in.
+    @Published var calendarEventToAdd: CalendarFeedEvent? = nil
 
     @Published var showAllHistory: Bool = false
     

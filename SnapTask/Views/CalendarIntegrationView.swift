@@ -6,6 +6,7 @@ struct CalendarIntegrationView: View {
     @StateObject private var appleService = AppleCalendarService.shared
     @StateObject private var googleService = GoogleCalendarService.shared
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var calendarFeed = CalendarEventsFeed.shared
     
     @State private var showingCalendarPicker = false
     @State private var showingGoogleAuth = false
@@ -17,6 +18,9 @@ struct CalendarIntegrationView: View {
     var body: some View {
         Form {
             enabledSection
+            
+            // Independent of the toggle above, which only writes tasks to the calendar.
+            calendarEventsSection
             
             if integrationManager.settings.isEnabled {
                 providerSection
@@ -71,6 +75,9 @@ struct CalendarIntegrationView: View {
                     var settings = integrationManager.settings
                     settings.isEnabled = newValue
                     integrationManager.updateSettings(settings)
+                    if newValue && settings.provider == .apple {
+                        Task { await ensureAppleAccess() }
+                    }
                 }
             ))
             .tint(themeManager.currentTheme.accentColor)
@@ -80,6 +87,46 @@ struct CalendarIntegrationView: View {
                 .themedPrimaryText()
         } footer: {
             Text("sync_tasks_calendar_automatically".localized)
+                .themedSecondaryText()
+        }
+    }
+    
+    private var calendarEventsSection: some View {
+        Section {
+            Toggle("show_calendar_events".localized, isOn: Binding(
+                // Off when access was revoked in iOS Settings: turning it on asks again.
+                get: { calendarFeed.isEnabled && appleService.canReadEvents },
+                set: { newValue in
+                    guard newValue else {
+                        calendarFeed.isEnabled = false
+                        return
+                    }
+                    Task {
+                        if await appleService.requestFullAccess() {
+                            calendarFeed.isEnabled = true
+                        } else {
+                            showingSettingsAlert = true
+                        }
+                    }
+                }
+            ))
+            .tint(themeManager.currentTheme.accentColor)
+            .listRowBackground(themeManager.currentTheme.surfaceColor)
+            
+            if calendarFeed.isEnabled && appleService.canReadEvents {
+                NavigationLink {
+                    VisibleCalendarsView()
+                } label: {
+                    Text("visible_calendars".localized)
+                        .themedPrimaryText()
+                }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
+            }
+        } header: {
+            Text("calendar_events_feed_header".localized)
+                .themedPrimaryText()
+        } footer: {
+            Text("show_calendar_events_footer".localized)
                 .themedSecondaryText()
         }
     }
@@ -114,7 +161,7 @@ struct CalendarIntegrationView: View {
     private var calendarSelectionSection: some View {
         Section(header: Text("calendar_selection".localized).themedPrimaryText()) {
             Button(action: {
-                showingCalendarPicker = true
+                openCalendarPicker()
             }) {
                 HStack {
                     Text("selected_calendar".localized)
@@ -236,6 +283,16 @@ struct CalendarIntegrationView: View {
         }
     }
     
+    /// Why Apple Calendar is not connected, from the iOS permission status.
+    private var appleDisconnectedReason: String {
+        switch appleService.authorizationStatus {
+        case .notDetermined: return "calendar_status_access_needed".localized
+        case .denied: return "calendar_status_access_denied".localized
+        case .restricted: return "calendar_status_restricted".localized
+        default: return "not_connected".localized
+        }
+    }
+    
     private var statusIndicator: some View {
         Group {
             switch integrationManager.settings.provider {
@@ -245,7 +302,7 @@ struct CalendarIntegrationView: View {
                     Circle()
                         .fill(isConnected ? themeManager.currentTheme.accentColor : .red)
                         .frame(width: 8, height: 8)
-                    Text(isConnected ? "connected".localized : "not_connected".localized)
+                    Text(isConnected ? "connected".localized : appleDisconnectedReason)
                         .themedSecondaryText()
                 }
             case .google:
@@ -258,6 +315,26 @@ struct CalendarIntegrationView: View {
                 }
             }
         }
+    }
+    
+    private func openCalendarPicker() {
+        Task {
+            if integrationManager.settings.provider == .apple {
+                guard await ensureAppleAccess() else { return }
+            }
+            showingCalendarPicker = true
+        }
+    }
+    
+    /// Asks for Apple Calendar access if needed; when it was already denied, offers to open iOS Settings.
+    @discardableResult
+    private func ensureAppleAccess() async -> Bool {
+        appleService.checkAuthorizationStatus()
+        if appleService.authorizationStatus == .denied || appleService.authorizationStatus == .restricted {
+            showingSettingsAlert = true
+            return false
+        }
+        return await appleService.requestAccess()
     }
     
     private func selectProvider(_ provider: CalendarProvider) {
@@ -279,7 +356,11 @@ struct CalendarIntegrationView: View {
                     print("📅 Request result: \(granted), final status: \(appleService.authorizationStatus.rawValue)")
                     
                     if !granted {
-                        errorMessage = "calendar_access_denied_message".localized
+                        if appleService.authorizationStatus == .denied || appleService.authorizationStatus == .restricted {
+                            showingSettingsAlert = true
+                        } else {
+                            errorMessage = "calendar_access_denied_message".localized
+                        }
                     }
                 case .google:
                     if !googleService.isAuthenticated {
@@ -442,4 +523,61 @@ struct CalendarSelectionView: View {
 
 #Preview {
     CalendarIntegrationView()
+}
+
+/// Which Apple calendars appear in the day list (Birthdays, Holidays and subscriptions included).
+struct VisibleCalendarsView: View {
+    @StateObject private var calendarFeed = CalendarEventsFeed.shared
+    @StateObject private var appleService = AppleCalendarService.shared
+    @StateObject private var themeManager = ThemeManager.shared
+    @State private var calendars: [EKCalendar] = []
+    
+    var body: some View {
+        List {
+            ForEach(calendars, id: \.calendarIdentifier) { calendar in
+                HStack {
+                    Circle()
+                        .fill(Color(cgColor: calendar.cgColor))
+                        .frame(width: 12, height: 12)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(calendar.title)
+                            .font(.body)
+                            .themedPrimaryText()
+                        Text(calendar.source.title)
+                            .font(.caption)
+                            .themedSecondaryText()
+                    }
+                    
+                    Spacer()
+                    
+                    if !calendarFeed.hiddenCalendarIds.contains(calendar.calendarIdentifier) {
+                        Image(systemName: "checkmark")
+                            .themedAccent()
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    toggle(calendar)
+                }
+                .listRowBackground(themeManager.currentTheme.surfaceColor)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(themeManager.currentTheme.backgroundColor)
+        .navigationTitle("visible_calendars".localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            calendars = appleService.allEventCalendars()
+        }
+    }
+    
+    private func toggle(_ calendar: EKCalendar) {
+        let id = calendar.calendarIdentifier
+        if calendarFeed.hiddenCalendarIds.contains(id) {
+            calendarFeed.hiddenCalendarIds.remove(id)
+        } else {
+            calendarFeed.hiddenCalendarIds.insert(id)
+        }
+    }
 }
