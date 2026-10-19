@@ -2200,3 +2200,5 @@
 "visible_calendars" = "Calendriers affichés";
 "calendar_event_add_as_task" = "Ajouter comme tâche";
 "calendar_event_added" = "Déjà ajouté";
+
+"timeline_free_hours" = "%d heures libres";

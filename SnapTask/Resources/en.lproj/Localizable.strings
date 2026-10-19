@@ -2358,3 +2358,5 @@
 "visible_calendars" = "Visible calendars";
 "calendar_event_add_as_task" = "Add as task";
 "calendar_event_added" = "Already added";
+
+"timeline_free_hours" = "%d free hours";

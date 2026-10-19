@@ -324,6 +324,8 @@ struct TimelineContentView: View {
     @State private var isAllDayExpanded: Bool = true
     @State private var currentTime = Date()
     @StateObject private var calendarFeed = CalendarEventsFeed.shared
+    /// Runs of free hours the user opened (by first hour); they close again on another day.
+    @State private var expandedFreeBlocks: Set<Int> = []
     @Environment(\.theme) private var theme
     
     private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -332,10 +334,19 @@ struct TimelineContentView: View {
         return viewModel.tasksForSelectedDate().filter { !$0.hasSpecificTime }
     }
     
+    /// Apple Calendar events not yet added as tasks: once added, their task stands for them.
+    private var pendingEvents: [CalendarFeedEvent] {
+        guard calendarFeed.isEnabled else { return [] }
+        return calendarFeed.events.filter { !calendarFeed.addedEventIds.contains($0.id) }
+    }
+    
     /// Apple Calendar events (birthdays, holidays…) shown with the all-day tasks.
     private var allDayEvents: [CalendarFeedEvent] {
-        calendarFeed.isEnabled ? calendarFeed.events.filter(\.isAllDay) : []
+        pendingEvents.filter(\.isAllDay)
     }
+    
+    /// Hours left out when they are empty: runs of at least this many collapse into one row.
+    private static let minCollapsedFreeHours = 3
     
     private var currentHour: Int {
         Calendar.current.component(.hour, from: currentTime)
@@ -415,27 +426,44 @@ struct TimelineContentView: View {
                                 }
                             }
                             .background(theme.surfaceColor.opacity(0.5))
+                            .id(Self.allDayRowId)
                             
                             Divider()
                                 .foregroundColor(theme.borderColor.opacity(0.5))
                         }
                         
-                        // Continuous 24-Hour Timeline Rows
-                        ForEach(Array(timelineRange), id: \.self) { hour in
-                            EnhancedTimelineHourRow(
-                                hour: hour,
-                                tasks: tasksForHour(hour),
-                                events: eventsForHour(hour),
-                                feed: calendarFeed,
-                                viewModel: viewModel,
-                                isCurrentHour: viewModel.isToday && currentHour == hour,
-                                currentMinute: viewModel.isToday && currentHour == hour ? currentMinute : nil,
-                                freeHoursCount: isStartOfFreeBlock(hour: hour) ? freeHoursStarting(at: hour) : nil,
-                                onScheduleAtHour: { selectedHour in
-                                    scheduleTask(at: selectedHour)
+                        // 24-hour timeline: long runs of free hours (the night) collapse into one row.
+                        ForEach(timelineRows) { row in
+                            switch row {
+                            case .hour(let hour):
+                                EnhancedTimelineHourRow(
+                                    hour: hour,
+                                    tasks: tasksForHour(hour),
+                                    events: eventsForHour(hour),
+                                    feed: calendarFeed,
+                                    viewModel: viewModel,
+                                    isCurrentHour: viewModel.isToday && currentHour == hour,
+                                    currentMinute: viewModel.isToday && currentHour == hour ? currentMinute : nil,
+                                    freeHoursCount: isStartOfFreeBlock(hour: hour) ? freeHoursStarting(at: hour) : nil,
+                                    onScheduleAtHour: { selectedHour in
+                                        scheduleTask(at: selectedHour)
+                                    }
+                                )
+                                .id(hour)
+                            case .freeHours(let hours, let isExpanded):
+                                CollapsedFreeHoursRow(hours: hours, isExpanded: isExpanded) {
+                                    HapticManager.shared.selection()
+                                    withAnimation(.smooth(duration: 0.3)) {
+                                        if isExpanded {
+                                            expandedFreeBlocks.remove(hours.lowerBound)
+                                        } else {
+                                            expandedFreeBlocks.insert(hours.lowerBound)
+                                        }
+                                    }
                                 }
-                            )
-                            .id(hour)
+                                .id(Self.freeHoursRowId(hours))
+                                .transition(.opacity)
+                            }
                         }
                         
                         // Closing divider after last hour
@@ -464,6 +492,7 @@ struct TimelineContentView: View {
             }
             .onChange(of: viewModel.selectedDate) { newDate in
                 calendarFeed.load(for: newDate)
+                expandedFreeBlocks = []
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     if let proxy = scrollProxy {
                         scrollToRelevantTime(proxy)
@@ -555,7 +584,7 @@ struct TimelineContentView: View {
                     HapticManager.shared.selection()
                     if let proxy = scrollProxy {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                            proxy.scrollTo(max(0, currentHour - 1), anchor: .top)
+                            proxy.scrollTo(rowId(containing: max(0, currentHour - 1)), anchor: .top)
                         }
                     }
                 }) {
@@ -588,9 +617,12 @@ struct TimelineContentView: View {
     // MARK: - Navigation & Interaction Helpers
     private func scrollToRelevantTime(_ proxy: ScrollViewProxy) {
         withAnimation(.easeInOut(duration: 0.3)) {
-            if viewModel.isToday {
+            if !allDayEvents.isEmpty {
+                // Birthdays and holidays sit above the hours: show them first.
+                proxy.scrollTo(Self.allDayRowId, anchor: .top)
+            } else if viewModel.isToday {
                 let target = max(0, currentHour - 1)
-                proxy.scrollTo(target, anchor: .top)
+                proxy.scrollTo(rowId(containing: target), anchor: .top)
             } else {
                 let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
                 let cal = Calendar.current
@@ -600,7 +632,7 @@ struct TimelineContentView: View {
                 }
                 let earliestHour = (taskHours + timedEvents.map(eventHour)).min() ?? 8
                 let target = max(0, earliestHour - 1)
-                proxy.scrollTo(target, anchor: .top)
+                proxy.scrollTo(rowId(containing: target), anchor: .top)
             }
         }
     }
@@ -626,7 +658,7 @@ struct TimelineContentView: View {
     
     /// Timed Apple Calendar events of the selected day.
     private var timedEvents: [CalendarFeedEvent] {
-        calendarFeed.isEnabled ? calendarFeed.events.filter { !$0.isAllDay } : []
+        pendingEvents.filter { !$0.isAllDay }
     }
     
     /// The hour row an event goes in; one that began the day before goes at midnight.
@@ -638,6 +670,86 @@ struct TimelineContentView: View {
     
     private func eventsForHour(_ hour: Int) -> [CalendarFeedEvent] {
         timedEvents.filter { eventHour($0) == hour }
+    }
+    
+    private static let allDayRowId = "allDay"
+    
+    private enum TimelineRow: Identifiable {
+        case hour(Int)
+        /// A run of free hours: collapsed into this row, or opened with this row as its header.
+        case freeHours(ClosedRange<Int>, isExpanded: Bool)
+        
+        var id: String {
+            switch self {
+            case .hour(let hour): return "hour-\(hour)"
+            case .freeHours(let hours, _): return "free-\(hours.lowerBound)-\(hours.upperBound)"
+            }
+        }
+    }
+    
+    /// Scroll id of a free-hours row: negative, so it never clashes with an hour row's id.
+    private static func freeHoursRowId(_ hours: ClosedRange<Int>) -> Int {
+        -1 - hours.lowerBound
+    }
+    
+    /// Hours taken by a task, an event or "now": from the start hour to the last hour it covers.
+    private var busyHours: Set<Int> {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: viewModel.selectedDate)
+        var hours = Set<Int>()
+        func mark(from start: Date, to end: Date) {
+            let first = calendar.component(.hour, from: max(start, dayStart))
+            let lastMoment = max(start, end.addingTimeInterval(-1))
+            let last = calendar.isDate(lastMoment, inSameDayAs: dayStart) ? calendar.component(.hour, from: lastMoment) : 23
+            for hour in first...max(first, last) { hours.insert(hour) }
+        }
+        for task in viewModel.tasksForSelectedDate() where task.hasSpecificTime {
+            let start = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
+            mark(from: start, to: start.addingTimeInterval(task.hasDuration ? task.duration : 0))
+        }
+        for event in timedEvents {
+            mark(from: event.startDate, to: event.endDate)
+        }
+        if viewModel.isToday { hours.insert(currentHour) }
+        return hours
+    }
+    
+    /// The rows of the day: one per hour, except runs of free hours, which collapse into one
+    /// row until the user opens them.
+    private var timelineRows: [TimelineRow] {
+        let busy = busyHours
+        var rows: [TimelineRow] = []
+        var hour = timelineRange.lowerBound
+        while hour <= timelineRange.upperBound {
+            guard !busy.contains(hour) else {
+                rows.append(.hour(hour))
+                hour += 1
+                continue
+            }
+            var last = hour
+            while last < timelineRange.upperBound && !busy.contains(last + 1) { last += 1 }
+            if last - hour + 1 >= Self.minCollapsedFreeHours {
+                let isExpanded = expandedFreeBlocks.contains(hour)
+                rows.append(.freeHours(hour...last, isExpanded: isExpanded))
+                if isExpanded {
+                    rows.append(contentsOf: (hour...last).map(TimelineRow.hour))
+                }
+            } else {
+                rows.append(contentsOf: (hour...last).map(TimelineRow.hour))
+            }
+            hour = last + 1
+        }
+        return rows
+    }
+    
+    /// The scroll id of the row showing this hour (a collapsed run is one row).
+    private func rowId(containing hour: Int) -> Int {
+        for row in timelineRows {
+            if case .freeHours(let hours, false) = row, hours.contains(hour) {
+                return Self.freeHoursRowId(hours)
+            }
+        }
+        return hour
     }
     
     private func freeHoursStarting(at hour: Int) -> Int {
@@ -820,6 +932,63 @@ struct EnhancedTimelineHourRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 0)
+    }
+}
+
+/// A run of free hours (typically the night) shown as one short row; tapping it opens the hours,
+/// and once open the same row, above them, closes them again.
+private struct CollapsedFreeHoursRow: View {
+    let hours: ClosedRange<Int>
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    /// Re-render when the 12/24h preference changes (it is injected as the locale).
+    @Environment(\.locale) private var locale
+    @Environment(\.theme) private var theme
+
+    private var isNight: Bool { hours.lowerBound == 0 || hours.upperBound == 23 }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            // When open, the first hour row below already shows this label.
+            Text(TimeFormat.hourLabel(hours.lowerBound))
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundColor(theme.secondaryTextColor)
+                .offset(y: -7)
+                .frame(width: 48, alignment: .topTrailing)
+                .opacity(isExpanded ? 0 : 1)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Rectangle()
+                    .fill(theme.borderColor.opacity(isExpanded ? 0 : 0.3))
+                    .frame(height: 1)
+
+                Button(action: onToggle) {
+                    HStack(spacing: 8) {
+                        Image(systemName: isNight ? "moon.zzz.fill" : "cup.and.saucer.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("\(TimeFormat.hourLabel(hours.lowerBound)) – \(TimeFormat.hourLabel((hours.upperBound + 1) % 24)) · " + "timeline_free_hours".localized(hours.count))
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 4)
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundColor(theme.secondaryTextColor)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(theme.surfaceColor.opacity(0.6))
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, 8)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

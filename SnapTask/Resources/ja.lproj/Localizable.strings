@@ -2284,3 +2284,5 @@
 "visible_calendars" = "表示するカレンダー";
 "calendar_event_add_as_task" = "タスクとして追加";
 "calendar_event_added" = "追加済み";
+
+"timeline_free_hours" = "空き時間 %d時間";

@@ -2317,3 +2317,5 @@
 "visible_calendars" = "Calendari visibili";
 "calendar_event_add_as_task" = "Aggiungi come attività";
 "calendar_event_added" = "Già aggiunto";
+
+"timeline_free_hours" = "%d ore libere";
