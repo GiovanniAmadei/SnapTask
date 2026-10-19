@@ -4,8 +4,6 @@ import SwiftUI
 struct CalendarEventsSection: View {
     @ObservedObject var feed: CalendarEventsFeed
     let onAdd: (CalendarFeedEvent) -> Void
-    /// Re-render when the 12/24h preference changes (it is injected as the locale).
-    @Environment(\.locale) private var locale
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -19,7 +17,11 @@ struct CalendarEventsSection: View {
             .foregroundColor(theme.secondaryTextColor)
 
             ForEach(feed.events) { event in
-                eventRow(event)
+                CalendarEventRow(
+                    event: event,
+                    isAdded: feed.addedEventIds.contains(event.id),
+                    onAdd: { onAdd(event) }
+                )
             }
         }
         .padding(.horizontal, 14)
@@ -28,24 +30,36 @@ struct CalendarEventsSection: View {
         .background(theme.surfaceColor)
         .cornerRadius(14)
     }
+}
 
-    private func eventRow(_ event: CalendarFeedEvent) -> some View {
-        HStack(spacing: 12) {
+/// One Apple Calendar event with "+" to add it as a task, or a checkmark once its task exists.
+/// Used in the day list and, more compact, in the hourly timeline.
+struct CalendarEventRow: View {
+    let event: CalendarFeedEvent
+    let isAdded: Bool
+    var compact = false
+    let onAdd: () -> Void
+    /// Re-render when the 12/24h preference changes (it is injected as the locale).
+    @Environment(\.locale) private var locale
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        HStack(spacing: compact ? 10 : 12) {
             ZStack {
                 Circle()
                     .fill(event.color.opacity(0.15))
-                    .frame(width: 34, height: 34)
+                    .frame(width: compact ? 26 : 34, height: compact ? 26 : 34)
                 Image(systemName: event.isBirthday ? "gift.fill" : "calendar")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: compact ? 11 : 14, weight: .semibold))
                     .foregroundColor(event.color)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(event.title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(compact ? .system(size: 14, weight: .medium) : .subheadline.weight(.semibold))
                     .themedPrimaryText()
                     .fixedSize(horizontal: false, vertical: true)
-                Text(subtitle(for: event))
+                Text(subtitle)
                     .font(.caption)
                     .themedSecondaryText()
                     .fixedSize(horizontal: false, vertical: true)
@@ -53,18 +67,18 @@ struct CalendarEventsSection: View {
 
             Spacer(minLength: 8)
 
-            if feed.addedEventIds.contains(event.id) {
+            if isAdded {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 24))
+                    .font(.system(size: compact ? 22 : 24))
                     .foregroundColor(theme.primaryColor)
                     .accessibilityLabel("calendar_event_added".localized)
             } else {
                 Button {
                     HapticManager.shared.impact(.light)
-                    onAdd(event)
+                    onAdd()
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: compact ? 22 : 24))
                         .foregroundColor(theme.primaryColor)
                 }
                 .buttonStyle(.plain)
@@ -73,7 +87,7 @@ struct CalendarEventsSection: View {
         }
     }
 
-    private func subtitle(for event: CalendarFeedEvent) -> String {
+    private var subtitle: String {
         let when: String
         if event.isAllDay {
             when = "all_day".localized

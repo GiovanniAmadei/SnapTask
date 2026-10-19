@@ -106,7 +106,7 @@ struct TimelineView: View {
                     preserveTime: !event.isAllDay,
                     onSave: { task in
                         viewModel.addTask(task)
-                        CalendarEventsFeed.shared.markAdded(event)
+                        CalendarEventsFeed.shared.markAdded(event, taskId: task.id)
                     }
                 )
             }
@@ -323,12 +323,18 @@ struct TimelineContentView: View {
     @State private var isRefreshing = false
     @State private var isAllDayExpanded: Bool = true
     @State private var currentTime = Date()
+    @StateObject private var calendarFeed = CalendarEventsFeed.shared
     @Environment(\.theme) private var theme
     
     private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
     private var allDayTasks: [TodoTask] {
         return viewModel.tasksForSelectedDate().filter { !$0.hasSpecificTime }
+    }
+    
+    /// Apple Calendar events (birthdays, holidays…) shown with the all-day tasks.
+    private var allDayEvents: [CalendarFeedEvent] {
+        calendarFeed.isEnabled ? calendarFeed.events.filter(\.isAllDay) : []
     }
     
     private var currentHour: Int {
@@ -356,7 +362,7 @@ struct TimelineContentView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         // Collapsible All-Day Tasks Section
-                        if !allDayTasks.isEmpty {
+                        if !allDayTasks.isEmpty || !allDayEvents.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
                                 Button(action: {
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -372,7 +378,7 @@ struct TimelineContentView: View {
                                             .font(.system(size: 13, weight: .bold))
                                             .foregroundColor(theme.textColor)
                                         
-                                        Text("\(allDayTasks.count)")
+                                        Text("\(allDayTasks.count + allDayEvents.count)")
                                             .font(.system(size: 11, weight: .bold, design: .rounded))
                                             .padding(.horizontal, 7)
                                             .padding(.vertical, 2)
@@ -394,6 +400,11 @@ struct TimelineContentView: View {
                                 
                                 if isAllDayExpanded {
                                     VStack(spacing: 6) {
+                                        ForEach(allDayEvents) { event in
+                                            TimelineCalendarEventCard(event: event, feed: calendarFeed) {
+                                                viewModel.calendarEventToAdd = event
+                                            }
+                                        }
                                         ForEach(allDayTasks, id: \.id) { task in
                                             CompactTimelineTaskView(task: task, viewModel: viewModel)
                                         }
@@ -414,6 +425,8 @@ struct TimelineContentView: View {
                             EnhancedTimelineHourRow(
                                 hour: hour,
                                 tasks: tasksForHour(hour),
+                                events: eventsForHour(hour),
+                                feed: calendarFeed,
                                 viewModel: viewModel,
                                 isCurrentHour: viewModel.isToday && currentHour == hour,
                                 currentMinute: viewModel.isToday && currentHour == hour ? currentMinute : nil,
@@ -444,11 +457,13 @@ struct TimelineContentView: View {
             }
             .onAppear {
                 scrollProxy = proxy
+                calendarFeed.load(for: viewModel.selectedDate)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                     scrollToRelevantTime(proxy)
                 }
             }
-            .onChange(of: viewModel.selectedDate) { _ in
+            .onChange(of: viewModel.selectedDate) { newDate in
+                calendarFeed.load(for: newDate)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     if let proxy = scrollProxy {
                         scrollToRelevantTime(proxy)
@@ -579,10 +594,11 @@ struct TimelineContentView: View {
             } else {
                 let tasks = viewModel.tasksForSelectedDate().filter { $0.hasSpecificTime }
                 let cal = Calendar.current
-                let earliestHour = tasks.map { task -> Int in
+                let taskHours = tasks.map { task -> Int in
                     let date = task.recurrence != nil ? task.occurrenceDate(on: viewModel.selectedDate) : task.startTime
                     return cal.component(.hour, from: date)
-                }.min() ?? 8
+                }
+                let earliestHour = (taskHours + timedEvents.map(eventHour)).min() ?? 8
                 let target = max(0, earliestHour - 1)
                 proxy.scrollTo(target, anchor: .top)
             }
@@ -606,6 +622,22 @@ struct TimelineContentView: View {
             let taskHour = calendar.component(.hour, from: date)
             return taskHour == hour
         }
+    }
+    
+    /// Timed Apple Calendar events of the selected day.
+    private var timedEvents: [CalendarFeedEvent] {
+        calendarFeed.isEnabled ? calendarFeed.events.filter { !$0.isAllDay } : []
+    }
+    
+    /// The hour row an event goes in; one that began the day before goes at midnight.
+    private func eventHour(_ event: CalendarFeedEvent) -> Int {
+        let calendar = Calendar.current
+        let start = max(event.startDate, calendar.startOfDay(for: viewModel.selectedDate))
+        return calendar.component(.hour, from: start)
+    }
+    
+    private func eventsForHour(_ hour: Int) -> [CalendarFeedEvent] {
+        timedEvents.filter { eventHour($0) == hour }
     }
     
     private func freeHoursStarting(at hour: Int) -> Int {
@@ -670,6 +702,9 @@ struct EnhancedTimelineHourRow: View {
     @Environment(\.locale) private var locale
     let hour: Int
     let tasks: [TodoTask]
+    /// Apple Calendar events starting in this hour, shown above the tasks.
+    let events: [CalendarFeedEvent]
+    @ObservedObject var feed: CalendarEventsFeed
     @ObservedObject var viewModel: TimelineViewModel
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
@@ -712,7 +747,7 @@ struct EnhancedTimelineHourRow: View {
                     .fill(theme.borderColor.opacity(0.3))
                     .frame(height: 1)
                 
-                if tasks.isEmpty {
+                if tasks.isEmpty && events.isEmpty {
                     // Clean, serene empty hour slot - tap anywhere to schedule
                     ZStack(alignment: .topLeading) {
                         Button {
@@ -762,6 +797,11 @@ struct EnhancedTimelineHourRow: View {
                 } else {
                     // Scheduled Tasks for this Hour (using the exact list view TimelineTaskCard design!)
                     VStack(alignment: .leading, spacing: 8) {
+                        ForEach(events) { event in
+                            TimelineCalendarEventCard(event: event, feed: feed) {
+                                viewModel.calendarEventToAdd = event
+                            }
+                        }
                         ForEach(tasks, id: \.id) { task in
                             TimelineTaskCard(
                                 task: task,
@@ -780,6 +820,34 @@ struct EnhancedTimelineHourRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 0)
+    }
+}
+
+/// An Apple Calendar event in the hourly timeline: read only, with "+" to add it as a task.
+private struct TimelineCalendarEventCard: View {
+    let event: CalendarFeedEvent
+    @ObservedObject var feed: CalendarEventsFeed
+    let onAdd: () -> Void
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        CalendarEventRow(
+            event: event,
+            isAdded: feed.addedEventIds.contains(event.id),
+            compact: true,
+            onAdd: onAdd
+        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(theme.surfaceColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(event.color.opacity(0.35), lineWidth: 1)
+                )
+                .shadow(color: theme.shadowColor, radius: 1, x: 0, y: 1)
+        )
     }
 }
 

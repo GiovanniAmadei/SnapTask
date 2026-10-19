@@ -38,8 +38,13 @@ final class CalendarEventsFeed: ObservableObject {
         }
     }
     @Published private(set) var events: [CalendarFeedEvent] = []
-    /// Events already added as tasks: their row shows a checkmark instead of "+".
-    @Published private(set) var addedEventIds: Set<String>
+    /// Events whose task still exists: their row shows a checkmark instead of "+".
+    /// Derived from the tasks, so deleting the task brings the "+" back.
+    @Published private(set) var addedEventIds: Set<String> = []
+    /// Event id → id of the task created from it.
+    private var addedTaskIds: [String: String]
+    /// Events added before the task id was saved (1.8.1): matched to a task by name.
+    private let legacyAddedEventIds: Set<String>
 
     private let appleService = AppleCalendarService.shared
     private let defaults = UserDefaults.standard
@@ -50,17 +55,25 @@ final class CalendarEventsFeed: ObservableObject {
         static let enabled = "calendar_events_feed_enabled"
         static let hiddenCalendars = "calendar_events_feed_hidden_calendars"
         static let addedEvents = "calendar_events_feed_added_events"
+        static let addedTasks = "calendar_events_feed_added_tasks"
     }
 
     private init() {
         isEnabled = defaults.bool(forKey: Keys.enabled)
         hiddenCalendarIds = Set(defaults.stringArray(forKey: Keys.hiddenCalendars) ?? [])
-        addedEventIds = Set(defaults.stringArray(forKey: Keys.addedEvents) ?? [])
+        addedTaskIds = defaults.dictionary(forKey: Keys.addedTasks) as? [String: String] ?? [:]
+        legacyAddedEventIds = Set(defaults.stringArray(forKey: Keys.addedEvents) ?? [])
 
         // Events changed in the Calendar app, or the permission changed in Settings.
         NotificationCenter.default.publisher(for: .EKEventStoreChanged)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.reload() }
+            .store(in: &cancellables)
+
+        // A task created from an event was deleted (or synced in): update the checkmarks.
+        TaskManager.shared.$tasks
+            .receive(on: RunLoop.main)
+            .sink { [weak self] tasks in self?.refreshAdded(tasks: tasks) }
             .store(in: &cancellables)
     }
 
@@ -69,12 +82,30 @@ final class CalendarEventsFeed: ObservableObject {
         reload()
     }
 
-    func markAdded(_ event: CalendarFeedEvent) {
+    func markAdded(_ event: CalendarFeedEvent, taskId: UUID) {
+        addedTaskIds[event.id] = taskId.uuidString
+        defaults.set(addedTaskIds, forKey: Keys.addedTasks)
         addedEventIds.insert(event.id)
-        defaults.set(Array(addedEventIds), forKey: Keys.addedEvents)
+    }
+
+    private func refreshAdded(tasks: [TodoTask]? = nil) {
+        let tasks = tasks ?? TaskManager.shared.tasks
+        let taskIds = Set(tasks.map(\.id.uuidString))
+        let taskNames = Set(tasks.map(\.name))
+        let added = Set(events.compactMap { event -> String? in
+            if let taskId = addedTaskIds[event.id] {
+                return taskIds.contains(taskId) ? event.id : nil
+            }
+            if legacyAddedEventIds.contains(event.id) {
+                return taskNames.contains(event.title) ? event.id : nil
+            }
+            return nil
+        })
+        if added != addedEventIds { addedEventIds = added }
     }
 
     private func reload() {
+        defer { refreshAdded() }
         guard isEnabled else {
             if !events.isEmpty { events = [] }
             return
