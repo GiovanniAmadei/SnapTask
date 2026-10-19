@@ -2494,5 +2494,5 @@
 "visible_calendars" = "Calendarios visibles";
 "calendar_event_add_as_task" = "Añadir como tarea";
 "calendar_event_added" = "Ya añadido";
-
-"timeline_free_hours" = "%d horas libres";
+"timeline_free_time" = "Tiempo libre: %@";
+"timeline_day_free" = "Día libre";

@@ -2212,5 +2212,5 @@
 "visible_calendars" = "Sichtbare Kalender";
 "calendar_event_add_as_task" = "Als Aufgabe hinzufügen";
 "calendar_event_added" = "Bereits hinzugefügt";
-
-"timeline_free_hours" = "%d freie Stunden";
+"timeline_free_time" = "Freie Zeit: %@";
+"timeline_day_free" = "Freier Tag";
