@@ -92,8 +92,9 @@ struct CalendarEventRow: View {
         if event.isAllDay {
             when = "all_day".localized
         } else {
-            let start = event.startDate.formatted(date: .omitted, time: .shortened)
-            let end = event.endDate.formatted(date: .omitted, time: .shortened)
+            // TimeFormat follows the app's 12/24h preference; `formatted` would not.
+            let start = TimeFormat.time(event.startDate)
+            let end = TimeFormat.time(event.endDate)
             when = "\(start) – \(end)"
         }
         return "\(when) · \(event.calendarTitle)"

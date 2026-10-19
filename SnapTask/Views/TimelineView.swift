@@ -850,6 +850,8 @@ private enum TimelineLayout {
     static let dotSize: CGFloat = 14
     /// From the top of a row to the center of its dot, level with the card's title.
     static let dotCenterY: CGFloat = 26
+    /// The day's line: visible on light and dark themes alike (the border color is too faint).
+    static func lineColor(_ theme: Theme) -> Color { theme.secondaryTextColor.opacity(0.35) }
 }
 
 /// The day's vertical line through an item's dot.
@@ -864,7 +866,7 @@ private struct TimelineRail: View {
     var body: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(hidesLineAbove ? Color.clear : theme.borderColor.opacity(0.7))
+                .fill(hidesLineAbove ? Color.clear : TimelineLayout.lineColor(theme))
                 .frame(width: 2, height: TimelineLayout.dotCenterY - TimelineLayout.dotSize / 2)
             ZStack {
                 Circle()
@@ -879,7 +881,7 @@ private struct TimelineRail: View {
             }
             .frame(width: TimelineLayout.dotSize, height: TimelineLayout.dotSize)
             Rectangle()
-                .fill(hidesLineBelow ? Color.clear : theme.borderColor.opacity(0.7))
+                .fill(hidesLineBelow ? Color.clear : TimelineLayout.lineColor(theme))
                 .frame(width: 2)
                 .frame(maxHeight: .infinity)
         }
@@ -897,7 +899,7 @@ private struct TimelineDashedRail: View {
                 path.move(to: CGPoint(x: geo.size.width / 2, y: 0))
                 path.addLine(to: CGPoint(x: geo.size.width / 2, y: geo.size.height))
             }
-            .stroke(theme.borderColor.opacity(0.8), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [2, 5]))
+            .stroke(TimelineLayout.lineColor(theme), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [2, 5]))
         }
         .frame(width: TimelineLayout.railWidth)
     }
@@ -1015,7 +1017,7 @@ private struct TimelineFreeTimeRow: View {
             }
             .buttonStyle(.plain)
             .disabled(isPast)
-            .opacity(isPast ? 0.6 : 1)
+            .opacity(isPast ? 0.8 : 1)
             .padding(.vertical, verticalPadding)
         }
         .fixedSize(horizontal: false, vertical: true)
