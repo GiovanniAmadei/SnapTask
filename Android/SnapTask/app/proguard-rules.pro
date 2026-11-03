@@ -1,19 +1,8 @@
-# Add project specific ProGuard rules here.
--keepattributes *Annotation*
--keepattributes Signature
--keepattributes InnerClasses
-
-# Room
--keep class * extends androidx.room.RoomDatabase
--keep @androidx.room.Entity class *
--dontwarn androidx.room.paging.**
-
-# Gson
--keepattributes Signature
--keep class com.snaptask.app.data.model.** { *; }
--keepclassmembers class com.snaptask.app.data.model.** { *; }
-
-# Hilt
--keep class dagger.hilt.** { *; }
--keep class javax.inject.** { *; }
--keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+-keepattributes *Annotation*, InnerClasses, Signature
+-dontnote kotlinx.serialization.**
+-keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
+-keepclasseswithmembers class kotlinx.serialization.json.** { kotlinx.serialization.KSerializer serializer(...); }
+-keep,includedescriptorclasses class com.snaptask.app.**$$serializer { *; }
+-keepclassmembers class com.snaptask.app.** { *** Companion; }
+-keepclasseswithmembers class com.snaptask.app.** { kotlinx.serialization.KSerializer serializer(...); }
+-dontwarn org.osmdroid.**

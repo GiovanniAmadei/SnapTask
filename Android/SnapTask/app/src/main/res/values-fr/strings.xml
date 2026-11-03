@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_tasks_name">SnapTask</string>
+    <string name="widget_tasks_description">Afficher les tâches pour la portée sélectionnée.</string>
+    <string name="widget_performance_name">Performance</string>
+    <string name="widget_performance_description">Consultez vos statistiques de productivité.</string>
+    <string name="widget_finance_name">Finances</string>
+    <string name="widget_finance_description">Consultez votre solde, vos revenus et vos dépenses.</string>
+    <string name="widget_budgets_name">Budgets par Catégorie</string>
+    <string name="widget_budgets_description">Suivez vos dépenses du mois par rapport aux budgets par catégorie.</string>
+    <string name="quick_add_task">Ajout rapide</string>
+</resources>

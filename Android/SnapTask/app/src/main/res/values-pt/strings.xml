@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_tasks_name">SnapTask</string>
+    <string name="widget_tasks_description">Ver tarefas do escopo selecionado.</string>
+    <string name="widget_performance_name">Desempenho</string>
+    <string name="widget_performance_description">Veja suas estatísticas de produtividade.</string>
+    <string name="widget_finance_name">Finanças</string>
+    <string name="widget_finance_description">Veja seu saldo, receitas e despesas.</string>
+    <string name="widget_budgets_name">Orçamentos por Categoria</string>
+    <string name="widget_budgets_description">Acompanhe seus gastos do mês em relação aos orçamentos por categoria.</string>
+    <string name="quick_add_task">Adicionar tarefa rápida</string>
+</resources>

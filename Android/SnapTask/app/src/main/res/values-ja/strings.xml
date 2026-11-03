@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_tasks_name">SnapTask</string>
+    <string name="widget_tasks_description">選択した範囲のタスクを表示。</string>
+    <string name="widget_performance_name">パフォーマンス</string>
+    <string name="widget_performance_description">生産性の統計を表示します。</string>
+    <string name="widget_finance_name">財務</string>
+    <string name="widget_finance_description">残高、収入、支出を確認できます。</string>
+    <string name="widget_budgets_name">カテゴリ予算</string>
+    <string name="widget_budgets_description">カテゴリ別予算に対する今月の支出を確認できます。</string>
+    <string name="quick_add_task">タスクをすばやく追加</string>
+</resources>

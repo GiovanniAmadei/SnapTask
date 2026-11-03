@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_tasks_name">SnapTask</string>
+    <string name="widget_tasks_description">Ver tareas del ámbito seleccionado.</string>
+    <string name="widget_performance_name">Rendimiento</string>
+    <string name="widget_performance_description">Consulta tus estadísticas de productividad.</string>
+    <string name="widget_finance_name">Finanzas</string>
+    <string name="widget_finance_description">Consulta tu saldo, ingresos y gastos.</string>
+    <string name="widget_budgets_name">Presupuestos por Categoría</string>
+    <string name="widget_budgets_description">Controla tus gastos mensuales frente a los presupuestos por categoría.</string>
+    <string name="quick_add_task">Añadir tarea rápida</string>
+</resources>
