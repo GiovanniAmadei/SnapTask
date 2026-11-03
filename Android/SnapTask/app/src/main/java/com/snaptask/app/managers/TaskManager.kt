@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import java.io.File
 import java.util.UUID
 import kotlin.math.max
 
@@ -384,6 +385,19 @@ object TaskManager {
         val completion = task.completions[key] ?: TaskCompletion()
         if (completion.isCompleted || completion.isInProgress == inProgress) return
         replace(task.copy(completions = task.completions + (key to completion.copy(isInProgress = inProgress)), lastModifiedDate = now()))
+        saveTasks()
+    }
+
+    /** Photos and voice notes whose file is gone, as after a restore from Google's cloud backup, are dropped. */
+    fun dropMissingMedia() {
+        val cleaned = tasks.map { task ->
+            task.copy(
+                photos = task.photos.filter { File(it.photoPath).exists() },
+                voiceMemos = task.voiceMemos.filter { File(it.audioPath).exists() },
+            )
+        }
+        if (cleaned == tasks) return
+        tasks = cleaned
         saveTasks()
     }
 

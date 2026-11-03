@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.snaptask.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.snaptask.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 200
         versionName = "2.0.0"
         buildConfigField("boolean", "UNLOCK_PRO", "false")

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and earlier: the same choices as data_extraction_rules.xml. -->
+<full-backup-content>
+    <include domain="file" path="store/" />
+    <include domain="file" path="Attachments/" requireFlags="deviceToDeviceTransfer" />
+    <include domain="sharedpref" path="snaptask.xml" />
+    <exclude domain="file" path="store/calendar_integration_settings.json" />
+    <exclude domain="file" path="store/calendar_events.json" />
+    <exclude domain="file" path="store/calendar_events_feed_hidden_calendars.json" />
+    <exclude domain="file" path="store/calendar_events_feed_added_tasks.json" />
+</full-backup-content>

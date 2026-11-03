@@ -674,6 +674,11 @@ object AppIconManager {
         Defaults.set("appIconId", option.id)
         currentId = option.id
     }
+
+    /** A restored backup keeps the choice but the launcher starts from the default icon. */
+    fun reapply() {
+        if (current.id != "primary") setIcon(current)
+    }
 }
 
 @Composable

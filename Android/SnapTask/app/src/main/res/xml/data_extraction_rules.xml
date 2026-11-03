@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12 and later. Google's cloud backup keeps at most 25 MB per app and saves nothing above that,
+    so photos and voice notes stay out of it: the data always fits. A phone-to-phone transfer has no
+    limit and takes them too. Calendar links hold row ids that mean other calendars on another phone.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="store/" />
+        <include domain="sharedpref" path="snaptask.xml" />
+        <exclude domain="file" path="store/calendar_integration_settings.json" />
+        <exclude domain="file" path="store/calendar_events.json" />
+        <exclude domain="file" path="store/calendar_events_feed_hidden_calendars.json" />
+        <exclude domain="file" path="store/calendar_events_feed_added_tasks.json" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="store/" />
+        <include domain="file" path="Attachments/" />
+        <include domain="sharedpref" path="snaptask.xml" />
+        <exclude domain="file" path="store/calendar_integration_settings.json" />
+        <exclude domain="file" path="store/calendar_events.json" />
+        <exclude domain="file" path="store/calendar_events_feed_hidden_calendars.json" />
+        <exclude domain="file" path="store/calendar_events_feed_added_tasks.json" />
+    </device-transfer>
+</data-extraction-rules>

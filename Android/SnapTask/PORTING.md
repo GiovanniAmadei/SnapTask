@@ -1,6 +1,7 @@
 # SnapTask Android: porting status
 
-Native Kotlin/Compose rewrite of the iOS app (reference: `SnapTask/`, branch feat/android from feat/mac-app).
+Native Kotlin/Compose rewrite of the iOS app (reference: `SnapTask/`, branch feat/android on main).
+Targets Android 16 (API 36), required by Play for new apps since 31 August 2026.
 All files use `package com.snaptask.app`, in folders named like the iOS ones.
 
 Rules: stored icon names are SF Symbol names (drawn through kit/SFIcons.kt); strings use the iOS keys
@@ -33,6 +34,10 @@ It logs under the tag `EXPLORE`. Its DEAD lines are candidates, not bugs: in a g
 - Calendar: "Device Calendar" and "Google Calendar" both read the phone's calendars (no Google sign-in).
 - Feedback replies: no push (iOS only, APNs). A background check about once an hour posts the notification.
 - Offer codes open the Play redeem page. Siri, Action Button and spoken "today's tasks" have no equivalent.
+- No sync. Android's backup (res/xml/data_extraction_rules.xml, backup_rules.xml) keeps data and settings in
+  Google's cloud; photos and voice notes go only phone to phone, since the cloud saves nothing above 25 MB.
+  Calendar links are left out (their ids mean other calendars on another phone). The first launch on a device
+  (`SnapTaskApp.settleOnThisDevice`) sets alarms and icon again and drops photos and voice notes left behind.
 
 ## Feedback
 Separate from iOS: `feedback_android`, `votes_android`, `likes_android`. The Firestore rules allow them (copy of the rules in use:
@@ -42,3 +47,5 @@ Separate from iOS: `feedback_android`, `votes_android`, `likes_android`. The Fir
 - Create the three products in Play Console; prices show "---" until then. Purchases are untested.
 - Legal texts in assets/legal still describe Apple, iCloud and the App Store.
 - Release signing is not configured.
+- `USE_EXACT_ALARM`: Play allows it only for alarm clock and calendar apps and asks for a declaration. If it is
+  refused, keep `SCHEDULE_EXACT_ALARM` and ask the user for it when reminders are turned on.

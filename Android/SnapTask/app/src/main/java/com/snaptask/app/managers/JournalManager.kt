@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlinx.serialization.builtins.ListSerializer
+import java.io.File
 import java.time.LocalDate
 import java.util.UUID
 
@@ -26,6 +27,19 @@ object JournalManager {
     }
 
     private fun save() = Store.save(storageKey, serializer, entriesByDay.values.toList())
+
+    /** Same as `TaskManager.dropMissingMedia`. */
+    fun dropMissingMedia() {
+        val cleaned = entriesByDay.mapValues { (_, entry) ->
+            entry.copy(
+                photos = entry.photos.filter { File(it.photoPath).exists() },
+                voiceMemos = entry.voiceMemos.filter { File(it.audioPath).exists() },
+            )
+        }
+        if (cleaned == entriesByDay) return
+        entriesByDay = cleaned
+        save()
+    }
 
     private inline fun change(date: Date, block: (JournalEntry) -> JournalEntry) {
         val day = date.startOfDay()
