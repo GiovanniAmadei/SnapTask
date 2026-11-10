@@ -449,8 +449,11 @@ struct PomodoroCompletionView: View {
             
             taskManager.saveTrackingSession(trackingSession)
             
-            // Save time tracking data to statistics as individual task
-            await saveToStatistics(categoryId: task.category?.id, timeSpent: editedFocusTime, taskName: editedTaskName, taskId: task.id)
+            // Completing the task already adds this time to its category in the statistics
+            // (TaskManager.updateTaskRating); only tasks without a category get their own entry.
+            if task.category == nil {
+                await saveToStatistics(categoryId: nil, timeSpent: editedFocusTime, taskName: editedTaskName, taskId: task.id)
+            }
             
             if let updatedTask = TaskManager.shared.tasks.first(where: { $0.id == task.id }) {
                 CloudKitService.shared.saveTask(updatedTask)
@@ -471,7 +474,10 @@ struct PomodoroCompletionView: View {
             }
             
             taskManager.saveTrackingSession(trackingSession)
-            await saveToStatistics(categoryId: category.id, timeSpent: editedFocusTime)
+            // With a task, completing it already counted the time in the statistics
+            if !hasTask {
+                await saveToStatistics(categoryId: category.id, timeSpent: editedFocusTime)
+            }
         } else {
             // General / Uncategorized tracking
             taskManager.saveTrackingSession(trackingSession)
@@ -491,8 +497,8 @@ struct PomodoroCompletionView: View {
         let categoryKey: String
         
         if let categoryId = categoryId {
-            // Regular category tracking
-            categoryKey = categoryId.uuidString
+            // Regular category tracking (same key the statistics read)
+            categoryKey = "category_\(categoryId.uuidString)"
         } else if let taskId = taskId, let taskName = taskName {
             // Individual task tracking - use a special prefix to distinguish from categories
             categoryKey = "task_\(taskId.uuidString)"
@@ -505,7 +511,7 @@ struct PomodoroCompletionView: View {
             ]
             UserDefaults.standard.set(taskMetadata, forKey: "taskMetadata")
         } else {
-            return // Invalid configuration
+            categoryKey = "uncategorized"
         }
         
         if timeTrackingData[dateKey] == nil {
