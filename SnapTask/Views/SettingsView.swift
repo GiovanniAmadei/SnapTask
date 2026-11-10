@@ -1096,137 +1096,11 @@ struct SettingsView: View {
     }
     
     private func scheduleDailyQuoteNotification() {
-        // Remove existing daily quote notifications (legacy id and new prefix-based ids)
-        let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: ["dailyQuote"]) // legacy
-
-        center.getPendingNotificationRequests { requests in
-            let idsToRemove = requests
-                .filter { $0.identifier.hasPrefix("dailyQuote_") }
-                .map { $0.identifier }
-
-            if !idsToRemove.isEmpty {
-                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
-                print(" Removed \(idsToRemove.count) existing daily quote notifications")
-            }
-
-            guard dailyQuoteNotificationsEnabled else { return }
-
-            // Parse the time from dailyQuoteNotificationTime
-            let timeComponents = self.dailyQuoteNotificationTime.split(separator: ":")
-            guard timeComponents.count == 2,
-                  let hour = Int(timeComponents[0]),
-                  let minute = Int(timeComponents[1]) else { return }
-
-            let calendar = Calendar.current
-            let quoteService = QuoteService.shared
-
-            // Start from today
-            let today = Date()
-            var scheduledCount = 0
-
-            for offset in 0..<30 {
-                guard let baseDate = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
-
-                var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
-                components.hour = hour
-                components.minute = minute
-
-                guard let fireDate = calendar.date(from: components) else { continue }
-
-                // Only schedule future notifications
-                if fireDate <= Date() { continue }
-
-                // Build identifier and content for that day
-                let idDateFormatter = DateFormatter()
-                idDateFormatter.dateFormat = "yyyy-MM-dd"
-                let idDateString = idDateFormatter.string(from: baseDate)
-                let identifier = "dailyQuote_\(idDateString)"
-
-                let dailyQuote = quoteService.quoteFor(date: baseDate)
-
-                let content = UNMutableNotificationContent()
-                content.title = "your_daily_motivation".localized
-                content.body = String(format: "daily_quote_notification_body".localized, dailyQuote.text, dailyQuote.author)
-                content.sound = .default
-                content.badge = nil
-
-                let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
-                let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
-
-                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-                center.add(request) { error in
-                    if let error = error {
-                        print(" Error scheduling daily quote (\(identifier)): \(error)")
-                    }
-                }
-                scheduledCount += 1
-            }
-
-            print(" Scheduled \(scheduledCount) daily quote notifications starting at \(self.dailyQuoteNotificationTime)")
-        }
+        DailyReminderScheduler.scheduleDailyQuotes()
     }
 
     private func scheduleDiaryNotification() {
-        let center = UNUserNotificationCenter.current()
-        center.getPendingNotificationRequests { requests in
-            let idsToRemove = requests
-                .filter { $0.identifier.hasPrefix("diary_") }
-                .map { $0.identifier }
-
-            if !idsToRemove.isEmpty {
-                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
-                print(" Removed \(idsToRemove.count) existing diary notifications")
-            }
-
-            guard diaryNotificationsEnabled else { return }
-
-            let timeComponents = self.diaryNotificationTime.split(separator: ":")
-            guard timeComponents.count == 2,
-                  let hour = Int(timeComponents[0]),
-                  let minute = Int(timeComponents[1]) else { return }
-
-            let calendar = Calendar.current
-            let today = Date()
-            var scheduledCount = 0
-
-            for offset in 0..<30 {
-                guard let baseDate = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
-
-                var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
-                components.hour = hour
-                components.minute = minute
-
-                guard let fireDate = calendar.date(from: components) else { continue }
-
-                if fireDate <= Date() { continue }
-
-                let idDateFormatter = DateFormatter()
-                idDateFormatter.dateFormat = "yyyy-MM-dd"
-                let idDateString = idDateFormatter.string(from: baseDate)
-                let identifier = "diary_\(idDateString)"
-
-                let content = UNMutableNotificationContent()
-                content.title = "diary_reminder_title".localized
-                content.body = "diary_reminder_body".localized
-                content.sound = .default
-                content.badge = nil
-
-                let triggerComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
-                let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
-
-                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-                center.add(request) { error in
-                    if let error = error {
-                        print(" Error scheduling diary reminder (\(identifier)): \(error)")
-                    }
-                }
-
-                scheduledCount += 1
-            }
-
-            print(" Scheduled \(scheduledCount) diary reminders starting at \(self.diaryNotificationTime)")
-        }
+        DailyReminderScheduler.scheduleDiaryReminders()
     }
     
     private func cancelDailyQuoteNotification() {
@@ -1441,18 +1315,6 @@ struct IOSQuoteCard: View {
                             .themedSecondaryText()
                         
                         Spacer()
-                        
-                        Button {
-                            Task {
-                                await quoteManager.forceUpdateQuote()
-                            }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.caption)
-                                .themedPrimary()
-                        }
-                        .disabled(quoteManager.isLoading)
-                        .opacity(quoteManager.isLoading ? 0.6 : 1.0)
                     }
                 }
             }
