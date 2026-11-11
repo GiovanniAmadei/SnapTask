@@ -11,7 +11,7 @@ struct ShowTodayTasksIntent: AppIntent {
     static var title: LocalizedStringResource = "Show Today's Tasks"
     static var description = IntentDescription(
         LocalizedStringResource("Lists the tasks you have planned for today."),
-        categoryName: "Tasks"
+        categoryName: "tasks"
     )
 
     static var openAppWhenRun: Bool = false

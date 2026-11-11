@@ -1,25 +1,25 @@
 import Foundation
 import AppIntents
-import WidgetKit
 
 /// Adds a new task to SnapTask without opening the app.
 ///
-/// Entry points:
-/// - Control Center / Lock Screen / Action Button via `ControlWidgetButton`.
+/// Entry points (the Control Center button uses `OpenQuickAddIntent` instead):
 /// - Action Button (iOS 17.2+ on iPhone 15 Pro and later) via `SnapTaskAppShortcuts`.
 /// - Siri ("Add task in SnapTask").
 /// - Shortcuts app / Spotlight / Automations.
 ///
 /// In interactive contexts (Siri, Action Button, Shortcuts, compatible
 /// automations) the system can prompt for the task name at runtime.
+///
+/// Main app target only: it adds the task through `TaskManager`.
 struct QuickAddTaskIntent: AppIntent {
     static var title: LocalizedStringResource = "Add Quick Task"
     static var description = IntentDescription(
         "Quickly add a new task to your SnapTask timeline.",
-        categoryName: "Tasks"
+        categoryName: "tasks"
     )
 
-    /// Don't pop the app; we just write to the App Group and reload widgets.
+    /// Runs in the background: Siri just confirms the task, without opening the app.
     static var openAppWhenRun: Bool = false
 
     @Parameter(
@@ -39,6 +39,7 @@ struct QuickAddTaskIntent: AppIntent {
         Summary("Add task to SnapTask")
     }
 
+    @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         guard let taskName else {
             throw $taskName.requestValue("What do you want to do?")
@@ -47,24 +48,6 @@ struct QuickAddTaskIntent: AppIntent {
         let trimmed = taskName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw $taskName.requestValue("What do you want to do?")
-        }
-
-        guard let suite = UserDefaults(suiteName: "group.com.snapTask.shared") else {
-            return .result(dialog: "Could not access SnapTask data.")
-        }
-
-        let key = "savedTasks"
-
-        // Load existing tasks (may be empty if this is the first run).
-        var tasks: [TodoTask] = []
-        if let data = suite.data(forKey: key) {
-            do {
-                tasks = try JSONDecoder().decode([TodoTask].self, from: data)
-            } catch {
-                // If decoding fails we continue with an empty array rather
-                // than losing the quick capture attempt.
-                tasks = []
-            }
         }
 
         // Build a minimal task scoped to "today" with no specific time.
@@ -102,20 +85,18 @@ struct QuickAddTaskIntent: AppIntent {
             goalId: nil
         )
 
-        tasks.append(newTask)
-
-        do {
-            let data = try JSONEncoder().encode(tasks)
-            suite.set(data, forKey: key)
-            suite.synchronize()
-
-            // Drop a marker the app can read on next foreground to refresh.
-            suite.set(Date().timeIntervalSince1970, forKey: "lastQuickAddTimestamp")
-
-            WidgetCenter.shared.reloadAllTimelines()
-        } catch {
+        // Added through the app's TaskManager, like a task created in the app. Before, the
+        // intent wrote the task straight into the shared container: the app, holding its own
+        // copy of the tasks in memory, overwrote it at its next save, so the task vanished,
+        // and it never reached iCloud either.
+        let manager = TaskManager.shared
+        await manager.addTask(newTask)
+        guard let saved = manager.tasks.first(where: { $0.id == newTask.id }) else {
             return .result(dialog: "Could not save the task.")
         }
+        // Sent to iCloud now: Siri runs this with the app in the background, which can be
+        // suspended before the save that `addTask` schedules a second later.
+        CloudKitService.shared.saveTask(saved)
 
         let successMessage = String(
             format: String(localized: "Added \"%@\" to SnapTask."),
