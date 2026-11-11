@@ -9,52 +9,36 @@ class QuoteService {
     private init() {}
     
     func fetchDailyQuote() async throws -> Quote {
-        // For now, we'll use the built-in quotes and pick deterministically for today
         return quoteFor(date: Date())
     }
 
-    /// Returns the deterministic daily quote for a specific date.
-    /// This exposes the same logic used for today's quote, allowing callers
-    /// to schedule notifications with the correct quote for future dates.
+    /// Returns the daily quote for a specific date.
+    ///
+    /// Every calendar date has its own quote in `quotes.json` (366 entries, 29 February
+    /// included), so the same date shows the same quote every year. The result depends
+    /// only on the day, so notifications scheduled in advance match what the app shows.
     func quoteFor(date: Date) -> Quote {
-        // For now, we'll use the built-in quotes
-        // In the future, this could be extended to fetch from an API
-        let fallbackQuotes = [
-            Quote(text: "The only way to do great work is to love what you do.", author: "Steve Jobs"),
-            Quote(text: "Success is not final, failure is not fatal: It is the courage to continue that counts.", author: "Winston Churchill"),
-            Quote(text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt"),
-            Quote(text: "Your time is limited, don't waste it living someone else's life.", author: "Steve Jobs"),
-            Quote(text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt"),
-            Quote(text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius"),
-            Quote(text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson"),
-            Quote(text: "The only limit to our realization of tomorrow is our doubts of today.", author: "Franklin D. Roosevelt"),
-            Quote(text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney"),
-            Quote(text: "If you're going through hell, keep going.", author: "Winston Churchill"),
-            Quote(text: "Innovation distinguishes between a leader and a follower.", author: "Steve Jobs"),
-            Quote(text: "Life is what happens to you while you're busy making other plans.", author: "John Lennon"),
-            Quote(text: "The future depends on what you do today.", author: "Mahatma Gandhi"),
-            Quote(text: "It is during our darkest moments that we must focus to see the light.", author: "Aristotle"),
-            Quote(text: "Success is not how high you have climbed, but how you make a positive difference to the world.", author: "Roy T. Bennett"),
-            Quote(text: "The only impossible journey is the one you never begin.", author: "Tony Robbins"),
-            Quote(text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein"),
-            Quote(text: "What you get by achieving your goals is not as important as what you become by achieving your goals.", author: "Zig Ziglar"),
-            Quote(text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery"),
-            Quote(text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "Anonymous")
-        ]
-
-        // Use a deterministic approach based on the provided date
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: date)
-        let seed = dateString.hash
-
-        // Use the hash as seed for deterministic randomness
-        var generator = LinearCongruentialGenerator(seed: UInt64(abs(seed)))
-        let randomIndex = Int(generator.next() % UInt64(fallbackQuotes.count))
-
-        return fallbackQuotes[randomIndex]
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let parts = calendar.dateComponents([.month, .day], from: date)
+        let key = String(format: "%02d-%02d", parts.month ?? 1, parts.day ?? 1)
+        return Self.quotesByDate[key] ?? Self.quotesByDate["01-01"] ?? Quote.placeholder
     }
-    
+
+    /// One quote per calendar date ("MM-dd"), from `quotes.json` in the app bundle.
+    /// The same file ships in the Android app (assets/quotes.json).
+    static let quotesByDate: [String: Quote] = {
+        struct Entry: Decodable { let date: String; let text: String; let author: String }
+        guard let url = Bundle.main.url(forResource: "quotes", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let entries = try? JSONDecoder().decode([Entry].self, from: data) else {
+            print(" quotes.json missing or unreadable, using the placeholder quote")
+            return [:]
+        }
+        return Dictionary(entries.map { ($0.date, Quote(text: $0.text, author: $0.author)) },
+                          uniquingKeysWith: { first, _ in first })
+    }()
+
     // MARK: - Future API Implementation
     /*
     private func fetchFromAPI() async throws -> Quote {
@@ -77,21 +61,6 @@ class QuoteService {
         )
     }
     */
-}
-
-// MARK: - Linear Congruential Generator
-// Simple pseudo-random number generator for deterministic randomness
-private struct LinearCongruentialGenerator {
-    private var state: UInt64
-    
-    init(seed: UInt64) {
-        state = seed
-    }
-    
-    mutating func next() -> UInt64 {
-        state = state &* 1103515245 &+ 12345
-        return state
-    }
 }
 
 // MARK: - Errors

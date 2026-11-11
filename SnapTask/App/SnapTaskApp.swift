@@ -101,6 +101,8 @@ struct SnapTaskApp: App {
                         Task {
                             await quoteManager.checkAndUpdateQuote()
                         }
+                        // Keep the 30-day window of daily quote / diary reminders rolling
+                        DailyReminderScheduler.refreshAll()
                         // Fetches settings changed on other devices too. This device's settings are
                         // uploaded when they change: pushing them on every launch overwrote newer
                         // changes made elsewhere.
@@ -300,8 +302,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if FeedbackReplyNotifier.isFeedbackReply(userInfo) {
             FeedbackReplyNotifier.handleTap(userInfo: userInfo)
         } else if identifier == "dailyQuote" || identifier.hasPrefix("dailyQuote_") {
-            Task {
-                await QuoteManager.shared.forceUpdateQuote()
+            // User tapped daily quote notification: show the quote it carried
+            Task { @MainActor in
+                QuoteManager.shared.showTodaysQuote()
             }
         } else if identifier.hasPrefix("pomodoro-") {
             print("📱 Pomodoro notification tapped: \(identifier)")
