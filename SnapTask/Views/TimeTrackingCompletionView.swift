@@ -520,10 +520,12 @@ struct TimeTrackingCompletionView: View {
             
         } else if let category = selectedCategory {
             print(" Saving to category: \(category.name)")
+            var completedTask = false
             
             // Mark task as completed if it exists, and SAVE actual duration so it shows in task details
             if let task = task {
                 if TaskManager.shared.tasks.contains(where: { $0.id == task.id }) {
+                    completedTask = true
                     let calendar = Calendar.current
                     let today = calendar.startOfDay(for: Date())
                     
@@ -558,8 +560,11 @@ struct TimeTrackingCompletionView: View {
                 }
             }
             
-            // Save time tracking data to statistics ONLY for the selected category
-            await saveToStatistics(categoryId: category.id, timeSpent: editedFocusTime)
+            // Save time tracking data to statistics ONLY for the selected category.
+            // A completed task already counted it (TaskManager.updateTaskRating).
+            if !completedTask {
+                await saveToStatistics(categoryId: category.id, timeSpent: editedFocusTime)
+            }
             print(" Successfully saved to category only")
         } else {
             // No selection made: default to Uncategorized behavior
@@ -614,8 +619,8 @@ struct TimeTrackingCompletionView: View {
         let categoryKey: String
         
         if let categoryId = categoryId {
-            // Regular category tracking
-            categoryKey = categoryId.uuidString
+            // Regular category tracking (same key the statistics read)
+            categoryKey = "category_\(categoryId.uuidString)"
         } else if let taskId = taskId, let taskName = taskName {
             // Individual task tracking - use a special prefix to distinguish from categories
             categoryKey = "task_\(taskId.uuidString)"
@@ -628,7 +633,7 @@ struct TimeTrackingCompletionView: View {
             ]
             UserDefaults.standard.set(taskMetadata, forKey: "taskMetadata")
         } else {
-            return // Invalid configuration
+            categoryKey = "uncategorized"
         }
         
         if timeTrackingData[dateKey] == nil {

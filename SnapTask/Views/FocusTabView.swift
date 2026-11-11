@@ -175,6 +175,8 @@ struct FocusTabView: View {
             pendingSessionType = .pomodoro
             showingSessionConflict = true
         } else {
+            // General Pomodoro: drop a task left over from an earlier, never started session
+            pomodoroViewModel.initializeGeneralSession()
             showingPomodoro = true
         }
     }
@@ -214,6 +216,7 @@ struct FocusTabView: View {
             selectedTrackingMode = mode
             showingTimeTracker = true
         case .pomodoro:
+            pomodoroViewModel.initializeGeneralSession()
             showingPomodoro = true
         }
 

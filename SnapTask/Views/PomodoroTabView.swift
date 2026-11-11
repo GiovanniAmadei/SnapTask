@@ -84,7 +84,10 @@ struct PomodoroTabView: View {
                 }
             }
             .onAppear {
-                if !viewModel.hasActiveTask {
+                // Keep a task that was just set (setActiveTask leaves the session "not started"):
+                // fall back to a general session only when there is no task or it is finished.
+                // General entry points reset the session themselves before opening this view.
+                if !viewModel.hasActiveTask && (viewModel.activeTask == nil || viewModel.state == .completed) {
                     viewModel.initializeGeneralSession()
                 }
             }

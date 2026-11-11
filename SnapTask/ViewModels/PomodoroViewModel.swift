@@ -177,7 +177,7 @@ class PomodoroViewModel: ObservableObject {
         }
         
         // Rimuovi notifiche esistenti se la sessione è ancora attiva
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        Self.removePomodoroNotifications()
     }
     
     private func saveBackgroundState() {
@@ -335,9 +335,29 @@ class PomodoroViewModel: ObservableObject {
         }
     }
     
+    /// Identifiers of the Pomodoro's notifications. Fixed, so they can be removed (and
+    /// replaced) right away without touching any other notification of the app.
+    private nonisolated static let sessionEndNotificationID = "pomodoro-complete"
+    private nonisolated static let nextWorkNotificationID = "pomodoro-next-work"
+
+    /// Removes only the Pomodoro's own pending notifications, leaving task reminders,
+    /// daily quotes and every other notification of the app alone.
+    nonisolated static func removePomodoroNotifications() {
+        let center = UNUserNotificationCenter.current()
+        let current = [sessionEndNotificationID, nextWorkNotificationID]
+        center.removePendingNotificationRequests(withIdentifiers: current)
+        // Older versions added a random suffix ("pomodoro-complete-<uuid>"): clean those up too.
+        center.getPendingNotificationRequests { requests in
+            let legacy = requests.map(\.identifier).filter { $0.hasPrefix("pomodoro-") && !current.contains($0) }
+            if !legacy.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: legacy)
+            }
+        }
+    }
+    
     private func scheduleSessionEndNotification() async {
         // Remove existing notifications
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        Self.removePomodoroNotifications()
         
         guard state == .working || state == .onBreak, timeRemaining > 0 else { return }
         
@@ -354,7 +374,7 @@ class PomodoroViewModel: ObservableObject {
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeRemaining, repeats: false)
         let request = UNNotificationRequest(
-            identifier: "pomodoro-complete-\(UUID().uuidString)",
+            identifier: Self.sessionEndNotificationID,
             content: content,
             trigger: trigger
         )
@@ -375,7 +395,7 @@ class PomodoroViewModel: ObservableObject {
                 repeats: false
             )
             let nextWorkRequest = UNNotificationRequest(
-                identifier: "pomodoro-next-work-\(UUID().uuidString)",
+                identifier: Self.nextWorkNotificationID,
                 content: nextWorkContent,
                 trigger: nextWorkTrigger
             )
@@ -603,7 +623,7 @@ class PomodoroViewModel: ObservableObject {
         pauseStartTime = Date()
         
         // Remove notifications
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        Self.removePomodoroNotifications()
         
         LiveActivityManager.shared.update(
             phase: .paused,
@@ -680,7 +700,7 @@ class PomodoroViewModel: ObservableObject {
         totalPausedTime = 0
         
         // Remove notifications
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        Self.removePomodoroNotifications()
         
         // End Live Activity
         LiveActivityManager.shared.end(dismissImmediately: true)
@@ -714,7 +734,7 @@ class PomodoroViewModel: ObservableObject {
         // Use settings.totalSessions instead of hardcoded totalSessions
         if currentSession >= settings.totalSessions {
             state = .completed
-            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            Self.removePomodoroNotifications()
             LiveActivityManager.shared.end(dismissImmediately: false)
             // Clear persisted state when cycle is completed
             UserDefaults.standard.removeObject(forKey: persistedKey)
@@ -758,7 +778,7 @@ class PomodoroViewModel: ObservableObject {
         // Use settings.totalSessions instead of hardcoded totalSessions
         if currentSession > settings.totalSessions {
             state = .completed
-            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            Self.removePomodoroNotifications()
             LiveActivityManager.shared.end(dismissImmediately: false)
             // Clear persisted state when cycle is completed
             UserDefaults.standard.removeObject(forKey: persistedKey)
@@ -886,7 +906,7 @@ class PomodoroViewModel: ObservableObject {
     deinit {
         timer?.cancel()
         NotificationCenter.default.removeObserver(self)
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        Self.removePomodoroNotifications()
         Logger.pomodoro("PomodoroViewModel deinitialized", level: .info)
     }
 }
