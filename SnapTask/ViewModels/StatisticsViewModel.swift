@@ -108,10 +108,14 @@ class StatisticsViewModel: ObservableObject {
                         return subtotal
                     }
 
+                    // A completion's actual duration is already in the tracked time below:
+                    // TaskManager.updateTaskRating copies it there (syncActualDurationWithStatistics).
+                    // Counting it here too doubled every category's hours.
+                    if (completion.actualDuration ?? 0) > 0 {
+                        return subtotal
+                    }
                     var taskDuration: TimeInterval = 0
-                    if let actualDuration = completion.actualDuration, actualDuration > 0 {
-                        taskDuration = actualDuration
-                    } else if task.totalTrackedTime > 0 {
+                    if task.totalTrackedTime > 0 {
                         taskDuration = task.totalTrackedTime
                     } else if task.hasDuration && task.duration > 0 {
                         taskDuration = task.duration
@@ -883,7 +887,7 @@ class StatisticsViewModel: ObservableObject {
         }
     }
 
-    /// Same sources as the donut (completed tasks' duration + tracked sessions), split by day and by task.
+    /// Same sources as the donut (tracked time + completed tasks without an actual duration), split by day and by task.
     func categoryDetail(for categoryId: UUID) -> CategoryDetail {
         let calendar = Calendar.current
         let (start, end) = periodDays
@@ -891,12 +895,17 @@ class StatisticsViewModel: ObservableObject {
         var perDay: [Date: Double] = [:]
         var perTask: [UUID: (name: String, icon: String, hours: Double, completions: Int)] = [:]
         var completions = 0
+        // Actual durations of completed tasks: shown per task, but already part of the
+        // tracked time read below (TaskManager copies them there), so not added to the days.
+        var actualHours = 0.0
 
         for task in statTasks where task.category?.id == categoryId {
             for (date, completion) in task.completions where completion.isCompleted && date >= start && date < endExclusive {
                 var duration: TimeInterval = 0
+                var alreadyTracked = false
                 if let actual = completion.actualDuration, actual > 0 {
                     duration = actual
+                    alreadyTracked = true
                 } else if task.totalTrackedTime > 0 {
                     duration = task.totalTrackedTime
                 } else if task.hasDuration && task.duration > 0 {
@@ -904,7 +913,11 @@ class StatisticsViewModel: ObservableObject {
                 }
                 let hours = duration / 3600
                 let day = calendar.startOfDay(for: date)
-                perDay[day, default: 0] += hours
+                if alreadyTracked {
+                    actualHours += hours
+                } else {
+                    perDay[day, default: 0] += hours
+                }
                 let icon = (task.icon.isEmpty || task.icon == "circle") ? (task.category?.icon ?? "checkmark.circle") : task.icon
                 var entry = perTask[task.id] ?? (task.name, icon, 0, 0)
                 entry.hours += hours
@@ -950,7 +963,8 @@ class StatisticsViewModel: ObservableObject {
             hours: total,
             previousHours: hasPreviousPeriod ? (name.flatMap { previousCategoryHours[$0] } ?? 0) : nil,
             completions: completions,
-            trackedSessionHours: sessionHours,
+            // Sessions only: the tracked time minus the copies of completed tasks' durations
+            trackedSessionHours: max(0, sessionHours - actualHours),
             buckets: buckets,
             tasks: perTask.map { CategoryTaskShare(id: $0.key, name: $0.value.name, icon: $0.value.icon,
                                                    hours: $0.value.hours, completions: $0.value.completions) }
